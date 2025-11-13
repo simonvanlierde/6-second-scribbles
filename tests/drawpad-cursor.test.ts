@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable import/no-unresolved */
+
 import { describe, expect, it } from 'vitest'
 
 import { clientToCanvasCoords } from '../src/utils/canvasCoords'

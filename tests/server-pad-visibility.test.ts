@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable import/no-unresolved */
+
 import { describe, expect, it } from 'vitest'
 
 import GameServer from '../src/server/index'
@@ -10,7 +10,12 @@ function createMockConnection(id: string) {
 
 function createMockRoom() {
   const broadcasted: string[] = []
-  return { id: 'r', storage: { setAlarm: async () => {} }, broadcast: (m: string) => broadcasted.push(m), getBroadcasts: () => broadcasted }
+  return {
+    id: 'r',
+    storage: { setAlarm: async () => {} },
+    broadcast: (m: string) => broadcasted.push(m),
+    getBroadcasts: () => broadcasted,
+  }
 }
 
 describe('server pad visibility', () => {
@@ -32,7 +37,9 @@ describe('server pad visibility', () => {
 
     const c3 = createMockConnection('c3')
     let last = ''
-    c3.send = (m: string) => { last = m }
+    c3.send = (m: string) => {
+      last = m
+    }
     server.onConnect(c3)
     const parsed = JSON.parse(last)
     expect(parsed.type).toBe('room_state')

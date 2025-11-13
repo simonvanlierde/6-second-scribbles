@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable import/no-unresolved */
+
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -15,7 +15,11 @@ describe('client drawpad handler', () => {
     const store = useGameStore()
     const { handleMessage } = useGameConnection()
 
-    const msg = { type: 'draw_stroke', playerId: 'p2', stroke: { color: '#000', width: 2, points: [{ x: 1, y: 2 }] } }
+    const msg = {
+      type: 'draw_stroke',
+      playerId: 'p2',
+      stroke: { color: '#000', width: 2, points: [{ x: 1, y: 2 }] },
+    }
     handleMessage(msg as any)
 
     expect(store.currentStrokes.length).toBeGreaterThan(0)

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable import/no-unresolved */
+
 import { describe, expect, it } from 'vitest'
 
 import GameServer from '../src/server/index'
@@ -37,7 +37,11 @@ describe('GameServer drawpad relay', () => {
     server.onMessage(JSON.stringify({ type: 'join', playerId: 'p2', name: 'Player' }), conn2)
 
     // p2 sends a stroke
-    const strokeMsg = { type: 'draw_stroke', playerId: 'p2', stroke: { color: '#000', width: 3, points: [{ x: 1, y: 2 }] } }
+    const strokeMsg = {
+      type: 'draw_stroke',
+      playerId: 'p2',
+      stroke: { color: '#000', width: 3, points: [{ x: 1, y: 2 }] },
+    }
     server.onMessage(JSON.stringify(strokeMsg), conn2)
 
     const broadcasts = (room as any).getBroadcasts()
