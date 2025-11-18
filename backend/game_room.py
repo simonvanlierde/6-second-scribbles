@@ -48,6 +48,9 @@ class GameRoom:
     # Maximum players per room
     MAX_PLAYERS = 10
 
+    # Room hibernation timeout (5 minutes of being empty)
+    HIBERNATION_TIMEOUT_SECONDS = 5 * 60
+
     def __init__(self, room_id: str):
         self.room_id = room_id
         self.players: Dict[str, PlayerInfo] = {}
@@ -56,6 +59,10 @@ class GameRoom:
         self._idle_check_task: Optional[asyncio.Task] = None
         self._pending_host_transfer: Optional[asyncio.Task] = None
         self._last_host_id: Optional[str] = None  # Track last host for reconnection
+        self._created_at = time.time()
+        self._last_activity = time.time()
+        self._emptied_at: Optional[float] = None  # When room became empty
+        self.is_hibernated = False
 
     async def start_idle_check(self):
         """Start periodic idle player check"""
@@ -114,6 +121,14 @@ class GameRoom:
         if player_id not in self.players and len(self.players) >= self.MAX_PLAYERS:
             raise ValueError(f"Room is full (maximum {self.MAX_PLAYERS} players)")
 
+        # Room is no longer empty - wake from hibernation if needed
+        if self.is_hibernated:
+            print(f"[GameRoom {self.room_id}] Waking from hibernation")
+            self.is_hibernated = False
+
+        self._last_activity = time.time()
+        self._emptied_at = None
+
         # Check if this is the previous host reconnecting
         is_reconnecting_host = (player_id == self._last_host_id and player_id not in self.players)
 
@@ -146,6 +161,11 @@ class GameRoom:
         if player_id in self.players:
             del self.players[player_id]
 
+        # Mark when room becomes empty
+        if len(self.players) == 0:
+            self._emptied_at = time.time()
+            print(f"[GameRoom {self.room_id}] Room is now empty, marked for hibernation/cleanup")
+
         # Handle host transfer if the host left
         if player_id == self.host_id:
             if len(self.players) > 0:
@@ -164,7 +184,6 @@ class GameRoom:
                 # No players left, room is effectively closed
                 self.host_id = None
                 self._last_host_id = None
-                print(f"[GameRoom {self.room_id}] Room is now empty")
 
     async def _delayed_host_transfer(self, old_host_id: str):
         """Transfer host after a delay, allowing for reconnection"""
@@ -251,6 +270,51 @@ class GameRoom:
         """Check if the room is empty"""
         return len(self.players) == 0
 
+    def should_hibernate(self) -> bool:
+        """Check if room should be hibernated (empty for < hibernation timeout)"""
+        if not self.is_empty() or self.is_hibernated:
+            return False
+
+        if self._emptied_at is None:
+            return False
+
+        # Room has been empty for some time but not long enough to be removed
+        empty_duration = time.time() - self._emptied_at
+        return empty_duration >= 60  # Hibernate after 1 minute of being empty
+
+    def should_be_removed(self) -> bool:
+        """Check if room should be permanently removed"""
+        if not self.is_empty():
+            return False
+
+        if self._emptied_at is None:
+            return False
+
+        # Remove room if empty for longer than hibernation timeout
+        empty_duration = time.time() - self._emptied_at
+        return empty_duration >= self.HIBERNATION_TIMEOUT_SECONDS
+
+    def get_age_seconds(self) -> float:
+        """Get room age in seconds"""
+        return time.time() - self._created_at
+
+    def get_empty_duration_seconds(self) -> Optional[float]:
+        """Get how long room has been empty, or None if not empty"""
+        if self._emptied_at is None:
+            return None
+        return time.time() - self._emptied_at
+
+    async def hibernate(self):
+        """Put room into hibernation mode"""
+        if self.is_hibernated or not self.is_empty():
+            return
+
+        print(f"[GameRoom {self.room_id}] Entering hibernation mode (age: {self.get_age_seconds():.0f}s)")
+        self.is_hibernated = True
+
+        # Could persist room state here if needed
+        # For now, we just mark it as hibernated
+
     async def cleanup_custom_categories(self):
         """Delete all custom categories created for this room"""
         try:
@@ -272,10 +336,88 @@ class GameRoom:
 
 
 class RoomManager:
-    """Manages all game rooms"""
+    """
+    Manages all game rooms with PartyKit-like lifecycle
+
+    Features:
+    - Automatic hibernation of empty rooms after 1 minute
+    - Garbage collection of hibernated rooms after 5 minutes
+    - Periodic cleanup every 60 seconds
+    """
+
+    # Cleanup interval (1 minute)
+    CLEANUP_INTERVAL_SECONDS = 60
 
     def __init__(self):
         self.rooms: Dict[str, GameRoom] = {}
+        self._cleanup_task: Optional[asyncio.Task] = None
+        self._is_running = False
+
+    async def start(self):
+        """Start the room manager and periodic cleanup"""
+        if self._is_running:
+            return
+
+        self._is_running = True
+        self._cleanup_task = asyncio.create_task(self._periodic_cleanup_loop())
+        print(f"[RoomManager] Started with cleanup interval of {self.CLEANUP_INTERVAL_SECONDS}s")
+
+    async def stop(self):
+        """Stop the room manager and cleanup tasks"""
+        self._is_running = False
+
+        if self._cleanup_task:
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+
+        # Clean up all rooms
+        for room_id in list(self.rooms.keys()):
+            await self.remove_room(room_id)
+
+        print("[RoomManager] Stopped and cleaned up all rooms")
+
+    async def _periodic_cleanup_loop(self):
+        """Periodically clean up and hibernate rooms"""
+        while self._is_running:
+            try:
+                await asyncio.sleep(self.CLEANUP_INTERVAL_SECONDS)
+                await self._run_cleanup()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[RoomManager] Error in cleanup loop: {e}")
+
+    async def _run_cleanup(self):
+        """Run cleanup and hibernation checks on all rooms"""
+        total_rooms = len(self.rooms)
+        hibernated_count = 0
+        removed_count = 0
+
+        rooms_to_remove = []
+        rooms_to_hibernate = []
+
+        # Check each room
+        for room_id, room in list(self.rooms.items()):
+            if room.should_be_removed():
+                rooms_to_remove.append(room_id)
+            elif room.should_hibernate():
+                rooms_to_hibernate.append((room_id, room))
+
+        # Hibernate rooms
+        for room_id, room in rooms_to_hibernate:
+            await room.hibernate()
+            hibernated_count += 1
+
+        # Remove old rooms
+        for room_id in rooms_to_remove:
+            await self.remove_room(room_id)
+            removed_count += 1
+
+        if hibernated_count > 0 or removed_count > 0:
+            print(f"[RoomManager] Cleanup: {total_rooms} total, {hibernated_count} hibernated, {removed_count} removed")
 
     def get_or_create_room(self, room_id: str) -> GameRoom:
         """Get an existing room or create a new one"""
@@ -283,6 +425,7 @@ class RoomManager:
             room = GameRoom(room_id)
             self.rooms[room_id] = room
             asyncio.create_task(room.start_idle_check())
+            print(f"[RoomManager] Created new room: {room_id} (total rooms: {len(self.rooms)})")
         return self.rooms[room_id]
 
     def get_room(self, room_id: str) -> Optional[GameRoom]:
@@ -296,10 +439,10 @@ class RoomManager:
             await room.stop_idle_check()
             await room.cleanup_custom_categories()  # Clean up custom categories
             del self.rooms[room_id]
-            print(f"[RoomManager] Removed room {room_id}")
+            print(f"[RoomManager] Removed room {room_id} (total rooms: {len(self.rooms)})")
 
     async def cleanup_empty_rooms(self):
-        """Remove empty rooms"""
+        """Remove empty rooms (called on disconnect for immediate cleanup)"""
         empty_rooms = [
             room_id for room_id, room in self.rooms.items()
             if room.is_empty()
@@ -307,6 +450,21 @@ class RoomManager:
 
         for room_id in empty_rooms:
             await self.remove_room(room_id)
+
+    def get_stats(self) -> Dict[str, any]:
+        """Get room manager statistics"""
+        total_rooms = len(self.rooms)
+        active_rooms = sum(1 for room in self.rooms.values() if not room.is_empty())
+        hibernated_rooms = sum(1 for room in self.rooms.values() if room.is_hibernated)
+        total_players = sum(len(room.players) for room in self.rooms.values())
+
+        return {
+            "total_rooms": total_rooms,
+            "active_rooms": active_rooms,
+            "hibernated_rooms": hibernated_rooms,
+            "empty_rooms": total_rooms - active_rooms - hibernated_rooms,
+            "total_players": total_players
+        }
 
     def find_random_public_room(self, max_players: int = 10) -> Optional[str]:
         """

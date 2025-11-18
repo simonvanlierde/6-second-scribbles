@@ -64,16 +64,25 @@ class CustomCategoryCreate(BaseModel):
 # Lifecycle events
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup"""
+    """Initialize database and room manager on startup"""
     print("🚀 Starting Six Second Scribbles API...")
     await init_db()
     print("✅ Database initialized")
+
+    # Start room manager for periodic cleanup
+    await room_manager.start()
+    print("✅ Room manager started")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up on shutdown"""
     print("👋 Shutting down...")
+
+    # Stop room manager and clean up all rooms
+    await room_manager.stop()
+    print("✅ Room manager stopped")
+
     await close_db()
     print("✅ Database connections closed")
 
@@ -86,6 +95,20 @@ async def root():
         "status": "ok",
         "service": "Six Second Scribbles API",
         "version": "2.0.0"
+    }
+
+
+@app.get("/api/stats")
+async def get_stats():
+    """
+    Get server statistics including room counts and player counts
+
+    Returns room manager stats like total rooms, active rooms, hibernated rooms, etc.
+    """
+    stats = room_manager.get_stats()
+    return {
+        "status": "ok",
+        **stats
     }
 
 
