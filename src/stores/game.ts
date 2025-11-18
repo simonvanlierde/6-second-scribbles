@@ -1,8 +1,9 @@
-import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
-import { GAME_SETTINGS } from '@/config/gameConfig';
-import type { Card, Difficulty, DrawStroke, Player, RoundResult } from '@/shared/types';
+import { GAME_SETTINGS } from '@/config/gameConfig'
+import type { Card, Difficulty, DrawStroke, Player, RoundResult } from '@/shared/types'
+import logger from '@/utils/logger'
 
 export const useGameStore = defineStore('game', () => {
   // Load from localStorage if available
@@ -10,8 +11,8 @@ export const useGameStore = defineStore('game', () => {
   const initialState = savedState ? JSON.parse(savedState) : null
 
   // Load user's name from localStorage
-  const savedName = localStorage.getItem('playerName') || '';
-  const localPlayerName = ref<string>(savedName);
+  const savedName = localStorage.getItem('playerName') || ''
+  const localPlayerName = ref<string>(savedName)
 
   // State
   const roomCode = ref<string>(initialState?.roomCode || '')
@@ -19,11 +20,15 @@ export const useGameStore = defineStore('game', () => {
   const players = ref<Map<string, Player>>(new Map())
   const hostId = ref<string | null>(null)
   const currentRound = ref<number>(initialState?.currentRound || 0)
-  const maxRounds = ref<number>(initialState?.maxRounds || GAME_SETTINGS.rounds.DEFAULT); // Use default from gameConfig
-  const difficulty = ref<Difficulty>(initialState?.difficulty || GAME_SETTINGS.difficulty.DEFAULT); // Use default from gameConfig
-  const gamePhase = ref<'lobby' | 'drawing' | 'guessing' | 'scoring' | 'complete'>(initialState?.gamePhase || 'lobby')
-  const roundLength = ref<number>(initialState?.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT); // Duration of each round in seconds
-  const roundStartTime = ref<number | undefined>(initialState?.roundStartTime); // Unix timestamp when current round started
+  const maxRounds = ref<number>(initialState?.maxRounds || GAME_SETTINGS.rounds.DEFAULT) // Use default from gameConfig
+  const difficulty = ref<Difficulty>(initialState?.difficulty || GAME_SETTINGS.difficulty.DEFAULT) // Use default from gameConfig
+  const gamePhase = ref<'waiting-room' | 'drawing' | 'guessing' | 'scoring' | 'complete'>(
+    initialState?.gamePhase || 'waiting-room'
+  )
+  const roundLength = ref<number>(
+    initialState?.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT
+  ) // Duration of each round in seconds
+  const roundStartTime = ref<number | undefined>(initialState?.roundStartTime) // Unix timestamp when current round started
   const currentStrokes = ref<DrawStroke[]>([])
   const showDrawpad = ref<boolean>(initialState?.showDrawpad ?? true)
   const showPadForRoom = ref<boolean>(initialState?.showPadForRoom ?? true)
@@ -37,17 +42,24 @@ export const useGameStore = defineStore('game', () => {
   const localPlayer = computed(() => players.value.get(localPlayerId.value))
   const playersList = computed(() => Array.from(players.value.values()))
   const canStartGame = computed(() => {
-    const result = players.value.size >= 2 && gamePhase.value === 'lobby';
-    console.log('[Store] canStartGame:', result, 'Player count:', players.value.size, 'Game phase:', gamePhase.value);
-    return result;
+    const result = players.value.size >= 2 && gamePhase.value === 'waiting-room'
+    logger.debug(
+      '[Store] canStartGame:',
+      result,
+      'Player count:',
+      players.value.size,
+      'Game phase:',
+      gamePhase.value
+    )
+    return result
   })
   const isHost = computed(() => hostId.value === localPlayerId.value)
 
   // Actions
   function setLocalPlayer(id: string, name: string) {
-    localPlayerId.value = id;
-    localPlayerName.value = name;
-    localStorage.setItem('playerName', name); // Save name to localStorage
+    localPlayerId.value = id
+    localPlayerName.value = name
+    localStorage.setItem('playerName', name) // Save name to localStorage
   }
 
   function setRoomCode(code: string) {
@@ -98,43 +110,49 @@ export const useGameStore = defineStore('game', () => {
   function startGame(gameDifficulty: Difficulty, gameRounds: number, roundLengthSec: number) {
     // Store the game configuration but don't change phase yet
     // Phase will change when we receive start_round from server
-    difficulty.value = gameDifficulty;
-    maxRounds.value = gameRounds;
-    roundLength.value = roundLengthSec;
+    difficulty.value = gameDifficulty
+    maxRounds.value = gameRounds
+    roundLength.value = roundLengthSec
 
     // Reset scores and round for new game
-    currentRound.value = 0;
-    players.value.forEach(player => {
-      player.score = 0;
-    });
+    currentRound.value = 0
+    players.value.forEach((player) => {
+      player.score = 0
+    })
 
-    saveState();
+    saveState()
   }
 
   function startRound(roundNumber: number, cards: Record<string, Card>) {
-    currentRound.value = roundNumber;
-    gamePhase.value = 'drawing';
-    clearStrokes();
+    currentRound.value = roundNumber
+    gamePhase.value = 'drawing'
+    clearStrokes()
 
     // Assign cards to all players
     for (const [playerId, card] of Object.entries(cards)) {
-      const player = players.value.get(playerId);
+      const player = players.value.get(playerId)
       if (player) {
-        player.currentCard = card;
+        player.currentCard = card
       }
 
       // Set local player's card
       if (playerId === localPlayerId.value) {
-        localPlayerCard.value = card;
-        console.log('[Store] Set localPlayerCard for round', roundNumber, ':', card);
+        localPlayerCard.value = card
+        console.log('[Store] Set localPlayerCard for round', roundNumber, ':', card)
       }
     }
 
-    saveState();
+    saveState()
   }
 
   function addStroke(stroke: DrawStroke) {
     currentStrokes.value.push(stroke)
+  }
+
+  // removeStrokeById removed; eraser is implemented as a white stroke overlay
+
+  function setStrokes(strokes: DrawStroke[]) {
+    currentStrokes.value = strokes || []
   }
 
   function clearStrokes() {
@@ -179,7 +197,7 @@ export const useGameStore = defineStore('game', () => {
     currentRound.value = 0
     maxRounds.value = GAME_SETTINGS.rounds.DEFAULT
     difficulty.value = GAME_SETTINGS.difficulty.DEFAULT
-    gamePhase.value = 'lobby'
+    gamePhase.value = 'waiting-room'
     roundStartTime.value = undefined
     currentStrokes.value = []
     localPlayerCard.value = undefined
@@ -193,7 +211,7 @@ export const useGameStore = defineStore('game', () => {
 
   function getFinalScores() {
     return playersList.value
-      .map(p => ({
+      .map((p) => ({
         playerId: p.id,
         playerName: p.name,
         score: p.score,
@@ -311,5 +329,6 @@ export const useGameStore = defineStore('game', () => {
     showDrawpad,
     showPadForRoom,
     setShowPadForRoom,
+    setStrokes,
   }
 })

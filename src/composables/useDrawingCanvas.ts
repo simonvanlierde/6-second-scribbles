@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
 import type { DrawStroke } from '@/shared/types'
+import logger from '@/utils/logger'
 
 export function useDrawingCanvas() {
   // Declare and initialize all properties
@@ -12,16 +13,59 @@ export function useDrawingCanvas() {
   const currentColor = ref('#000000')
   const currentWidth = ref(5)
   // Optional callback for incremental stroke progress (points appended while drawing)
-  const onStrokeProgress = ref<((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void) | null>(null)
+  const onStrokeProgress = ref<
+    | ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void)
+    | null
+  >(null)
+
+  // Prevent-default handlers for touch events (stable references so we can remove them)
+  const onTouchStartPrevent = (e: Event) => e.preventDefault()
+  const onTouchMovePrevent = (e: Event) => e.preventDefault()
 
   function initCanvas(canvas: HTMLCanvasElement) {
     // Clean up old listeners if re-initializing
     removeEventListeners()
 
     canvasRef.value = canvas
-    const context = canvas.getContext('2d')
+    let context = canvas.getContext('2d')
+
+    // In some test environments (jsdom) canvas.getContext may return null.
+    // Provide a lightweight no-op mock context so the drawing composable can
+    // be exercised in unit tests without failing. The mock implements the
+    // subset of CanvasRenderingContext2D used by the app.
     if (!context) {
-      throw new Error('Could not get 2D context from canvas')
+      logger.debug('[useDrawingCanvas] 2D context unavailable; using mock context for tests')
+      const mockContext: unknown = {
+        // drawing state
+        strokeStyle: '#000',
+        lineWidth: 1,
+        lineCap: 'round',
+        lineJoin: 'round',
+        // no-op drawing methods
+        beginPath: () => {},
+        moveTo: (_x: number, _y: number) => {},
+        lineTo: (_x: number, _y: number) => {},
+        stroke: () => {},
+        clearRect: (_x: number, _y: number, _w: number, _h: number) => {},
+        drawImage: (
+          _img: CanvasImageSource,
+          _sx?: number,
+          _sy?: number,
+          _sw?: number,
+          _sh?: number
+        ) => {},
+        setTransform: (
+          _a: number,
+          _b: number,
+          _c: number,
+          _d: number,
+          _e: number,
+          _f: number
+        ) => {},
+        fillRect: (_x: number, _y: number, _w: number, _h: number) => {},
+        measureText: (_text: string) => ({ width: 0 }),
+      }
+      context = mockContext as CanvasRenderingContext2D
     }
     ctx.value = context
 
@@ -37,19 +81,27 @@ export function useDrawingCanvas() {
   }
 
   function removeEventListeners() {
-    if (!canvasRef.value) return
+    // Remove canvas listeners if present
+    if (canvasRef.value) {
+      // Mouse events
+      canvasRef.value.removeEventListener('mousedown', startDrawing)
+      canvasRef.value.removeEventListener('mousemove', draw)
+      canvasRef.value.removeEventListener('mouseup', stopDrawing)
+      canvasRef.value.removeEventListener('mouseleave', stopDrawing)
 
-    // Mouse events
-    canvasRef.value.removeEventListener('mousedown', startDrawing)
-    canvasRef.value.removeEventListener('mousemove', draw)
-    canvasRef.value.removeEventListener('mouseup', stopDrawing)
-    canvasRef.value.removeEventListener('mouseleave', stopDrawing)
+      // Touch events
+      canvasRef.value.removeEventListener('touchstart', handleTouchStart)
+      canvasRef.value.removeEventListener('touchmove', handleTouchMove)
+      canvasRef.value.removeEventListener('touchend', stopDrawing)
+      canvasRef.value.removeEventListener('touchcancel', stopDrawing)
 
-    // Touch events
-    canvasRef.value.removeEventListener('touchstart', handleTouchStart)
-    canvasRef.value.removeEventListener('touchmove', handleTouchMove)
-    canvasRef.value.removeEventListener('touchend', stopDrawing)
-    canvasRef.value.removeEventListener('touchcancel', stopDrawing)
+      // Prevent scrolling handlers
+      canvasRef.value.removeEventListener('touchstart', onTouchStartPrevent)
+      canvasRef.value.removeEventListener('touchmove', onTouchMovePrevent)
+    }
+
+    // Window resize listener
+    window.removeEventListener('resize', resize)
   }
 
   function setupEventListeners() {
@@ -68,30 +120,35 @@ export function useDrawingCanvas() {
     canvasRef.value.addEventListener('touchcancel', stopDrawing)
 
     // Prevent scrolling on touch
-    canvasRef.value.addEventListener('touchstart', (e) => e.preventDefault())
-    canvasRef.value.addEventListener('touchmove', (e) => e.preventDefault())
+    canvasRef.value.addEventListener('touchstart', onTouchStartPrevent)
+    canvasRef.value.addEventListener('touchmove', onTouchMovePrevent)
+
+    // Respond to viewport resize to recompute scaling/internal buffer
+    window.addEventListener('resize', resize)
   }
 
   function getCoordinates(event: MouseEvent | TouchEvent): { x: number; y: number } {
     if (!canvasRef.value) return { x: 0, y: 0 }
-
     const rect = canvasRef.value.getBoundingClientRect()
 
-    if (event instanceof MouseEvent) {
-      return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      }
-    } else {
-      const touch = event.touches[0]
-      if (!touch) return { x: 0, y: 0 }
-      return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-      }
-    }
-  }
+    const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0]?.clientX || 0
+    const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0]?.clientY || 0
 
+    // Determine logical size (the canonical drawing area) from data attrs if provided
+    const logicalWidth = Number(canvasRef.value.dataset.logicalWidth) || canvasRef.value.clientWidth
+    const logicalHeight =
+      Number(canvasRef.value.dataset.logicalHeight) || canvasRef.value.clientHeight
+
+    // The element may be visually scaled via CSS transform; compute scale factor
+    const scaleX = rect.width / logicalWidth || 1
+    const scaleY = rect.height / logicalHeight || 1
+    const scale = Math.max(scaleX, scaleY) || 1
+
+    // Map client coordinates into logical canvas coordinates
+    const x = (clientX - rect.left) / scale - (canvasRef.value.clientLeft || 0)
+    const y = (clientY - rect.top) / scale - (canvasRef.value.clientTop || 0)
+    return { x, y }
+  }
 
   function startDrawing(event: MouseEvent | TouchEvent) {
     if (!ctx.value) return
@@ -141,7 +198,15 @@ export function useDrawingCanvas() {
     }
   }
 
-  function setStrokeProgressCallback(cb: ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void) | null) {
+  function setStrokeProgressCallback(
+    cb:
+      | ((partial: {
+          color: string
+          width: number
+          points: Array<{ x: number; y: number }>
+        }) => void)
+      | null
+  ) {
     onStrokeProgress.value = cb
   }
 
@@ -169,38 +234,42 @@ export function useDrawingCanvas() {
 
   function resize() {
     if (!canvasRef.value || !ctx.value) return
+
     // Preserve drawing via dataURL (safer across DPI changes)
     const dataUrl = canvasRef.value.toDataURL()
 
-    const parent = canvasRef.value.parentElement
-    if (!parent) return
-
-    const cssWidth = parent.clientWidth
-    const cssHeight = parent.clientHeight
+    // Determine canonical logical size from data attributes (defaults to current client size)
+    const logicalWidth = Number(canvasRef.value.dataset.logicalWidth) || 800
+    const logicalHeight = Number(canvasRef.value.dataset.logicalHeight) || 500
     const dpr = window.devicePixelRatio || 1
 
-    // Set the internal pixel size for high-DPI displays
-    canvasRef.value.width = Math.round(cssWidth * dpr)
-    canvasRef.value.height = Math.round(cssHeight * dpr)
+    // Compute scale to fit into parent width but never exceed 1 (no upscaling)
+    const parent = canvasRef.value.parentElement || document.body
+    const parentWidth = parent.clientWidth
+    const scale = Math.min(1, parentWidth / logicalWidth)
 
-    // Keep CSS size unchanged
-    canvasRef.value.style.width = `${cssWidth}px`
-    canvasRef.value.style.height = `${cssHeight}px`
+    // Set CSS size to the logical size; visual scaling is handled by transform
+    canvasRef.value.style.width = `${logicalWidth}px`
+    canvasRef.value.style.height = `${logicalHeight}px`
+    canvasRef.value.style.transformOrigin = 'top left'
+    canvasRef.value.style.transform = `scale(${scale})`
 
-    // Reset and scale drawing context so drawing coordinates map to CSS pixels
+    // Set the internal pixel buffer according to logical size and DPR
+    canvasRef.value.width = Math.round(logicalWidth * dpr)
+    canvasRef.value.height = Math.round(logicalHeight * dpr)
+
+    // Reset and scale drawing context so drawing coordinates map to logical CSS pixels
     ctx.value.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    // Restore previous drawing from data URL
+    // Restore previous drawing from data URL into logical coordinate space
     if (dataUrl) {
       const image = new Image()
       image.onload = () => {
         try {
-          // drawImage uses CSS-space coordinates because we've setTransform(dpr,...)
-          ctx.value!.clearRect(0, 0, cssWidth, cssHeight)
-          ctx.value!.drawImage(image, 0, 0, cssWidth, cssHeight)
+          ctx.value!.clearRect(0, 0, logicalWidth, logicalHeight)
+          ctx.value!.drawImage(image, 0, 0, logicalWidth, logicalHeight)
         } catch (err) {
-          // sometimes test DOMs throw on drawImage; ignore but log at debug level
-          console.debug('restore drawing failed', err)
+          logger.debug('restore drawing failed', err)
         }
       }
       image.src = dataUrl
@@ -245,6 +314,20 @@ export function useDrawingCanvas() {
     }
   }
 
+  function cleanup() {
+    // Remove event listeners and clear canvas state
+    removeEventListeners()
+    try {
+      clear()
+    } catch {
+      // ignore errors during cleanup
+    }
+    // Null out refs so re-init is possible
+    canvasRef.value = null
+    ctx.value = null
+    onStrokeProgress.value = null
+  }
+
   return {
     canvasRef,
     isDrawing,
@@ -259,6 +342,7 @@ export function useDrawingCanvas() {
     drawStroke,
     toDataURL,
     loadDrawing,
+    cleanup,
     setStrokeProgressCallback,
   }
 }

@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useGameStore } from '@/stores/game'
-import { useGameConnection } from '@/composables/useGameConnection'
-import { clearGameEngine } from '@/composables/gameEngineInstance'
+import { useLeaveRoom } from '@/composables/useLeaveRoom'
 
 const store = useGameStore()
-const router = useRouter()
-const { disconnect } = useGameConnection()
+const { leave: leaveRoom } = useLeaveRoom()
 
-function leaveRoom() {
-  disconnect()
-  clearGameEngine()
-  store.reset()
-  router.push('/')
+// Confirmation modal for leaving results screen
+const showLeaveWarning = ref(false)
+
+function showLeaveConfirmation() {
+  showLeaveWarning.value = true
+}
+
+function confirmLeave() {
+  showLeaveWarning.value = false
+  leaveRoom()
 }
 
 const countdown = ref(5)
@@ -76,8 +79,10 @@ onMounted(() => {
 <template>
   <div class="results-screen">
     <div class="container">
-      <div style="display: flex; justify-content: flex-end">
-        <button class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
+      <div style="display: flex; justify-content: flex-start; margin-bottom: 1rem">
+        <button class="btn-leave-small" @click="showLeaveConfirmation" title="Leave Game">
+          🚪←
+        </button>
       </div>
       <h1>Round {{ store.currentRound }} Results</h1>
 
@@ -123,6 +128,15 @@ onMounted(() => {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-model="showLeaveWarning"
+    title="Leave Game?"
+    message="Are you sure you want to leave the game? You will return to the lobby."
+    confirmText="Leave"
+    cancelText="Cancel"
+    @confirm="confirmLeave"
+  />
 </template>
 
 <style scoped>
@@ -301,4 +315,29 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.btn-leave-small {
+  padding: 0.375rem 0.5rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #495057;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  opacity: 0.8;
+}
+
+.btn-leave-small:hover {
+  background-color: rgba(255, 255, 255, 1);
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Modal styles are provided by ConfirmDialog component */
 </style>

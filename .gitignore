@@ -32,6 +32,7 @@ Thumbs.db
 !.vscode/settings.json
 .idea/
 .claude/
+.github/instructions/
 *.suo
 *.ntvs*
 *.njsproj

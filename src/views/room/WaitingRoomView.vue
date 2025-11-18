@@ -1,26 +1,42 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useGameStore } from '@/stores/game'
 import { useGameConnection } from '@/composables/useGameConnection'
-import { initGameEngine, clearGameEngine } from '@/composables/gameEngineInstance'
+import { initGameEngine } from '@/composables/gameEngineInstance'
+import { useLeaveRoom } from '@/composables/useLeaveRoom'
 import { GAME_SETTINGS } from '@/config/gameConfig'
 import type { Difficulty } from '@/shared/types'
 import SharedDrawpad from '@/components/SharedDrawpad.vue'
 import { useNotifications } from '@/composables/notifications'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import logger from '@/utils/logger'
 
 const route = useRoute()
 const router = useRouter()
 const store = useGameStore()
-const { send, disconnect } = useGameConnection()
+const { send } = useGameConnection()
+const { leave: leaveRoom } = useLeaveRoom()
+
+// Ensure we request the latest game/room state when this view mounts so the
+// shared drawpad strokes (persisted server-side) are available immediately
+// even if the user hasn't opened the drawpad yet.
+onMounted(() => {
+  try {
+    send({ type: 'request_game_state', playerId: store.localPlayerId })
+  } catch (err) {
+    // send is a no-op if the socket isn't open yet; ignore errors here
+    // Log at debug level so developers can inspect failures when DEBUG=true
+    logger.debug('[WaitingRoom] request_game_state send failed', err)
+  }
+})
 
 const difficulty = ref<Difficulty>(GAME_SETTINGS.difficulty.DEFAULT)
 const rounds = ref<number>(GAME_SETTINGS.rounds.DEFAULT)
 const roundLength = ref<number>(GAME_SETTINGS.roundLengthSeconds.DEFAULT)
 const showLeaveWarning = ref(false)
 const roundsError = ref<string | null>(null)
-const showCopyTooltip = ref(false)
 // Persisted per-user in the store
 const showDrawpad = computed({
   get: () => store.showDrawpad,
@@ -54,31 +70,43 @@ function broadcastSettings() {
 
 // Listen for clear command: host triggers a clear message; SharedDrawpad will
 // react to store changes / server messages and clear its local canvas.
-function handleClear() {
-  if (store.isHost) {
-    send({ type: 'drawpad_clear', playerId: store.localPlayerId })
-  }
-}
 
 function toggleDrawpad() {
   const newVal = !showDrawpad.value
   showDrawpad.value = newVal
-
-  // If we are host, broadcast visibility change to everyone
-  if (store.isHost) {
-    send({ type: 'pad_visibility', playerId: store.localPlayerId, visible: newVal })
-  }
 }
 
 // SharedDrawpad handles incremental stroke sending, rendering, and clear events.
 
+// Host-level drawpad controls (visibility and clear) state
+const showClearConfirm = ref(false)
+const { showNotification } = useNotifications()
+
+function hostToggleRoomVisibility() {
+  const newVal = !store.showPadForRoom
+  store.setShowPadForRoom(newVal)
+  send({ type: 'pad_visibility', playerId: store.localPlayerId, visible: newVal })
+}
+
+function promptClearForEveryone() {
+  // open confirm dialog (we will not offer undo for shared clears)
+  showClearConfirm.value = true
+}
+
+function doClearForEveryoneConfirmed() {
+  // send clear and show a plain notification (no undo for shared clears)
+  send({ type: 'drawpad_clear', playerId: store.localPlayerId })
+  showClearConfirm.value = false
+  showNotification('Shared pad cleared — this action cannot be undone')
+}
+
 function startGame() {
   if (!canStart.value) {
-    console.log('[UI] Cannot start game. canStart:', canStart.value)
+    logger.info('[UI] Cannot start game. canStart:', canStart.value)
     return
   }
 
-  console.log(
+  logger.info(
     '[UI] Starting game with difficulty:',
     difficulty.value,
     'Rounds:',
@@ -93,7 +121,7 @@ function startGame() {
     rounds: rounds.value || GAME_SETTINGS.rounds.DEFAULT,
     roundLength: roundLength.value || GAME_SETTINGS.roundLengthSeconds.DEFAULT,
   }
-  console.log('[UI] Sending start_game message:', start_game_message)
+  logger.debug('[UI] Sending start_game message:', start_game_message)
 
   // Broadcast start_game message to all players
   send(start_game_message)
@@ -111,10 +139,8 @@ async function copyRoomCode() {
     // Show a small toast notification
     const { showNotification } = useNotifications()
     showNotification('Copied!')
-    showCopyTooltip.value = true
-    setTimeout(() => (showCopyTooltip.value = false), 800)
   } catch (err) {
-    console.error('Failed to copy room code:', err)
+    logger.error('Failed to copy room code:', err)
   }
 }
 
@@ -122,15 +148,8 @@ function showLeaveConfirmation() {
   showLeaveWarning.value = true
 }
 
-function cancelLeave() {
-  showLeaveWarning.value = false
-}
-
 function confirmLeave() {
-  disconnect()
-  clearGameEngine()
-  store.reset()
-  router.push('/')
+  leaveRoom()
 }
 
 function adjustRoundLength(delta: number) {
@@ -170,21 +189,24 @@ watch(rounds, (val) => {
   }
 })
 
-// Persist roundLength to store when it changes
+// Update roundLength in store when it changes (server will persist)
 watch(roundLength, (val) => {
   if (Number.isFinite(val)) {
-    // store exposes roundLength ref; assign and save
+    // store exposes roundLength ref; assign
     store.roundLength = val
-    store.saveState()
-    // Broadcast to other players if host
+    // Broadcast to other players if host (server will persist)
     if (store.isHost) {
       broadcastSettings()
     }
   }
 })
 
-// Watch difficulty changes and broadcast
-watch(difficulty, () => {
+// Watch difficulty changes: persist to store and broadcast if host
+watch(difficulty, (val) => {
+  // val should be a Difficulty string; persist to store
+  if (typeof val === 'string') {
+    store.setDifficulty(val as Difficulty)
+  }
   if (store.isHost) {
     broadcastSettings()
   }
@@ -230,7 +252,7 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   <div class="screen">
     <div class="container">
       <div class="header-with-back">
-        <button class="btn btn-secondary btn-back" @click="showLeaveConfirmation">← Back</button>
+        <button class="btn btn-back" @click="showLeaveConfirmation">→🚪 Leave room</button>
         <h1>🎨 Room: {{ roomCode }}</h1>
       </div>
 
@@ -272,9 +294,8 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
               {{ GAME_SETTINGS.rounds.MAX }}</small
             >
           </div>
-
-          <!-- Advanced settings for round time -->
-          <details>
+          <!-- Advanced settings should take full width underneath other controls -->
+          <details class="advanced-settings-fullwidth">
             <summary>Advanced Settings</summary>
             <div class="setting-group">
               <label for="round-time">Round Time (seconds):</label>
@@ -297,20 +318,19 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
               </div>
             </div>
           </details>
+
           <div class="setting-group">
             <label></label>
             <div v-if="roundsError" class="input-error">{{ roundsError }}</div>
           </div>
         </div>
 
-        <!-- Host controls -->
         <div v-if="store.isHost">
           <button class="btn btn-primary" :disabled="!canStart" @click="startGame">
             {{ canStart ? 'Start Game' : 'Waiting for players (need 2+)' }}
           </button>
         </div>
 
-        <!-- Non-host: Show read-only game settings and waiting message -->
         <div v-else class="non-host-section">
           <div :class="['settings-preview-compact', { 'settings-flash': settingsFlash }]">
             <strong>Game Settings:</strong>
@@ -327,69 +347,78 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
           </p>
         </div>
 
-        <!-- Shared Mini Drawpad -->
-        <div class="drawpad-section">
-          <div class="drawpad-header">
-            <div class="drawpad-title">
-              <h3>🎨 Doodle While You Wait!</h3>
-            </div>
-            <div class="drawpad-controls">
-              <button v-if="store.isHost" class="btn btn-small" @click="handleClear">
-                Clear drawpad for everyone
-              </button>
-              <button
-                v-if="store.isHost"
-                class="btn btn-small"
-                @click="
-                  () => {
-                    store.setShowPadForRoom(!store.showPadForRoom)
-                    send({
-                      type: 'pad_visibility',
-                      playerId: store.localPlayerId,
-                      visible: store.showPadForRoom,
-                    })
-                  }
-                "
-              >
-                {{
-                  store.showPadForRoom ? 'Hide drawpad for everyone' : 'Show drawpad for everyone'
-                }}
-              </button>
-              <!-- Local visibility toggle for this client -->
-              <button class="btn btn-small" @click="toggleDrawpad">
-                {{ showDrawpad ? 'Hide pad' : 'Show pad' }}
-              </button>
-            </div>
-          </div>
-
-          <div v-if="store.showPadForRoom && store.showDrawpad" class="drawpad-container">
-            <SharedDrawpad />
-          </div>
-        </div>
-
         <div class="share-room">
           <p>Share this room code with friends:</p>
-          <div class="room-code-share">
+          <div class="room-code-share" style="position: relative">
             <span class="room-code-display">{{ roomCode }}</span>
             <div style="display: inline-flex; align-items: center; gap: 0.5rem">
               <button class="btn btn-small" @click="copyRoomCode">Copy</button>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+        <!-- per-client toggle: always available when the room allows the pad (host can still hide for everyone from SharedDrawpad) -->
+        <div class="share-drawpad-divider" />
+        <div style="display: flex; justify-content: center; margin-top: 0.5rem; gap: 0.5rem">
+          <!-- per-client toggle: only when the room allows the pad; toggles local visibility -->
+          <button
+            v-if="store.showPadForRoom"
+            :class="['btn btn-small btn-personal']"
+            @click="toggleDrawpad"
+          >
+            {{ showDrawpad ? (store.isHost ? 'Hide pad for me' : 'Hide pad') : 'Show pad' }}
+          </button>
+          <!-- Host-level controls: hide/show for everyone and clear -->
+          <div v-if="store.isHost" style="display: flex; gap: 0.5rem; align-items: center">
+            <button class="btn btn-small btn-host" @click="hostToggleRoomVisibility">
+              {{ store.showPadForRoom ? 'Hide pad for everyone' : 'Show pad for everyone' }}
+            </button>
+            <button
+              v-if="store.showPadForRoom"
+              class="btn btn-small btn-host btn-danger"
+              @click="promptClearForEveryone"
+            >
+              Clear pad for everyone
+            </button>
+          </div>
+          <!-- host controls above handle both show/hide and clearing; no duplicate banner needed -->
+        </div>
 
-    <!-- Leave confirmation modal -->
-    <div v-if="showLeaveWarning" class="modal-overlay" @click="cancelLeave">
-      <div class="modal-content" @click.stop>
-        <h2>Leave Room?</h2>
-        <p>Are you sure you want to leave this room?</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="cancelLeave">Cancel</button>
-          <button class="btn btn-danger" @click="confirmLeave">Leave</button>
+        <!-- divider between share code and drawpad -->
+        <div class="share-drawpad-divider" />
+
+        <div
+          v-if="store.showPadForRoom && store.showDrawpad"
+          class="drawpad-section"
+          style="border-top: 1px solid #dee2e6; margin-top: 1.5rem; padding-top: 1.5rem"
+        >
+          <div class="drawpad-controls">
+            <!-- SharedDrawpad will show host-only global controls; WaitingRoom only shows local toggle above -->
+          </div>
+
+          <div v-if="store.showDrawpad" class="drawpad-container">
+            <!-- waiting room uses a slightly smaller logical canvas to avoid horizontal scrolling on smaller laptops -->
+            <SharedDrawpad :logicalWidth="680" :logicalHeight="420" />
+          </div>
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model="showLeaveWarning"
+      title="Leave Room?"
+      message="Are you sure you want to leave this room?"
+      confirmText="Leave"
+      cancelText="Cancel"
+      @confirm="confirmLeave"
+    />
+    <ConfirmDialog
+      v-model="showClearConfirm"
+      title="Clear shared pad"
+      message="This will clear the shared draw pad for everyone. This action cannot be undone. Continue?"
+      confirmText="Clear"
+      cancelText="Cancel"
+      @confirm="doClearForEveryoneConfirmed"
+    />
   </div>
 </template>
 
@@ -449,6 +478,8 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   gap: 1rem;
   margin: 1.5rem 0;
   flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
 }
 
 .setting-group {
@@ -686,53 +717,7 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   letter-spacing: 0.1em;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-content h2 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.modal-content p {
-  margin-bottom: 1.5rem;
-  color: #666;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-}
+/* Modal styles are provided by ConfirmDialog component */
 
 .copy-tooltip {
   position: absolute;
@@ -747,6 +732,42 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   transform-origin: top right;
   animation: pop 220ms ease;
   z-index: 100;
+}
+
+/* Advanced settings should clear the flex flow and span full width below other controls */
+.advanced-settings-fullwidth {
+  width: 100%;
+  display: block;
+  margin-top: 0.75rem;
+}
+.advanced-settings-fullwidth .setting-group {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Visual divider between share-room and drawpad */
+.share-drawpad-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.12));
+  margin: 1rem 0 1.25rem 0;
+  border-radius: 1px;
+}
+
+/* Host personal hide button - make it visually distinctive */
+
+/* Host-level controls: yellow styling */
+.btn-host {
+  background: linear-gradient(180deg, #fff4cc, #ffe082);
+  border: 1px solid #ffd54f;
+  color: #5a3e00;
+  font-weight: 600;
+}
+
+/* Personal hide/show button for individuals (gray) */
+.btn-personal {
+  background: linear-gradient(180deg, #f5f5f5, #e9e9e9);
+  border: 1px solid #d0d0d0;
+  color: #333;
 }
 
 @keyframes pop {

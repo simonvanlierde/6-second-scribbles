@@ -8,7 +8,7 @@ const props = defineProps({
   length: { type: Number, default: 6 },
 })
 
-const emit = defineEmits(['update:modelValue', 'complete'])
+const emit = defineEmits(['update:modelValue', 'complete', 'enter'])
 
 const codeInputs = ref<string[]>(Array.from({ length: props.length }, () => ''))
 const inputRefs: Array<HTMLInputElement | null> = []
@@ -70,6 +70,14 @@ function onKeyDown(e: KeyboardEvent, idx: number) {
   } else if (e.key === 'ArrowRight') {
     focusInput(Math.min(idx + 1, props.length - 1))
   }
+
+  // If Enter is pressed and code is complete, emit complete
+  if (e.key === 'Enter') {
+    const val = combined.value
+    if (val.length === props.length) {
+      emit('enter', val)
+    }
+  }
 }
 
 function onPaste(e: ClipboardEvent) {
@@ -113,56 +121,27 @@ onMounted(() => {
   </div>
 </template>
 
+<!-- styles moved to src/assets/main.css -->
+
 <style scoped>
 .room-code-inputs {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.5rem;
   justify-content: center;
   align-items: center;
+  margin-top: 0.5rem;
 }
 .code-input {
-  /* slightly wider/taller so characters aren't clipped; smaller font for clarity */
-  width: 2.9rem;
-  height: 3.2rem;
-  box-sizing: border-box;
-  padding: 0.15rem 0;
+  width: 2.25rem;
+  height: 2.75rem;
   text-align: center;
-  font-size: 1rem;
-  line-height: 1.1rem;
+  font-size: 1.25rem;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', monospace;
+  border-radius: 6px;
+  outline: none;
 }
 .code-input:focus {
   border-color: #5b8def;
   box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.12);
-}
-.code-input {
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 120ms ease;
-}
-
-/* Larger touch targets on small screens */
-@media (max-width: 480px) {
-  .code-input {
-    width: 3.6rem;
-    height: 4rem;
-    font-size: 1.2rem;
-    padding: 0.2rem 0;
-  }
-  .room-code-inputs {
-    gap: 0.6rem;
-  }
-}
-.sr-only {
-  position: absolute !important;
-  height: 1px;
-  width: 1px;
-  overflow: hidden;
-  clip: rect(1px, 1px, 1px, 1px);
-  white-space: nowrap;
 }
 </style>

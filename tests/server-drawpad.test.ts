@@ -3,34 +3,19 @@
 import { describe, expect, it } from 'vitest'
 
 import GameServer from '../src/server/index'
+import { createMockConnection, createMockRoom } from './helpers/mockRoom'
 
 // Minimal mock connection
-function createMockConnection(id: string) {
-  return {
-    id,
-    send: (_msg: string) => {},
-    close: () => {},
-  }
-}
 
 // Minimal mock room with broadcast capture
-function createMockRoom() {
-  const broadcasted: string[] = []
-  return {
-    id: 'test-room',
-    storage: { setAlarm: async () => {} },
-    broadcast: (msg: string) => broadcasted.push(msg),
-    getBroadcasts: () => broadcasted,
-  }
-}
 
 describe('GameServer drawpad relay', () => {
   it('relays draw_stroke to all clients', () => {
     const room = createMockRoom()
     const server = new (GameServer as any)(room)
 
-    const conn1 = createMockConnection('c1')
-    const conn2 = createMockConnection('c2')
+    const conn1 = createMockConnection('c1', room)
+    const conn2 = createMockConnection('c2', room)
 
     // Simulate two players joining
     server.onMessage(JSON.stringify({ type: 'join', playerId: 'p1', name: 'Host' }), conn1)
@@ -49,27 +34,27 @@ describe('GameServer drawpad relay', () => {
     expect(broadcasts.some((b: string) => b.includes('draw_stroke'))).toBe(true)
   })
 
-  it('only accepts drawpad_clear from host', () => {
+  it('only accepts drawpad_clear from host', async () => {
     const room = createMockRoom()
     const server = new (GameServer as any)(room)
 
-    const conn1 = createMockConnection('c1')
-    const conn2 = createMockConnection('c2')
+    const conn1 = createMockConnection('c1', room)
+    const conn2 = createMockConnection('c2', room)
 
-    server.onMessage(JSON.stringify({ type: 'join', playerId: 'p1', name: 'Host' }), conn1)
-    server.onMessage(JSON.stringify({ type: 'join', playerId: 'p2', name: 'Player' }), conn2)
+    await server.onMessage(JSON.stringify({ type: 'join', playerId: 'p1', name: 'Host' }), conn1)
+    await server.onMessage(JSON.stringify({ type: 'join', playerId: 'p2', name: 'Player' }), conn2)
 
     // Set host
-    server.hostId = 'p1'
+    server.state.hostId = 'p1'
 
     // Non-host tries to clear
-    server.onMessage(JSON.stringify({ type: 'drawpad_clear', playerId: 'p2' }), conn2)
+    await server.onMessage(JSON.stringify({ type: 'drawpad_clear', playerId: 'p2' }), conn2)
     let broadcasts = (room as any).getBroadcasts()
     // No broadcast expected
     expect(broadcasts.some((b: string) => b.includes('drawpad_clear'))).toBe(false)
 
     // Host clears
-    server.onMessage(JSON.stringify({ type: 'drawpad_clear', playerId: 'p1' }), conn1)
+    await server.onMessage(JSON.stringify({ type: 'drawpad_clear', playerId: 'p1' }), conn1)
     broadcasts = (room as any).getBroadcasts()
     expect(broadcasts.some((b: string) => b.includes('drawpad_clear'))).toBe(true)
   })

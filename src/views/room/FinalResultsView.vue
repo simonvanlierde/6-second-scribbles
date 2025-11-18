@@ -4,22 +4,41 @@ import { useRouter } from 'vue-router'
 
 import { useGameStore } from '@/stores/game'
 import { useGameConnection } from '@/composables/useGameConnection'
-import { clearGameEngine } from '@/composables/gameEngineInstance'
+import { useLeaveRoom } from '@/composables/useLeaveRoom'
+import logger from '@/utils/logger'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import computeDenseRanks from '@/utils/ranking'
+import type { PlayerScore, RankedItem } from '@/utils/ranking'
 
 const router = useRouter()
 const store = useGameStore()
-const { disconnect, send } = useGameConnection()
+const { send } = useGameConnection()
+const { leave: leaveRoom } = useLeaveRoom()
 const isReady = ref(false)
 const autoRestartTimeout = ref<number | null>(null)
+const showLeaveDialog = ref(false)
 
-const finalScores = computed(() => store.getFinalScores())
-const winner = computed(() => store.getWinner())
+const finalScores = computed<PlayerScore[]>(() => store.getFinalScores())
+
+// Use shared ranking util (dense ranking)
+const rankedScores = computed<RankedItem[]>(() => computeDenseRanks(finalScores.value))
+
+// Compute winners (could be multiple when tied for top score)
+const winners = computed<PlayerScore[]>(() => {
+  if (!rankedScores.value.length) return []
+  const first = rankedScores.value[0]
+  if (!first) return []
+  const topRank = first.rank
+  return rankedScores.value.filter((r) => r.rank === topRank).map((r) => r.player)
+})
+
+const winner = computed<PlayerScore | null>(() => (winners.value[0] ?? null) as PlayerScore | null)
 
 // Watch for game phase changes (when host starts new game)
 watch(
   () => store.gamePhase,
   (newPhase) => {
-    if (newPhase === 'lobby') {
+    if (newPhase === 'waiting-room') {
       // Host started a new game, redirect to waiting room
       clearAutoRestartTimeout()
       router.push(`/room/${store.roomCode}`)
@@ -36,12 +55,12 @@ watch(
 
     // Check if all players are ready
     if (newReadyCount > 0 && newReadyCount === store.totalPlayers) {
-      console.log('[ResultsView] All players ready. Auto-restart in 60 seconds.')
+      logger.info('[FinalResultsView] All players ready. Auto-restart in 60 seconds.')
 
       // Set timeout for auto-restart
       clearAutoRestartTimeout()
       autoRestartTimeout.value = window.setTimeout(() => {
-        console.log('[ResultsView] Auto-restart timeout reached. Restarting game.')
+        logger.info('[FinalResultsView] Auto-restart timeout reached. Restarting game.')
         playAgain()
       }, 60000) // 60 seconds
     }
@@ -57,27 +76,11 @@ function clearAutoRestartTimeout() {
 
 function playAgain() {
   if (store.isHost) {
-    // Host broadcasts restart_game message to all players
+    // Host broadcasts restart_game message to all players (including themselves)
     send({
       type: 'restart_game',
     })
-
-    // Clear scores for all players locally
-    store.playersList.forEach((player) => {
-      player.score = 0
-    })
-
-    // Reset round counter
-    store.currentRound = 0
-
-    // Reset game state to lobby
-    store.setGamePhase('lobby')
-
-    // Clear game engine for fresh start
-    clearGameEngine()
-
-    // Navigate back to waiting room where host can start new game
-    router.push(`/room/${store.roomCode}`)
+    // Server will handle phase change and broadcast - watcher will navigate
   } else {
     // Non-host indicates they're ready to play again
     isReady.value = true
@@ -88,13 +91,11 @@ function playAgain() {
   }
 }
 
-function leaveRoom() {
+function confirmLeaveRoom() {
   // Disconnect and go back to lobby
   clearAutoRestartTimeout()
-  disconnect()
-  clearGameEngine()
-  store.reset()
-  router.push('/')
+  // centralized leave handles disconnect, clearing engine, navigate then reset
+  leaveRoom()
 }
 
 onUnmounted(() => {
@@ -108,29 +109,49 @@ onUnmounted(() => {
       <h1>🏆 Game Over!</h1>
 
       <div class="card winner-card">
-        <div class="trophy-icon">🎉</div>
-        <h2>Winner: {{ winner?.playerName || 'Unknown' }}</h2>
-        <p class="winner-score">{{ winner?.score || 0 }} points</p>
+        <div class="trophy-icon"><font-awesome-icon icon="fa-solid fa-trophy" /></div>
+        <h2>
+          Winner:
+          <template v-if="winners.length > 1">
+            <!-- Show multiple winners joined by commas -->
+            <span class="multi-winners">{{ winners.map((w) => w.playerName).join(', ') }}</span>
+          </template>
+          <template v-else>
+            {{ winner?.playerName || 'Unknown' }}
+          </template>
+        </h2>
+        <p class="winner-score">
+          <!-- Show top score if present -->
+          {{ winners[0]?.score ?? 0 }} points
+        </p>
+        <p v-if="winners.length > 1" class="tie-note">It's a tie!</p>
       </div>
 
       <div class="card">
         <h2>Final Scores</h2>
         <div class="scores-list">
           <div
-            v-for="(player, index) in finalScores"
-            :key="player.playerId"
+            v-for="(item, index) in rankedScores"
+            :key="item.player.playerId"
             class="score-item"
             :class="{
-              winner: index === 0,
-              'current-player': player.playerId === store.localPlayerId,
+              winner: item.rank === 1,
+              'current-player': item.player.playerId === store.localPlayerId,
             }"
           >
-            <div class="rank">{{ index + 1 }}</div>
-            <div class="player-info">
-              <span class="player-name">{{ player.playerName }}</span>
-              <span v-if="player.playerId === store.localPlayerId" class="player-badge">(You)</span>
+            <div class="rank">
+              {{ item.rank }}
+              <span v-if="item.tiedWithPrevious" class="tie-badge">
+                <font-awesome-icon icon="fa-solid fa-equals" class="tie-icon" />
+              </span>
             </div>
-            <div class="player-score">{{ player.score }} pts</div>
+            <div class="player-info">
+              <span class="player-name">{{ item.player.playerName }}</span>
+              <span v-if="item.player.playerId === store.localPlayerId" class="player-badge"
+                >(You)</span
+              >
+            </div>
+            <div class="player-score">{{ item.player.score }} pts</div>
           </div>
         </div>
 
@@ -147,7 +168,7 @@ onUnmounted(() => {
             ✓ Ready for Next Game
           </button>
           <div v-else class="ready-indicator">✓ Ready! Waiting for host to start new game...</div>
-          <button class="btn btn-secondary" @click="leaveRoom">🚪 Leave Room</button>
+          <button class="btn btn-to-lobby" @click="showLeaveDialog = true">→🚪 Leave room</button>
         </div>
       </div>
 
@@ -169,6 +190,15 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model="showLeaveDialog"
+      title="Leave to Lobby?"
+      message="Are you sure you want to leave? You will return to the lobby."
+      confirmText="Leave"
+      cancelText="Stay"
+      @confirm="confirmLeaveRoom"
+    />
   </div>
 </template>
 
@@ -206,6 +236,34 @@ onUnmounted(() => {
   font-size: 1.5rem;
   font-weight: bold;
   margin: 0;
+}
+
+.tie-note {
+  margin-top: 0.5rem;
+  font-style: italic;
+  opacity: 0.95;
+}
+
+.tie-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-radius: 999px;
+  padding: 0.125rem 0.35rem;
+  font-weight: 700;
+}
+
+.tie-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.winner-card .multi-winners {
+  font-size: 1rem;
+  opacity: 0.95;
 }
 
 .scores-list {
