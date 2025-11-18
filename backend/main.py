@@ -89,6 +89,35 @@ async def root():
     }
 
 
+@app.get("/api/rooms/random")
+async def get_random_room():
+    """
+    Find a random public room that's available to join
+
+    Returns:
+    - room_code: The room code to join
+    - player_count: Current number of players in the room
+
+    Returns 404 if no available rooms found
+    """
+    room_code = room_manager.find_random_public_room(max_players=10)
+
+    if not room_code:
+        raise HTTPException(
+            status_code=404,
+            detail="No available public rooms found. Try creating a new room!"
+        )
+
+    room = room_manager.get_room(room_code)
+    player_count = len(room.players) if room else 0
+
+    return {
+        "room_code": room_code,
+        "player_count": player_count,
+        "max_players": 10
+    }
+
+
 @app.get("/api/categories")
 async def get_categories(
     difficulty: Optional[str] = None,
@@ -603,6 +632,15 @@ async def parse_message(data: str, room, websocket: WebSocket):
                 await room.broadcast(message)
             else:
                 print("[Server] Ignored pad_visibility from non-host connection")
+
+        elif msg_type == "privacy_changed":
+            # Only allow host to change room privacy
+            if sender_player_id and room.host_id and sender_player_id == room.host_id:
+                room.metadata.is_private = message.get("isPrivate", False)
+                print(f"[Server] Host updated room privacy to {message.get('isPrivate')}")
+                # Don't broadcast privacy changes - it's a backend-only setting
+            else:
+                print("[Server] Ignored privacy_changed from non-host connection")
 
         elif msg_type == "request_game_state":
             # Send current game state to the requester

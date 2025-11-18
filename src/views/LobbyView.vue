@@ -64,6 +64,42 @@ function joinRoom() {
   connect(code)
   router.push(`/room/${code}`)
 }
+
+async function joinRandomRoom() {
+  if (!playerName.value.trim()) {
+    error.value = 'Please enter your name'
+    return
+  }
+
+  error.value = ''
+
+  try {
+    const BACKEND_HOST = (import.meta as any).env?.VITE_BACKEND_HOST || 'http://localhost:8000'
+    const response = await fetch(`${BACKEND_HOST}/api/rooms/random`)
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        error.value = 'No available rooms found. Try creating a new room!'
+      } else {
+        error.value = 'Failed to find a room. Please try again.'
+      }
+      return
+    }
+
+    const data = await response.json()
+    const roomCode = data.room_code
+
+    const playerId = generatePlayerId()
+    store.setLocalPlayerAndSave(playerId, playerName.value.trim())
+    store.setRoomCodeAndSave(roomCode)
+
+    connect(roomCode)
+    router.push(`/room/${roomCode}`)
+  } catch (err) {
+    console.error('Error joining random room:', err)
+    error.value = 'Failed to connect. Please try again.'
+  }
+}
 </script>
 
 <template>
@@ -94,6 +130,8 @@ function joinRoom() {
 
           <div class="button-group">
             <button class="btn btn-primary" @click="createRoom">Create Room</button>
+            <div class="divider">or</div>
+            <button class="btn btn-random" @click="joinRandomRoom">🎲 Join Random Room</button>
             <div class="divider">or</div>
             <div class="input-group">
               <RoomCodeInput v-model="roomCodeModel" @complete="onCodeComplete" />
@@ -148,5 +186,17 @@ function joinRoom() {
 .room-code-inputs .code-input:focus {
   border-color: #5b8def;
   box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.12);
+}
+
+.btn-random {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-random:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 </style>

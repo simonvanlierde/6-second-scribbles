@@ -21,6 +21,7 @@ const roundLength = ref<number>(GAME_SETTINGS.roundLengthSeconds.DEFAULT)
 const showLeaveWarning = ref(false)
 const roundsError = ref<string | null>(null)
 const showCopyTooltip = ref(false)
+const isPrivateRoom = ref(false)
 // Persisted per-user in the store
 const showDrawpad = computed({
   get: () => store.showDrawpad,
@@ -67,6 +68,18 @@ function toggleDrawpad() {
   // If we are host, broadcast visibility change to everyone
   if (store.isHost) {
     send({ type: 'pad_visibility', playerId: store.localPlayerId, visible: newVal })
+  }
+}
+
+function togglePrivacy() {
+  // Only host can change privacy
+  if (store.isHost) {
+    send({
+      type: 'privacy_changed',
+      playerId: store.localPlayerId,
+      isPrivate: isPrivateRoom.value
+    })
+    console.log('[UI] Room privacy changed to:', isPrivateRoom.value)
   }
 }
 
@@ -297,6 +310,16 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
               </div>
             </div>
           </details>
+
+          <!-- Private Room Setting -->
+          <div class="setting-group">
+            <label>
+              <input type="checkbox" v-model="isPrivateRoom" @change="togglePrivacy" />
+              Private Room
+              <small class="privacy-hint">Private rooms won't appear in random room join</small>
+            </label>
+          </div>
+
           <div class="setting-group">
             <label></label>
             <div v-if="roundsError" class="input-error">{{ roundsError }}</div>
@@ -534,6 +557,18 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   color: #d9534f;
   font-size: 0.9rem;
   margin-top: 0.25rem;
+}
+
+.privacy-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.setting-group label input[type='checkbox'] {
+  margin-right: 0.5rem;
 }
 
 .non-host-section {

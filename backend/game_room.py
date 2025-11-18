@@ -33,6 +33,7 @@ class RoomMetadata:
     max_rounds: int = 5
     pad_visibility: bool = True
     ready_players: Set[str] = field(default_factory=set)
+    is_private: bool = False  # Private rooms don't appear in random join
 
 
 class GameRoom:
@@ -243,6 +244,35 @@ class RoomManager:
 
         for room_id in empty_rooms:
             await self.remove_room(room_id)
+
+    def find_random_public_room(self, max_players: int = 10) -> Optional[str]:
+        """
+        Find a random public room that's available to join
+
+        Criteria:
+        - Not private (is_private = False)
+        - Not full (< max_players)
+        - In lobby phase (not mid-game)
+        - Has at least 1 player (not empty)
+
+        Returns room_id if found, None otherwise
+        """
+        import random
+
+        available_rooms = []
+
+        for room_id, room in self.rooms.items():
+            # Check if room meets criteria
+            if (not room.metadata.is_private and
+                len(room.players) < max_players and
+                len(room.players) > 0 and
+                room.metadata.game_phase == "lobby"):
+                available_rooms.append(room_id)
+
+        if available_rooms:
+            return random.choice(available_rooms)
+
+        return None
 
 
 # Global room manager instance
