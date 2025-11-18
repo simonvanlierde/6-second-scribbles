@@ -61,15 +61,11 @@ export function useDrawingCanvas() {
     canvasRef.value.addEventListener('mouseup', stopDrawing)
     canvasRef.value.addEventListener('mouseleave', stopDrawing)
 
-    // Touch events for mobile
-    canvasRef.value.addEventListener('touchstart', handleTouchStart)
-    canvasRef.value.addEventListener('touchmove', handleTouchMove)
-    canvasRef.value.addEventListener('touchend', stopDrawing)
-    canvasRef.value.addEventListener('touchcancel', stopDrawing)
-
-    // Prevent scrolling on touch
-    canvasRef.value.addEventListener('touchstart', (e) => e.preventDefault())
-    canvasRef.value.addEventListener('touchmove', (e) => e.preventDefault())
+    // Touch events for mobile - using passive: false to allow preventDefault
+    canvasRef.value.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvasRef.value.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvasRef.value.addEventListener('touchend', stopDrawing, { passive: true })
+    canvasRef.value.addEventListener('touchcancel', stopDrawing, { passive: true })
   }
 
   function getCoordinates(event: MouseEvent | TouchEvent): { x: number; y: number } {
@@ -77,18 +73,42 @@ export function useDrawingCanvas() {
 
     const rect = canvasRef.value.getBoundingClientRect()
 
+    // Get the CSS dimensions (what the user sees)
+    const cssWidth = rect.width
+    const cssHeight = rect.height
+
+    // Get the internal canvas dimensions (actual resolution)
+    const canvasWidth = canvasRef.value.width
+    const canvasHeight = canvasRef.value.height
+
+    // Calculate scale factors
+    // Since we use setTransform(dpr, 0, 0, dpr, 0, 0), we work in CSS space
+    // So coordinates should be relative to CSS dimensions, not internal resolution
+
+    let clientX: number
+    let clientY: number
+
     if (event instanceof MouseEvent) {
-      return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      }
+      clientX = event.clientX
+      clientY = event.clientY
     } else {
       const touch = event.touches[0]
       if (!touch) return { x: 0, y: 0 }
-      return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-      }
+      clientX = touch.clientX
+      clientY = touch.clientY
+    }
+
+    // Convert to canvas-relative coordinates (CSS space)
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+
+    // Clamp to canvas bounds to prevent drawing outside
+    const clampedX = Math.max(0, Math.min(x, cssWidth))
+    const clampedY = Math.max(0, Math.min(y, cssHeight))
+
+    return {
+      x: clampedX,
+      y: clampedY,
     }
   }
 
@@ -146,10 +166,14 @@ export function useDrawingCanvas() {
   }
 
   function handleTouchStart(event: TouchEvent) {
+    // Prevent scrolling while drawing
+    event.preventDefault()
     startDrawing(event)
   }
 
   function handleTouchMove(event: TouchEvent) {
+    // Prevent scrolling while drawing
+    event.preventDefault()
     draw(event)
   }
 

@@ -109,10 +109,65 @@ onMounted(() => {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tool-group {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.tool-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 .mini-canvas {
   width: 100%;
   height: 200px;
   border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  touch-action: none; /* Prevent scrolling while drawing */
+  cursor: crosshair;
+}
+.drawpad-hint {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  text-align: center;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .mini-canvas {
+    height: 180px;
+  }
+
+  .canvas-tools {
+    font-size: 0.875rem;
+  }
+
+  .tool-group label {
+    font-size: 0.75rem;
+  }
+
+  .drawpad-hint {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mini-canvas {
+    height: 150px;
+  }
+
+  .canvas-tools {
+    gap: 0.375rem;
+  }
+
+  .btn-small {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+  }
 }
 </style>

@@ -600,16 +600,116 @@ function submitGuessesForPlayer(targetPlayerId: string) {
 }
 
 @media (max-width: 768px) {
+  .game-header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .round-info,
+  .score {
+    font-size: 0.875rem;
+  }
+
+  .timer {
+    font-size: 1.5rem;
+    padding: 0.375rem 1rem;
+    min-width: 80px;
+  }
+
+  .btn-leave {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
   .drawing-container {
     flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
   }
 
   .category-card {
     flex: 0 0 auto;
+    padding: 1rem;
+  }
+
+  .category-card h3 {
+    font-size: 1.25rem;
+  }
+
+  .canvas-container {
+    padding: 0.75rem;
+  }
+
+  .canvas-tools {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tool-group {
+    font-size: 0.875rem;
+  }
+
+  .drawing-canvas {
+    min-height: 300px;
+    /* Ensure canvas takes full width on mobile */
+    touch-action: none;
+    /* Prevent default touch actions for better drawing */
   }
 
   .guess-grid {
     grid-template-columns: 1fr;
+  }
+
+  .guessing-screen {
+    padding: 1rem;
+  }
+
+  .drawing-card {
+    padding: 1rem;
+  }
+
+  .drawing-display {
+    min-height: 200px;
+  }
+}
+
+/* Extra small devices (phones in portrait) */
+@media (max-width: 480px) {
+  .game-header {
+    font-size: 0.875rem;
+  }
+
+  .timer {
+    font-size: 1.25rem;
+    padding: 0.25rem 0.75rem;
+    min-width: 60px;
+  }
+
+  .drawing-container {
+    padding: 0.5rem;
+  }
+
+  .category-card {
+    padding: 0.75rem;
+  }
+
+  .items-list li {
+    font-size: 0.75rem;
+    padding: 0.375rem;
+  }
+
+  .drawing-canvas {
+    min-height: 250px;
+  }
+
+  .canvas-tools {
+    font-size: 0.75rem;
+  }
+
+  .guess-input {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 }
 </style>
