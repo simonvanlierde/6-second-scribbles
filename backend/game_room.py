@@ -42,12 +42,20 @@ class GameRoom:
     # Idle timeout configuration (3 minutes of inactivity during game)
     IDLE_TIMEOUT_MS = 3 * 60 * 1000
 
+    # Host transfer delay (1 second to allow for reconnections)
+    HOST_TRANSFER_DELAY_MS = 1000
+
+    # Maximum players per room
+    MAX_PLAYERS = 10
+
     def __init__(self, room_id: str):
         self.room_id = room_id
         self.players: Dict[str, PlayerInfo] = {}
         self.host_id: Optional[str] = None
         self.metadata = RoomMetadata()
         self._idle_check_task: Optional[asyncio.Task] = None
+        self._pending_host_transfer: Optional[asyncio.Task] = None
+        self._last_host_id: Optional[str] = None  # Track last host for reconnection
 
     async def start_idle_check(self):
         """Start periodic idle player check"""
@@ -96,7 +104,19 @@ class GameRoom:
                         pass
 
     async def add_player(self, player_id: str, name: str, websocket: WebSocket):
-        """Add a player to the room"""
+        """
+        Add a player to the room
+
+        Returns tuple: (player, is_reconnecting_host)
+        Raises ValueError if room is full
+        """
+        # Check if room is at capacity (but allow existing player to reconnect)
+        if player_id not in self.players and len(self.players) >= self.MAX_PLAYERS:
+            raise ValueError(f"Room is full (maximum {self.MAX_PLAYERS} players)")
+
+        # Check if this is the previous host reconnecting
+        is_reconnecting_host = (player_id == self._last_host_id and player_id not in self.players)
+
         categories = self._generate_categories_for_player()
         player = PlayerInfo(
             id=player_id,
@@ -107,11 +127,19 @@ class GameRoom:
         )
         self.players[player_id] = player
 
-        # If this is the first player, make them host
-        if len(self.players) == 1:
+        # Cancel pending host transfer if the host reconnected
+        if is_reconnecting_host and self._pending_host_transfer:
+            self._pending_host_transfer.cancel()
+            self._pending_host_transfer = None
             self.host_id = player_id
+            print(f"[GameRoom {self.room_id}] Host {name} ({player_id}) reconnected, host transfer cancelled")
 
-        return player
+        # If this is the first player, make them host
+        elif len(self.players) == 1:
+            self.host_id = player_id
+            self._last_host_id = player_id
+
+        return player, is_reconnecting_host
 
     async def remove_player(self, player_id: str):
         """Remove a player from the room"""
@@ -121,9 +149,40 @@ class GameRoom:
         # Handle host transfer if the host left
         if player_id == self.host_id:
             if len(self.players) > 0:
-                # Transfer host to the next player
+                # Schedule delayed host transfer to allow for reconnection
+                print(f"[GameRoom {self.room_id}] Host disconnected, scheduling transfer in {self.HOST_TRANSFER_DELAY_MS}ms...")
+
+                # Cancel any existing pending transfer
+                if self._pending_host_transfer:
+                    self._pending_host_transfer.cancel()
+
+                # Schedule new transfer
+                self._pending_host_transfer = asyncio.create_task(
+                    self._delayed_host_transfer(player_id)
+                )
+            else:
+                # No players left, room is effectively closed
+                self.host_id = None
+                self._last_host_id = None
+                print(f"[GameRoom {self.room_id}] Room is now empty")
+
+    async def _delayed_host_transfer(self, old_host_id: str):
+        """Transfer host after a delay, allowing for reconnection"""
+        try:
+            # Wait for the delay
+            await asyncio.sleep(self.HOST_TRANSFER_DELAY_MS / 1000)
+
+            # Check if host reconnected during the delay
+            if old_host_id in self.players:
+                print(f"[GameRoom {self.room_id}] Host reconnected, cancelling transfer")
+                self.host_id = old_host_id
+                return
+
+            # Transfer host if there are still players
+            if len(self.players) > 0:
                 new_host = list(self.players.values())[0]
                 self.host_id = new_host.id
+                self._last_host_id = new_host.id
 
                 # Notify all remaining players of the new host
                 await self.broadcast({
@@ -133,9 +192,13 @@ class GameRoom:
 
                 print(f"[GameRoom {self.room_id}] Host transferred to {new_host.name} ({new_host.id})")
             else:
-                # No players left, room is effectively closed
                 self.host_id = None
-                print(f"[GameRoom {self.room_id}] Room is now empty")
+                self._last_host_id = None
+
+        except asyncio.CancelledError:
+            print(f"[GameRoom {self.room_id}] Host transfer cancelled (host reconnected)")
+        finally:
+            self._pending_host_transfer = None
 
     def update_player_activity(self, player_id: str):
         """Update the last activity timestamp for a player"""

@@ -85,6 +85,24 @@ export function useGameConnection() {
     console.log('[WebSocket] Received:', message.type)
 
     switch (message.type) {
+      case 'join_error':
+        // Handle room full or other join errors
+        const errorMsg = (message as any).message || 'Unable to join room'
+        showNotification(errorMsg, 'error')
+        console.error('[WebSocket] Join error:', errorMsg)
+
+        // Redirect back to lobby
+        setTimeout(() => {
+          router.push('/')
+        }, 2000)
+        break
+
+      case 'host_restored':
+        // Host reconnected and retained host status
+        console.log('[WebSocket] Host status restored')
+        showNotification('Host status restored', 'success')
+        break
+
       case 'room_state':
         // Sync existing players when joining (including ourselves)
         message.players.forEach((p) => {

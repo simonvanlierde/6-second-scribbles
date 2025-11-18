@@ -500,20 +500,40 @@ async def parse_message(data: str, room, websocket: WebSocket):
             player_id = message.get("playerId")
             name = message.get("name")
 
-            await room.add_player(player_id, name, websocket)
+            try:
+                player, is_reconnecting_host = await room.add_player(player_id, name, websocket)
 
-            # Broadcast updated player list to everyone
-            all_players = room.get_player_list()
-            print(f"[Server] Broadcasting player_joined with players: {all_players}")
+                # Broadcast updated player list to everyone
+                all_players = room.get_player_list()
+                print(f"[Server] Broadcasting player_joined with players: {all_players}")
 
-            await room.broadcast({
-                "type": "player_joined",
-                "playerId": player_id,
-                "name": name,
-                "players": all_players,
-            })
+                await room.broadcast({
+                    "type": "player_joined",
+                    "playerId": player_id,
+                    "name": name,
+                    "players": all_players,
+                    "isHost": player_id == room.host_id,
+                })
 
-            return message
+                # If host reconnected, notify them
+                if is_reconnecting_host:
+                    await websocket.send_text(json.dumps({
+                        "type": "host_restored",
+                        "message": "You are still the host"
+                    }))
+
+                return message
+
+            except ValueError as e:
+                # Room is full
+                print(f"[Server] Player {name} ({player_id}) cannot join: {e}")
+                await websocket.send_text(json.dumps({
+                    "type": "join_error",
+                    "error": "room_full",
+                    "message": str(e)
+                }))
+                await websocket.close(code=1008, reason=str(e))
+                return None
 
         elif msg_type == "start_game":
             print(f"[Server] Raw start_game message: {json.dumps(message)}")

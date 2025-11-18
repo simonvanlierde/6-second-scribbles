@@ -26,6 +26,19 @@ function generatePlayerId(): string {
   return `player_${Date.now()}_${Math.random().toString(36).substring(7)}`
 }
 
+function getOrCreatePlayerId(): string {
+  // Try to get existing player ID from localStorage to avoid ghost players on reload
+  const existingId = localStorage.getItem('player_id')
+  if (existingId) {
+    return existingId
+  }
+
+  // Generate new ID and store it
+  const newId = generatePlayerId()
+  localStorage.setItem('player_id', newId)
+  return newId
+}
+
 function createRoom() {
   if (!playerName.value.trim()) {
     error.value = 'Please enter your name'
@@ -33,7 +46,7 @@ function createRoom() {
   }
 
   const roomCode = sharedGenerateRoomCode()
-  const playerId = generatePlayerId()
+  const playerId = getOrCreatePlayerId()
 
   store.setLocalPlayer(playerId, playerName.value.trim()) // Updated to use setLocalPlayer
   store.setRoomCode(roomCode)
@@ -55,7 +68,7 @@ function joinRoom() {
   }
 
   const code = roomCodeModel.value
-  const playerId = generatePlayerId()
+  const playerId = getOrCreatePlayerId()
 
   store.setLocalPlayerAndSave(playerId, playerName.value.trim())
   store.setRoomCodeAndSave(code)
@@ -89,7 +102,7 @@ async function joinRandomRoom() {
     const data = await response.json()
     const roomCode = data.room_code
 
-    const playerId = generatePlayerId()
+    const playerId = getOrCreatePlayerId()
     store.setLocalPlayerAndSave(playerId, playerName.value.trim())
     store.setRoomCodeAndSave(roomCode)
 
