@@ -139,6 +139,30 @@ npm run format         # Format code with Prettier
 npm run preview        # Preview the production build
 ```
 
+### Backend Testing
+
+The FastAPI backend includes a comprehensive test suite:
+
+```bash
+# Run all backend tests
+cd backend
+pytest
+
+# Run with coverage report
+pytest --cov=. --cov-report=html
+
+# Run specific test categories
+pytest -m integration     # Integration tests
+pytest -m "not slow"      # Skip slow tests
+
+# Using the Makefile (recommended)
+make test                 # Run all tests
+make coverage            # Run tests with coverage
+make ci                  # Run all CI checks
+```
+
+See `backend/README.md` for detailed testing documentation.
+
 ### Dev Tips
 
 * Vite's HMR means your frontend changes are instant.
@@ -146,6 +170,7 @@ npm run preview        # Preview the production build
 * Use the Vue DevTools browser extension to inspect the Pinia store state.
 * Check the Network tab in your browser's devtools to monitor WebSocket messages.
 * FastAPI provides automatic API documentation at `http://localhost:8000/docs`.
+* Run backend tests frequently to ensure API stability.
 
 ## 🚀 Deployment
 
