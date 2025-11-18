@@ -1,10 +1,117 @@
-# FastAPI Backend - Test Suite
+# FastAPI Backend
 
 ## Overview
 
-Comprehensive test suite for the Six Second Scribbles FastAPI backend using pytest with async support.
+Modern, scalable backend for Six Second Scribbles using:
+- **FastAPI** - High-performance async web framework
+- **PostgreSQL** - Reliable database for game data
+- **SQLAlchemy** - Async ORM for database operations
+- **RapidFuzz** - Fast fuzzy string matching for guess scoring
+- **WebSockets** - Real-time multiplayer communication
 
-## Installation
+## Features
+
+- ✅ PostgreSQL database for card/category storage
+- ✅ Fuzzy matching for guess validation (handles typos, plurals)
+- ✅ REST API for categories and cards
+- ✅ WebSocket support for real-time gameplay
+- ✅ Comprehensive test suite (90%+ coverage)
+- ✅ Database migrations with Alembic
+- ✅ Docker Compose for local development
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # For development
+```
+
+### 2. Setup Database
+
+Using Docker (recommended):
+```bash
+make db-setup  # Starts PostgreSQL, runs migrations, seeds data
+```
+
+Manual setup:
+```bash
+# Start PostgreSQL (via Docker or local install)
+docker-compose up -d
+
+# Run migrations
+alembic upgrade head
+
+# Seed database with card data
+python seed_data.py
+```
+
+### 3. Run Development Server
+
+```bash
+make dev
+# Or: uvicorn main:app --reload --port 8000
+```
+
+Visit:
+- API: http://localhost:8000
+- Interactive Docs: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Database Management
+
+```bash
+make db-up      # Start PostgreSQL container
+make db-down    # Stop PostgreSQL container
+make db-migrate # Run pending migrations
+make db-seed    # Seed database with card data
+make db-reset   # Clear and reseed database
+make db-setup   # Complete setup (up + migrate + seed)
+```
+
+## API Endpoints
+
+### Health Check
+```bash
+GET /  # API status
+```
+
+### Categories
+```bash
+GET /api/categories                # List all categories
+GET /api/categories?difficulty=easy  # Filter by difficulty
+GET /api/categories/{id}           # Get category with items
+```
+
+### Cards
+```bash
+GET /api/cards/random?difficulty=medium&count=5&player_count=4
+# Get random cards for a game
+```
+
+### Scoring
+```bash
+POST /api/score/guesses
+# Score player guesses with fuzzy matching
+Body: {
+  "guesses": ["cat", "elefant", "zebra"],
+  "correct_answers": ["cat", "elephant", "zebra"],
+  "alternatives": {}
+}
+```
+
+### Rooms
+```bash
+GET /rooms/{room_id}/status  # Get room status
+WS /party/{room_id}          # WebSocket for real-time gameplay
+```
+
+## Testing
+
+Comprehensive test suite with 90%+ coverage.
+
+### Installation
 
 Install development dependencies:
 

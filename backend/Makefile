@@ -1,4 +1,4 @@
-.PHONY: help install test test-watch coverage lint format type-check clean dev
+.PHONY: help install test test-watch coverage lint format type-check clean dev db-up db-down db-migrate db-seed db-reset db-setup
 
 help:  ## Show this help message
 	@echo 'Usage: make [target]'
@@ -44,6 +44,28 @@ clean:  ## Clean up generated files
 	rm -rf __pycache__ .pytest_cache .coverage htmlcov .ruff_cache .mypy_cache
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+
+db-up:  ## Start PostgreSQL database
+	docker-compose up -d
+
+db-down:  ## Stop PostgreSQL database
+	docker-compose down
+
+db-migrate:  ## Run database migrations
+	alembic upgrade head
+
+db-seed:  ## Seed database with card data
+	python seed_data.py
+
+db-reset:  ## Reset database (clear and reseed)
+	python seed_data.py --clear
+	python seed_data.py
+
+db-setup:  ## Complete database setup (start, migrate, seed)
+	make db-up
+	sleep 3
+	make db-migrate
+	make db-seed
 
 dev:  ## Run development server
 	uvicorn main:app --reload --port 8000

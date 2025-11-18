@@ -8,13 +8,25 @@ Architecture: "Dumb Pipe" Pattern
 """
 import json
 import time
-from typing import Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import random
+from typing import Optional, List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from pydantic import BaseModel
+
 from game_room import room_manager
+from database import get_db, init_db, close_db
+from db_models import Category, Card
+from scoring import guess_matcher
 
 
-app = FastAPI(title="Six Second Scribbles API")
+app = FastAPI(
+    title="Six Second Scribbles API",
+    description="Real-time multiplayer drawing game backend",
+    version="2.0.0"
+)
 
 # Configure CORS
 app.add_middleware(
@@ -26,10 +38,177 @@ app.add_middleware(
 )
 
 
+# Pydantic models for request/response
+class GuessRequest(BaseModel):
+    guesses: List[str]
+    correct_answers: List[str]
+    alternatives: dict = {}
+
+
+class GuessResponse(BaseModel):
+    score: int
+    total: int
+    percentage: float
+    matches: List[dict]
+    unmatched_answers: List[str]
+
+
+# Lifecycle events
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    print("🚀 Starting Six Second Scribbles API...")
+    await init_db()
+    print("✅ Database initialized")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up on shutdown"""
+    print("👋 Shutting down...")
+    await close_db()
+    print("✅ Database connections closed")
+
+
+# API Endpoints
 @app.get("/")
 async def root():
     """Health check endpoint"""
-    return {"status": "ok", "service": "Six Second Scribbles API"}
+    return {
+        "status": "ok",
+        "service": "Six Second Scribbles API",
+        "version": "2.0.0"
+    }
+
+
+@app.get("/api/categories")
+async def get_categories(
+    difficulty: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all categories, optionally filtered by difficulty
+
+    Query params:
+        difficulty: Filter by difficulty (easy, medium, hard)
+    """
+    query = select(Category)
+
+    if difficulty:
+        query = query.where(Category.difficulty == difficulty.lower())
+
+    result = await db.execute(query)
+    categories = result.scalars().all()
+
+    return {
+        "categories": [cat.to_dict() for cat in categories],
+        "count": len(categories)
+    }
+
+
+@app.get("/api/categories/{category_id}")
+async def get_category(
+    category_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get a specific category with its items"""
+    result = await db.execute(
+        select(Category).where(Category.id == category_id)
+    )
+    category = result.scalar_one_or_none()
+
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    # Get cards for this category
+    cards_result = await db.execute(
+        select(Card).where(Card.category_id == category_id)
+    )
+    cards = cards_result.scalars().all()
+
+    return {
+        "category": category.to_dict(),
+        "items": [card.item for card in cards],
+        "cards": [card.to_dict() for card in cards]
+    }
+
+
+@app.get("/api/cards/random")
+async def get_random_cards(
+    difficulty: str = "medium",
+    count: int = 1,
+    player_count: int = 2,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get random cards for a game
+
+    Query params:
+        difficulty: Difficulty level (easy, medium, hard)
+        count: Number of rounds (cards per player)
+        player_count: Number of players
+
+    Returns unique categories for each player for each round
+    """
+    # Get all categories for the difficulty
+    result = await db.execute(
+        select(Category).where(Category.difficulty == difficulty.lower())
+    )
+    categories = result.scalars().all()
+
+    if not categories:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No categories found for difficulty: {difficulty}"
+        )
+
+    total_needed = count * player_count
+
+    if len(categories) < total_needed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough categories ({len(categories)}) for {player_count} players and {count} rounds"
+        )
+
+    # Randomly select categories without replacement
+    selected_categories = random.sample(categories, total_needed)
+
+    # Get cards for selected categories
+    cards_by_category = {}
+    for category in selected_categories:
+        cards_result = await db.execute(
+            select(Card).where(Card.category_id == category.id)
+        )
+        cards = cards_result.scalars().all()
+        cards_by_category[category.id] = {
+            "category": category.name,
+            "items": [card.item for card in cards],
+            "alternatives": {card.item: card.alternatives for card in cards}
+        }
+
+    return {
+        "difficulty": difficulty,
+        "categories": cards_by_category
+    }
+
+
+@app.post("/api/score/guesses", response_model=GuessResponse)
+async def score_guesses(request: GuessRequest):
+    """
+    Score player guesses using fuzzy matching
+
+    Body:
+        guesses: List of player's guesses
+        correct_answers: List of correct answers
+        alternatives: Dict mapping answers to alternative spellings
+    """
+    result = guess_matcher.score_guesses(
+        guesses=request.guesses,
+        correct_answers=request.correct_answers,
+        alternatives_map=request.alternatives
+    )
+
+    return GuessResponse(**result)
 
 
 @app.get("/rooms/{room_id}/status")
