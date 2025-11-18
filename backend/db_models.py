@@ -9,13 +9,15 @@ from database import Base
 
 
 class Category(Base):
-    """Category model - represents a card category"""
+    """Category model - represents a card category (global or room-specific)"""
     __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     difficulty: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
+    room_id: Mapped[str] = mapped_column(String(10), nullable=True, index=True)  # NULL = global, value = room-specific
+    created_by: Mapped[str] = mapped_column(String(50), nullable=True)  # Player ID who created (for custom categories)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -30,10 +32,12 @@ class Category(Base):
     __table_args__ = (
         Index("idx_category_difficulty", "difficulty"),
         Index("idx_category_name", "name"),
+        Index("idx_category_room", "room_id"),
     )
 
     def __repr__(self):
-        return f"<Category(id={self.id}, name='{self.name}', difficulty='{self.difficulty}')>"
+        room_info = f", room='{self.room_id}'" if self.room_id else ""
+        return f"<Category(id={self.id}, name='{self.name}', difficulty='{self.difficulty}'{room_info})>"
 
     def to_dict(self):
         """Convert to dictionary"""
@@ -42,6 +46,9 @@ class Category(Base):
             "name": self.name,
             "difficulty": self.difficulty,
             "description": self.description,
+            "room_id": self.room_id,
+            "created_by": self.created_by,
+            "is_custom": self.room_id is not None,
             "item_count": len(self.cards) if self.cards else 0,
         }
 

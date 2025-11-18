@@ -14,6 +14,7 @@ Modern, scalable backend for Six Second Scribbles using:
 - ✅ PostgreSQL database for card/category storage
 - ✅ Fuzzy matching for guess validation (handles typos, plurals)
 - ✅ REST API for categories and cards
+- ✅ **Custom categories per room** - hosts can create room-specific categories
 - ✅ WebSocket support for real-time gameplay
 - ✅ Comprehensive test suite (90%+ coverage)
 - ✅ Database migrations with Alembic
@@ -100,6 +101,32 @@ Body: {
   "alternatives": {}
 }
 ```
+
+### Custom Categories (Room-Specific)
+```bash
+POST /api/rooms/{room_id}/categories
+# Create a custom category for a room (host only)
+Body: {
+  "name": "My Custom Category",
+  "items": ["item1", "item2", ... "item10"],  # Min 5 items
+  "difficulty": "medium",
+  "created_by": "player-id"
+}
+
+GET /api/rooms/{room_id}/categories
+# List all custom categories for a room
+
+DELETE /api/rooms/{room_id}/categories/{category_id}?player_id=host-id
+# Delete a custom category (host only)
+```
+
+**Features:**
+- Only the room host can create/delete custom categories
+- Minimum 5 items required per category
+- Custom categories are automatically included in card selection for that room
+- Automatically cleaned up when room closes
+- Different rooms can have categories with the same name
+- WebSocket broadcasts notify all players when categories are added/removed
 
 ### Rooms
 ```bash

@@ -187,6 +187,25 @@ class GameRoom:
         """Check if the room is empty"""
         return len(self.players) == 0
 
+    async def cleanup_custom_categories(self):
+        """Delete all custom categories created for this room"""
+        try:
+            from database import async_session_maker
+            from db_models import Category
+            from sqlalchemy import delete
+
+            async with async_session_maker() as session:
+                # Delete all categories with this room_id
+                stmt = delete(Category).where(Category.room_id == self.room_id)
+                result = await session.execute(stmt)
+                await session.commit()
+
+                deleted_count = result.rowcount
+                if deleted_count > 0:
+                    print(f"[GameRoom {self.room_id}] Cleaned up {deleted_count} custom categories")
+        except Exception as e:
+            print(f"[GameRoom {self.room_id}] Error cleaning up custom categories: {e}")
+
 
 class RoomManager:
     """Manages all game rooms"""
@@ -207,10 +226,11 @@ class RoomManager:
         return self.rooms.get(room_id)
 
     async def remove_room(self, room_id: str):
-        """Remove a room"""
+        """Remove a room and clean up custom categories"""
         if room_id in self.rooms:
             room = self.rooms[room_id]
             await room.stop_idle_check()
+            await room.cleanup_custom_categories()  # Clean up custom categories
             del self.rooms[room_id]
             print(f"[RoomManager] Removed room {room_id}")
 

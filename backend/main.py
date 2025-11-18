@@ -53,6 +53,14 @@ class GuessResponse(BaseModel):
     unmatched_answers: List[str]
 
 
+class CustomCategoryCreate(BaseModel):
+    name: str
+    items: List[str]  # List of items for this category
+    difficulty: str = "medium"
+    description: Optional[str] = None
+    created_by: str  # Player ID
+
+
 # Lifecycle events
 @app.on_event("startup")
 async def startup_event():
@@ -138,6 +146,7 @@ async def get_random_cards(
     difficulty: str = "medium",
     count: int = 1,
     player_count: int = 2,
+    room_id: Optional[str] = None,  # Include room-specific categories
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -147,14 +156,26 @@ async def get_random_cards(
         difficulty: Difficulty level (easy, medium, hard)
         count: Number of rounds (cards per player)
         player_count: Number of players
+        room_id: If provided, includes custom categories for this room
 
     Returns unique categories for each player for each round
     """
-    # Get all categories for the difficulty
-    result = await db.execute(
-        select(Category).where(Category.difficulty == difficulty.lower())
+    # Build query for global categories with this difficulty
+    query = select(Category).where(
+        Category.difficulty == difficulty.lower(),
+        Category.room_id.is_(None)  # Global categories only
     )
-    categories = result.scalars().all()
+    result = await db.execute(query)
+    categories = list(result.scalars().all())
+
+    # If room_id provided, also include custom categories for that room
+    if room_id:
+        custom_query = select(Category).where(
+            Category.room_id == room_id
+        )
+        custom_result = await db.execute(custom_query)
+        custom_categories = list(custom_result.scalars().all())
+        categories.extend(custom_categories)
 
     if not categories:
         raise HTTPException(
@@ -167,7 +188,8 @@ async def get_random_cards(
     if len(categories) < total_needed:
         raise HTTPException(
             status_code=400,
-            detail=f"Not enough categories ({len(categories)}) for {player_count} players and {count} rounds"
+            detail=f"Not enough categories ({len(categories)}) for {player_count} players and {count} rounds. "
+                   f"Available: {len(categories)}, needed: {total_needed}"
         )
 
     # Randomly select categories without replacement
@@ -183,12 +205,14 @@ async def get_random_cards(
         cards_by_category[category.id] = {
             "category": category.name,
             "items": [card.item for card in cards],
-            "alternatives": {card.item: card.alternatives for card in cards}
+            "alternatives": {card.item: card.alternatives for card in cards},
+            "is_custom": category.room_id is not None
         }
 
     return {
         "difficulty": difficulty,
-        "categories": cards_by_category
+        "categories": cards_by_category,
+        "includes_custom": room_id is not None
     }
 
 
@@ -209,6 +233,156 @@ async def score_guesses(request: GuessRequest):
     )
 
     return GuessResponse(**result)
+
+
+# Custom Categories (Room-specific)
+@app.post("/api/rooms/{room_id}/categories")
+async def create_custom_category(
+    room_id: str,
+    category_data: CustomCategoryCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a custom category for a specific room
+
+    Only available for the host of that room during the game session.
+    Custom categories are automatically cleaned up when the room closes.
+    """
+    # Verify room exists
+    room = room_manager.get_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    # Verify the creator is the host
+    if room.host_id != category_data.created_by:
+        raise HTTPException(status_code=403, detail="Only the room host can create custom categories")
+
+    # Validate items count (should have at least 5, typically 10)
+    if len(category_data.items) < 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Custom category must have at least 5 items"
+        )
+
+    # Create category
+    category = Category(
+        name=category_data.name,
+        difficulty=category_data.difficulty,
+        description=category_data.description or f"Custom category for room {room_id}",
+        room_id=room_id,
+        created_by=category_data.created_by
+    )
+    db.add(category)
+    await db.flush()  # Get the category ID
+
+    # Create cards for this category
+    for item in category_data.items:
+        card = Card(
+            category_id=category.id,
+            item=item.strip(),
+            alternatives=[]
+        )
+        db.add(card)
+
+    await db.commit()
+
+    # Broadcast to all players in room
+    await room.broadcast({
+        "type": "custom_category_added",
+        "category": category.to_dict(),
+        "items": category_data.items
+    })
+
+    return {
+        "success": True,
+        "category": category.to_dict(),
+        "message": f"Custom category '{category_data.name}' created with {len(category_data.items)} items"
+    }
+
+
+@app.get("/api/rooms/{room_id}/categories")
+async def get_room_categories(
+    room_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all custom categories for a specific room
+
+    Returns only the categories created for this room, not global categories.
+    """
+    result = await db.execute(
+        select(Category).where(Category.room_id == room_id)
+    )
+    categories = result.scalars().all()
+
+    # Get cards for each category
+    categories_with_items = []
+    for category in categories:
+        cards_result = await db.execute(
+            select(Card).where(Card.category_id == category.id)
+        )
+        cards = cards_result.scalars().all()
+
+        categories_with_items.append({
+            **category.to_dict(),
+            "items": [card.item for card in cards]
+        })
+
+    return {
+        "room_id": room_id,
+        "categories": categories_with_items,
+        "count": len(categories_with_items)
+    }
+
+
+@app.delete("/api/rooms/{room_id}/categories/{category_id}")
+async def delete_custom_category(
+    room_id: str,
+    category_id: int,
+    player_id: str,  # Query param: who is deleting
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete a custom category from a room
+
+    Only the host can delete custom categories.
+    """
+    # Verify room exists
+    room = room_manager.get_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    # Verify the player is the host
+    if room.host_id != player_id:
+        raise HTTPException(status_code=403, detail="Only the room host can delete custom categories")
+
+    # Get category
+    result = await db.execute(
+        select(Category).where(
+            Category.id == category_id,
+            Category.room_id == room_id
+        )
+    )
+    category = result.scalar_one_or_none()
+
+    if not category:
+        raise HTTPException(status_code=404, detail="Custom category not found")
+
+    # Delete category (cards will cascade delete)
+    await db.delete(category)
+    await db.commit()
+
+    # Broadcast to all players in room
+    await room.broadcast({
+        "type": "custom_category_removed",
+        "category_id": category_id,
+        "category_name": category.name
+    })
+
+    return {
+        "success": True,
+        "message": f"Custom category '{category.name}' deleted"
+    }
 
 
 @app.get("/rooms/{room_id}/status")
