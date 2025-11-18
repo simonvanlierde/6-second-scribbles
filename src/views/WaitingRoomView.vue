@@ -22,6 +22,15 @@ const showLeaveWarning = ref(false)
 const roundsError = ref<string | null>(null)
 const showCopyTooltip = ref(false)
 const isPrivateRoom = ref(false)
+const activeKickVotes = ref<Map<string, { currentVotes: number; requiredVotes: number; expiresAt: number }>>(new Map())
+const showKickConfirm = ref<string | null>(null) // player ID to confirm kicking
+
+// Expose activeKickVotes and handlers globally so useGameConnection can update it
+;(window as any).__kickVotesState = {
+  votes: activeKickVotes,
+  showNotification
+}
+
 // Persisted per-user in the store
 const showDrawpad = computed({
   get: () => store.showDrawpad,
@@ -81,6 +90,42 @@ function togglePrivacy() {
     })
     console.log('[UI] Room privacy changed to:', isPrivateRoom.value)
   }
+}
+
+function initiateKick(targetPlayerId: string) {
+  showKickConfirm.value = targetPlayerId
+}
+
+function confirmKick(targetPlayerId: string) {
+  send({
+    type: 'initiate_kick',
+    playerId: store.localPlayerId,
+    targetPlayerId: targetPlayerId
+  })
+  showKickConfirm.value = null
+}
+
+function cancelKick() {
+  showKickConfirm.value = null
+}
+
+function voteToKick(targetPlayerId: string) {
+  send({
+    type: 'cast_kick_vote',
+    playerId: store.localPlayerId,
+    targetPlayerId: targetPlayerId
+  })
+}
+
+function canKickPlayer(playerId: string): boolean {
+  // Can't kick yourself
+  if (playerId === store.localPlayerId) return false
+
+  // Host can kick anyone except themselves
+  if (store.isHost) return true
+
+  // Non-hosts can initiate votes to kick
+  return true
 }
 
 // SharedDrawpad handles incremental stroke sending, rendering, and clear events.
@@ -251,11 +296,36 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
         <h2>Players ({{ playerCount }})</h2>
         <ul class="player-list">
           <li v-for="player in store.playersList" :key="player.id" class="player-item">
-            <span class="player-name">{{ player.name }}</span>
-            <span v-if="player.id === store.localPlayerId" class="player-badge">(You)</span>
-            <span v-if="store.playersList[0]?.id === player.id" class="player-badge host"
-              >Host</span
+            <div class="player-info">
+              <span class="player-name">{{ player.name }}</span>
+              <span v-if="player.id === store.localPlayerId" class="player-badge">(You)</span>
+              <span v-if="store.playersList[0]?.id === player.id" class="player-badge host"
+                >Host</span
+              >
+            </div>
+
+            <!-- Kick vote status -->
+            <div v-if="activeKickVotes.has(player.id)" class="kick-vote-status">
+              <span class="vote-progress">
+                Kick vote: {{ activeKickVotes.get(player.id)!.currentVotes }}/{{ activeKickVotes.get(player.id)!.requiredVotes }}
+              </span>
+              <button
+                v-if="player.id !== store.localPlayerId"
+                class="btn btn-small btn-vote"
+                @click="voteToKick(player.id)"
+              >
+                Vote Kick
+              </button>
+            </div>
+
+            <!-- Kick button -->
+            <button
+              v-if="canKickPlayer(player.id) && !activeKickVotes.has(player.id)"
+              class="btn btn-small btn-kick"
+              @click="initiateKick(player.id)"
             >
+              {{ store.isHost && player.id !== store.hostId ? 'Kick' : 'Vote Kick' }}
+            </button>
           </li>
         </ul>
 
@@ -413,6 +483,26 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
         </div>
       </div>
     </div>
+
+    <!-- Kick confirmation modal -->
+    <div v-if="showKickConfirm" class="modal-overlay" @click="cancelKick">
+      <div class="modal-content" @click.stop>
+        <h2>{{ store.isHost ? 'Kick Player?' : 'Start Kick Vote?' }}</h2>
+        <p v-if="store.isHost">
+          Are you sure you want to kick {{ store.playersList.find(p => p.id === showKickConfirm)?.name }}?
+        </p>
+        <p v-else>
+          Start a vote to kick {{ store.playersList.find(p => p.id === showKickConfirm)?.name }}?
+          {{ store.playersList.find(p => p.id === showKickConfirm)?.id === store.hostId ? 'All players must vote unanimously to kick the host.' : 'Requires 2/3 majority vote.' }}
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" @click="cancelKick">Cancel</button>
+          <button class="btn btn-danger" @click="confirmKick(showKickConfirm!)">
+            {{ store.isHost ? 'Kick' : 'Start Vote' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -446,12 +536,19 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   border-radius: 4px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  flex: 1;
 }
 
 .player-name {
   font-weight: 500;
-  flex: 1;
 }
 
 .player-badge {
@@ -465,6 +562,44 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
 .player-badge.host {
   background-color: #ffc107;
   color: #000;
+}
+
+.btn-kick {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-kick:hover {
+  background-color: #c82333;
+}
+
+.btn-vote {
+  background-color: #ff6b6b;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-vote:hover {
+  background-color: #ff5252;
+}
+
+.kick-vote-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #fff3cd;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #ffc107;
+}
+
+.vote-progress {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #856404;
 }
 
 .game-settings {

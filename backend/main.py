@@ -685,6 +685,36 @@ async def parse_message(data: str, room, websocket: WebSocket):
             else:
                 print("[Server] Ignored privacy_changed from non-host connection")
 
+        elif msg_type == "initiate_kick":
+            # Initiate a vote to kick a player
+            if sender_player_id:
+                target_player_id = message.get("targetPlayerId")
+                if target_player_id:
+                    result = await room.initiate_kick_vote(sender_player_id, target_player_id)
+                    if not result.get("success"):
+                        # Send error to initiator
+                        await websocket.send_text(json.dumps({
+                            "type": "kick_error",
+                            "error": result.get("error", "Failed to initiate kick vote")
+                        }))
+                else:
+                    print("[Server] Missing targetPlayerId in initiate_kick message")
+
+        elif msg_type == "cast_kick_vote":
+            # Cast a vote to kick a player
+            if sender_player_id:
+                target_player_id = message.get("targetPlayerId")
+                if target_player_id:
+                    result = await room.cast_kick_vote(sender_player_id, target_player_id)
+                    if not result.get("success"):
+                        # Send error to voter
+                        await websocket.send_text(json.dumps({
+                            "type": "kick_error",
+                            "error": result.get("error", "Failed to cast vote")
+                        }))
+                else:
+                    print("[Server] Missing targetPlayerId in cast_kick_vote message")
+
         elif msg_type == "request_game_state":
             # Send current game state to the requester
             players_with_categories = [

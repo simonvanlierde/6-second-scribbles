@@ -24,6 +24,17 @@ class PlayerInfo:
 
 
 @dataclass
+class KickVote:
+    """Tracks votes to kick a player"""
+    target_player_id: str
+    target_player_name: str
+    initiated_by: str
+    voters: Set[str] = field(default_factory=set)
+    created_at: float = field(default_factory=time.time)
+    expires_at: float = field(default_factory=lambda: time.time() + 60)  # 1 minute
+
+
+@dataclass
 class RoomMetadata:
     categories: List[str] = field(default_factory=list)
     game_phase: str = "lobby"
@@ -51,6 +62,9 @@ class GameRoom:
     # Room hibernation timeout (5 minutes of being empty)
     HIBERNATION_TIMEOUT_SECONDS = 5 * 60
 
+    # Kick vote timeout (1 minute)
+    KICK_VOTE_TIMEOUT_SECONDS = 60
+
     def __init__(self, room_id: str):
         self.room_id = room_id
         self.players: Dict[str, PlayerInfo] = {}
@@ -63,6 +77,7 @@ class GameRoom:
         self._last_activity = time.time()
         self._emptied_at: Optional[float] = None  # When room became empty
         self.is_hibernated = False
+        self.active_kick_votes: Dict[str, KickVote] = {}  # target_player_id -> KickVote
 
     async def start_idle_check(self):
         """Start periodic idle player check"""
@@ -78,11 +93,12 @@ class GameRoom:
                 pass
 
     async def _idle_check_loop(self):
-        """Periodically check for idle players"""
+        """Periodically check for idle players and cleanup expired votes"""
         while True:
             try:
                 await asyncio.sleep(60)  # Check every 60 seconds
                 await self._check_idle_players()
+                self.cleanup_expired_votes()
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -265,6 +281,187 @@ class GameRoom:
         """Generate categories for a player (placeholder)"""
         # Replace with actual category generation logic
         return ["Category1", "Category2", "Category3"]
+
+    async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> Dict:
+        """
+        Initiate a vote to kick a player
+
+        Returns dict with status and info about the vote
+        """
+        # Validate players exist
+        if initiator_id not in self.players:
+            return {"success": False, "error": "Initiator not in room"}
+
+        if target_player_id not in self.players:
+            return {"success": False, "error": "Target player not in room"}
+
+        # Can't kick yourself
+        if initiator_id == target_player_id:
+            return {"success": False, "error": "Cannot kick yourself"}
+
+        # Check if vote already exists
+        if target_player_id in self.active_kick_votes:
+            vote = self.active_kick_votes[target_player_id]
+            if time.time() < vote.expires_at:
+                return {"success": False, "error": "Vote already in progress"}
+            else:
+                # Clean up expired vote
+                del self.active_kick_votes[target_player_id]
+
+        # Host can kick directly
+        is_host_kicking = (initiator_id == self.host_id)
+        target_is_host = (target_player_id == self.host_id)
+
+        if is_host_kicking and not target_is_host:
+            # Host kicks non-host player directly
+            await self.kick_player(target_player_id, "Kicked by host")
+            return {
+                "success": True,
+                "immediate": True,
+                "reason": "Host kicked player"
+            }
+
+        # Create vote
+        target_player = self.players[target_player_id]
+        vote = KickVote(
+            target_player_id=target_player_id,
+            target_player_name=target_player.name,
+            initiated_by=initiator_id,
+            voters={initiator_id}  # Initiator automatically votes yes
+        )
+        self.active_kick_votes[target_player_id] = vote
+
+        # Broadcast vote started
+        await self.broadcast({
+            "type": "kick_vote_started",
+            "targetPlayerId": target_player_id,
+            "targetPlayerName": target_player.name,
+            "initiatedBy": initiator_id,
+            "requiredVotes": self._get_required_votes(target_is_host),
+            "currentVotes": 1,
+            "expiresAt": vote.expires_at * 1000  # Convert to ms for frontend
+        })
+
+        print(f"[GameRoom {self.room_id}] Kick vote started for {target_player.name} by {self.players[initiator_id].name}")
+
+        return {
+            "success": True,
+            "immediate": False,
+            "vote_id": target_player_id
+        }
+
+    async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> Dict:
+        """Cast a vote to kick a player"""
+        # Validate voter exists
+        if voter_id not in self.players:
+            return {"success": False, "error": "Voter not in room"}
+
+        # Check if vote exists
+        if target_player_id not in self.active_kick_votes:
+            return {"success": False, "error": "No active vote for this player"}
+
+        vote = self.active_kick_votes[target_player_id]
+
+        # Check if vote expired
+        if time.time() > vote.expires_at:
+            del self.active_kick_votes[target_player_id]
+            await self.broadcast({
+                "type": "kick_vote_expired",
+                "targetPlayerId": target_player_id
+            })
+            return {"success": False, "error": "Vote has expired"}
+
+        # Can't vote to kick yourself
+        if voter_id == target_player_id:
+            return {"success": False, "error": "Cannot vote to kick yourself"}
+
+        # Add vote
+        vote.voters.add(voter_id)
+
+        target_is_host = (target_player_id == self.host_id)
+        required_votes = self._get_required_votes(target_is_host)
+        current_votes = len(vote.voters)
+
+        # Broadcast vote update
+        await self.broadcast({
+            "type": "kick_vote_updated",
+            "targetPlayerId": target_player_id,
+            "currentVotes": current_votes,
+            "requiredVotes": required_votes
+        })
+
+        print(f"[GameRoom {self.room_id}] Kick vote: {current_votes}/{required_votes} for {vote.target_player_name}")
+
+        # Check if vote passes
+        if current_votes >= required_votes:
+            await self.kick_player(target_player_id, "Kicked by vote")
+            del self.active_kick_votes[target_player_id]
+            return {
+                "success": True,
+                "vote_passed": True
+            }
+
+        return {
+            "success": True,
+            "vote_passed": False,
+            "current_votes": current_votes,
+            "required_votes": required_votes
+        }
+
+    def _get_required_votes(self, target_is_host: bool) -> int:
+        """Calculate required votes to kick a player"""
+        total_players = len(self.players)
+
+        if target_is_host:
+            # Need all other players to vote (unanimous)
+            return total_players - 1
+        else:
+            # Need 2/3 majority (excluding target)
+            eligible_voters = total_players - 1
+            return max(2, int((eligible_voters * 2) / 3) + 1)
+
+    async def kick_player(self, player_id: str, reason: str = "Kicked"):
+        """Kick a player from the room"""
+        if player_id not in self.players:
+            return
+
+        player = self.players[player_id]
+        print(f"[GameRoom {self.room_id}] Kicking player {player.name} ({player_id}): {reason}")
+
+        # Close their websocket connection
+        try:
+            await player.websocket.close(code=1008, reason=reason)
+        except Exception as e:
+            print(f"[GameRoom {self.room_id}] Error closing websocket for kicked player: {e}")
+
+        # Remove from room
+        await self.remove_player(player_id)
+
+        # Broadcast kick event
+        await self.broadcast({
+            "type": "player_kicked",
+            "playerId": player_id,
+            "playerName": player.name,
+            "reason": reason
+        })
+
+        # Clean up any vote for this player
+        if player_id in self.active_kick_votes:
+            del self.active_kick_votes[player_id]
+
+    def cleanup_expired_votes(self):
+        """Remove expired kick votes"""
+        now = time.time()
+        expired = [
+            target_id for target_id, vote in self.active_kick_votes.items()
+            if now > vote.expires_at
+        ]
+
+        for target_id in expired:
+            del self.active_kick_votes[target_id]
+            print(f"[GameRoom {self.room_id}] Kick vote expired for player {target_id}")
+
+        return len(expired)
 
     def is_empty(self) -> bool:
         """Check if the room is empty"""

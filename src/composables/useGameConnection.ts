@@ -270,6 +270,68 @@ export function useGameConnection() {
           showNotification(visible ? 'Host showed the drawpad for the room' : 'Host hid the drawpad for the room')
         }
         break
+
+      case 'kick_vote_started':
+        // Update kick vote state if WaitingRoomView has exposed it
+        if ((window as any).__kickVotesState) {
+          const msg = message as any
+          (window as any).__kickVotesState.votes.set(msg.targetPlayerId, {
+            currentVotes: msg.currentVotes,
+            requiredVotes: msg.requiredVotes,
+            expiresAt: msg.expiresAt
+          })
+
+          const targetPlayer = store.playersList.find(p => p.id === msg.targetPlayerId)
+          if (msg.initiatorId === store.localPlayerId) {
+            showNotification(`Started kick vote for ${msg.targetPlayerName}`)
+          } else if (targetPlayer) {
+            showNotification(`Kick vote started for ${targetPlayer.name}`)
+          }
+        }
+        break
+
+      case 'kick_vote_updated':
+        // Update vote progress
+        if ((window as any).__kickVotesState) {
+          const msg = message as any
+          const existingVote = (window as any).__kickVotesState.votes.get(msg.targetPlayerId)
+          if (existingVote) {
+            existingVote.currentVotes = msg.currentVotes
+            existingVote.requiredVotes = msg.requiredVotes
+          }
+        }
+        break
+
+      case 'player_kicked':
+        // Clean up kick vote state and show notification
+        if ((window as any).__kickVotesState) {
+          const msg = message as any
+          (window as any).__kickVotesState.votes.delete(msg.playerId)
+
+          if (msg.playerId === store.localPlayerId) {
+            showNotification('You have been kicked from the room', 'error')
+            // Redirect will happen automatically when connection closes
+          } else {
+            showNotification(`${msg.playerName} was kicked from the room`)
+          }
+        }
+        // Player will be removed via player_left message
+        break
+
+      case 'kick_vote_expired':
+        // Clean up expired vote
+        if ((window as any).__kickVotesState) {
+          const msg = message as any
+          (window as any).__kickVotesState.votes.delete(msg.targetPlayerId)
+          showNotification(`Kick vote for ${msg.targetPlayerName} expired`)
+        }
+        break
+
+      case 'kick_error':
+        // Show error notification
+        const kickErrorMsg = (message as any).error || 'Failed to process kick request'
+        showNotification(kickErrorMsg, 'error')
+        break
     }
   }
 
