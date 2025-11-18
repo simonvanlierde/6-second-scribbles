@@ -45,6 +45,7 @@ class RoomMetadata:
     pad_visibility: bool = True
     ready_players: Set[str] = field(default_factory=set)
     is_private: bool = False  # Private rooms don't appear in random join
+    language: str = "en"  # Language code (ISO 639-1): en, es, fr, etc.
 
 
 class GameRoom:

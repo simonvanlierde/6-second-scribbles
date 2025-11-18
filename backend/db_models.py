@@ -16,6 +16,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     difficulty: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
+    language: Mapped[str] = mapped_column(String(5), nullable=False, default='en', index=True)  # ISO 639-1 language code
     room_id: Mapped[str] = mapped_column(String(10), nullable=True, index=True)  # NULL = global, value = room-specific
     created_by: Mapped[str] = mapped_column(String(50), nullable=True)  # Player ID who created (for custom categories)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -33,6 +34,7 @@ class Category(Base):
         Index("idx_category_difficulty", "difficulty"),
         Index("idx_category_name", "name"),
         Index("idx_category_room", "room_id"),
+        Index("idx_category_language", "language"),
     )
 
     def __repr__(self):
@@ -46,6 +48,7 @@ class Category(Base):
             "name": self.name,
             "difficulty": self.difficulty,
             "description": self.description,
+            "language": self.language,
             "room_id": self.room_id,
             "created_by": self.created_by,
             "is_custom": self.room_id is not None,

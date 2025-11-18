@@ -92,6 +92,18 @@ function togglePrivacy() {
   }
 }
 
+function changeLanguage(newLanguage: string) {
+  // Only host can change language
+  if (store.isHost) {
+    send({
+      type: 'language_update',
+      playerId: store.localPlayerId,
+      language: newLanguage
+    })
+    console.log('[UI] Room language changed to:', newLanguage)
+  }
+}
+
 function initiateKick(targetPlayerId: string) {
   showKickConfirm.value = targetPlayerId
 }
@@ -329,7 +341,31 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
           </li>
         </ul>
 
+        <!-- Show language indicator for non-host players -->
+        <div v-if="!store.isHost" class="language-indicator">
+          <span class="language-label">🌐 Language:</span>
+          <span class="language-value">{{
+            store.language === 'en' ? 'English' :
+            store.language === 'es' ? 'Español' :
+            store.language === 'fr' ? 'Français' :
+            store.language
+          }}</span>
+        </div>
+
         <div v-if="store.isHost" class="game-settings">
+          <div class="setting-group">
+            <label for="language-select">🌐 Language:</label>
+            <select
+              id="language-select"
+              :value="store.language"
+              @change="changeLanguage(($event.target as HTMLSelectElement).value)"
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
+
           <div class="setting-group">
             <label for="difficulty-select">Difficulty:</label>
             <select id="difficulty-select" v-model="difficulty">
@@ -600,6 +636,28 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
   font-size: 0.875rem;
   font-weight: 600;
   color: #856404;
+}
+
+.language-indicator {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.language-label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.language-value {
+  color: #212529;
+  font-weight: 500;
 }
 
 .game-settings {

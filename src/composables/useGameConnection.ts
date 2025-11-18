@@ -123,6 +123,10 @@ export function useGameConnection() {
           // padVisibility is a host-controlled room-level preference
           store.setShowPadForRoom(!!(message as any).padVisibility)
         }
+        if ((message as any).language !== undefined) {
+          // Sync language from room state
+          store.setLanguage((message as any).language)
+        }
         break
 
       case 'player_joined':
@@ -331,6 +335,22 @@ export function useGameConnection() {
         // Show error notification
         const kickErrorMsg = (message as any).error || 'Failed to process kick request'
         showNotification(kickErrorMsg, 'error')
+        break
+
+      case 'language_update':
+        // Update language when host changes it
+        const newLang = (message as any).language
+        if (newLang) {
+          store.setLanguage(newLang)
+          if (!store.isHost) {
+            const langNames: Record<string, string> = {
+              en: 'English',
+              es: 'Español',
+              fr: 'Français'
+            }
+            showNotification(`Language changed to ${langNames[newLang] || newLang}`)
+          }
+        }
         break
     }
   }

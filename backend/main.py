@@ -144,18 +144,23 @@ async def get_random_room():
 @app.get("/api/categories")
 async def get_categories(
     difficulty: Optional[str] = None,
+    language: Optional[str] = "en",
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get all categories, optionally filtered by difficulty
+    Get all categories, optionally filtered by difficulty and language
 
     Query params:
         difficulty: Filter by difficulty (easy, medium, hard)
+        language: Filter by language (en, es, fr, etc.) - defaults to 'en'
     """
     query = select(Category)
 
     if difficulty:
         query = query.where(Category.difficulty == difficulty.lower())
+
+    if language:
+        query = query.where(Category.language == language.lower())
 
     result = await db.execute(query)
     categories = result.scalars().all()
@@ -199,6 +204,7 @@ async def get_random_cards(
     count: int = 1,
     player_count: int = 2,
     room_id: Optional[str] = None,  # Include room-specific categories
+    language: str = "en",  # Language filter
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -209,18 +215,21 @@ async def get_random_cards(
         count: Number of rounds (cards per player)
         player_count: Number of players
         room_id: If provided, includes custom categories for this room
+        language: Language code (en, es, fr, etc.) - defaults to 'en'
 
     Returns unique categories for each player for each round
     """
-    # Build query for global categories with this difficulty
+    # Build query for global categories with this difficulty and language
     query = select(Category).where(
         Category.difficulty == difficulty.lower(),
+        Category.language == language.lower(),
         Category.room_id.is_(None)  # Global categories only
     )
     result = await db.execute(query)
     categories = list(result.scalars().all())
 
     # If room_id provided, also include custom categories for that room
+    # Note: Room-specific categories use the room's language setting
     if room_id:
         custom_query = select(Category).where(
             Category.room_id == room_id
@@ -472,6 +481,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             "difficulty": room.metadata.difficulty,
             "maxRounds": room.metadata.max_rounds,
             "padVisibility": room.metadata.pad_visibility,
+            "language": room.metadata.language,
         }))
 
         # Handle messages
@@ -651,6 +661,19 @@ async def parse_message(data: str, room, websocket: WebSocket):
             else:
                 print(f"[Server] Ignored settings_update from non-host connection")
 
+        elif msg_type == "language_update":
+            # Only allow the current host to change language
+            if sender_player_id and room.host_id and sender_player_id == room.host_id:
+                new_language = message.get("language", "en")
+                room.metadata.language = new_language
+                print(f"[Server] Host updated room language to {new_language}")
+                await room.broadcast({
+                    "type": "language_update",
+                    "language": new_language
+                })
+            else:
+                print(f"[Server] Ignored language_update from non-host connection")
+
         elif msg_type == "draw_stroke":
             # Relay stroke data to all clients (including sender)
             await room.broadcast(message)
@@ -733,6 +756,7 @@ async def parse_message(data: str, room, websocket: WebSocket):
                 "gamePhase": room.metadata.game_phase,
                 "roundStartTime": room.metadata.round_start_time,
                 "roundLength": room.metadata.round_length,
+                "language": room.metadata.language,
             }))
 
         else:

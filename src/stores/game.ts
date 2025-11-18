@@ -32,6 +32,7 @@ export const useGameStore = defineStore('game', () => {
   const categories = ref<string[]>([])
   const readyCount = ref<number>(0)
   const totalPlayers = ref<number>(0)
+  const language = ref<string>(initialState?.language || 'en')  // ISO 639-1 language code
 
   // Computed
   const localPlayer = computed(() => players.value.get(localPlayerId.value))
@@ -219,6 +220,7 @@ export const useGameStore = defineStore('game', () => {
       roundLength: roundLength.value,
       showDrawpad: showDrawpad.value,
       showPadForRoom: showPadForRoom.value,
+      language: language.value,
     }
     localStorage.setItem('gameState', JSON.stringify(state))
   }
@@ -253,6 +255,11 @@ export const useGameStore = defineStore('game', () => {
     totalPlayers.value = total
   }
 
+  function setLanguage(lang: string) {
+    language.value = lang
+    saveState()
+  }
+
   return {
     // State
     roomCode,
@@ -272,6 +279,7 @@ export const useGameStore = defineStore('game', () => {
     categories,
     readyCount,
     totalPlayers,
+    language,
 
     // Computed
     localPlayer,
@@ -311,5 +319,6 @@ export const useGameStore = defineStore('game', () => {
     showDrawpad,
     showPadForRoom,
     setShowPadForRoom,
+    setLanguage,
   }
 })
