@@ -9,13 +9,10 @@
   },
   "scripts": {
     "dev:web": "vite --debug",
-    "dev:server": "partykit dev --live",
+    "dev:server": "cd backend && python -m uvicorn main:app --reload --port 8000",
     "dev": "concurrently --kill-others --prefix command \"npm:dev:web\" \"npm:dev:server\"",
     "build:web": "vue-tsc --build && vite build",
-    "build:server": "partykit build",
     "build": "npm run build:web",
-    "deploy:server": "partykit deploy",
-    "deploy": "run-s build:web deploy:server",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
@@ -27,7 +24,6 @@
     "format": "prettier --write . --ignore-path .gitignore"
   },
   "dependencies": {
-    "partysocket": "1.1.6",
     "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3"
@@ -56,7 +52,6 @@
     "jsdom": "^27.2.0",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.23.0",
-    "partykit": "^0.0.115",
     "prettier": "3.6.2",
     "typescript": "~5.9.0",
     "vite": "npm:rolldown-vite@latest",

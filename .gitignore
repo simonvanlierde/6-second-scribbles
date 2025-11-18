@@ -45,8 +45,18 @@ Thumbs.db
 ### Temp / cache
 .tmp/
 .cache/
-.partykit/
 .eslintcache
+
+### Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
 
 ### Test artifacts
 coverage/

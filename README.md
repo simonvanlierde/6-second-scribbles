@@ -19,24 +19,32 @@ This is a fast-paced drawing game for 2-10 players. These are the rules:
 * **111+ categories** across Easy, Medium, and Hard difficulties.
 * **Fully responsive:** Works on desktop, tablet, and mobile.
 * **Simple room codes:** 6-char codes to join games.
-* **Modern stack:** Built with Vue 3, TypeScript, Pinia, and PartyKit.
+* **Modern stack:** Built with Vue 3, TypeScript, Pinia, and FastAPI.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-* **Node.js:**: v24.11.1 or later.  Download the latest LTS version from [nodejs.org](https://nodejs.org/).
+* **Node.js:**: v20.19.0 or later. Download the latest LTS version from [nodejs.org](https://nodejs.org/).
+* **Python:**: 3.8 or later. Download from [python.org](https://www.python.org/).
 
 ### Installation
 
 ```bash
-# Install all the dependencies
+# Install Node dependencies
 npm install
 
-# Terminal 1: Start the frontend (Vite dev server)
+# Install Python dependencies for the backend
+pip install -r backend/requirements.txt
+
+# Start both frontend and backend (recommended)
 npm run dev
 
-# Terminal 2: Start the backend (PartyKit WebSocket server)
+# OR run them separately:
+# Terminal 1: Start the frontend (Vite dev server)
+npm run dev:web
+
+# Terminal 2: Start the backend (FastAPI WebSocket server)
 npm run dev:server
 ```
 
@@ -53,7 +61,7 @@ Open `http://localhost:3001` in your browser and start drawing!
 | **Routing** | Vue Router | 4.6.3 |
 | **Language** | TypeScript | 5.9.0 |
 | **Bundler** | Vite | 7.2.2 |
-| **Backend** | PartyKit | 0.0.115 |
+| **Backend** | FastAPI | 0.115.6 |
 | **Protocol** | WebSockets | - |
 
 ## 📁 Project Structure
@@ -79,15 +87,18 @@ six-second-scribbles/
 │   │   └── deck.ts             # All 111+ game cards
 │   ├── shared/
 │   │   └── types.ts            # Shared TS types
-│   ├── server/
-│   │   └── index.ts            # PartyKit WebSocket server
 │   └── assets/
 │       └── main.css            # Global styles
 │
+├── backend/
+│   ├── main.py                 # FastAPI application
+│   ├── game_room.py            # Game room management
+│   ├── models.py               # Message type definitions
+│   └── requirements.txt        # Python dependencies
+│
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
-└── partykit.json
+└── vite.config.ts
 ```
 
 ## 🎮 How to Play
@@ -118,10 +129,10 @@ six-second-scribbles/
 ### Available Scripts
 
 ```bash
-npm run dev            # Start Vite dev server (frontend)
-npm run dev:server     # Start PartyKit server (backend)
+npm run dev            # Start both frontend and backend
+npm run dev:web        # Start Vite dev server (frontend only)
+npm run dev:server     # Start FastAPI server (backend only)
 npm run build          # Build production frontend
-npm run build-only     # Build without type checking
 npm run type-check     # Run TypeScript checks
 npm run lint           # Run oxlint + ESLint
 npm run format         # Format code with Prettier
@@ -131,49 +142,48 @@ npm run preview        # Preview the production build
 ### Dev Tips
 
 * Vite's HMR means your frontend changes are instant.
-* The PartyKit server will auto-restart when you change its code.
+* The FastAPI server will auto-reload when you change its code (thanks to `--reload` flag).
 * Use the Vue DevTools browser extension to inspect the Pinia store state.
 * Check the Network tab in your browser's devtools to monitor WebSocket messages.
+* FastAPI provides automatic API documentation at `http://localhost:8000/docs`.
 
 ## 🚀 Deployment
 
-Deploying involves two parts: the **backend** (PartyKit server) and the **frontend** (Vue site).
+Deploying involves two parts: the **backend** (FastAPI server) and the **frontend** (Vue site).
 
 ### Step 1: Deploy the Backend Server
 
-This server handles all real-time messages.
+The FastAPI backend can be deployed to various platforms:
 
-#### Option 1: PartyKit Hosting (Simple)
+#### Option 1: Deploy to a VPS or Cloud Provider
 
-This is the fastest method.
+1. Choose a hosting provider (AWS EC2, DigitalOcean, Heroku, etc.)
 
-1. Log in to PartyKit (one-time setup):
+2. Install Python 3.8+ on your server
 
+3. Install dependencies:
     ```bash
-    npx partykit login
+    pip install -r backend/requirements.txt
     ```
 
-2. Run the deploy command:
-
+4. Run the server with a production ASGI server:
     ```bash
-    npm run deploy:server
+    cd backend
+    uvicorn main:app --host 0.0.0.0 --port 8000
     ```
 
-3. PartyKit will give you a live URL, like `https://draw6s.username.partykit.dev`. **Copy this URL.**
+5. For production, use a process manager like systemd or supervisor to keep the server running.
 
-#### Option 2: Self-Host on Cloudflare
+6. Set up a reverse proxy (nginx or Cloudflare) to handle SSL/TLS for secure WebSocket connections (wss://).
 
-If you prefer to host on your own Cloudflare account:
+#### Option 2: Deploy to Railway/Render
 
-1. Ensure your `.env.production` has your Cloudflare details (copy from `.env.example` if needed).
+Services like [Railway](https://railway.app/) or [Render](https://render.com/) make Python deployment simple:
 
-    ```sh
-    # .env.production
-    CLOUDFLARE_ACCOUNT_ID='your_account_id'
-    CLOUDFLARE_API_TOKEN='your_api_token'
-    ```
-
-2. Follow the [official PartyKit guide for Cloudflare](https://docs.partykit.io/guides/deploy-to-cloudflare/).
+1. Create a new Python web service
+2. Point it to your repository
+3. Set the start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Deploy and note your backend URL
 
 ### Step 2: Configure, Build, and Deploy the Frontend
 
@@ -181,13 +191,13 @@ Now you'll prepare and deploy the website.
 
 #### 1. Configure the Backend URL
 
-* Open your `.env.production` file.
+* Create a `.env.production` file (or configure via your hosting provider).
 
-* Add your **PartyKit URL** from Step 1. Remember to change `https://` to `wss://` (for secure websockets).
+* Add your **FastAPI backend URL**. Remember to use `wss://` for secure websockets.
 
     ```sh
     # .env.production
-    VITE_PARTYKIT_HOST=wss://draw6s.your-username.partykit.dev
+    VITE_BACKEND_HOST=wss://your-backend-domain.com
     ```
 
 #### 2. Build the Frontend
@@ -214,7 +224,7 @@ This project is a real-time, multiplayer web version inspired by two wonderful c
 1. **The original physical game:** *Six Second Scribbles*, created by **Hazel Reynolds** and published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles).
 2. **The original solo web version:** by **Oliver Culley de Lange**, which you can find [on GitHub](https://github.com/OliverCulleyDeLange/6ss).
 
-This implementation rebuilds the game from the ground up as a multiplayer experience using Vue 3, Pinia, and PartyKit.
+This implementation rebuilds the game from the ground up as a multiplayer experience using Vue 3, Pinia, and FastAPI.
 
 ## 🤝 Contributing
 

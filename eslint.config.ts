@@ -19,7 +19,7 @@ export default defineConfigWithVueTs(
       '**/dist/**',
       '**/dist-ssr/**',
       '**/coverage/**',
-      '**/.partykit/**',
+      '**/backend/**',
       '**/server/**',
     ],
   },

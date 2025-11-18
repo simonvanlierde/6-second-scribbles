@@ -9,7 +9,7 @@ import type { GameMessage } from '@/shared/types';
 import { useGameStore } from '@/stores/game';
 
 
-const PARTYKIT_HOST = (import.meta as any).env?.VITE_PARTYKIT_HOST || 'ws://localhost:1999';
+const BACKEND_HOST = (import.meta as any).env?.VITE_BACKEND_HOST || 'ws://localhost:8000';
 
 // Singleton WebSocket connection shared across all components
 let ws: WebSocket | null = null;
@@ -27,7 +27,7 @@ export function useGameConnection() {
       ws.close()
     }
 
-    const url = `${PARTYKIT_HOST}/party/${roomCode}`
+    const url = `${BACKEND_HOST}/party/${roomCode}`
     ws = new WebSocket(url)
 
     ws.onopen = () => {
