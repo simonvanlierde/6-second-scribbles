@@ -1,14 +1,9 @@
-"""
-Tests for main FastAPI application and endpoints
-"""
-import pytest
-import json
-from unittest.mock import AsyncMock, patch, MagicMock
-from fastapi.testclient import TestClient
-from fastapi.websockets import WebSocketDisconnect
+"""Tests for main FastAPI application and endpoints"""
 
-from main import app
-from game_room import room_manager
+import json
+from unittest.mock import AsyncMock
+
+from app.game_room import room_manager
 
 
 class TestHTTPEndpoints:
@@ -71,11 +66,7 @@ class TestWebSocketConnection:
             websocket.receive_text()
 
             # Send join message
-            join_msg = {
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }
+            join_msg = {"type": "join", "playerId": "player-1", "name": "Alice"}
             websocket.send_text(json.dumps(join_msg))
 
             # Should receive player_joined broadcast
@@ -93,22 +84,14 @@ class TestWebSocketConnection:
             ws1.receive_text()  # Initial state
 
             # Player 1 joins
-            ws1.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
+            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
             ws1.receive_text()  # player_joined
 
             with test_client.websocket_connect("/party/TEST01") as ws2:
                 ws2.receive_text()  # Initial state
 
                 # Player 2 joins
-                ws2.send_text(json.dumps({
-                    "type": "join",
-                    "playerId": "player-2",
-                    "name": "Bob"
-                }))
+                ws2.send_text(json.dumps({"type": "join", "playerId": "player-2", "name": "Bob"}))
 
                 # Both should receive the broadcast
                 msg1 = json.loads(ws1.receive_text())
@@ -119,30 +102,35 @@ class TestWebSocketConnection:
                 assert len(msg1["players"]) == 2
                 assert len(msg2["players"]) == 2
 
-    def test_player_disconnect_cleanup(self, test_client):
-        """Test that players are cleaned up when they disconnect"""
-        room_id = "TEST01"
+    async def test_player_disconnect_cleanup(self, game_room, mock_websocket):
+        """Test that players are removed from the room when they disconnect."""
+        await game_room.add_player("player-1", "Alice", mock_websocket)
+        assert len(game_room.players) == 1
 
-        with test_client.websocket_connect(f"/party/{room_id}") as websocket:
-            websocket.receive_text()  # Initial state
+        await game_room.remove_player("player-1")
 
-            # Join
-            websocket.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
-            websocket.receive_text()  # player_joined
+        assert len(game_room.players) == 0
 
-        # After disconnect, room should eventually be cleaned up or empty
-        # Give it a moment for cleanup
-        import time
-        time.sleep(0.1)
+    def test_player_leaves_broadcast_visible(self, test_client):
+        """Test that remaining players see a player_left broadcast on disconnect."""
+        with test_client.websocket_connect("/party/DISC01") as ws1:
+            ws1.receive_text()  # room_state
+            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
+            ws1.receive_text()  # player_joined
 
-        # Check room is empty
-        room = room_manager.get_room(room_id)
-        if room:  # Room might not be cleaned up yet
-            assert len(room.players) == 0
+            with test_client.websocket_connect("/party/DISC01") as ws2:
+                ws2.receive_text()  # room_state
+                ws2.send_text(json.dumps({"type": "join", "playerId": "player-2", "name": "Bob"}))
+                ws1.receive_text()  # player_joined broadcast
+                ws2.receive_text()  # player_joined broadcast
+
+                # Player 1 disconnects while player 2 is watching
+                # (ws1 context exits → server sends player_left to ws2)
+                ws1.close()
+
+                msg = json.loads(ws2.receive_text())
+                assert msg["type"] == "player_left"
+                assert msg["playerId"] == "player-1"
 
 
 class TestMessageHandling:
@@ -161,11 +149,7 @@ class TestMessageHandling:
                 ws2.receive_text()  # Initial state
 
                 # Player 2 joins
-                join_msg2 = {
-                    "type": "join",
-                    "playerId": "player-2",
-                    "name": "Bob"
-                }
+                join_msg2 = {"type": "join", "playerId": "player-2", "name": "Bob"}
                 ws2.send_text(json.dumps(join_msg2))
 
                 # Clear join broadcasts
@@ -226,11 +210,7 @@ class TestMessageHandling:
                 ws2.receive_text()  # Initial state
 
                 # Player 2 joins
-                join_msg2 = {
-                    "type": "join",
-                    "playerId": "player-2",
-                    "name": "Bob"
-                }
+                join_msg2 = {"type": "join", "playerId": "player-2", "name": "Bob"}
                 ws2.send_text(json.dumps(join_msg2))
 
                 # Clear join broadcasts
@@ -254,22 +234,14 @@ class TestMessageHandling:
             ws1.receive_text()  # Initial state
 
             # Player 1 joins
-            ws1.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
+            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
             ws1.receive_text()  # player_joined
 
             with test_client.websocket_connect("/party/TEST01") as ws2:
                 ws2.receive_text()  # Initial state
 
                 # Player 2 joins
-                ws2.send_text(json.dumps({
-                    "type": "join",
-                    "playerId": "player-2",
-                    "name": "Bob"
-                }))
+                ws2.send_text(json.dumps({"type": "join", "playerId": "player-2", "name": "Bob"}))
 
                 # Clear join broadcasts
                 ws1.receive_text()
@@ -279,11 +251,7 @@ class TestMessageHandling:
                 draw_msg = {
                     "type": "draw_stroke",
                     "playerId": "player-1",
-                    "stroke": {
-                        "color": "#000000",
-                        "width": 2,
-                        "points": [{"x": 10, "y": 20}]
-                    }
+                    "stroke": {"color": "#000000", "width": 2, "points": [{"x": 10, "y": 20}]},
                 }
                 ws1.send_text(json.dumps(draw_msg))
 
@@ -300,18 +268,11 @@ class TestMessageHandling:
             ws1.receive_text()  # Initial state
 
             # Player 1 joins
-            ws1.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
+            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
             ws1.receive_text()  # player_joined
 
             # Player indicates ready
-            ws1.send_text(json.dumps({
-                "type": "player_ready",
-                "playerId": "player-1"
-            }))
+            ws1.send_text(json.dumps({"type": "player_ready", "playerId": "player-1"}))
 
             # Should receive ready_status
             msg = json.loads(ws1.receive_text())
@@ -325,17 +286,11 @@ class TestMessageHandling:
             websocket.receive_text()  # Initial state
 
             # Join
-            websocket.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
+            websocket.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
             websocket.receive_text()  # player_joined
 
             # Restart game
-            websocket.send_text(json.dumps({
-                "type": "restart_game"
-            }))
+            websocket.send_text(json.dumps({"type": "restart_game"}))
 
             # Should receive restart broadcast
             msg = json.loads(websocket.receive_text())
@@ -349,18 +304,11 @@ class TestMessageHandling:
             assert initial["type"] == "room_state"
 
             # Join
-            websocket.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
+            websocket.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
             websocket.receive_text()  # player_joined
 
             # Request state
-            websocket.send_text(json.dumps({
-                "type": "request_game_state",
-                "playerId": "player-1"
-            }))
+            websocket.send_text(json.dumps({"type": "request_game_state", "playerId": "player-1"}))
 
             # Should receive room_state
             msg = json.loads(websocket.receive_text())
@@ -371,43 +319,24 @@ class TestMessageHandling:
 class TestHostTransfer:
     """Test suite for host transfer logic"""
 
-    def test_host_transfer_on_disconnect(self, test_client):
-        """Test that host is transferred when original host disconnects"""
-        with test_client.websocket_connect("/party/TEST01") as ws1:
-            ws1.receive_text()  # Initial state
+    async def test_host_transfer_on_disconnect(self, room_with_players):
+        """Test that host is transferred when original host disconnects.
 
-            # Player 1 joins (becomes host)
-            ws1.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
-            ws1.receive_text()  # player_joined
+        Uses the room_with_players fixture (Alice=host, Bob=player-2) with
+        mock websockets to avoid sync TestClient timing issues.
+        """
+        import asyncio
 
-            with test_client.websocket_connect("/party/TEST01") as ws2:
-                ws2.receive_text()  # Initial state
+        room = room_with_players
+        assert room.host_id == "player-1"
 
-                # Player 2 joins
-                ws2.send_text(json.dumps({
-                    "type": "join",
-                    "playerId": "player-2",
-                    "name": "Bob"
-                }))
+        # Remove the host
+        await room.remove_player("player-1")
 
-                # Clear join broadcasts
-                ws1.receive_text()
-                ws2.receive_text()
+        # Wait for the delayed host transfer (1 second + buffer)
+        await asyncio.sleep(1.5)
 
-                # Player 1 (host) disconnects
-                ws1.close()
-
-            # Player 2 should receive host_changed
-            msg = json.loads(ws2.receive_text())
-            assert msg["type"] == "player_left"
-
-            msg = json.loads(ws2.receive_text())
-            assert msg["type"] == "host_changed"
-            assert msg["newHostId"] == "player-2"
+        assert room.host_id == "player-2"
 
 
 class TestErrorHandling:
@@ -424,23 +353,16 @@ class TestErrorHandling:
             # Connection should still be open (error is logged but not fatal)
             # We can continue sending valid messages
 
-    def test_room_cleanup_after_all_disconnect(self, test_client):
-        """Test that rooms are eventually cleaned up after all players leave"""
-        room_id = "TEST01"
+    async def test_room_marked_empty_after_all_disconnect(self, game_room, mock_websocket):
+        """Test that room is marked as empty after all players disconnect.
 
-        with test_client.websocket_connect(f"/party/{room_id}") as ws1:
-            ws1.receive_text()
-            ws1.send_text(json.dumps({
-                "type": "join",
-                "playerId": "player-1",
-                "name": "Alice"
-            }))
-            ws1.receive_text()
+        Note: rooms are not immediately removed — the periodic cleanup loop
+        handles hibernation (1 min) and removal (5 min).
+        """
+        await game_room.add_player("player-1", "Alice", mock_websocket)
+        assert not game_room.is_empty()
 
-        # After disconnect, check room state
-        import time
-        time.sleep(0.1)
+        await game_room.remove_player("player-1")
 
-        room = room_manager.get_room(room_id)
-        if room:
-            assert room.is_empty()
+        assert game_room.is_empty()
+        assert game_room._emptied_at is not None

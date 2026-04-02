@@ -1,0 +1,65 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# List available recipes
+default:
+    @just --list
+
+# ── Dev ───────────────────────────────────────────────────────────────────────
+
+# Start Vite dev server
+[group('dev')]
+dev:
+    npm run dev:web
+
+# ── Test ──────────────────────────────────────────────────────────────────────
+
+# Run unit tests (watch mode)
+[group('test')]
+test:
+    npm run test:unit
+
+# Run unit tests once (CI mode)
+[group('test')]
+test-ci:
+    npm run test:unit -- --run
+
+# Run e2e tests with Playwright
+[group('test')]
+test-e2e:
+    npm run test:e2e
+
+# Run e2e tests with Playwright UI
+[group('test')]
+test-e2e-ui:
+    npx playwright test --ui
+
+# ── Lint & Format ─────────────────────────────────────────────────────────────
+
+# Run all linters
+[group('lint')]
+lint:
+    npm run lint
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+
+# Type-check with vue-tsc
+[group('build')]
+type-check:
+    npm run type-check
+
+# Build for production
+[group('build')]
+build:
+    npm run build
+
+# Preview production build locally
+[group('build')]
+preview:
+    npm run preview
+
+# ── Install ───────────────────────────────────────────────────────────────────
+
+# Install dependencies
+[group('install')]
+install:
+    npm install

@@ -1,8 +1,9 @@
 # FastAPI Backend
-
+<!-- spell-checker: ignore elefant-->
 ## Overview
 
 Modern, scalable backend for Six Second Scribbles using:
+
 - **FastAPI** - High-performance async web framework
 - **PostgreSQL** - Reliable database for game data
 - **SQLAlchemy** - Async ORM for database operations
@@ -32,11 +33,13 @@ pip install -r requirements-dev.txt  # For development
 ### 2. Setup Database
 
 Using Docker (recommended):
+
 ```bash
 make db-setup  # Starts PostgreSQL, runs migrations, seeds data
 ```
 
 Manual setup:
+
 ```bash
 # Start PostgreSQL (via Docker or local install)
 docker-compose up -d
@@ -56,9 +59,10 @@ make dev
 ```
 
 Visit:
-- API: http://localhost:8000
-- Interactive Docs: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+
+- API: <http://localhost:8000>
+- Interactive Docs: <http://localhost:8000/docs>
+- ReDoc: <http://localhost:8000/redoc>
 
 ## Database Management
 
@@ -74,11 +78,13 @@ make db-setup   # Complete setup (up + migrate + seed)
 ## API Endpoints
 
 ### Health Check
+
 ```bash
 GET /  # API status
 ```
 
 ### Categories
+
 ```bash
 GET /api/categories                # List all categories
 GET /api/categories?difficulty=easy  # Filter by difficulty
@@ -86,12 +92,14 @@ GET /api/categories/{id}           # Get category with items
 ```
 
 ### Cards
+
 ```bash
 GET /api/cards/random?difficulty=medium&count=5&player_count=4
 # Get random cards for a game
 ```
 
 ### Scoring
+
 ```bash
 POST /api/score/guesses
 # Score player guesses with fuzzy matching
@@ -103,6 +111,7 @@ Body: {
 ```
 
 ### Custom Categories (Room-Specific)
+
 ```bash
 POST /api/rooms/{room_id}/categories
 # Create a custom category for a room (host only)
@@ -121,6 +130,7 @@ DELETE /api/rooms/{room_id}/categories/{category_id}?player_id=host-id
 ```
 
 **Features:**
+
 - Only the room host can create/delete custom categories
 - Minimum 5 items required per category
 - Custom categories are automatically included in card selection for that room
@@ -129,6 +139,7 @@ DELETE /api/rooms/{room_id}/categories/{category_id}?player_id=host-id
 - WebSocket broadcasts notify all players when categories are added/removed
 
 ### Rooms
+
 ```bash
 GET /rooms/{room_id}/status  # Get room status
 WS /party/{room_id}          # WebSocket for real-time gameplay
@@ -149,11 +160,13 @@ pip install -r requirements-dev.txt
 ## Running Tests
 
 ### Run all tests
+
 ```bash
 pytest
 ```
 
 ### Run with coverage report
+
 ```bash
 pytest --cov=. --cov-report=html
 ```
@@ -161,6 +174,7 @@ pytest --cov=. --cov-report=html
 Then open `htmlcov/index.html` in your browser to see the detailed coverage report.
 
 ### Run specific test files
+
 ```bash
 # Test game room logic only
 pytest tests/test_game_room.py
@@ -173,6 +187,7 @@ pytest tests/test_integration.py
 ```
 
 ### Run by marker
+
 ```bash
 # Run integration tests only
 pytest -m integration
@@ -182,16 +197,19 @@ pytest -m "not slow"
 ```
 
 ### Verbose output
+
 ```bash
 pytest -v
 ```
 
 ### Stop on first failure
+
 ```bash
 pytest -x
 ```
 
 ### Run specific test
+
 ```bash
 pytest tests/test_game_room.py::TestGameRoom::test_add_first_player_becomes_host
 ```
@@ -237,6 +255,7 @@ Tests are marked with the following markers:
 ## Coverage Goals
 
 We aim for:
+
 - **Overall coverage**: >90%
 - **Critical paths** (game room, message handling): 100%
 - **Integration scenarios**: All major flows covered
@@ -304,11 +323,13 @@ black --check .
 ## Debugging Tests
 
 ### Print debugging
+
 ```bash
 pytest -s  # Don't capture stdout
 ```
 
 ### PDB debugging
+
 ```python
 def test_something():
     import pdb; pdb.set_trace()  # Breakpoint
@@ -316,6 +337,7 @@ def test_something():
 ```
 
 ### Pytest debugging
+
 ```bash
 pytest --pdb  # Drop into debugger on failure
 ```
@@ -357,16 +379,19 @@ locust -f tests/load_test.py
 ## Troubleshooting
 
 ### Tests hanging
+
 - Check for missing `await` keywords in async tests
 - Verify WebSocket connections are properly closed
 - Check for infinite loops in idle check tasks
 
 ### Import errors
+
 - Ensure you're in the backend directory
 - Check that `PYTHONPATH` includes the backend directory
 - Verify all dependencies are installed
 
 ### Flaky tests
+
 - Use `pytest-repeat` to run flaky tests multiple times
 - Check for race conditions in async code
 - Ensure proper cleanup in fixtures

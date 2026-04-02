@@ -1,74 +1,47 @@
-[tool.black]
-  extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
-  include = '\.pyi?$'
-  line-length = 100
-  target-version = ['py310', 'py311', 'py312', 'py39']
+[project]
+  dependencies = [
+    "alembic>=1.17.2",
+    "asyncpg>=0.31.0",
+    "fastapi[standard]>=0.122.0",
+    "pydantic-settings>=2.12.0",
+    "rapidfuzz>=3.14.3",
+    "redis>=5.0",
+  ]
+  description = "Backend for 6-second-scribbles"
+  name = "backend"
+  readme = "README.md"
+  requires-python = ">=3.14"
+  version = "0.1.0"
 
-[tool.ruff]
-  line-length    = 100
-  target-version = "py39"
-
-  [tool.ruff.lint]
-    ignore = [
-      "B008", # do not perform function calls in argument defaults
-      "C901", # too complex
-      "E501", # line too long (handled by black)
-    ]
-    select = [
-      "B",  # flake8-bugbear
-      "C",  # flake8-comprehensions
-      "E",  # pycodestyle errors
-      "F",  # pyflakes
-      "I",  # isort
-      "UP", # pyupgrade
-      "W",  # pycodestyle warnings
-    ]
-
-    [tool.ruff.lint.per-file-ignores]
-      "__init__.py" = ["F401"]         # Unused imports
-      "tests/*.py"  = ["F401", "F811"] # Unused imports and redefinition
-
-[tool.mypy]
-  disallow_untyped_defs  = false
-  ignore_missing_imports = true
-  python_version         = "3.9"
-  warn_return_any        = true
-  warn_unused_configs    = true
+[dependency-groups]
+  dev = [
+    "commitizen>=4.10.0",
+    "greenlet>=3.3.2",
+    "httpx>=0.28.1",
+    "pre-commit>=4.5.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest>=9.0.1",
+    "ruff>=0.14.6",
+    "testcontainers>=4.14.2",
+    "ty>=0.0.27",
+]
 
 [tool.pytest.ini_options]
+  addopts = [
+    "--cov-branch",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov=.",
+    "--strict-markers",
+    "--tb=short",
+    "-v",
+  ]
   asyncio_mode = "auto"
   markers = [
-    "integration: marks tests as integration tests",
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-  ]
-  python_classes = ["Test*"]
-  python_files = ["test_*.py"]
-  python_functions = ["test_*"]
-  testpaths = ["tests"]
-
-[tool.coverage.run]
-  omit   = [".venv/*", "__pycache__/*", "tests/*", "venv/*"]
-  source = ["."]
-
-[tool.coverage.report]
-  exclude_lines = [
-    "@abstractmethod",
-    "def __repr__",
-    "if TYPE_CHECKING:",
-    "if __name__ == .__main__.:",
-    "pragma: no cover",
-    "raise AssertionError",
-    "raise NotImplementedError",
+    "asyncio: mark a test as requiring asyncio.",
+    "integration: mark a test as an integration test.",
+    "slow: mark a test as slow.",
+    "unit: mark a test as a unit test.",
   ]

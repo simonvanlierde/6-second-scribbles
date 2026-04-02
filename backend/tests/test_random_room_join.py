@@ -1,44 +1,33 @@
-"""
-Tests for random room join functionality
-"""
+"""Tests for random room join functionality"""
+
+import json
+
 import pytest
-from httpx import AsyncClient
 
 
 class TestRandomRoomJoin:
     """Test suite for random room join feature"""
 
-    @pytest.mark.asyncio
-    async def test_no_available_rooms(self, async_client: AsyncClient):
+    def test_no_available_rooms(self, test_client):
         """Test when no public rooms are available"""
-        response = await async_client.get("/api/rooms/random")
+        response = test_client.get("/api/rooms/random")
 
-        # Should return 404 when no rooms available
         assert response.status_code == 404
         data = response.json()
         assert "detail" in data
         assert "no available" in data["detail"].lower()
 
-    @pytest.mark.asyncio
-    async def test_find_public_room(self, async_client: AsyncClient):
+    def test_find_public_room(self, test_client):
         """Test finding a public room that's available"""
-        # First, create a public room by having someone join
         room_id = "PUBLIC_ROOM_01"
 
-        async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-            # Initial state
-            await ws.receive_json()
+        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+            ws.receive_text()  # room_state
 
-            # Player joins
-            await ws.send_json({
-                "type": "join",
-                "playerId": "player1",
-                "name": "Test Player"
-            })
-            await ws.receive_json()  # player_joined
+            ws.send_text(json.dumps({"type": "join", "playerId": "player1", "name": "Test Player"}))
+            ws.receive_text()  # player_joined
 
-            # Now try to get a random room
-            response = await async_client.get("/api/rooms/random")
+            response = test_client.get("/api/rooms/random")
 
             assert response.status_code == 200
             data = response.json()
@@ -46,170 +35,119 @@ class TestRandomRoomJoin:
             assert data["player_count"] == 1
             assert data["max_players"] == 10
 
-    @pytest.mark.asyncio
-    async def test_private_room_not_returned(self, async_client: AsyncClient):
+    def test_private_room_not_returned(self, test_client):
         """Test that private rooms are not returned in random join"""
-        # Create a private room
+        from app.game_room import room_manager
+
         room_id = "PRIVATE_ROOM"
 
-        async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-            # Initial state
-            await ws.receive_json()
+        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+            ws.receive_text()  # room_state
 
-            # Host joins
-            await ws.send_json({
-                "type": "join",
-                "playerId": "host1",
-                "name": "Host"
-            })
-            await ws.receive_json()
+            ws.send_text(json.dumps({"type": "join", "playerId": "host1", "name": "Host"}))
+            ws.receive_text()  # player_joined
 
-            # Host sets room to private
-            await ws.send_json({
-                "type": "privacy_changed",
-                "playerId": "host1",
-                "isPrivate": True
-            })
+            # Set privacy directly — privacy_changed has no server ack, so a
+            # bare send_text() would race with the following GET request.
+            room = room_manager.get_room(room_id)
+            assert room is not None
+            room.metadata.is_private = True
 
-            # Try to get random room - should not find the private one
-            response = await async_client.get("/api/rooms/random")
+            response = test_client.get("/api/rooms/random")
             assert response.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_full_room_not_returned(self, async_client: AsyncClient):
-        """Test that full rooms (10 players) are not returned"""
-        from game_room import room_manager
+    def test_full_room_not_returned(self, test_client):
+        """Test that full rooms (10 players) are not returned by random join."""
+        from unittest.mock import AsyncMock
+
+        from app.game_room import GameRoom, PlayerInfo
+        from app.game_room import room_manager
 
         room_id = "FULL_ROOM"
-        room = room_manager.get_or_create_room(room_id)
-
-        # Simulate 10 players (max capacity)
+        # Build the room without get_or_create_room (which needs an event loop
+        # to create_task the idle check).
+        room = GameRoom(room_id)
         for i in range(10):
-            # We can't actually add 10 websocket connections easily in test,
-            # but we can test the logic indirectly by checking the find method
-            pass
+            ws = AsyncMock()
+            room.players[f"player-{i}"] = PlayerInfo(
+                id=f"player-{i}", name=f"Player {i}", websocket=ws
+            )
+        room.host_id = "player-0"
+        room_manager.rooms[room_id] = room
 
-        # This test would need proper WebSocket mocking
-        # For now, just verify the endpoint exists
-        response = await async_client.get("/api/rooms/random")
-        # Will be 404 since no available rooms
-        assert response.status_code in [200, 404]
+        response = test_client.get("/api/rooms/random")
+        assert response.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_mid_game_room_not_returned(self, async_client: AsyncClient):
+    def test_mid_game_room_not_returned(self, test_client):
         """Test that rooms mid-game are not returned"""
-        from game_room import room_manager
-
         room_id = "GAMING_ROOM"
-        room = room_manager.get_or_create_room(room_id)
 
-        async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-            await ws.receive_json()
+        with test_client.websocket_connect(f"/party/{room_id}") as ws1:
+            ws1.receive_text()
+            ws1.send_text(json.dumps({"type": "join", "playerId": "player1", "name": "Player 1"}))
+            ws1.receive_text()
 
-            # Player joins
-            await ws.send_json({
-                "type": "join",
-                "playerId": "player1",
-                "name": "Player 1"
-            })
-            await ws.receive_json()
+            with test_client.websocket_connect(f"/party/{room_id}") as ws2:
+                ws2.receive_text()
+                ws2.send_text(json.dumps({"type": "join", "playerId": "player2", "name": "Player 2"}))
+                ws1.receive_text()
+                ws2.receive_text()
 
-            # Second player joins (need 2+ to start)
-            await ws.send_json({
-                "type": "join",
-                "playerId": "player2",
-                "name": "Player 2"
-            })
-            await ws.receive_json()
+                ws1.send_text(json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60}))
+                ws1.receive_text()  # start_game broadcast
+                ws2.receive_text()
 
-            # Start game (changes phase to "drawing")
-            await ws.send_json({
-                "type": "start_game",
-                "difficulty": "medium",
-                "rounds": 3,
-                "roundLength": 60
-            })
+                response = test_client.get("/api/rooms/random")
 
-            # Room should now be in game phase, not lobby
-            # So it shouldn't be returned by random join
-            response = await async_client.get("/api/rooms/random")
-
-            # Either finds another lobby room or returns 404
-            if response.status_code == 200:
-                data = response.json()
-                # Should not be the gaming room
-                assert data["room_code"] != room_id
+                if response.status_code == 200:
+                    data = response.json()
+                    assert data["room_code"] != room_id
 
 
 class TestPrivacyToggle:
     """Test suite for room privacy toggle"""
 
-    @pytest.mark.asyncio
-    async def test_host_can_set_privacy(self, async_client: AsyncClient):
+    def test_host_can_set_privacy(self, test_client):
         """Test that host can change room privacy"""
         room_id = "PRIVACY_TEST"
 
-        async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-            await ws.receive_json()
+        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+            ws.receive_text()
 
-            # Host joins
-            await ws.send_json({
-                "type": "join",
-                "playerId": "host1",
-                "name": "Host"
-            })
-            await ws.receive_json()
+            ws.send_text(json.dumps({"type": "join", "playerId": "host1", "name": "Host"}))
+            ws.receive_text()
 
-            # Verify room is initially public (can be found)
-            response = await async_client.get("/api/rooms/random")
+            # Initially public
+            response = test_client.get("/api/rooms/random")
             assert response.status_code == 200
-            data = response.json()
-            assert data["room_code"] == room_id
+            assert response.json()["room_code"] == room_id
 
             # Host sets to private
-            await ws.send_json({
-                "type": "privacy_changed",
-                "playerId": "host1",
-                "isPrivate": True
-            })
+            ws.send_text(json.dumps({"type": "privacy_changed", "isPrivate": True}))
 
-            # Now should not be found
-            response = await async_client.get("/api/rooms/random")
+            response = test_client.get("/api/rooms/random")
             assert response.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_non_host_cannot_set_privacy(self, async_client: AsyncClient):
+    def test_non_host_cannot_set_privacy(self, test_client):
         """Test that non-host players cannot change privacy"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "NON_HOST_PRIVACY"
-        room = room_manager.get_or_create_room(room_id)
 
-        async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-            await ws.receive_json()
+        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+            ws.receive_text()
+            ws.send_text(json.dumps({"type": "join", "playerId": "host1", "name": "Host"}))
+            ws.receive_text()
 
-            # Host joins
-            await ws.send_json({
-                "type": "join",
-                "playerId": "host1",
-                "name": "Host"
-            })
-            await ws.receive_json()
+            with test_client.websocket_connect(f"/party/{room_id}") as ws2:
+                ws2.receive_text()
+                ws2.send_text(json.dumps({"type": "join", "playerId": "player2", "name": "Player 2"}))
+                ws.receive_text()   # player_joined on ws1
+                ws2.receive_text()  # player_joined on ws2
 
-            # Non-host joins
-            await ws.send_json({
-                "type": "join",
-                "playerId": "player2",
-                "name": "Player 2"
-            })
-            await ws.receive_json()
+                # Non-host tries to set privacy (should be ignored)
+                ws2.send_text(json.dumps({"type": "privacy_changed", "isPrivate": True}))
 
-            # Non-host tries to set privacy (should be ignored)
-            await ws.send_json({
-                "type": "privacy_changed",
-                "playerId": "player2",
-                "isPrivate": True
-            })
-
-            # Room should still be public (privacy change ignored)
-            assert room.metadata.is_private is False
+                room = room_manager.get_room(room_id)
+                assert room is not None
+                assert room.metadata.is_private is False

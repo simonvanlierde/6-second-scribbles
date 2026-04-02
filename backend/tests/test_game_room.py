@@ -1,12 +1,12 @@
-"""
-Tests for game room management functionality
-"""
-import pytest
+"""Tests for game room management functionality"""
+
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
-from game_room import GameRoom, RoomManager, PlayerInfo
+import pytest
+
+from app.game_room import GameRoom
 
 
 class TestGameRoom:
@@ -66,7 +66,8 @@ class TestGameRoom:
         # Host leaves
         await game_room.remove_player("player-1")
 
-        # Bob should become the new host
+        # Bob should become the new host after HOST_TRANSFER_DELAY_MS (1 second)
+        await asyncio.sleep(1.5)
         assert game_room.host_id == "player-2"
         # Should broadcast host_changed message
         ws2.send_text.assert_called()
@@ -186,7 +187,7 @@ class TestRoomManager:
         """Test creating a room manager"""
         assert len(room_manager.rooms) == 0
 
-    def test_get_or_create_room(self, room_manager):
+    async def test_get_or_create_room(self, room_manager):
         """Test getting or creating a room"""
         room_id = "TEST01"
 
@@ -200,7 +201,7 @@ class TestRoomManager:
         assert room1 is room2
         assert len(room_manager.rooms) == 1
 
-    def test_get_room(self, room_manager):
+    async def test_get_room(self, room_manager):
         """Test getting an existing room"""
         room_id = "TEST01"
 

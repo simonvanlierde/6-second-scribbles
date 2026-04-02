@@ -1,0 +1,48 @@
+{
+  "name": "six-second-scribbles-multiplayer",
+  "version": "0.1.0",
+  "description": "Multiplayer web implementation of Six Second Scribbles party drawing game",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev:web": "vite --debug",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:unit": "vitest",
+    "test:e2e": "playwright test",
+    "test": "run-s test:*",
+    "type-check": "vue-tsc --build",
+    "lint": "biome check --write",
+    "format": "biome format"
+  },
+  "dependencies": {
+    "@vueuse/core": "^14.2.1",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.9",
+    "@playwright/test": "^1.56.1",
+    "@tsconfig/node22": "^22.0.2",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^22.18.11",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitejs/plugin-vue-jsx": "^5.1.1",
+    "@vue/test-utils": "^2.4.6",
+    "@vue/tsconfig": "^0.8.1",
+    "concurrently": "^9.2.1",
+    "happy-dom": "^20.0.10",
+    "jiti": "^2.6.1",
+    "jsdom": "^27.2.0",
+    "npm-run-all2": "^8.0.4",
+    "typescript": "~5.9.0",
+    "vite": "npm:rolldown-vite@latest",
+    "vite-plugin-vue-devtools": "^8.0.3",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.1.1"
+  }
+}

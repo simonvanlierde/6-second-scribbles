@@ -1,10 +1,9 @@
-"""
-Tests for host transfer on reconnection and player limit enforcement
-"""
-import pytest
+"""Tests for host transfer on reconnection and player limit enforcement"""
+
 import asyncio
+
+import pytest
 from httpx import AsyncClient
-from game_room import GameRoom
 
 
 class TestDelayedHostTransfer:
@@ -13,7 +12,7 @@ class TestDelayedHostTransfer:
     @pytest.mark.asyncio
     async def test_host_reconnects_within_delay(self):
         """Test that host retains status when reconnecting within 1 second"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "HOST_RECONNECT_TEST"
         room = room_manager.get_or_create_room(room_id)
@@ -52,7 +51,7 @@ class TestDelayedHostTransfer:
     @pytest.mark.asyncio
     async def test_host_does_not_reconnect_transfer_occurs(self):
         """Test that host is transferred if they don't reconnect within 1 second"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "HOST_TRANSFER_TEST"
         room = room_manager.get_or_create_room(room_id)
@@ -89,7 +88,7 @@ class TestPlayerLimitEnforcement:
     @pytest.mark.asyncio
     async def test_room_full_rejects_11th_player(self, async_client: AsyncClient):
         """Test that an 11th player cannot join a full room"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "FULL_ROOM_TEST"
         room = room_manager.get_or_create_room(room_id)
@@ -97,6 +96,7 @@ class TestPlayerLimitEnforcement:
         class MockWebSocket:
             async def send_text(self, message):
                 pass
+
             async def close(self, code=None, reason=None):
                 pass
 
@@ -118,7 +118,7 @@ class TestPlayerLimitEnforcement:
     @pytest.mark.asyncio
     async def test_existing_player_can_reconnect_to_full_room(self):
         """Test that existing player can reconnect even if room appears full"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "RECONNECT_FULL_TEST"
         room = room_manager.get_or_create_room(room_id)
@@ -155,45 +155,34 @@ class TestPlayerLimitEnforcement:
 class TestWebSocketRoomFull:
     """Test WebSocket handling of room full scenario"""
 
-    @pytest.mark.asyncio
-    async def test_websocket_sends_error_when_room_full(self, async_client: AsyncClient):
+    def test_websocket_sends_error_when_room_full(self, test_client):
         """Test that WebSocket sends join_error when trying to join full room"""
-        from game_room import room_manager
+        import json
+
+        from unittest.mock import AsyncMock
+
+        from app.game_room import GameRoom, PlayerInfo
+        from app.game_room import room_manager
 
         room_id = "WS_FULL_TEST"
-        room = room_manager.get_or_create_room(room_id)
-
-        # Pre-fill room with 10 players via direct method
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
+        room = GameRoom(room_id)
         for i in range(10):
-            ws = MockWebSocket()
-            await room.add_player(f"player_{i}", f"Player {i}", ws)
+            ws = AsyncMock()
+            room.players[f"player_{i}"] = PlayerInfo(
+                id=f"player_{i}", name=f"Player {i}", websocket=ws
+            )
+        room.host_id = "player_0"
+        room_manager.rooms[room_id] = room
 
-        # Now try to connect via WebSocket as 11th player
-        try:
-            async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-                # Receive initial room state
-                await ws.receive_json()
+        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+            ws.receive_text()  # room_state
 
-                # Try to join
-                await ws.send_json({
-                    "type": "join",
-                    "playerId": "player_11",
-                    "name": "Player 11"
-                })
+            ws.send_text(json.dumps({"type": "join", "playerId": "player_11", "name": "Player 11"}))
 
-                # Should receive join_error
-                response = await ws.receive_json()
-                assert response["type"] == "join_error"
-                assert response["error"] == "room_full"
-                assert "full" in response["message"].lower()
-
-        except Exception as e:
-            # Connection might close, which is also acceptable
-            assert "1008" in str(e) or "room full" in str(e).lower()
+            response = json.loads(ws.receive_text())
+            assert response["type"] == "join_error"
+            assert response["error"] == "room_full"
+            assert "full" in response["message"].lower()
 
 
 class TestGhostPlayerPrevention:
@@ -207,12 +196,11 @@ class TestGhostPlayerPrevention:
         # 2. Return existing ID if found
         # 3. Generate new ID only if not found
         # 4. Store new ID in localStorage
-        pass
 
     @pytest.mark.asyncio
     async def test_reconnecting_player_replaces_old_connection(self):
         """Test that reconnecting with same player ID replaces old connection"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "RECONNECT_TEST"
         room = room_manager.get_or_create_room(room_id)

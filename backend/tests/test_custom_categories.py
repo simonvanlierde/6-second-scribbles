@@ -1,22 +1,30 @@
-"""
-Tests for custom category functionality
-"""
+"""Tests for custom category functionality"""
+
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from db_models import Category, Card
-from main import app
-from database import get_db, async_session_maker, init_db
+from app.database import async_session_maker, init_db
+from app.db_models import Card, Category
 
 
 @pytest.fixture
 async def test_db():
-    """Create test database"""
-    await init_db()
-    async with async_session_maker() as session:
+    """Provide a database session pointing at the test container.
+
+    The _configure_db autouse fixture in conftest.py patches
+    app.database.engine and async_session_maker to point at a containerised
+    Postgres instance. We create tables here and yield a session.
+    """
+    import app.database as db_mod
+
+    # Ensure tables exist (idempotent via CREATE TABLE IF NOT EXISTS)
+    async with db_mod.engine.begin() as conn:
+        await conn.run_sync(db_mod.Base.metadata.create_all)
+
+    async with db_mod.async_session_maker() as session:
         yield session
+        await session.rollback()  # clean up any uncommitted state
 
 
 @pytest.fixture
@@ -36,25 +44,30 @@ async def sample_room_with_host(test_client):
 class TestCustomCategoryAPI:
     """Test custom category API endpoints"""
 
-    @pytest.mark.asyncio
-    async def test_create_custom_category(self, async_client: AsyncClient):
+    def test_create_custom_category(self, test_client):
         """Test creating a custom category"""
-        # First create a room by connecting
-        room_id = "CREATE_TEST"
-        async with async_client.websocket_connect(f"/party/{room_id}") as ws:
-            # Skip initial messages
-            await ws.receive_json()
+        from unittest.mock import AsyncMock
 
-        # Now create custom category
-        response = await async_client.post(
+        from app.game_room import GameRoom, PlayerInfo, room_manager
+
+        room_id = "CREATE_TEST"
+
+        # Set up room with a host directly (avoids HTTP-inside-WebSocket conflict)
+        room = GameRoom(room_id)
+        ws = AsyncMock()
+        room.players["host-123"] = PlayerInfo(id="host-123", name="Host Player", websocket=ws)
+        room.host_id = "host-123"
+        room_manager.rooms[room_id] = room
+
+        response = test_client.post(
             f"/api/rooms/{room_id}/categories",
             json={
                 "name": "My Custom Animals",
                 "items": ["unicorn", "dragon", "phoenix", "griffin", "pegasus"],
                 "difficulty": "hard",
                 "description": "Mythical creatures",
-                "created_by": "host-123"
-            }
+                "created_by": "host-123",
+            },
         )
 
         assert response.status_code == 200
@@ -64,23 +77,30 @@ class TestCustomCategoryAPI:
         assert data["category"]["name"] == "My Custom Animals"
         assert data["category"]["is_custom"] is True
 
-    @pytest.mark.asyncio
-    async def test_create_category_requires_minimum_items(self, async_client: AsyncClient):
+    def test_create_category_requires_minimum_items(self, test_client):
         """Test that custom categories require at least 5 items"""
+        import json
+
         room_id = "MIN_ITEMS_TEST"
 
-        response = await async_client.post(
-            f"/api/rooms/{room_id}/categories",
-            json={
-                "name": "Too Few Items",
-                "items": ["item1", "item2", "item3"],  # Only 3 items
-                "difficulty": "medium",
-                "created_by": "host-123"
-            }
-        )
+        # Create a room and join as host first
+        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+            ws.receive_text()
+            ws.send_text(json.dumps({"type": "join", "playerId": "host-123", "name": "Host"}))
+            ws.receive_text()
 
-        assert response.status_code == 400
-        assert "at least 5 items" in response.json()["detail"]
+            response = test_client.post(
+                f"/api/rooms/{room_id}/categories",
+                json={
+                    "name": "Too Few Items",
+                    "items": ["item1", "item2", "item3"],  # Only 3 items
+                    "difficulty": "medium",
+                    "created_by": "host-123",
+                },
+            )
+
+            assert response.status_code == 400
+            assert "at least 5 items" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_only_host_can_create_categories(self, async_client: AsyncClient):
@@ -94,8 +114,8 @@ class TestCustomCategoryAPI:
                 "name": "Unauthorized Category",
                 "items": ["item1", "item2", "item3", "item4", "item5"],
                 "difficulty": "medium",
-                "created_by": "not-the-host"
-            }
+                "created_by": "not-the-host",
+            },
         )
 
         # Should fail if room doesn't exist or player isn't host
@@ -107,12 +127,7 @@ class TestCustomCategoryAPI:
         room_id = "GET_CATEGORIES_TEST"
 
         # Create a custom category in database
-        category = Category(
-            name="Test Category",
-            difficulty="medium",
-            room_id=room_id,
-            created_by="test-user"
-        )
+        category = Category(name="Test Category", difficulty="medium", room_id=room_id, created_by="test-user")
         test_db.add(category)
         await test_db.flush()
 
@@ -139,12 +154,7 @@ class TestCustomCategoryAPI:
         room_id = "DELETE_TEST"
 
         # Create a custom category
-        category = Category(
-            name="To Be Deleted",
-            difficulty="medium",
-            room_id=room_id,
-            created_by="host-123"
-        )
+        category = Category(name="To Be Deleted", difficulty="medium", room_id=room_id, created_by="host-123")
         test_db.add(category)
         await test_db.commit()
 
@@ -152,27 +162,19 @@ class TestCustomCategoryAPI:
 
         # Delete it
         response = await async_client.delete(
-            f"/api/rooms/{room_id}/categories/{category_id}",
-            params={"player_id": "host-123"}
+            f"/api/rooms/{room_id}/categories/{category_id}", params={"player_id": "host-123"}
         )
 
         # Should fail without an active room, but test the endpoint exists
         assert response.status_code in [200, 404]
 
     @pytest.mark.asyncio
-    async def test_custom_categories_included_in_random_selection(
-        self, async_client: AsyncClient, test_db
-    ):
+    async def test_custom_categories_included_in_random_selection(self, async_client: AsyncClient, test_db):
         """Test that custom categories are included when getting random cards"""
         room_id = "RANDOM_TEST"
 
         # Create a custom category
-        category = Category(
-            name="Custom Test",
-            difficulty="medium",
-            room_id=room_id,
-            created_by="test-user"
-        )
+        category = Category(name="Custom Test", difficulty="medium", room_id=room_id, created_by="test-user")
         test_db.add(category)
         await test_db.flush()
 
@@ -185,13 +187,7 @@ class TestCustomCategoryAPI:
 
         # Get random cards including this room
         response = await async_client.get(
-            "/api/cards/random",
-            params={
-                "difficulty": "medium",
-                "count": 1,
-                "player_count": 2,
-                "room_id": room_id
-            }
+            "/api/cards/random", params={"difficulty": "medium", "count": 1, "player_count": 2, "room_id": room_id}
         )
 
         # May succeed or fail depending on if enough global categories exist
@@ -207,27 +203,20 @@ class TestCustomCategoryCleanup:
     @pytest.mark.asyncio
     async def test_categories_cleaned_up_when_room_closes(self, test_db):
         """Test that custom categories are deleted when room is removed"""
-        from game_room import GameRoom
+        from app.game_room import GameRoom
 
         room_id = "CLEANUP_TEST"
         room = GameRoom(room_id)
 
         # Create custom categories in database
         for i in range(3):
-            category = Category(
-                name=f"Temp Category {i}",
-                difficulty="medium",
-                room_id=room_id,
-                created_by="test-user"
-            )
+            category = Category(name=f"Temp Category {i}", difficulty="medium", room_id=room_id, created_by="test-user")
             test_db.add(category)
 
         await test_db.commit()
 
         # Verify they exist
-        result = await test_db.execute(
-            select(Category).where(Category.room_id == room_id)
-        )
+        result = await test_db.execute(select(Category).where(Category.room_id == room_id))
         categories_before = result.scalars().all()
         assert len(categories_before) == 3
 
@@ -235,9 +224,7 @@ class TestCustomCategoryCleanup:
         await room.cleanup_custom_categories()
 
         # Verify they're deleted
-        result = await test_db.execute(
-            select(Category).where(Category.room_id == room_id)
-        )
+        result = await test_db.execute(select(Category).where(Category.room_id == room_id))
         categories_after = result.scalars().all()
         assert len(categories_after) == 0
 
@@ -270,7 +257,7 @@ class TestCustomCategoryIntegration:
         # Room can have multiple custom categories
         # Each with unique names within that room
         # All get included in card selection for that room
-        pass  # Implementation verified via API tests
+        # Implementation verified via API tests
 
 
 class TestCustomCategoryEdgeCases:
@@ -280,29 +267,17 @@ class TestCustomCategoryEdgeCases:
     async def test_custom_category_same_name_different_rooms(self, test_db):
         """Test that different rooms can have categories with the same name"""
         # Room 1
-        cat1 = Category(
-            name="Animals",
-            difficulty="easy",
-            room_id="ROOM1",
-            created_by="user1"
-        )
+        cat1 = Category(name="Animals", difficulty="easy", room_id="ROOM1", created_by="user1")
         test_db.add(cat1)
 
         # Room 2 - same name, different room
-        cat2 = Category(
-            name="Animals",
-            difficulty="easy",
-            room_id="ROOM2",
-            created_by="user2"
-        )
+        cat2 = Category(name="Animals", difficulty="easy", room_id="ROOM2", created_by="user2")
         test_db.add(cat2)
 
         await test_db.commit()
 
         # Both should exist
-        result = await test_db.execute(
-            select(Category).where(Category.name == "Animals")
-        )
+        result = await test_db.execute(select(Category).where(Category.name == "Animals"))
         categories = result.scalars().all()
         assert len(categories) == 2
 
@@ -314,37 +289,29 @@ class TestCustomCategoryEdgeCases:
             name="Global Animals",
             difficulty="easy",
             room_id=None,  # Global
-            created_by=None
+            created_by=None,
         )
         test_db.add(global_cat)
         await test_db.commit()
 
         # Create a room-specific category
-        room_cat = Category(
-            name="Room Animals",
-            difficulty="easy",
-            room_id="TEST_ROOM",
-            created_by="test-user"
-        )
+        room_cat = Category(name="Room Animals", difficulty="easy", room_id="TEST_ROOM", created_by="test-user")
         test_db.add(room_cat)
         await test_db.commit()
 
         # Clean up room categories
-        from game_room import GameRoom
+        from app.game_room import GameRoom
+
         room = GameRoom("TEST_ROOM")
         await room.cleanup_custom_categories()
 
         # Global category should still exist
-        result = await test_db.execute(
-            select(Category).where(Category.room_id.is_(None))
-        )
+        result = await test_db.execute(select(Category).where(Category.room_id.is_(None)))
         global_categories = result.scalars().all()
         assert len(global_categories) >= 1
         assert any(c.name == "Global Animals" for c in global_categories)
 
         # Room category should be deleted
-        result = await test_db.execute(
-            select(Category).where(Category.room_id == "TEST_ROOM")
-        )
+        result = await test_db.execute(select(Category).where(Category.room_id == "TEST_ROOM"))
         room_categories = result.scalars().all()
         assert len(room_categories) == 0

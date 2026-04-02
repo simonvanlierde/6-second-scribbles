@@ -1,11 +1,11 @@
-"""
-Tests for room hibernation and automatic garbage collection
-"""
-import pytest
-import asyncio
+"""Tests for room hibernation and automatic garbage collection"""
+
 import time
+
+import pytest
 from httpx import AsyncClient
-from game_room import GameRoom, RoomManager
+
+from app.game_room import GameRoom, RoomManager
 
 
 class TestRoomHibernation:
@@ -14,7 +14,7 @@ class TestRoomHibernation:
     @pytest.mark.asyncio
     async def test_room_marked_empty_on_last_player_leave(self):
         """Test that room is marked when last player leaves"""
-        from game_room import room_manager
+        from app.game_room import room_manager
 
         room_id = "EMPTY_TEST"
         room = room_manager.get_or_create_room(room_id)

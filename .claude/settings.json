@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vue-tsc:*)",
+      "Bash(pnpm run:*)",
+      "Bash(grep -v '^$')",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm exec:*)",
+      "Bash(uv run:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

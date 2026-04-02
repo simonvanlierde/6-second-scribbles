@@ -1,0 +1,46 @@
+---
+version: "0.2"
+language: en
+dictionaries:
+  - cpp-compound-words
+  - docker
+  - filetypes
+  - npm
+  - python
+  - software-tools
+  - softwareTerms
+
+# Include hidden files
+enableGlobDot: true
+
+# Exclude files in .gitignore
+useGitignore: true
+ignorePaths:
+  - .git
+  - "*-lock.*"
+
+words:
+  # Names
+  - Culley
+  - Lierde
+  - Lange
+
+  # Software terms
+  - ASGI
+  - onupdate
+  - ondelete
+  - htmlcov
+  - Partykit
+
+  # Language names
+  - Español
+  - Français
+
+import:
+  - "@cspell/dict-es-es/cspell-ext.json"
+  - "@cspell/dict-fr-fr/cspell-ext.json"
+
+# Multilingual category data
+overrides:
+  - filename: "**/{seed_data.py,seed_data.json}"
+    language: "en,es,fr"

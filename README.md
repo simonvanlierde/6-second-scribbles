@@ -134,7 +134,7 @@ npm run dev:web        # Start Vite dev server (frontend only)
 npm run dev:server     # Start FastAPI server (backend only)
 npm run build          # Build production frontend
 npm run type-check     # Run TypeScript checks
-npm run lint           # Run oxlint + ESLint
+npm run lint           # Run biome
 npm run format         # Format code with Prettier
 npm run preview        # Preview the production build
 ```
@@ -187,11 +187,13 @@ The FastAPI backend can be deployed to various platforms:
 2. Install Python 3.8+ on your server
 
 3. Install dependencies:
+
     ```bash
     pip install -r backend/requirements.txt
     ```
 
-4. Run the server with a production ASGI server:
+4. Run the server:
+
     ```bash
     cd backend
     uvicorn main:app --host 0.0.0.0 --port 8000
@@ -247,7 +249,7 @@ Your provider will give you a public URL, and your game will be live.
 This project is a real-time, multiplayer web version inspired by two wonderful creations:
 
 1. **The original physical game:** *Six Second Scribbles*, created by **Hazel Reynolds** and published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles).
-2. **The original solo web version:** by **Oliver Culley de Lange**, which you can find [on GitHub](https://github.com/OliverCulleyDeLange/6ss).
+1. **The original solo web version:** by **Oliver Culley de Lange**, which you can find [on GitHub](https://github.com/OliverCulleyDeLange/6ss).
 
 This implementation rebuilds the game from the ground up as a multiplayer experience using Vue 3, Pinia, and FastAPI.
 
