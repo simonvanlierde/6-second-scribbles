@@ -28,7 +28,7 @@ class TestRoomHibernation:
         assert room.is_empty() is True
         assert room._emptied_at is not None
 
-    async def test_room_enters_hibernation_after_1_minute(self, make_ws):
+    async def test_room_enters_hibernation_after_1_minute(self, make_ws) -> None:
         """Test that room enters hibernation after being empty for 1 minute."""
         room = GameRoom("HIBERNATE_TEST")
 
@@ -47,7 +47,7 @@ class TestRoomHibernation:
         await room.hibernate()
         assert room.is_hibernated is True
 
-    async def test_room_removed_after_5_minutes(self, make_ws):
+    async def test_room_removed_after_5_minutes(self, make_ws) -> None:
         """Test that room is marked for removal after 5 minutes empty."""
         room = GameRoom("REMOVAL_TEST")
 
@@ -61,7 +61,7 @@ class TestRoomHibernation:
 
         assert room.should_be_removed() is True
 
-    async def test_room_wakes_from_hibernation_on_join(self, make_ws):
+    async def test_room_wakes_from_hibernation_on_join(self, make_ws) -> None:
         """Test that hibernated room wakes up when player joins."""
         room = GameRoom("WAKE_TEST")
 
@@ -69,7 +69,7 @@ class TestRoomHibernation:
         room._emptied_at = time.time() - 120
 
         ws = make_ws()
-        player, _ = await room.add_player("player_1", "Player 1", ws)
+        _player, _ = await room.add_player("player_1", "Player 1", ws)
 
         assert room.is_hibernated is False
         assert room._emptied_at is None
@@ -78,7 +78,7 @@ class TestRoomHibernation:
 class TestRoomManagerCleanup:
     """Test suite for RoomManager periodic cleanup."""
 
-    async def test_room_manager_starts_and_stops(self):
+    async def test_room_manager_starts_and_stops(self) -> None:
         """Test that room manager can start and stop cleanly."""
         manager = RoomManager()
 
@@ -103,7 +103,7 @@ class TestRoomManagerCleanup:
         empty_seconds,
         expect_hibernated,
         expect_removed,
-    ):
+    ) -> None:
         """Test periodic cleanup transitions: hibernate after 1 min, remove after 5 min."""
         room = managed_room_manager.get_or_create_room("CLEANUP_STATE_TEST")
         ws = make_ws()
@@ -120,7 +120,7 @@ class TestRoomManagerCleanup:
             assert "CLEANUP_STATE_TEST" in managed_room_manager.rooms
             assert room.is_hibernated is expect_hibernated
 
-    async def test_cleanup_keeps_active_rooms(self, managed_room_manager, make_ws):
+    async def test_cleanup_keeps_active_rooms(self, managed_room_manager, make_ws) -> None:
         """Test that cleanup doesn't affect rooms with players."""
         room = managed_room_manager.get_or_create_room("ACTIVE_ROOM")
         ws = make_ws()
@@ -135,7 +135,7 @@ class TestRoomManagerCleanup:
 class TestRoomManagerStats:
     """Test suite for room manager statistics."""
 
-    async def test_get_stats_with_mixed_rooms(self, make_ws):
+    async def test_get_stats_with_mixed_rooms(self, make_ws) -> None:
         """Test stats with active, empty, and hibernated rooms."""
         manager = RoomManager()
 
@@ -169,7 +169,7 @@ class TestRoomManagerStats:
 class TestStatsEndpoint:
     """Test suite for /api/stats endpoint."""
 
-    async def test_stats_endpoint_returns_stats(self, async_client: "AsyncClient"):
+    async def test_stats_endpoint_returns_stats(self, async_client: AsyncClient) -> None:
         """Test that /api/stats returns server statistics with correct structure."""
         # Baseline: no rooms
         response = await async_client.get("/api/stats")
@@ -192,7 +192,7 @@ class TestStatsEndpoint:
 class TestRoomLifecycle:
     """Test complete room lifecycle."""
 
-    async def test_complete_room_lifecycle(self, managed_room_manager, make_ws):
+    async def test_complete_room_lifecycle(self, managed_room_manager, make_ws) -> None:
         """Test room from creation to hibernation to removal."""
         # 1. Create room
         room = managed_room_manager.get_or_create_room("LIFECYCLE_TEST")

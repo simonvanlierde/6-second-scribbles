@@ -18,10 +18,7 @@ CARD_DECKS = json.loads((Path(__file__).parent / "seed_data.json").read_text())
 
 async def seed_database() -> None:
     """Seed the database with card deck data."""
-    print("🌱 Starting database seed...")
-
     await init_db()
-    print("✅ Database tables initialized")
 
     async with get_session_maker()() as session:
         try:
@@ -29,15 +26,12 @@ async def seed_database() -> None:
             existing = result.scalars().all()
 
             if existing:
-                print("⚠️  Database already contains data. Skipping seed.")
-                print(f"   Found {len(existing)} categories")
                 return
 
             total_categories = 0
             total_items = 0
 
             for difficulty, categories in CARD_DECKS.items():
-                print(f"\n📦 Seeding {difficulty} categories...")
 
                 for cat_data in categories:
                     category = Category(
@@ -60,32 +54,23 @@ async def seed_database() -> None:
                     total_categories += 1
                     total_items += len(cat_data["items"])
 
-                    print(f"   ✓ {cat_data['category']} ({len(cat_data['items'])} items)")
 
             await session.commit()
 
-            print("\n✅ Seed complete!")
-            print(f"   📊 {total_categories} categories created")
-            print(f"   📝 {total_items} items added")
 
-        except Exception as e:
+        except Exception:
             await session.rollback()
-            print(f"\n❌ Error seeding database: {e}")
             raise
 
 
 async def clear_database() -> None:
     """Clear all data from the database (use with caution!)."""
-    print("⚠️  Clearing database...")
-
     async with get_session_maker()() as session:
         try:
             await session.execute(delete(Category))
             await session.commit()
-            print("✅ Database cleared")
-        except Exception as e:
+        except Exception:
             await session.rollback()
-            print(f"❌ Error clearing database: {e}")
             raise
 
 

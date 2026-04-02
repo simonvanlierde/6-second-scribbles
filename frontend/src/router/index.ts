@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import LobbyView from "../views/LobbyView.vue";
 
 const router = createRouter({
-  history: createWebHistory((import.meta as any).env?.BASE_URL || "/"),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: "/",

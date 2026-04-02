@@ -1,4 +1,4 @@
-import type { InjectionKey, ShallowRef } from "vue";
+import { type InjectionKey, inject, type ShallowRef } from "vue";
 
 import type { useGameEngine } from "./useGameEngine";
 
@@ -8,3 +8,13 @@ import type { useGameEngine } from "./useGameEngine";
  * Value is null when no game is active or the local player is not the host.
  */
 export const gameEngineKey: InjectionKey<ShallowRef<ReturnType<typeof useGameEngine> | null>> = Symbol("gameEngine");
+
+export function injectGameEngine() {
+  const gameEngineRef = inject(gameEngineKey, null);
+
+  if (!gameEngineRef) {
+    throw new Error("Game engine injection is missing.");
+  }
+
+  return gameEngineRef;
+}

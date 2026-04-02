@@ -128,16 +128,16 @@ async function joinRandomRoom() {
           </div>
 
           <div class="button-group">
-            <button class="btn btn-primary" @click="createRoom">Create Room</button>
+            <button type="button" class="btn btn-primary" @click="createRoom">Create Room</button>
             <div class="divider">or</div>
-            <button class="btn btn-random" :disabled="isJoiningRandom" @click="joinRandomRoom">
+            <button type="button" class="btn btn-random" :disabled="isJoiningRandom" @click="joinRandomRoom">
               {{ isJoiningRandom ? 'Finding a room...' : '🎲 Join Random Room' }}
             </button>
             <div class="divider">or</div>
             <div class="input-group">
               <RoomCodeInput v-model="roomCodeModel" />
               <div style="display: flex; justify-content: center; margin-top: 0.75rem">
-                <button class="btn btn-secondary" @click="joinRoom">Join Room</button>
+                <button type="button" class="btn btn-secondary" @click="joinRoom">Join Room</button>
               </div>
             </div>
           </div>

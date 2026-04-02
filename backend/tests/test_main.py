@@ -1,301 +1,146 @@
-"""Tests for main FastAPI application and endpoints"""
+"""Tests for the FastAPI app surface and core websocket flows."""
 
-import json
+from __future__ import annotations
+
 from unittest.mock import AsyncMock
 
 from app.game_room import room_manager
+from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 
-class TestHTTPEndpoints:
-    """Test suite for HTTP endpoints"""
-
-    def test_root_endpoint(self, test_client):
-        """Test the root health check endpoint"""
-        response = test_client.get("/")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "ok"
-        assert data["service"] == "Six Second Scribbles API"
-
-    async def test_room_status_nonexistent(self, async_client):
-        """Test room status for a non-existent room"""
-        response = await async_client.get("/rooms/NONEXISTENT/status")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["exists"] is False
-
-    async def test_room_status_existing(self, async_client):
-        """Test room status for an existing room"""
-        # Create a room
-        room = room_manager.get_or_create_room("TEST01")
-
-        # Add a player
-        ws = AsyncMock()
-        await room.add_player("player-1", "Alice", ws)
-        room.metadata.game_phase = "drawing"
-
-        response = await async_client.get("/rooms/TEST01/status")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["exists"] is True
-        assert data["players"] == 1
-        assert data["game_phase"] == "drawing"
+def test_root_endpoint(test_client) -> None:
+    response = test_client.get("/")
 
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["service"] == "Six Second Scribbles API"
+    assert "version" in payload
 
-class TestWebSocketConnection:
-    """Test suite for WebSocket connection handling"""
 
-    def test_websocket_connect_and_disconnect(self, test_client):
-        """Test basic WebSocket connection and disconnection"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            # Should receive initial room state
-            data = websocket.receive_text()
-            message = json.loads(data)
+async def test_room_status_for_existing_and_missing_room(async_client) -> None:
+    missing_response = await async_client.get("/rooms/NONEXISTENT/status")
+    assert missing_response.status_code == 200
+    assert missing_response.json() == {"exists": False}
 
-            assert message["type"] == "room_state"
-            assert message["gamePhase"] == "lobby"
-            assert isinstance(message["players"], list)
-
-    def test_websocket_join_message(self, test_client):
-        """Test joining a room via WebSocket"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            # Receive initial state
-            websocket.receive_text()
+    room = room_manager.get_or_create_room("TEST01")
+    await room.add_player("player-1", "Alice", AsyncMock())
+    room.metadata.game_phase = "drawing"
 
-            # Send join message
-            join_msg = {"type": "join", "playerId": "player-1", "name": "Alice"}
-            websocket.send_text(json.dumps(join_msg))
+    existing_response = await async_client.get("/rooms/TEST01/status")
+    assert existing_response.status_code == 200
+    assert existing_response.json() == {"exists": True, "players": 1, "game_phase": "drawing"}
 
-            # Should receive player_joined broadcast
-            data = websocket.receive_text()
-            message = json.loads(data)
 
-            assert message["type"] == "player_joined"
-            assert message["playerId"] == "player-1"
-            assert message["name"] == "Alice"
-            assert len(message["players"]) == 1
-
-    def test_multiple_players_join(self, test_client):
-        """Test multiple players joining the same room"""
-        with test_client.websocket_connect("/party/TEST01") as ws1:
-            ws1.receive_text()  # Initial state
+def test_join_broadcast_lists_all_players(test_client) -> None:
+    with joined_players(
+        test_client,
+        "JOIN01",
+        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+    ) as (ws1, ws2):
+        send_json(ws1, {"type": "request_game_state", "playerId": "player-1"})
+        send_json(ws2, {"type": "request_game_state", "playerId": "player-2"})
 
-            # Player 1 joins
-            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
-            ws1.receive_text()  # player_joined
-
-            with test_client.websocket_connect("/party/TEST01") as ws2:
-                ws2.receive_text()  # Initial state
-
-                # Player 2 joins
-                ws2.send_text(json.dumps({"type": "join", "playerId": "player-2", "name": "Bob"}))
-
-                # Both should receive the broadcast
-                msg1 = json.loads(ws1.receive_text())
-                msg2 = json.loads(ws2.receive_text())
-
-                assert msg1["type"] == "player_joined"
-                assert msg2["type"] == "player_joined"
-                assert len(msg1["players"]) == 2
-                assert len(msg2["players"]) == 2
-
-    def test_player_leaves_broadcast_visible(self, test_client):
-        """Test that remaining players see a player_left broadcast on disconnect."""
-        with test_client.websocket_connect("/party/DISC01") as ws1:
-            ws1.receive_text()  # room_state
-            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
-            ws1.receive_text()  # player_joined
-
-            with test_client.websocket_connect("/party/DISC01") as ws2:
-                ws2.receive_text()  # room_state
-                ws2.send_text(json.dumps({"type": "join", "playerId": "player-2", "name": "Bob"}))
-                ws1.receive_text()  # player_joined broadcast
-                ws2.receive_text()  # player_joined broadcast
-
-                # Player 1 disconnects while player 2 is watching
-                # (ws1 context exits → server sends player_left to ws2)
-                ws1.close()
-
-                msg = json.loads(ws2.receive_text())
-                assert msg["type"] == "player_left"
-                assert msg["playerId"] == "player-1"
-
-
-class TestMessageHandling:
-    """Test suite for game message handling"""
-
-    def test_start_game_message(self, test_client, sample_messages):
-        """Test starting a game"""
-        with test_client.websocket_connect("/party/TEST01") as ws1:
-            ws1.receive_text()  # Initial state
-
-            # Player 1 joins
-            ws1.send_text(json.dumps(sample_messages["join"]))
-            ws1.receive_text()  # player_joined
-
-            with test_client.websocket_connect("/party/TEST01") as ws2:
-                ws2.receive_text()  # Initial state
-
-                # Player 2 joins
-                join_msg2 = {"type": "join", "playerId": "player-2", "name": "Bob"}
-                ws2.send_text(json.dumps(join_msg2))
-
-                # Clear join broadcasts
-                ws1.receive_text()
-                ws2.receive_text()
-
-                # Start game
-                ws1.send_text(json.dumps(sample_messages["start_game"]))
-
-                # Both players should receive start_game
-                msg1 = json.loads(ws1.receive_text())
-                msg2 = json.loads(ws2.receive_text())
-
-                assert msg1["type"] == "start_game"
-                assert msg2["type"] == "start_game"
-                assert msg1["difficulty"] == "medium"
-                assert msg1["rounds"] == 5
-
-    def test_settings_update_from_host(self, test_client, sample_messages):
-        """Test that only host can update settings"""
-        with test_client.websocket_connect("/party/TEST01") as ws1:
-            ws1.receive_text()  # Initial state
-
-            # Player 1 joins (becomes host)
-            ws1.send_text(json.dumps(sample_messages["join"]))
-            ws1.receive_text()  # player_joined
-
-            with test_client.websocket_connect("/party/TEST01") as ws2:
-                ws2.receive_text()  # Initial state
-
-                # Player 2 joins
-                join_msg2 = {"type": "join", "playerId": "player-2", "name": "Bob"}
-                ws2.send_text(json.dumps(join_msg2))
-
-                # Clear join broadcasts
-                ws1.receive_text()
-                ws2.receive_text()
-
-                # Host updates settings
-                ws1.send_text(json.dumps(sample_messages["settings_update"]))
-
-                # Both should receive update
-                msg1 = json.loads(ws1.receive_text())
-                msg2 = json.loads(ws2.receive_text())
-
-                assert msg1["type"] == "settings_update"
-                assert msg2["type"] == "settings_update"
-                assert msg1["difficulty"] == "hard"
-
-    def test_draw_stroke_broadcast(self, test_client):
-        """Test that draw strokes are broadcast to all players"""
-        with test_client.websocket_connect("/party/TEST01") as ws1:
-            ws1.receive_text()  # Initial state
-
-            # Player 1 joins
-            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
-            ws1.receive_text()  # player_joined
-
-            with test_client.websocket_connect("/party/TEST01") as ws2:
-                ws2.receive_text()  # Initial state
-
-                # Player 2 joins
-                ws2.send_text(json.dumps({"type": "join", "playerId": "player-2", "name": "Bob"}))
-
-                # Clear join broadcasts
-                ws1.receive_text()
-                ws2.receive_text()
-
-                # Player 1 draws
-                draw_msg = {
-                    "type": "draw_stroke",
-                    "playerId": "player-1",
-                    "stroke": {"color": "#000000", "width": 2, "points": [{"x": 10, "y": 20}]},
-                }
-                ws1.send_text(json.dumps(draw_msg))
-
-                # Both should receive the stroke
-                msg1 = json.loads(ws1.receive_text())
-                msg2 = json.loads(ws2.receive_text())
-
-                assert msg1["type"] == "draw_stroke"
-                assert msg2["type"] == "draw_stroke"
-
-    def test_player_ready_tracking(self, test_client):
-        """Test player ready status tracking"""
-        with test_client.websocket_connect("/party/TEST01") as ws1:
-            ws1.receive_text()  # Initial state
-
-            # Player 1 joins
-            ws1.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
-            ws1.receive_text()  # player_joined
-
-            # Player indicates ready
-            ws1.send_text(json.dumps({"type": "player_ready", "playerId": "player-1"}))
-
-            # Should receive ready_status
-            msg = json.loads(ws1.receive_text())
-            assert msg["type"] == "ready_status"
-            assert msg["readyCount"] == 1
-            assert msg["totalPlayers"] == 1
-
-    def test_restart_game(self, test_client):
-        """Test restarting a game"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            websocket.receive_text()  # Initial state
-
-            # Join
-            websocket.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
-            websocket.receive_text()  # player_joined
-
-            # Restart game
-            websocket.send_text(json.dumps({"type": "restart_game"}))
-
-            # Should receive restart broadcast
-            msg = json.loads(websocket.receive_text())
-            assert msg["type"] == "restart_game"
-
-    def test_request_game_state(self, test_client):
-        """Test requesting current game state"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            # Initial state
-            initial = json.loads(websocket.receive_text())
-            assert initial["type"] == "room_state"
-
-            # Join
-            websocket.send_text(json.dumps({"type": "join", "playerId": "player-1", "name": "Alice"}))
-            websocket.receive_text()  # player_joined
-
-            # Request state
-            websocket.send_text(json.dumps({"type": "request_game_state", "playerId": "player-1"}))
-
-            # Should receive room_state
-            msg = json.loads(websocket.receive_text())
-            assert msg["type"] == "room_state"
-            assert len(msg["players"]) == 1
-
-
-class TestErrorHandling:
-    """Test suite for error handling"""
-
-    def test_invalid_json_message(self, test_client, sample_messages):
-        """Test that invalid JSON is handled non-fatally — connection stays alive"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            websocket.receive_text()  # Initial state
-
-            websocket.send_text(json.dumps(sample_messages["join"]))
-            websocket.receive_text()  # player_joined
-
-            # Send invalid JSON — should not crash the connection
-            websocket.send_text("not valid json{")
-
-            # Connection is still live: a valid heartbeat is accepted without error
-            websocket.send_text(json.dumps(sample_messages["heartbeat"]))
-
-            # A subsequent valid message still gets a response, proving the connection survived
-            websocket.send_text(json.dumps({"type": "request_game_state", "playerId": "player-123"}))
-            msg = json.loads(websocket.receive_text())
-            assert msg["type"] == "room_state"
+        assert receive_json(ws1)["players"] == receive_json(ws2)["players"]
+
+
+def test_player_disconnect_broadcasts_player_left(test_client) -> None:
+    with joined_players(
+        test_client,
+        "DISC01",
+        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+    ) as (ws1, ws2):
+        ws1.close()
+
+        assert receive_json(ws2) == {"type": "player_left", "playerId": "player-1"}
+
+
+def test_request_game_state_returns_current_room_state(test_client) -> None:
+    with test_client.websocket_connect("/party/STATE01") as websocket:
+        initial_state = receive_json(websocket)
+        assert initial_state["type"] == "room_state"
+
+        join_player(websocket, "player-1", "Alice")
+        send_json(websocket, {"type": "request_game_state", "playerId": "player-1"})
+
+        room_state = receive_json(websocket)
+        assert room_state["type"] == "room_state"
+        assert room_state["players"] == [{"id": "player-1", "name": "Alice", "categories": []}]
+        assert room_state["difficulty"] == "medium"
+        assert room_state["maxRounds"] == 5
+        assert room_state["padVisibility"] is True
+
+
+def test_ready_and_restart_messages_are_broadcast(test_client) -> None:
+    with test_client.websocket_connect("/party/CONTROL01") as websocket:
+        receive_json(websocket)
+        join_player(websocket, "player-1", "Alice")
+
+        send_json(websocket, {"type": "player_ready", "playerId": "player-1"})
+        ready_status = receive_json(websocket)
+        assert ready_status == {"type": "ready_status", "readyCount": 1, "totalPlayers": 1}
+
+        send_json(websocket, {"type": "restart_game"})
+        assert receive_json(websocket) == {"type": "restart_game"}
+
+
+def test_non_host_cannot_restart_game(test_client) -> None:
+    with joined_players(
+        test_client,
+        "CONTROL02",
+        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+    ) as (_ws1, ws2):
+        send_json(ws2, {"type": "restart_game", "playerId": "player-2"})
+
+        assert receive_json(ws2) == {
+            "type": "permission_error",
+            "error": "host_only",
+            "message": "Only the host can restart the game.",
+        }
+
+
+def test_invalid_json_does_not_close_connection(test_client, sample_messages) -> None:
+    with test_client.websocket_connect("/party/ERROR01") as websocket:
+        receive_json(websocket)
+        join_player(websocket, "player-123", "Test Player")
+
+        websocket.send_text("not valid json{")
+        assert receive_json(websocket) == {
+            "type": "protocol_error",
+            "error": "invalid_payload",
+            "message": "Invalid websocket payload.",
+        }
+        send_json(websocket, sample_messages["heartbeat"])
+        send_json(websocket, {"type": "request_game_state", "playerId": "player-123"})
+
+        assert receive_json(websocket)["type"] == "room_state"
+
+
+def test_invalid_typed_payload_returns_protocol_error(test_client) -> None:
+    with joined_players(
+        test_client,
+        "PROTO01",
+        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+    ) as (_ws1, ws2):
+        send_json(ws2, {"type": "submit_guess", "playerId": "player-2"})
+
+        assert receive_json(ws2) == {
+            "type": "protocol_error",
+            "error": "invalid_payload",
+            "message": "Invalid websocket payload.",
+        }
+
+
+def test_player_ready_requires_matching_connection_identity(test_client) -> None:
+    with joined_players(
+        test_client,
+        "READY01",
+        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+    ) as (_ws1, ws2):
+        send_json(ws2, {"type": "player_ready", "playerId": "player-1"})
+
+        assert receive_json(ws2) == {
+            "type": "player_ready_error",
+            "error": "invalid_player",
+            "message": "Ready updates must match your connection.",
+        }

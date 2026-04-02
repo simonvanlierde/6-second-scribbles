@@ -71,19 +71,46 @@ export const useGameStore = defineStore("game", () => {
 
   function addPlayer(id: string, name: string) {
     if (!players.value.has(id)) {
-      players.value.set(id, { id, name, score: 0 });
+      const next = new Map(players.value);
+      next.set(id, { id, name, score: 0 });
+      players.value = next;
     }
     if (players.value.size === 1 && !hostId.value) {
       hostId.value = id;
     }
   }
 
+  function setPlayers(nextPlayers: Array<{ id: string; name: string }>) {
+    const next = new Map<string, Player>();
+
+    for (const incoming of nextPlayers) {
+      const existing = players.value.get(incoming.id);
+      next.set(incoming.id, {
+        id: incoming.id,
+        name: incoming.name,
+        score: existing?.score ?? 0,
+        currentCard: existing?.currentCard,
+        drawing: existing?.drawing,
+      });
+    }
+
+    players.value = next;
+
+    if (players.value.size === 1 && !hostId.value) {
+      hostId.value = nextPlayers[0]?.id ?? null;
+    }
+  }
+
   function removePlayer(id: string) {
-    players.value.delete(id);
+    if (!players.value.has(id)) return;
+
+    const next = new Map(players.value);
+    next.delete(id);
+    players.value = next;
   }
 
   function clearPlayers() {
-    players.value.clear();
+    players.value = new Map();
   }
 
   function setHost(id: string) {
@@ -182,14 +209,24 @@ export const useGameStore = defineStore("game", () => {
 
   function reset() {
     roomCode.value = "";
-    players.value.clear();
+    players.value = new Map();
+    kickVotes.value = new Map();
+    hostId.value = null;
     currentRound.value = 0;
     maxRounds.value = GAME_SETTINGS.rounds.DEFAULT;
     difficulty.value = GAME_SETTINGS.difficulty.DEFAULT;
     gamePhase.value = "lobby";
     roundStartTime.value = undefined;
+    roundLength.value = GAME_SETTINGS.roundLengthSeconds.DEFAULT;
     currentStrokes.value = [];
     localPlayerCard.value = undefined;
+    lastRoundResults.value = [];
+    categories.value = [];
+    readyCount.value = 0;
+    totalPlayers.value = 0;
+    showDrawpad.value = true;
+    showPadForRoom.value = true;
+    language.value = "en";
   }
 
   function getFinalScores() {
@@ -278,19 +315,30 @@ export const useGameStore = defineStore("game", () => {
   }
 
   function startKickVote(targetPlayerId: string, vote: KickVote) {
-    kickVotes.value.set(targetPlayerId, vote);
+    const next = new Map(kickVotes.value);
+    next.set(targetPlayerId, vote);
+    kickVotes.value = next;
   }
 
   function updateKickVote(targetPlayerId: string, data: Pick<KickVote, "currentVotes" | "requiredVotes">) {
     const existing = kickVotes.value.get(targetPlayerId);
     if (existing) {
-      existing.currentVotes = data.currentVotes;
-      existing.requiredVotes = data.requiredVotes;
+      const next = new Map(kickVotes.value);
+      next.set(targetPlayerId, {
+        ...existing,
+        currentVotes: data.currentVotes,
+        requiredVotes: data.requiredVotes,
+      });
+      kickVotes.value = next;
     }
   }
 
   function removeKickVote(targetPlayerId: string) {
-    kickVotes.value.delete(targetPlayerId);
+    if (!kickVotes.value.has(targetPlayerId)) return;
+
+    const next = new Map(kickVotes.value);
+    next.delete(targetPlayerId);
+    kickVotes.value = next;
   }
 
   return {
@@ -327,6 +375,7 @@ export const useGameStore = defineStore("game", () => {
     setLocalPlayer,
     setRoomCode,
     addPlayer,
+    setPlayers,
     removePlayer,
     clearPlayers,
     setHost,

@@ -88,10 +88,12 @@ export function useGameConnection() {
         break;
 
       case "room_state":
-        for (const p of message.players) store.addPlayer(p.id, p.name);
+        store.setPlayers(message.players);
         if (message.hostId) store.setHost(message.hostId);
         store.setCategories(message.categories);
         store.setGamePhase(message.gamePhase);
+        if (message.difficulty) store.setDifficulty(message.difficulty);
+        if (message.maxRounds) store.setMaxRounds(message.maxRounds);
         if (message.roundStartTime) store.setRoundStartTime(message.roundStartTime);
         if (message.roundLength) store.setRoundLength(message.roundLength);
         if (message.padVisibility !== undefined) store.setShowPadForRoom(message.padVisibility);
@@ -99,7 +101,7 @@ export function useGameConnection() {
         break;
 
       case "player_joined":
-        for (const p of message.players) store.addPlayer(p.id, p.name);
+        store.setPlayers(message.players);
         if (message.isHost) store.setHost(message.playerId);
         break;
 
@@ -217,9 +219,12 @@ export function useGameConnection() {
         break;
 
       case "player_kicked":
+        store.removePlayer(message.playerId);
         store.removeKickVote(message.playerId);
         if (message.playerId === store.localPlayerId) {
           showNotification("You have been kicked from the room", "error");
+          store.reset();
+          router.push("/");
         } else {
           showNotification(`${message.playerName} was kicked from the room`);
         }
@@ -244,6 +249,16 @@ export function useGameConnection() {
         }
         break;
       }
+
+      case "custom_category_added":
+        store.setCategories([...store.categories, message.category.name]);
+        showNotification(`Added custom category: ${message.category.name}`);
+        break;
+
+      case "custom_category_removed":
+        store.setCategories(store.categories.filter((name) => name !== message.category_name));
+        showNotification(`Removed custom category: ${message.category_name}`);
+        break;
     }
   }
 

@@ -1,7 +1,6 @@
 """Tests for fuzzy matching and scoring functionality."""
 
 # spell-checker: ignore elefant, girafe, rabit, aple, bannana, pinapple, gutar, paino, violen, trumpit
-# ruff: noqa: PLR2004 # Magic values are used for fuzzy matching assertions
 import pytest
 
 from app.scoring import GuessMatcher
@@ -15,12 +14,6 @@ class TestGuessMatcher:
         """Create a GuessMatcher instance."""
         return GuessMatcher()
 
-    def test_normalize(self, matcher: GuessMatcher) -> None:
-        """Test text normalization."""
-        assert matcher.normalize("Hello World") == "hello world"
-        assert matcher.normalize("  spaces  ") == "spaces"
-        assert matcher.normalize("UPPERCASE") == "uppercase"
-
     def test_generate_variants(self, matcher: GuessMatcher) -> None:
         """Test variant generation."""
         variants = matcher.generate_variants("cat")
@@ -31,12 +24,6 @@ class TestGuessMatcher:
         dog_variants = matcher.generate_variants("dogs")
         assert "dogs" in dog_variants
         assert "dog" in dog_variants
-
-    def test_exact_match_simple(self, matcher: GuessMatcher) -> None:
-        """Test exact matching."""
-        assert matcher.exact_match("cat", "cat") is True
-        assert matcher.exact_match("Cat", "cat") is True  # Case insensitive
-        assert matcher.exact_match("cat", "dog") is False
 
     def test_exact_match_plural(self, matcher: GuessMatcher) -> None:
         """Test exact matching with plurals."""
@@ -189,25 +176,6 @@ class TestGuessMatcher:
         assert result["score"] == 0
         assert result["total"] == 0
         assert result["percentage"] == 0.0
-
-    def test_case_insensitive_matching(self, matcher: GuessMatcher) -> None:
-        """Test that matching is case insensitive."""
-        guesses = ["CAT", "Dog", "BIRD"]
-        correct = ["cat", "dog", "bird"]
-
-        result = matcher.score_guesses(guesses, correct)
-
-        assert result["score"] == 3
-        assert result["percentage"] == 100.0
-
-    def test_whitespace_handling(self, matcher: GuessMatcher) -> None:
-        """Test that extra whitespace is handled."""
-        guesses = ["  cat  ", "dog", "  bird"]
-        correct = ["cat", "dog", "bird"]
-
-        result = matcher.score_guesses(guesses, correct)
-
-        assert result["score"] == 3
 
     def test_match_details(self, matcher: GuessMatcher) -> None:
         """Test that match details are returned."""

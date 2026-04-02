@@ -60,7 +60,7 @@ class Category(Base):
 
 
 class Card(Base):
-    """Card model - individual items within a category"""
+    """Card model - individual items within a category."""
 
     __tablename__ = "cards"
 
@@ -83,7 +83,7 @@ class Card(Base):
         return f"<Card(id={self.id}, category_id={self.category_id}, item='{self.item}')>"
 
     def to_dict(self):
-        """Convert to dictionary"""
+        """Convert to dictionary."""
         return {
             "id": self.id,
             "category_id": self.category_id,

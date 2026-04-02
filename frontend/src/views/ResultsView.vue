@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, inject, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 
-import { gameEngineKey } from "@/composables/injectionKeys";
+import { injectGameEngine } from "@/composables/injectionKeys";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
+const router = useRouter();
 const { send } = useGameConnection();
-// biome-ignore lint/style/noNonNullAssertion: always provided by App.vue
-const gameEngineRef = inject(gameEngineKey)!;
+const gameEngineRef = injectGameEngine();
 const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
 const isReady = ref(false);
 const autoRestartTimeout = ref<number | null>(null);
@@ -133,10 +134,12 @@ onUnmounted(() => {
         </div>
 
         <div class="button-group">
-          <button v-if="store.isHost" class="btn btn-primary" @click="playAgain">🔄 Play Again</button>
-          <button v-else-if="!isReady" class="btn btn-primary" @click="playAgain">✓ Ready for Next Game</button>
+          <button v-if="store.isHost" type="button" class="btn btn-primary" @click="playAgain">🔄 Play Again</button>
+          <button v-else-if="!isReady" type="button" class="btn btn-primary" @click="playAgain">
+            ✓ Ready for Next Game
+          </button>
           <div v-else class="ready-indicator">✓ Ready! Waiting for host to start new game...</div>
-          <button class="btn btn-secondary" @click="leaveRoom">🚪 Leave Room</button>
+          <button type="button" class="btn btn-secondary" @click="leaveRoom">🚪 Leave Room</button>
         </div>
       </div>
 

@@ -13,15 +13,20 @@ dev:
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-# Run unit tests (watch mode)
+# Run unit tests once
 [group('test')]
 test:
     npm run test:unit
 
+# Run unit tests in watch mode
+[group('test')]
+test-watch:
+    npm run test:unit:watch
+
 # Run unit tests once (CI mode)
 [group('test')]
 test-ci:
-    npm run test:unit -- --run
+    npm run test:unit
 
 # Run e2e tests with Playwright
 [group('test')]
@@ -39,6 +44,10 @@ test-e2e-ui:
 [group('lint')]
 lint:
     npm run lint
+
+check:
+    npm run lint
+    npm run type-check
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 

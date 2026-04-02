@@ -8,10 +8,12 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
+    "dev": "vite --debug",
     "dev:web": "vite --debug",
     "build": "vite build",
     "preview": "vite preview",
-    "test:unit": "vitest",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test": "run-s test:*",
     "type-check": "vue-tsc --build",

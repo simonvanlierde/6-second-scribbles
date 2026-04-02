@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import type { UserConfig } from "vite";
 
 import viteConfig from "./vite.config";
 
@@ -7,7 +8,7 @@ import viteConfig from "./vite.config";
 // Keep the original intent: use jsdom, respect default excludes and
 // also explicitly exclude node_modules and e2e tests.
 export default mergeConfig(
-  viteConfig,
+  viteConfig as UserConfig,
   defineConfig({
     test: {
       environment: "jsdom",

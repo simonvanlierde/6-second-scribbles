@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
-import { gameEngineKey } from "@/composables/injectionKeys";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { injectGameEngine } from "@/composables/injectionKeys";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
@@ -9,8 +9,7 @@ import { useGameStore } from "@/stores/game";
 const store = useGameStore();
 const { send } = useGameConnection();
 const canvas = useDrawingCanvas();
-// biome-ignore lint/style/noNonNullAssertion: always provided by App.vue
-const gameEngineRef = inject(gameEngineKey)!;
+const gameEngineRef = injectGameEngine();
 const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
 
 const canvasElement = ref<HTMLCanvasElement | null>(null);

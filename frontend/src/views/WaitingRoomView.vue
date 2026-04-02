@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
+import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 
 import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
 import PlayerListPanel from "@/components/PlayerListPanel.vue";
 import SharedDrawpad from "@/components/SharedDrawpad.vue";
-import { gameEngineKey } from "@/composables/injectionKeys";
+import { injectGameEngine } from "@/composables/injectionKeys";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameEngine } from "@/composables/useGameEngine";
@@ -17,7 +17,7 @@ const route = useRoute();
 const store = useGameStore();
 const { send } = useGameConnection();
 const { showNotification } = useNotifications();
-const gameEngineRef = inject(gameEngineKey)!;
+const gameEngineRef = injectGameEngine();
 const { leaveRoom } = useLeaveRoom(gameEngineRef);
 
 const leaveDialogRef = ref<HTMLDialogElement | null>(null);
@@ -34,6 +34,7 @@ const canStart = computed(() => store.canStartGame && store.isHost);
 
 function handleClear() {
   if (store.isHost) {
+    store.clearStrokes();
     send({ type: "drawpad_clear", playerId: store.localPlayerId });
   }
 }
@@ -96,7 +97,7 @@ function toggleRoomPadVisibility() {
   <div class="screen">
     <div class="container">
       <div class="header-with-back">
-        <button class="btn btn-secondary btn-back" @click="showLeaveConfirmation">← Back</button>
+        <button type="button" class="btn btn-secondary btn-back" @click="showLeaveConfirmation">← Back</button>
         <h1>🎨 Room: {{ roomCode }}</h1>
       </div>
 
@@ -108,7 +109,7 @@ function toggleRoomPadVisibility() {
 
         <!-- Host start button -->
         <div v-if="store.isHost">
-          <button class="btn btn-primary" :disabled="!canStart" @click="startGame">
+          <button type="button" class="btn btn-primary" :disabled="!canStart" @click="startGame">
             {{ canStart ? 'Start Game' : 'Waiting for players (need 2+)' }}
           </button>
         </div>
@@ -125,11 +126,15 @@ function toggleRoomPadVisibility() {
               <h3>🎨 Doodle While You Wait!</h3>
             </div>
             <div class="drawpad-controls">
-              <button v-if="store.isHost" class="btn btn-small" @click="handleClear">Clear drawpad for everyone</button>
-              <button v-if="store.isHost" class="btn btn-small" @click="toggleRoomPadVisibility">
+              <button v-if="store.isHost" type="button" class="btn btn-small" @click="handleClear">
+                Clear drawpad for everyone
+              </button>
+              <button v-if="store.isHost" type="button" class="btn btn-small" @click="toggleRoomPadVisibility">
                 {{ store.showPadForRoom ? 'Hide drawpad for everyone' : 'Show drawpad for everyone' }}
               </button>
-              <button class="btn btn-small" @click="toggleDrawpad">{{ showDrawpad ? 'Hide pad' : 'Show pad' }}</button>
+              <button type="button" class="btn btn-small" @click="toggleDrawpad">
+                {{ showDrawpad ? 'Hide pad' : 'Show pad' }}
+              </button>
             </div>
           </div>
 
@@ -141,7 +146,7 @@ function toggleRoomPadVisibility() {
           <div class="room-code-share">
             <span class="room-code-display">{{ roomCode }}</span>
             <div style="display: inline-flex; align-items: center; gap: 0.5rem">
-              <button class="btn btn-small" @click="copyRoomCode">Copy</button>
+              <button type="button" class="btn btn-small" @click="copyRoomCode">Copy</button>
             </div>
           </div>
         </div>
@@ -153,8 +158,8 @@ function toggleRoomPadVisibility() {
       <h2>Leave Room?</h2>
       <p>Are you sure you want to leave this room?</p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" @click="cancelLeave">Cancel</button>
-        <button class="btn btn-danger" @click="confirmLeave">Leave</button>
+        <button type="button" class="btn btn-secondary" @click="cancelLeave">Cancel</button>
+        <button type="button" class="btn btn-danger" @click="confirmLeave">Leave</button>
       </div>
     </dialog>
   </div>
@@ -296,7 +301,7 @@ function toggleRoomPadVisibility() {
 .btn.btn-primary[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
-  background-color: #c0c0c0 !important;
-  color: #666 !important;
+  background-color: #c0c0c0;
+  color: #666;
 }
 </style>

@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
-import { gameEngineKey } from "@/composables/injectionKeys";
+import { injectGameEngine } from "@/composables/injectionKeys";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-// biome-ignore lint/style/noNonNullAssertion: always provided by App.vue
-const gameEngineRef = inject(gameEngineKey)!;
+const gameEngineRef = injectGameEngine();
 const { leaveRoom } = useLeaveRoom(gameEngineRef);
 
 const countdown = ref(5);
@@ -72,7 +71,7 @@ onMounted(() => {
   <div class="results-screen">
     <div class="container">
       <div style="display: flex; justify-content: flex-end">
-        <button class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
+        <button type="button" class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
       </div>
       <h1>Round {{ store.currentRound }} Results</h1>
 

@@ -29,9 +29,11 @@ def _create_logged_task(coro, name: str) -> asyncio.Task:
     """Create a fire-and-forget task that logs any unhandled exception."""
     task = asyncio.create_task(coro, name=name)
     task.add_done_callback(
-        lambda t: logger.error("[Task %s] unhandled exception: %s", name, t.exception())
-        if not t.cancelled() and t.exception()
-        else None,
+        lambda t: (
+            logger.error("[Task %s] unhandled exception: %s", name, t.exception())
+            if not t.cancelled() and t.exception()
+            else None
+        ),
     )
     return task
 
@@ -42,7 +44,7 @@ class PlayerInfo:
 
     id: str
     name: str
-    websocket: "WebSocket"
+    websocket: WebSocket
     categories: list[str] = field(default_factory=list)
     last_activity: float = field(default_factory=time.time)
 
@@ -104,12 +106,12 @@ class GameRoom:
         self.is_hibernated = False
         self.active_kick_votes: dict[str, KickVote] = {}  # target_player_id -> KickVote
 
-    async def score_and_broadcast_round(self):
+    async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
         async with self._scoring_lock:
             await self._score_and_broadcast_round_locked()
 
-    async def _score_and_broadcast_round_locked(self):
+    async def _score_and_broadcast_round_locked(self) -> None:
         """Inner scoring logic, must be called under self._scoring_lock."""
         if self._round_scoring_task:
             self._round_scoring_task.cancel()
@@ -178,7 +180,7 @@ class GameRoom:
                 name=f"game_complete_{self.room_id}",
             )
 
-    async def _broadcast_game_complete_after_delay(self):
+    async def _broadcast_game_complete_after_delay(self) -> None:
         """Wait for the round-results countdown, then broadcast game_complete."""
         await asyncio.sleep(5)
         winner_id = (
@@ -197,7 +199,7 @@ class GameRoom:
         logger.info("[GameRoom %s] Game complete. Winner: %s", self.room_id, winner_id)
         await self.persist()
 
-    def start_scoring_timeout(self, timeout_seconds: int):
+    def start_scoring_timeout(self, timeout_seconds: int) -> None:
         """Start a fallback scoring task in case not all players submit in time."""
         if self._round_scoring_task:
             self._round_scoring_task.cancel()
@@ -206,7 +208,7 @@ class GameRoom:
             name=f"scoring_timeout_{self.room_id}",
         )
 
-    async def _scoring_timeout(self, timeout_seconds: int):
+    async def _scoring_timeout(self, timeout_seconds: int) -> None:
         try:
             await asyncio.sleep(timeout_seconds + 3)  # small buffer after guessing phase ends
             submitted = len(self.metadata.submitted_players)
@@ -221,27 +223,25 @@ class GameRoom:
         except asyncio.CancelledError:
             pass
 
-    async def start_idle_check(self):
-        """Start periodic idle player check"""
+    async def start_idle_check(self) -> None:
+        """Start periodic idle player check."""
         self._idle_check_task = _create_logged_task(
             self._idle_check_loop(),
             name=f"idle_check_{self.room_id}",
         )
 
-    async def stop_idle_check(self):
+    async def stop_idle_check(self) -> None:
         """Stop idle player check and any pending scoring tasks."""
         if self._idle_check_task:
             self._idle_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._idle_check_task
-            except asyncio.CancelledError:
-                pass
         if self._round_scoring_task:
             self._round_scoring_task.cancel()
             self._round_scoring_task = None
 
-    async def _idle_check_loop(self):
-        """Periodically check for idle players and cleanup expired votes"""
+    async def _idle_check_loop(self) -> None:
+        """Periodically check for idle players and cleanup expired votes."""
         while True:
             try:
                 await asyncio.sleep(60)  # Check every 60 seconds
@@ -252,8 +252,8 @@ class GameRoom:
             except Exception:
                 logger.exception("[GameRoom %s] Error in idle check", self.room_id)
 
-    async def _check_idle_players(self):
-        """Check for and disconnect idle players during active game phases"""
+    async def _check_idle_players(self) -> None:
+        """Check for and disconnect idle players during active game phases."""
         if self.metadata.game_phase not in ["lobby", "complete"]:
             now = time.time()
             idle_players = []
@@ -278,15 +278,16 @@ class GameRoom:
                     with contextlib.suppress(Exception):
                         await player.websocket.close(code=1000, reason="Disconnected due to inactivity")
 
-    async def add_player(self, player_id: str, name: str, websocket: "WebSocket"):
-        """Add a player to the room
+    async def add_player(self, player_id: str, name: str, websocket: WebSocket):
+        """Add a player to the room.
 
         Returns tuple: (player, is_reconnecting_host)
         Raises ValueError if room is full
         """
         # Check if room is at capacity (but allow existing player to reconnect)
         if player_id not in self.players and len(self.players) >= settings.max_players:
-            raise ValueError(f"Room is full (maximum {settings.max_players} players)")
+            msg = f"Room is full (maximum {settings.max_players} players)"
+            raise ValueError(msg)
 
         # Room is no longer empty - wake from hibernation if needed
         if self.is_hibernated:
@@ -326,8 +327,8 @@ class GameRoom:
 
         return player, is_reconnecting_host
 
-    async def remove_player(self, player_id: str):
-        """Remove a player from the room"""
+    async def remove_player(self, player_id: str) -> None:
+        """Remove a player from the room."""
         if player_id in self.players:
             del self.players[player_id]
 
@@ -360,8 +361,8 @@ class GameRoom:
                 self.host_id = None
                 self._last_host_id = None
 
-    async def _delayed_host_transfer(self, old_host_id: str):
-        """Transfer host after a delay, allowing for reconnection"""
+    async def _delayed_host_transfer(self, old_host_id: str) -> None:
+        """Transfer host after a delay, allowing for reconnection."""
         try:
             # Wait for the delay
             await asyncio.sleep(settings.host_transfer_delay_ms / 1000)
@@ -391,12 +392,121 @@ class GameRoom:
         finally:
             self._pending_host_transfer = None
 
-    def update_player_activity(self, player_id: str):
-        """Update the last activity timestamp for a player"""
+    def update_player_activity(self, player_id: str) -> None:
+        """Update the last activity timestamp for a player."""
         if player_id in self.players:
             self.players[player_id].last_activity = time.time()
 
-    async def broadcast(self, message: dict, exclude: str | None = None):
+    def is_host(self, player_id: str | None) -> bool:
+        """Return whether the given player currently owns the room."""
+        return bool(player_id and self.host_id and player_id == self.host_id)
+
+    def room_state_payload(self) -> dict[str, Any]:
+        """Build the canonical websocket room-state snapshot."""
+        return {
+            "type": "room_state",
+            "players": [
+                {"id": player.id, "name": player.name, "categories": player.categories}
+                for player in self.players.values()
+            ],
+            "hostId": self.host_id,
+            "categories": self.metadata.categories,
+            "gamePhase": self.metadata.game_phase,
+            "difficulty": self.metadata.difficulty,
+            "maxRounds": self.metadata.max_rounds,
+            "roundStartTime": self.metadata.round_start_time,
+            "roundLength": self.metadata.round_length,
+            "padVisibility": self.metadata.pad_visibility,
+            "language": self.metadata.language,
+        }
+
+    def configure_game(
+        self,
+        *,
+        round_length: int | None,
+        difficulty: str | None,
+        max_rounds: int | None,
+    ) -> None:
+        """Initialize a new game from the lobby state."""
+        self.metadata.round_length = round_length
+        self.metadata.difficulty = difficulty or self.metadata.difficulty
+        self.metadata.max_rounds = max_rounds or 5
+        self.metadata.game_phase = "drawing"
+        self.metadata.current_round = 0
+        self.metadata.player_scores = dict.fromkeys(self.players, 0)
+        self.metadata.ready_players.clear()
+
+    def start_round(self, *, round_number: int | None, cards: dict[str, dict[str, Any]] | None) -> int:
+        """Transition the room into a new drawing round and return the start timestamp."""
+        round_start_time = int(time.time() * 1000)
+        self.metadata.round_start_time = round_start_time
+        self.metadata.game_phase = "drawing"
+        self.metadata.current_round = round_number or (self.metadata.current_round + 1)
+        self.metadata.player_cards = cards or {}
+        self.metadata.guess_submissions = []
+        self.metadata.submitted_players = set()
+        self.metadata.player_count_for_scoring = len(self.players)
+        for player_id in self.players:
+            self.metadata.player_scores.setdefault(player_id, 0)
+        if self._round_scoring_task:
+            self._round_scoring_task.cancel()
+            self._round_scoring_task = None
+        self.metadata.ready_players.clear()
+        return round_start_time
+
+    def start_guessing(self) -> int:
+        """Transition into the guessing phase and return the scoring timeout."""
+        self.metadata.game_phase = "guessing"
+        self.metadata.player_count_for_scoring = len(self.players)
+        return self.metadata.round_length or 30
+
+    def reset_game(self) -> None:
+        """Reset mutable game state back to the lobby."""
+        if self._round_scoring_task:
+            self._round_scoring_task.cancel()
+            self._round_scoring_task = None
+        self.metadata.player_scores = {}
+        self.metadata.current_round = 0
+        self.metadata.guess_submissions = []
+        self.metadata.submitted_players = set()
+        self.metadata.player_cards = {}
+        self.metadata.ready_players.clear()
+        self.metadata.round_start_time = None
+        self.metadata.game_phase = "lobby"
+
+    def mark_player_ready(self, player_id: str) -> dict[str, int | str]:
+        """Record that a player is ready and return the shared ready-status payload."""
+        self.metadata.ready_players.add(player_id)
+        return {
+            "type": "ready_status",
+            "readyCount": len(self.metadata.ready_players),
+            "totalPlayers": len(self.players),
+        }
+
+    async def record_guess_submission(
+        self,
+        *,
+        player_id: str,
+        target_player_id: str,
+        guesses: list[str],
+    ) -> None:
+        """Store a guess submission and score immediately when all players are done."""
+        self.metadata.guess_submissions.append(
+            {"playerId": player_id, "targetPlayerId": target_player_id, "guesses": guesses},
+        )
+        self.metadata.submitted_players.add(player_id)
+        submitted = len(self.metadata.submitted_players)
+        expected = self.metadata.player_count_for_scoring
+        logger.info(
+            "[Server] Guess submitted by %s: %s/%s players submitted",
+            player_id,
+            submitted,
+            expected,
+        )
+        if expected > 0 and submitted >= expected:
+            await self.score_and_broadcast_round()
+
+    async def broadcast(self, message: dict, exclude: str | None = None) -> None:
         """Broadcast a message to all players in the room."""
         message_str = json.dumps(message)
         disconnected_players = []
@@ -415,8 +525,8 @@ class GameRoom:
             await self.remove_player(player_id)
             await self.broadcast({"type": "player_left", "playerId": player_id})
 
-    async def send_to_player(self, player_id: str, message: dict):
-        """Send a message to a specific player"""
+    async def send_to_player(self, player_id: str, message: dict) -> None:
+        """Send a message to a specific player."""
         if player_id in self.players:
             player = self.players[player_id]
             try:
@@ -426,11 +536,11 @@ class GameRoom:
                 await self.remove_player(player_id)
 
     def get_player_list(self) -> list[dict[str, str]]:
-        """Get the list of all players in the room"""
+        """Get the list of all players in the room."""
         return [{"id": p.id, "name": p.name} for p in self.players.values()]
 
     async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> dict:
-        """Initiate a vote to kick a player
+        """Initiate a vote to kick a player.
 
         Returns dict with status and info about the vote
         """
@@ -478,7 +588,7 @@ class GameRoom:
                 "type": "kick_vote_started",
                 "targetPlayerId": target_player_id,
                 "targetPlayerName": target_player.name,
-                "initiatedBy": initiator_id,
+                "initiatorId": initiator_id,
                 "requiredVotes": self._get_required_votes(target_is_host),
                 "currentVotes": 1,
                 "expiresAt": vote.expires_at * 1000,  # Convert to ms for frontend
@@ -495,7 +605,7 @@ class GameRoom:
         return {"success": True, "immediate": False, "vote_id": target_player_id}
 
     async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> dict:
-        """Cast a vote to kick a player"""
+        """Cast a vote to kick a player."""
         # Validate voter exists
         if voter_id not in self.players:
             return {"success": False, "error": "Voter not in room"}
@@ -550,7 +660,7 @@ class GameRoom:
         return {"success": True, "vote_passed": False, "current_votes": current_votes, "required_votes": required_votes}
 
     def _get_required_votes(self, target_is_host: bool) -> int:
-        """Calculate required votes to kick a player"""
+        """Calculate required votes to kick a player."""
         total_players = len(self.players)
 
         if target_is_host:
@@ -560,8 +670,8 @@ class GameRoom:
         eligible_voters = total_players - 1
         return max(2, int((eligible_voters * 2) / 3) + 1)
 
-    async def kick_player(self, player_id: str, reason: str = "Kicked"):
-        """Kick a player from the room"""
+    async def kick_player(self, player_id: str, reason: str = "Kicked") -> None:
+        """Kick a player from the room."""
         if player_id not in self.players:
             return
 
@@ -587,7 +697,7 @@ class GameRoom:
             del self.active_kick_votes[player_id]
 
     def cleanup_expired_votes(self):
-        """Remove expired kick votes"""
+        """Remove expired kick votes."""
         now = time.time()
         expired = [target_id for target_id, vote in self.active_kick_votes.items() if now > vote.expires_at]
 
@@ -618,7 +728,7 @@ class GameRoom:
         }
 
     @classmethod
-    def from_redis_dict(cls, data: dict) -> "GameRoom":
+    def from_redis_dict(cls, data: dict) -> GameRoom:
         """Restore a room from a Redis-persisted dict (no players — they reconnect)."""
         room = cls(data["room_id"])
         room.host_id = data.get("host_id")
@@ -644,11 +754,11 @@ class GameRoom:
     # ------------------------------------------------------------------ #
 
     def is_empty(self) -> bool:
-        """Check if the room is empty"""
+        """Check if the room is empty."""
         return len(self.players) == 0
 
     def should_hibernate(self) -> bool:
-        """Check if room should be hibernated (empty for < hibernation timeout)"""
+        """Check if room should be hibernated (empty for < hibernation timeout)."""
         if not self.is_empty() or self.is_hibernated:
             return False
 
@@ -660,7 +770,7 @@ class GameRoom:
         return empty_duration >= 60  # Hibernate after 1 minute of being empty
 
     def should_be_removed(self) -> bool:
-        """Check if room should be permanently removed"""
+        """Check if room should be permanently removed."""
         if not self.is_empty():
             return False
 
@@ -672,25 +782,25 @@ class GameRoom:
         return empty_duration >= settings.room_ttl_seconds
 
     def get_age_seconds(self) -> float:
-        """Get room age in seconds"""
+        """Get room age in seconds."""
         return time.time() - self._created_at
 
     def get_empty_duration_seconds(self) -> float | None:
-        """Get how long room has been empty, or None if not empty"""
+        """Get how long room has been empty, or None if not empty."""
         if self._emptied_at is None:
             return None
         return time.time() - self._emptied_at
 
-    async def hibernate(self):
-        """Put room into hibernation mode"""
+    async def hibernate(self) -> None:
+        """Put room into hibernation mode."""
         if self.is_hibernated or not self.is_empty():
             return
 
         logger.info("[GameRoom %s] Entering hibernation mode (age: %.0fs)", self.room_id, self.get_age_seconds())
         self.is_hibernated = True
 
-    async def cleanup_custom_categories(self):
-        """Delete all custom categories created for this room"""
+    async def cleanup_custom_categories(self) -> None:
+        """Delete all custom categories created for this room."""
         try:
             from sqlalchemy import delete
 
@@ -711,7 +821,7 @@ class GameRoom:
 
 
 class RoomManager:
-    """Manages all game rooms with PartyKit-like lifecycle
+    """Manages all game rooms with PartyKit-like lifecycle.
 
     Features:
     - Automatic hibernation of empty rooms after 1 minute
@@ -727,8 +837,8 @@ class RoomManager:
         self._cleanup_task: asyncio.Task | None = None
         self._is_running = False
 
-    async def start(self):
-        """Start the room manager and periodic cleanup"""
+    async def start(self) -> None:
+        """Start the room manager and periodic cleanup."""
         if self._is_running:
             return
 
@@ -740,7 +850,7 @@ class RoomManager:
         )
         logger.info("[RoomManager] Started with cleanup interval of %ss", self.CLEANUP_INTERVAL_SECONDS)
 
-    async def _restore_from_redis(self):
+    async def _restore_from_redis(self) -> None:
         """Load persisted room states from Redis on startup."""
         from app.redis_store import load_all_room_states
 
@@ -755,16 +865,14 @@ class RoomManager:
         if states:
             logger.info("[RoomManager] Restored %s room(s) from Redis", len(states))
 
-    async def stop(self):
-        """Stop the room manager and cleanup tasks"""
+    async def stop(self) -> None:
+        """Stop the room manager and cleanup tasks."""
         self._is_running = False
 
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Clean up all rooms
         for room_id in list(self.rooms.keys()):
@@ -772,8 +880,8 @@ class RoomManager:
 
         logger.info("[RoomManager] Stopped and cleaned up all rooms")
 
-    async def _periodic_cleanup_loop(self):
-        """Periodically clean up and hibernate rooms"""
+    async def _periodic_cleanup_loop(self) -> None:
+        """Periodically clean up and hibernate rooms."""
         while self._is_running:
             try:
                 await asyncio.sleep(self.CLEANUP_INTERVAL_SECONDS)
@@ -783,8 +891,8 @@ class RoomManager:
             except Exception:
                 logger.exception("[RoomManager] Error in cleanup loop")
 
-    async def _run_cleanup(self):
-        """Run cleanup and hibernation checks on all rooms"""
+    async def _run_cleanup(self) -> None:
+        """Run cleanup and hibernation checks on all rooms."""
         total_rooms = len(self.rooms)
         hibernated_count = 0
         removed_count = 0
@@ -818,7 +926,7 @@ class RoomManager:
             )
 
     def get_or_create_room(self, room_id: str) -> GameRoom:
-        """Get an existing room or create a new one"""
+        """Get an existing room or create a new one."""
         if room_id not in self.rooms:
             room = GameRoom(room_id)
             self.rooms[room_id] = room
@@ -827,11 +935,11 @@ class RoomManager:
         return self.rooms[room_id]
 
     def get_room(self, room_id: str) -> GameRoom | None:
-        """Get an existing room"""
+        """Get an existing room."""
         return self.rooms.get(room_id)
 
-    async def remove_room(self, room_id: str):
-        """Remove a room and clean up custom categories"""
+    async def remove_room(self, room_id: str) -> None:
+        """Remove a room and clean up custom categories."""
         if room_id in self.rooms:
             room = self.rooms[room_id]
             await room.stop_idle_check()
@@ -842,14 +950,14 @@ class RoomManager:
             await delete_room_state(room_id)
             logger.info("[RoomManager] Removed room %s (total rooms: %s)", room_id, len(self.rooms))
 
-    async def cleanup_empty_rooms(self):
+    async def cleanup_empty_rooms(self) -> None:
         """Remove all currently empty rooms."""
         empty_rooms = [room_id for room_id, room in self.rooms.items() if room.is_empty()]
         for room_id in empty_rooms:
             await self.remove_room(room_id)
 
     def get_stats(self) -> dict[str, Any]:
-        """Get room manager statistics"""
+        """Get room manager statistics."""
         total_rooms = len(self.rooms)
         active_rooms = sum(1 for room in self.rooms.values() if not room.is_empty())
         hibernated_rooms = sum(1 for room in self.rooms.values() if room.is_hibernated)
@@ -864,7 +972,7 @@ class RoomManager:
         }
 
     def find_random_public_room(self, max_players: int = 10) -> str | None:
-        """Find a random public room that's available to join
+        """Find a random public room that's available to join.
 
         Criteria:
         - Not private (is_private = False)

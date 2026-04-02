@@ -9,7 +9,7 @@
         <label>Size:</label>
         <input type="range" min="1" max="20" v-model.number="width">
       </div>
-      <div class="tool-group"><button class="btn btn-small" @click="clearLocal">Clear</button></div>
+      <div class="tool-group"><button type="button" class="btn btn-small" @click="clearLocal">Clear</button></div>
     </div>
     <canvas ref="canvasEl" class="mini-canvas"></canvas>
     <p class="drawpad-hint">Draw together with other players while waiting!</p>
@@ -53,18 +53,15 @@ function scheduleSend() {
 watch(
   () => store.currentStrokes,
   (strokes) => {
+    if (strokes.length === 0) {
+      canvas.clear();
+      return;
+    }
+
     const last = strokes[strokes.length - 1];
     if (last) canvas.drawStroke(last);
   },
   { deep: true },
-);
-
-// Clear canvas when server clears it
-watch(
-  () => store.currentStrokes.length,
-  (len) => {
-    if (len === 0) canvas.clear();
-  },
 );
 
 watch(color, (v) => canvas.setColor(v));

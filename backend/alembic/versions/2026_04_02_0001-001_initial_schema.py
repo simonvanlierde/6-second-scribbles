@@ -6,11 +6,15 @@ Create Date: 2026-04-02 00:01:00.000000
 
 """
 
-from collections.abc import Sequence
+
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
 from alembic import op
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "001"
 down_revision: str | None = None

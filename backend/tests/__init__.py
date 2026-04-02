@@ -1,1 +1,1 @@
-"""Test suite for Six Second Scribbles backend"""
+"""Test suite for Six Second Scribbles backend."""

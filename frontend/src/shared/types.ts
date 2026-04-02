@@ -90,6 +90,8 @@ export type GameMessage =
       hostId?: string;
       categories: string[];
       gamePhase: "lobby" | "drawing" | "guessing" | "scoring" | "complete";
+      difficulty?: Difficulty;
+      maxRounds?: number;
       roundStartTime?: number;
       roundLength?: number;
       padVisibility?: boolean;
@@ -121,4 +123,6 @@ export type GameMessage =
   | { type: "kick_vote_updated"; targetPlayerId: string; currentVotes: number; requiredVotes: number }
   | { type: "player_kicked"; playerId: string; playerName: string }
   | { type: "kick_vote_expired"; targetPlayerId: string; targetPlayerName: string }
-  | { type: "kick_error"; error: string };
+  | { type: "kick_error"; error: string }
+  | { type: "custom_category_added"; category: { id?: number; name: string }; items: string[] }
+  | { type: "custom_category_removed"; category_id: number; category_name: string };

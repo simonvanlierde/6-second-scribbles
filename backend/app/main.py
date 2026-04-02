@@ -10,15 +10,15 @@ import json
 import logging
 import random
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import close_db, get_db, init_db
+from app.database import AsyncSessionDep, close_db, init_db
 from app.db_models import Card, Category
 from app.game_room import room_manager
 from app.redis_store import close_redis, get_redis
@@ -27,8 +27,6 @@ from app.ws_handler import WSMessageHandler
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +147,9 @@ async def get_random_room() -> dict[str, Any]:
 
 @app.get("/api/categories")
 async def get_categories(
+    db: AsyncSessionDep,
     difficulty: str | None = None,
     language: str | None = "en",
-    db: AsyncSession = Depends(get_db),
 ):
     """Get all categories, optionally filtered by difficulty and language.
 
@@ -174,8 +172,8 @@ async def get_categories(
 
 
 @app.get("/api/categories/{category_id}")
-async def get_category(category_id: int, db: AsyncSession = Depends(get_db)):
-    """Get a specific category with its items"""
+async def get_category(category_id: int, db: AsyncSessionDep):
+    """Get a specific category with its items."""
     result = await db.execute(select(Category).where(Category.id == category_id))
     category = result.scalar_one_or_none()
 
@@ -195,14 +193,14 @@ async def get_category(category_id: int, db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/cards/random")
 async def get_random_cards(
+    db: AsyncSessionDep,
     difficulty: str = "medium",
     count: int = 1,
     player_count: int = 2,
     room_id: str | None = None,  # Include room-specific categories
     language: str = "en",  # Language filter
-    db: AsyncSession = Depends(get_db),
 ):
-    """Get random cards for a game
+    """Get random cards for a game.
 
     Query params:
         difficulty: Difficulty level (easy, medium, hard)
@@ -267,7 +265,7 @@ async def get_random_cards(
 
 @app.post("/api/score/guesses", response_model=GuessResponse)
 async def score_guesses(request: GuessRequest):
-    """Score player guesses using fuzzy matching
+    """Score player guesses using fuzzy matching.
 
     Body:
         guesses: List of player's guesses
@@ -285,8 +283,8 @@ async def score_guesses(request: GuessRequest):
 
 # Custom Categories (Room-specific)
 @app.post("/api/rooms/{room_id}/categories")
-async def create_custom_category(room_id: str, category_data: CustomCategoryCreate, db: AsyncSession = Depends(get_db)):
-    """Create a custom category for a specific room
+async def create_custom_category(room_id: str, category_data: CustomCategoryCreate, db: AsyncSessionDep):
+    """Create a custom category for a specific room.
 
     Only available for the host of that room during the game session.
     Custom categories are automatically cleaned up when the room closes.
@@ -335,8 +333,8 @@ async def create_custom_category(room_id: str, category_data: CustomCategoryCrea
 
 
 @app.get("/api/rooms/{room_id}/categories")
-async def get_room_categories(room_id: str, db: AsyncSession = Depends(get_db)):
-    """Get all custom categories for a specific room
+async def get_room_categories(room_id: str, db: AsyncSessionDep):
+    """Get all custom categories for a specific room.
 
     Returns only the categories created for this room, not global categories.
     """
@@ -362,11 +360,11 @@ async def get_room_categories(room_id: str, db: AsyncSession = Depends(get_db)):
 async def delete_custom_category(
     room_id: str,
     category_id: int,
-    player_id_header: str | None = Header(default=None, alias="X-Player-Id"),
-    player_id_query: str | None = Query(default=None, alias="player_id"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSessionDep,
+    player_id_header: Annotated[str | None, Header(alias="X-Player-Id")] = None,
+    player_id_query: Annotated[str | None, Query(alias="player_id")] = None,
 ):
-    """Delete a custom category from a room
+    """Delete a custom category from a room.
 
     Only the host can delete custom categories.
     """
@@ -405,7 +403,7 @@ async def delete_custom_category(
 
 @app.get("/rooms/{room_id}/status")
 async def room_status(room_id: str):
-    """Get the status of a room"""
+    """Get the status of a room."""
     room = room_manager.get_room(room_id)
     if not room:
         return {"exists": False}
@@ -418,8 +416,8 @@ async def room_status(room_id: str):
 
 
 @app.websocket("/party/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str):
-    """WebSocket endpoint for game rooms"""
+async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
+    """WebSocket endpoint for game rooms."""
     await websocket.accept()
     logger.info("[WebSocket] Connection accepted for room %s", room_id)
 
@@ -428,23 +426,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
 
     try:
         # Send initial room state
-        await websocket.send_text(
-            json.dumps(
-                {
-                    "type": "room_state",
-                    "players": room.get_player_list(),
-                    "hostId": room.host_id,
-                    "categories": room.metadata.categories,
-                    "gamePhase": room.metadata.game_phase,
-                    "roundStartTime": room.metadata.round_start_time,
-                    "roundLength": room.metadata.round_length,
-                    "difficulty": room.metadata.difficulty,
-                    "maxRounds": room.metadata.max_rounds,
-                    "padVisibility": room.metadata.pad_visibility,
-                    "language": room.metadata.language,
-                },
-            ),
-        )
+        await websocket.send_text(json.dumps(room.room_state_payload()))
 
         # Handle messages
         while True:

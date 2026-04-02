@@ -8,13 +8,13 @@ const store = useGameStore();
 const { send } = useGameConnection();
 
 const playerGuesses = ref<Record<string, string[]>>({});
-const submittedPlayers = ref<Set<string>>(new Set());
+const submittedPlayers = ref<string[]>([]);
 const allGuessesSubmitted = ref(false);
 
 const otherPlayers = computed(() => store.playersList.filter((p) => p.id !== store.localPlayerId));
 
 onMounted(() => {
-  submittedPlayers.value.clear();
+  submittedPlayers.value = [];
   for (const player of otherPlayers.value) {
     playerGuesses.value[player.id] = Array(10).fill("");
   }
@@ -30,9 +30,11 @@ function submitGuessesForPlayer(targetPlayerId: string) {
   if (guesses.length === 0) return;
 
   send({ type: "submit_guess", playerId: store.localPlayerId, targetPlayerId, guesses });
-  submittedPlayers.value.add(targetPlayerId);
+  if (!submittedPlayers.value.includes(targetPlayerId)) {
+    submittedPlayers.value = [...submittedPlayers.value, targetPlayerId];
+  }
 
-  if (submittedPlayers.value.size === otherPlayers.value.length) {
+  if (submittedPlayers.value.length === otherPlayers.value.length) {
     allGuessesSubmitted.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
   }
@@ -57,7 +59,7 @@ function submitGuessesForPlayer(targetPlayerId: string) {
             <p v-else class="waiting-text">Waiting for drawing...</p>
           </div>
 
-          <div v-if="submittedPlayers.has(player.id)" class="submitted-message">
+          <div v-if="submittedPlayers.includes(player.id)" class="submitted-message">
             <p>✓ Guesses submitted! Waiting for other players...</p>
           </div>
           <div v-else class="guess-inputs">
