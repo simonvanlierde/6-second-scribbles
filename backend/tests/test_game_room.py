@@ -158,6 +158,12 @@ class TestGameRoom:
         room_with_players.metadata.ready_players.add("player-2")
         assert len(room_with_players.metadata.ready_players) == 2
 
+    async def test_mark_player_ready_returns_ready_status_payload(self, room_with_players) -> None:
+        """Test ready-state payload serialization uses websocket aliases."""
+        payload = room_with_players.mark_player_ready("player-1")
+
+        assert payload.to_payload() == {"type": "ready_status", "readyCount": 1, "totalPlayers": 2}
+
     async def test_broadcast_handles_disconnected_player(self, game_room, make_ws) -> None:
         """Test that broadcast handles disconnected players gracefully."""
         ws1 = make_ws()
@@ -186,6 +192,78 @@ class TestGameRoom:
 
         assert game_room.is_empty()
         assert game_room._emptied_at is not None
+
+    async def test_initiate_kick_vote_broadcasts_modeled_payload(self, game_room, make_ws) -> None:
+        """Test kick vote start broadcast preserves the expected protocol shape."""
+        ws1, ws2, ws3 = make_ws(), make_ws(), make_ws()
+
+        await game_room.add_player("player-1", "Alice", ws1)
+        await game_room.add_player("player-2", "Bob", ws2)
+        await game_room.add_player("player-3", "Charlie", ws3)
+
+        result = await game_room.initiate_kick_vote("player-2", "player-1")
+
+        assert result.success is True
+        assert result.vote_id == "player-1"
+        messages = [json.loads(message) for message in ws1.sent_texts]
+        assert messages[-1]["type"] == "kick_vote_started"
+        assert messages[-1]["targetPlayerId"] == "player-1"
+        assert messages[-1]["targetPlayerName"] == "Alice"
+        assert messages[-1]["initiatorId"] == "player-2"
+        assert messages[-1]["currentVotes"] == 1
+        assert messages[-1]["requiredVotes"] == 2
+        assert "expiresAt" in messages[-1]
+
+    async def test_cast_kick_vote_returns_typed_progress_result(self, game_room, make_ws) -> None:
+        """Test kick-vote progress returns a typed result object."""
+        ws1, ws2, ws3, ws4 = make_ws(), make_ws(), make_ws(), make_ws()
+
+        await game_room.add_player("player-1", "Alice", ws1)
+        await game_room.add_player("player-2", "Bob", ws2)
+        await game_room.add_player("player-3", "Charlie", ws3)
+        await game_room.add_player("player-4", "Dana", ws4)
+
+        start_result = await game_room.initiate_kick_vote("player-2", "player-1")
+        assert start_result.success is True
+
+        vote_result = await game_room.cast_kick_vote("player-3", "player-1")
+
+        assert vote_result.success is True
+        assert vote_result.vote_passed is False
+        assert vote_result.current_votes == 2
+        assert vote_result.required_votes == 3
+
+    async def test_room_state_round_trips_through_persistence_model(self, game_room) -> None:
+        """Test persisted room state preserves structured metadata."""
+        game_room.host_id = "host-1"
+        game_room._last_host_id = "host-1"
+        game_room.metadata.game_phase = "drawing"
+        game_room.metadata.current_round = 2
+        game_room.metadata.ready_players.add("host-1")
+        game_room.metadata.submitted_players.add("player-2")
+        game_room.metadata.player_cards = {
+            "player-1": {
+                "category": "Animals",
+                "items": ["cat", "dog"],
+                "alternatives": {"cat": ["kitty"]},
+                "is_custom": False,
+            },
+        }
+        game_room.metadata.guess_submissions = [
+            {"playerId": "player-2", "targetPlayerId": "player-1", "guesses": ["cat"]},
+        ]
+
+        restored_room = GameRoom.from_state(game_room.to_state())
+
+        assert restored_room.host_id == "host-1"
+        assert restored_room.metadata.game_phase == "drawing"
+        assert restored_room.metadata.current_round == 2
+        assert restored_room.metadata.ready_players == {"host-1"}
+        assert restored_room.metadata.submitted_players == {"player-2"}
+        assert restored_room.metadata.player_cards["player-1"]["alternatives"] == {"cat": ["kitty"]}
+        assert restored_room.metadata.guess_submissions == [
+            {"playerId": "player-2", "targetPlayerId": "player-1", "guesses": ["cat"]},
+        ]
 
 
 class TestRoomManager:

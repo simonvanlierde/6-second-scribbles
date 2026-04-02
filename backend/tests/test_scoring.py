@@ -1,6 +1,7 @@
 """Tests for fuzzy matching and scoring functionality."""
+# spell-checker: ignore elefant, girafe, rabit, aple, bannana, pinapple, gutar, paino, violen, trumpit, monky, manago
+# spell-checker: ignore tigger, watermellon, clarnet, accordian
 
-# spell-checker: ignore elefant, girafe, rabit, aple, bannana, pinapple, gutar, paino, violen, trumpit
 import pytest
 
 from app.scoring import GuessMatcher
@@ -61,10 +62,10 @@ class TestGuessMatcher:
         correct = ["cat", "dog", "bird"]
         result = matcher.match_guess("cat", correct)
 
-        assert result["matched"] is True
-        assert result["matched_item"] == "cat"
-        assert result["similarity"] == 100.0
-        assert result["method"] == "exact"
+        assert result.matched is True
+        assert result.matched_item == "cat"
+        assert result.similarity == 100.0
+        assert result.method == "exact"
 
     def test_match_guess_fuzzy(self, matcher: GuessMatcher) -> None:
         """Test matching a guess with fuzzy match."""
@@ -72,10 +73,10 @@ class TestGuessMatcher:
         # girafe scores ~92% against giraffe — above the 85% threshold
         result = matcher.match_guess("girafe", correct)
 
-        assert result["matched"] is True
-        assert result["matched_item"] == "giraffe"
-        assert result["similarity"] >= 85
-        assert result["method"] == "fuzzy"
+        assert result.matched is True
+        assert result.matched_item == "giraffe"
+        assert result.similarity >= 85
+        assert result.method == "fuzzy"
 
     def test_match_guess_with_alternatives(self, matcher: GuessMatcher) -> None:
         """Test matching with alternative spellings."""
@@ -84,17 +85,17 @@ class TestGuessMatcher:
 
         result = matcher.match_guess("colour", correct, alternatives)
 
-        assert result["matched"] is True
-        assert result["method"] == "alternative"
+        assert result.matched is True
+        assert result.method == "alternative"
 
     def test_match_guess_no_match(self, matcher: GuessMatcher) -> None:
         """Test no match found."""
         correct = ["cat", "dog"]
         result = matcher.match_guess("elephant", correct)
 
-        assert result["matched"] is False
-        assert result["matched_item"] is None
-        assert result["method"] == "none"
+        assert result.matched is False
+        assert result.matched_item is None
+        assert result.method == "none"
 
     def test_score_guesses_perfect_score(self, matcher: GuessMatcher) -> None:
         """Test scoring with all correct guesses."""
@@ -103,11 +104,11 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 3
-        assert result["total"] == 3
-        assert result["percentage"] == 100.0
-        assert len(result["matches"]) == 3
-        assert len(result["unmatched_answers"]) == 0
+        assert result.score == 3
+        assert result.total == 3
+        assert result.percentage == 100.0
+        assert len(result.matches) == 3
+        assert len(result.unmatched_answers) == 0
 
     def test_score_guesses_partial_score(self, matcher: GuessMatcher) -> None:
         """Test scoring with some correct guesses."""
@@ -116,11 +117,11 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 2  # cat and bird matched
-        assert result["total"] == 4
-        assert result["percentage"] == 50.0
-        assert "dog" in result["unmatched_answers"]
-        assert "fish" in result["unmatched_answers"]
+        assert result.score == 2  # cat and bird matched
+        assert result.total == 4
+        assert result.percentage == 50.0
+        assert "dog" in result.unmatched_answers
+        assert "fish" in result.unmatched_answers
 
     def test_score_guesses_with_typos(self, matcher: GuessMatcher) -> None:
         """Test scoring with typos (fuzzy matching)."""
@@ -130,9 +131,9 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 3  # All should match via fuzzy
-        assert result["total"] == 3
-        assert result["percentage"] == 100.0
+        assert result.score == 3  # All should match via fuzzy
+        assert result.total == 3
+        assert result.percentage == 100.0
 
     def test_score_guesses_no_duplicates(self, matcher: GuessMatcher) -> None:
         """Test that duplicate guesses don't count twice."""
@@ -141,8 +142,8 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 2  # Only cat and dog (no duplicates)
-        assert result["total"] == 3
+        assert result.score == 2  # Only cat and dog (no duplicates)
+        assert result.total == 3
 
     def test_score_guesses_with_alternatives(self, matcher: GuessMatcher) -> None:
         """Test scoring with alternative spellings."""
@@ -152,8 +153,8 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct, alternatives_map)
 
-        assert result["score"] == 3
-        assert result["percentage"] == 100.0
+        assert result.score == 3
+        assert result.percentage == 100.0
 
     def test_score_guesses_empty_guesses(self, matcher: GuessMatcher) -> None:
         """Test scoring with no guesses."""
@@ -162,9 +163,9 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 0
-        assert result["total"] == 2
-        assert result["percentage"] == 0.0
+        assert result.score == 0
+        assert result.total == 2
+        assert result.percentage == 0.0
 
     def test_score_guesses_empty_correct(self, matcher: GuessMatcher) -> None:
         """Test scoring with no correct answers."""
@@ -173,9 +174,9 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 0
-        assert result["total"] == 0
-        assert result["percentage"] == 0.0
+        assert result.score == 0
+        assert result.total == 0
+        assert result.percentage == 0.0
 
     def test_match_details(self, matcher: GuessMatcher) -> None:
         """Test that match details are returned."""
@@ -186,19 +187,19 @@ class TestGuessMatcher:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert len(result["matches"]) == 2
+        assert len(result.matches) == 2
 
         # Check first match (exact)
-        cat_match = result["matches"][0]
-        assert cat_match["guess"] == "cat"
-        assert cat_match["matched_item"] == "cat"
-        assert cat_match["method"] == "exact"
+        cat_match = result.matches[0]
+        assert cat_match.guess == "cat"
+        assert cat_match.matched_item == "cat"
+        assert cat_match.method == "exact"
 
         # Check second match (fuzzy)
-        giraffe_match = result["matches"][1]
-        assert giraffe_match["guess"] == "girafe"
-        assert giraffe_match["matched_item"] == "giraffe"
-        assert giraffe_match["method"] == "fuzzy"
+        giraffe_match = result.matches[1]
+        assert giraffe_match.guess == "girafe"
+        assert giraffe_match.matched_item == "giraffe"
+        assert giraffe_match.method == "fuzzy"
 
 
 class TestRealWorldScenarios:
@@ -217,7 +218,7 @@ class TestRealWorldScenarios:
         result = matcher.score_guesses(guesses, correct)
 
         # Should match: cat, dogs->dog, fsh->fish (maybe), bird, rabit->rabbit
-        assert result["score"] >= 4  # At least these should match
+        assert result.score >= 4  # At least these should match
 
     def test_drawing_game_scenario(self, matcher: GuessMatcher) -> None:
         """Test realistic drawing game scenario."""
@@ -231,9 +232,9 @@ class TestRealWorldScenarios:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 5
-        assert result["total"] == 5
-        assert "orange" not in [m["matched_item"] for m in result["matches"]]
+        assert result.score == 5
+        assert result.total == 5
+        assert "orange" not in [match.matched_item for match in result.matches]
 
     def test_musical_instruments(self, matcher: GuessMatcher) -> None:
         """Test with musical instruments."""
@@ -244,4 +245,4 @@ class TestRealWorldScenarios:
 
         result = matcher.score_guesses(guesses, correct)
 
-        assert result["score"] == 5
+        assert result.score == 5

@@ -27,7 +27,7 @@
     "ruff>=0.14.6",
     "testcontainers>=4.14.2",
     "ty>=0.0.27",
-]
+  ]
 
 [tool.pytest.ini_options]
   addopts = [
@@ -73,15 +73,22 @@
     "fastapi.Query",
   ] # Allow default arguments for FastAPI functions
 
-  lint.per-file-ignores."tests/**/*.py" = [
-    "ANN",     # Tests can use lightweight fixture and helper typing
-    "D",       # Test names already document intent well enough
-    "PLR2004", # Literal values keep assertions readable in tests
-    "S101",    # allow assert in test files
-    "SLF001",  # Tests may exercise internal state transitions intentionally
-  ]
-
   lint.pydocstyle.convention = "google"
 
   lint.pylint.allow-magic-value-types = ["int"]
   lint.pylint.max-args                = 10
+
+  [tool.ruff.lint.per-file-ignores]
+
+    "alembic/**/*.py" = [
+      "D",       # Alembic migration scripts are auto-generated and don't need docstrings or type annotations
+      "INP001",  # Alembic migration scripts should not be recognized as a module
+      "PLR2004", # Literal values keep migration scripts readable
+    ]
+    "tests/**/*.py" = [
+      "ANN",     # Tests can use lightweight fixture and helper typing
+      "D",       # Test names already document intent well enough
+      "PLR2004", # Literal values keep assertions readable in tests
+      "S101",    # allow assert in test files
+      "SLF001",  # Tests may exercise internal state transitions intentionally
+    ]

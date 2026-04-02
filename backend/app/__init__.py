@@ -1,1 +1,1 @@
-# FastAPI backend for Six Second Scribbles
+"""FastAPI backend for Six Second Scribbles."""

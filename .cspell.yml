@@ -44,3 +44,6 @@ import:
 overrides:
   - filename: "**/{seed_data.py,seed_data.json}"
     language: "en,es,fr"
+  - filename: "README.md"
+    # cSpell doesn't recognize html-style comments in markdown, so we declare the README spelling configuration here 
+    ignoreWords: [ "elefant" ]

@@ -10,13 +10,13 @@ default:
 # Start everything: infra + backend + frontend
 [group('dev')]
 dev: up
-    cd frontend && pnpm run dev:web &
+    pnpm --dir frontend run dev:web &
     cd backend && uv run uvicorn app.main:app --reload --port 8000
 
 # Start only the frontend Vite dev server
 [group('dev')]
 dev-frontend:
-    cd frontend && pnpm run dev:web
+    pnpm --dir frontend run dev:web
 
 # Start only the backend API server
 [group('dev')]
@@ -50,12 +50,12 @@ test: test-frontend test-backend
 # Run frontend unit tests
 [group('test')]
 test-frontend:
-    cd frontend && pnpm run test:unit -- --run
+    pnpm --dir frontend run test:unit -- --run
 
 # Run frontend e2e tests (requires dev server running)
 [group('test')]
 test-e2e:
-    cd frontend && pnpm run test:e2e
+    pnpm --dir frontend run test:e2e
 
 # Run backend tests
 [group('test')]
@@ -76,7 +76,7 @@ lint: lint-frontend lint-backend
 # Lint frontend
 [group('lint')]
 lint-frontend:
-    cd frontend && pnpm run lint
+    pnpm --dir frontend run lint
 
 # Lint backend (ruff)
 [group('lint')]
@@ -90,7 +90,7 @@ format: format-frontend format-backend
 # Format frontend (prettier)
 [group('lint')]
 format-frontend:
-    cd frontend && pnpm run format
+    pnpm --dir frontend run format
 
 # Format backend (ruff)
 [group('lint')]
@@ -102,12 +102,12 @@ format-backend:
 # Build frontend for production
 [group('build')]
 build:
-    cd frontend && pnpm run build
+    pnpm --dir frontend run build
 
 # Type-check frontend
 [group('build')]
 type-check:
-    cd frontend && pnpm run type-check
+    pnpm --dir frontend run type-check
 
 # ── Database ──────────────────────────────────────────────────────────────────
 

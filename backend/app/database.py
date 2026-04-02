@@ -12,14 +12,18 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 
-# Base class for models (SQLAlchemy 2.0 style)
 class Base(DeclarativeBase):
-    pass
+    """Base class for SQLAlchemy models."""
 
 
-# Lazy singletons so tests can patch settings before initialization.
-_engine: AsyncEngine | None = None
-_session_maker: async_sessionmaker[AsyncSession] | None = None
+class _DatabaseState:
+    """Holds lazily created database resources."""
+
+    engine: AsyncEngine | None = None
+    session_maker: async_sessionmaker[AsyncSession] | None = None
+
+
+_state = _DatabaseState()
 
 
 def _create_engine() -> AsyncEngine:
@@ -34,21 +38,19 @@ def _create_engine() -> AsyncEngine:
 
 
 def _get_engine() -> AsyncEngine:
-    global _engine
-    if _engine is None:
-        _engine = _create_engine()
-    return _engine
+    if _state.engine is None:
+        _state.engine = _create_engine()
+    return _state.engine
 
 
 def _get_session_maker() -> async_sessionmaker[AsyncSession]:
-    global _session_maker
-    if _session_maker is None:
-        _session_maker = async_sessionmaker(
+    if _state.session_maker is None:
+        _state.session_maker = async_sessionmaker(
             bind=_get_engine(),
             class_=AsyncSession,
             expire_on_commit=False,
         )
-    return _session_maker
+    return _state.session_maker
 
 
 def get_session_maker() -> async_sessionmaker[AsyncSession]:
@@ -74,8 +76,7 @@ async def init_db() -> None:
 
 async def close_db() -> None:
     """Close database connections."""
-    global _engine, _session_maker
-    if _engine:
-        await _engine.dispose()
-        _engine = None
-        _session_maker = None
+    if _state.engine:
+        await _state.engine.dispose()
+    _state.engine = None
+    _state.session_maker = None

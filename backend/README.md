@@ -1,5 +1,5 @@
 # FastAPI Backend
-<!-- spell-checker: ignore elefant-->
+
 ## Overview
 
 Modern, scalable backend for Six Second Scribbles using:
@@ -216,7 +216,7 @@ pytest tests/test_game_room.py::TestGameRoom::test_add_first_player_becomes_host
 
 ## Test Organization
 
-```
+```bash
 tests/
 ├── __init__.py
 ├── conftest.py              # Shared fixtures and configuration

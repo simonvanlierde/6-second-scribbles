@@ -4,6 +4,7 @@ Default tests run against in-memory fakes for the database and Redis so unit and
 app tests stay fast and deterministic. Container-backed dependencies should be
 reserved for explicitly marked integration coverage.
 """
+# spell-checker: ignore getfixturevalue
 
 from __future__ import annotations
 
@@ -302,11 +303,14 @@ async def configure_test_services(
         monkeypatch.setattr(settings, "database_url_override", _postgres_async_url(postgres))
         monkeypatch.setattr(settings, "redis_url", _redis_url(redis))
 
+        main_module.app.state.redis_client = None
+
         main_module.app.dependency_overrides.clear()
 
         await _reset_real_infra()
         yield
         main_module.app.dependency_overrides.clear()
+        main_module.app.state.redis_client = None
         await database.close_db()
         await redis_store.close_redis()
         return
@@ -322,29 +326,20 @@ async def configure_test_services(
     async def fake_close_db() -> None:
         return None
 
-    async def fake_get_redis() -> FakeRedis:
-        return fake_redis
-
-    async def fake_close_redis() -> None:
-        await fake_redis.aclose()
-
     monkeypatch.setattr(database, "get_session_maker", lambda: session_maker)
     monkeypatch.setattr(database, "_get_session_maker", lambda: session_maker)
     monkeypatch.setattr(database, "init_db", fake_init_db)
     monkeypatch.setattr(database, "close_db", fake_close_db)
 
-    monkeypatch.setattr(redis_store, "_redis_client", fake_redis)
-    monkeypatch.setattr(redis_store, "get_redis", fake_get_redis)
-    monkeypatch.setattr(redis_store, "close_redis", fake_close_redis)
-
+    main_module.app.state.redis_client = fake_redis
     monkeypatch.setattr(main_module, "init_db", fake_init_db)
     monkeypatch.setattr(main_module, "close_db", fake_close_db)
-    monkeypatch.setattr(main_module, "get_redis", fake_get_redis)
-    monkeypatch.setattr(main_module, "close_redis", fake_close_redis)
 
     main_module.app.dependency_overrides[database.get_async_session] = override_get_db
     yield
     main_module.app.dependency_overrides.clear()
+    main_module.app.state.redis_client = None
+    await fake_redis.aclose()
 
 
 @pytest.fixture(autouse=True)

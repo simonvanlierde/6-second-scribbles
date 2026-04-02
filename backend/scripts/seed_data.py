@@ -14,6 +14,7 @@ from app.database import get_session_maker, init_db
 from app.db_models import Card, Category
 
 CARD_DECKS = json.loads((Path(__file__).parent / "seed_data.json").read_text())
+CLEAR_FLAG = "--clear"
 
 
 async def seed_database() -> None:
@@ -32,7 +33,6 @@ async def seed_database() -> None:
             total_items = 0
 
             for difficulty, categories in CARD_DECKS.items():
-
                 for cat_data in categories:
                     category = Category(
                         name=cat_data["category"],
@@ -54,9 +54,7 @@ async def seed_database() -> None:
                     total_categories += 1
                     total_items += len(cat_data["items"])
 
-
             await session.commit()
-
 
         except Exception:
             await session.rollback()
@@ -77,7 +75,7 @@ async def clear_database() -> None:
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) > 1 and sys.argv[1] == "--clear":
+    if len(sys.argv) > 1 and sys.argv[1] == CLEAR_FLAG:
         asyncio.run(clear_database())
     else:
         asyncio.run(seed_database())

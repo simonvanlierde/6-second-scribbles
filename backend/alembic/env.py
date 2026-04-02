@@ -34,7 +34,7 @@ target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
+# my_important_option = config.get_main_option("my_important_option") #noqa: ERA001
 # ... etc.
 
 
@@ -63,6 +63,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    """Run migrations with a given connection. This is used for both online and offline modes."""
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
@@ -70,10 +71,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """In this scenario we need to create an Engine and associate a connection with the context."""
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

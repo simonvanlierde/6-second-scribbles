@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
 import pytest
+from starlette.websockets import WebSocketDisconnect
 
 from app.game_room import PlayerInfo, RoomManager, room_manager
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
@@ -142,7 +143,7 @@ def test_host_can_kick_non_host_player(test_client) -> None:
         assert host_types == ["player_kicked", "player_left"]
         assert host_messages[0]["playerId"] == "p2"
 
-        with pytest.raises(Exception):
+        with pytest.raises(WebSocketDisconnect):
             receive_json(ws2)
 
 
@@ -188,7 +189,7 @@ def test_multiple_rooms_can_progress_independently(test_client) -> None:
 
 @pytest.mark.integration
 async def test_custom_categories_use_real_postgres(async_client: AsyncClient) -> None:
-    room_id = "PGREAL01"
+    room_id = "PG_REAL_01"
     room = room_manager.get_or_create_room(room_id)
     room.players["host-1"] = PlayerInfo(id="host-1", name="Host", websocket=AsyncMock())
     room.host_id = "host-1"
@@ -222,6 +223,17 @@ async def test_room_manager_restores_room_state_from_real_redis() -> None:
     room.metadata.game_phase = "drawing"
     room.metadata.current_round = 2
     room.metadata.ready_players.add("host-1")
+    room.metadata.player_cards = {
+        "host-1": {
+            "category": "Animals",
+            "items": ["cat", "dog"],
+            "alternatives": {"cat": ["kitty"]},
+            "is_custom": False,
+        },
+    }
+    room.metadata.guess_submissions = [
+        {"playerId": "host-1", "targetPlayerId": "host-1", "guesses": ["cat"]},
+    ]
 
     await room.persist()
 
@@ -234,5 +246,9 @@ async def test_room_manager_restores_room_state_from_real_redis() -> None:
         assert restored_room.metadata.game_phase == "drawing"
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
+        assert restored_room.metadata.player_cards["host-1"]["category"] == "Animals"
+        assert restored_room.metadata.guess_submissions == [
+            {"playerId": "host-1", "targetPlayerId": "host-1", "guesses": ["cat"]},
+        ]
     finally:
         await restored_manager.stop()

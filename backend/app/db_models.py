@@ -9,6 +9,7 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.domain_types import Difficulty, LanguageCode  # noqa: TC001 - narrows ORM field annotations
 
 
 class Category(Base):
@@ -18,11 +19,17 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    difficulty: Mapped[str] = mapped_column(String(20), nullable=False)
-    description: Mapped[str] = mapped_column(String(500), nullable=True)
-    language: Mapped[str] = mapped_column(String(5), nullable=False, default="en")  # ISO 639-1 language code
-    room_id: Mapped[str] = mapped_column(String(50), nullable=True)  # NULL = global, value = room-specific
-    created_by: Mapped[str] = mapped_column(String(50), nullable=True)  # Player ID who created (for custom categories)
+    difficulty: Mapped[Difficulty] = mapped_column(String(20), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    language: Mapped[LanguageCode] = mapped_column(String(5), nullable=False, default="en")  # ISO 639-1 language code
+    room_id: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )  # NULL = global, value = room-specific
+    created_by: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )  # Player ID who created (for custom categories)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -41,22 +48,9 @@ class Category(Base):
         Index("idx_category_language", "language"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         room_info = f", room='{self.room_id}'" if self.room_id else ""
         return f"<Category(id={self.id}, name='{self.name}', difficulty='{self.difficulty}'{room_info})>"
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "difficulty": self.difficulty,
-            "description": self.description,
-            "language": self.language,
-            "room_id": self.room_id,
-            "created_by": self.created_by,
-            "is_custom": self.room_id is not None,
-        }
 
 
 class Card(Base):
@@ -67,7 +61,11 @@ class Card(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
     item: Mapped[str] = mapped_column(String(100), nullable=False)
-    alternatives: Mapped[list] = mapped_column(JSON, nullable=True, default=list)  # Alternative spellings/names
+    alternatives: Mapped[list[str] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        default=list,
+    )  # Alternative spellings/names
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     # Relationship
@@ -79,14 +77,5 @@ class Card(Base):
         Index("idx_card_item", "item"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Card(id={self.id}, category_id={self.category_id}, item='{self.item}')>"
-
-    def to_dict(self):
-        """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "category_id": self.category_id,
-            "item": self.item,
-            "alternatives": self.alternatives or [],
-        }

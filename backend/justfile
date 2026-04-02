@@ -54,7 +54,7 @@ format:
 # Lint + format in one pass
 [group('lint')]
 check:
-    uv run ruff check . --fix && uv run ruff format .
+    uv run ruff check . --fix && uv run ruff format . && uv run ty check .
 
 # ── Database ──────────────────────────────────────────────────────────────────
 

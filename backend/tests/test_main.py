@@ -131,6 +131,21 @@ def test_invalid_typed_payload_returns_protocol_error(test_client) -> None:
         }
 
 
+def test_invalid_start_game_difficulty_returns_protocol_error(test_client) -> None:
+    with joined_players(
+        test_client,
+        "PROTO02",
+        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+    ) as (_ws1, ws2):
+        send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "roundLength": 30})
+
+        assert receive_json(ws2) == {
+            "type": "protocol_error",
+            "error": "invalid_payload",
+            "message": "Invalid websocket payload.",
+        }
+
+
 def test_player_ready_requires_matching_connection_identity(test_client) -> None:
     with joined_players(
         test_client,

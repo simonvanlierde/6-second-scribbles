@@ -5,29 +5,59 @@ Architecture: Server-side scoring with client-side card assignment.
 - Host client handles card assignment and round timing
 - Server broadcasts round_complete and game_complete
 """
-# spell-checker: ignore reconnections
+
+from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
-import random
+import secrets
 import time
-from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, TypedDict
+
+from sqlalchemy import delete
 
 from app.config import settings
+from app.database import get_session_maker
+from app.db_models import Category
+from app.domain_types import Difficulty, GamePhase, LanguageCode  # noqa: TC001 - used in runtime annotations
+from app.redis_store import delete_room_state, load_all_room_states, save_room_state
+from app.result_models import KickVoteResult
+from app.room_state import GuessSubmissionState, RoomMetadataState, RoomState
 from app.scoring import guess_matcher
+from app.ws_protocol import (
+    GameCompleteBroadcastEvent,
+    HostChangedEvent,
+    KickVoteExpiredEvent,
+    KickVoteStartedEvent,
+    KickVoteUpdatedEvent,
+    PlayerKickedEvent,
+    PlayerLeftEvent,
+    PlayerSnapshot,
+    ReadyStatusEvent,
+    RoomStateEvent,
+    RoundCompleteBroadcastEvent,
+    RoundResultItem,
+    WebSocketMessage,
+    send_ws_message,
+)
+
+# spell-checker: ignore reconnections
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
+LOBBY_PHASE = "lobby"
 
-def _create_logged_task(coro, name: str) -> asyncio.Task:
+
+def _create_logged_task(coroutine: Coroutine[object, object, object], name: str) -> asyncio.Task[object]:
     """Create a fire-and-forget task that logs any unhandled exception."""
-    task = asyncio.create_task(coro, name=name)
+    task = asyncio.create_task(coroutine, name=name)
     task.add_done_callback(
         lambda t: (
             logger.error("[Task %s] unhandled exception: %s", name, t.exception())
@@ -66,22 +96,59 @@ class RoomMetadata:
     """Metadata and state information for a game room."""
 
     categories: list[str] = field(default_factory=list)
-    game_phase: str = "lobby"
+    game_phase: GamePhase = "lobby"
     round_start_time: int | None = None
     round_length: int | None = None
-    difficulty: str = "medium"
+    difficulty: Difficulty = "medium"
     max_rounds: int = 5
     current_round: int = 0
     pad_visibility: bool = True
     ready_players: set[str] = field(default_factory=set)
     is_private: bool = False  # Private rooms don't appear in random join
-    language: str = "en"  # Language code (ISO 639-1): en, es, fr, etc.
+    language: LanguageCode = "en"  # Language code (ISO 639-1): en, es, fr, etc.
     # Server-side scoring state
-    player_cards: dict[str, dict[str, Any]] = field(default_factory=dict)  # playerId -> {category, items, ...}
-    guess_submissions: list[dict[str, Any]] = field(default_factory=list)  # [{playerId, targetPlayerId, guesses}]
+    player_cards: dict[str, PlayerCardData] = field(default_factory=dict)  # playerId -> {category, items, ...}
+    guess_submissions: list[GuessSubmission] = field(default_factory=list)  # [{playerId, targetPlayerId, guesses}]
     submitted_players: set[str] = field(default_factory=set)  # playerIds that have submitted at least once
     player_count_for_scoring: int = 0  # expected number of submitters (snapshot at start_guessing)
     player_scores: dict[str, int] = field(default_factory=dict)  # playerId -> cumulative score
+
+
+class PlayerCardData(TypedDict):
+    """Cards assigned to a player for a round."""
+
+    category: str
+    items: list[str]
+    alternatives: dict[str, list[str]]
+    is_custom: bool
+
+
+class GuessSubmission(TypedDict):
+    """A submitted guess payload from a player."""
+
+    playerId: str
+    targetPlayerId: str
+    guesses: list[str]
+
+
+class RoundResultData(TypedDict):
+    """Scored round result for a single submission."""
+
+    playerId: str
+    targetPlayerId: str
+    correctGuesses: int
+    totalItems: int
+    pointsEarned: int
+
+
+class RoomStats(TypedDict):
+    """Aggregate room manager statistics."""
+
+    total_rooms: int
+    active_rooms: int
+    hibernated_rooms: int
+    empty_rooms: int
+    total_players: int
 
 
 class GameRoom:
@@ -117,7 +184,7 @@ class GameRoom:
             self._round_scoring_task.cancel()
             self._round_scoring_task = None
 
-        results = []
+        results: list[RoundResultData] = []
         round_points: dict[str, int] = dict.fromkeys(self.players, 0)
 
         for submission in self.metadata.guess_submissions:
@@ -132,7 +199,7 @@ class GameRoom:
 
             correct_items = target_card.get("items", [])
             scoring_result = guess_matcher.score_guesses(guesses, correct_items)
-            correct_count = scoring_result["score"]
+            correct_count = scoring_result.score
             points_earned = correct_count * 10
 
             if player_id in round_points:
@@ -156,11 +223,10 @@ class GameRoom:
 
         self.metadata.game_phase = "scoring"
         await self.broadcast(
-            {
-                "type": "round_complete",
-                "results": results,
-                "scores": dict(self.metadata.player_scores),
-            },
+            RoundCompleteBroadcastEvent(
+                results=[RoundResultItem.model_validate(result) for result in results],
+                scores=dict(self.metadata.player_scores),
+            ),
         )
 
         logger.info(
@@ -190,11 +256,10 @@ class GameRoom:
         )
         self.metadata.game_phase = "complete"
         await self.broadcast(
-            {
-                "type": "game_complete",
-                "finalScores": dict(self.metadata.player_scores),
-                "winner": winner_id,
-            },
+            GameCompleteBroadcastEvent(
+                finalScores=dict(self.metadata.player_scores),
+                winner=winner_id,
+            ),
         )
         logger.info("[GameRoom %s] Game complete. Winner: %s", self.room_id, winner_id)
         await self.persist()
@@ -278,7 +343,7 @@ class GameRoom:
                     with contextlib.suppress(Exception):
                         await player.websocket.close(code=1000, reason="Disconnected due to inactivity")
 
-    async def add_player(self, player_id: str, name: str, websocket: WebSocket):
+    async def add_player(self, player_id: str, name: str, websocket: WebSocket) -> tuple[PlayerInfo, bool]:
         """Add a player to the room.
 
         Returns tuple: (player, is_reconnecting_host)
@@ -380,7 +445,7 @@ class GameRoom:
                 self._last_host_id = new_host.id
 
                 # Notify all remaining players of the new host
-                await self.broadcast({"type": "host_changed", "newHostId": new_host.id})
+                await self.broadcast(HostChangedEvent(newHostId=new_host.id))
 
                 logger.info("[GameRoom %s] Host transferred to %s (%s)", self.room_id, new_host.name, new_host.id)
             else:
@@ -401,30 +466,35 @@ class GameRoom:
         """Return whether the given player currently owns the room."""
         return bool(player_id and self.host_id and player_id == self.host_id)
 
-    def room_state_payload(self) -> dict[str, Any]:
+    def room_state_event(self) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot."""
-        return {
-            "type": "room_state",
-            "players": [
-                {"id": player.id, "name": player.name, "categories": player.categories}
-                for player in self.players.values()
-            ],
-            "hostId": self.host_id,
-            "categories": self.metadata.categories,
-            "gamePhase": self.metadata.game_phase,
-            "difficulty": self.metadata.difficulty,
-            "maxRounds": self.metadata.max_rounds,
-            "roundStartTime": self.metadata.round_start_time,
-            "roundLength": self.metadata.round_length,
-            "padVisibility": self.metadata.pad_visibility,
-            "language": self.metadata.language,
-        }
+        return RoomStateEvent.model_validate(
+            {
+                "players": [
+                    PlayerSnapshot(id=player.id, name=player.name, categories=player.categories)
+                    for player in self.players.values()
+                ],
+                "hostId": self.host_id,
+                "categories": self.metadata.categories,
+                "gamePhase": self.metadata.game_phase,
+                "difficulty": self.metadata.difficulty,
+                "maxRounds": self.metadata.max_rounds,
+                "roundStartTime": self.metadata.round_start_time,
+                "roundLength": self.metadata.round_length,
+                "padVisibility": self.metadata.pad_visibility,
+                "language": self.metadata.language,
+            },
+        )
+
+    def room_state_payload(self) -> dict[str, object]:
+        """Build the canonical websocket room-state snapshot as a JSON dict."""
+        return self.room_state_event().to_payload()
 
     def configure_game(
         self,
         *,
         round_length: int | None,
-        difficulty: str | None,
+        difficulty: Difficulty | None,
         max_rounds: int | None,
     ) -> None:
         """Initialize a new game from the lobby state."""
@@ -436,7 +506,7 @@ class GameRoom:
         self.metadata.player_scores = dict.fromkeys(self.players, 0)
         self.metadata.ready_players.clear()
 
-    def start_round(self, *, round_number: int | None, cards: dict[str, dict[str, Any]] | None) -> int:
+    def start_round(self, *, round_number: int | None, cards: dict[str, PlayerCardData] | None) -> int:
         """Transition the room into a new drawing round and return the start timestamp."""
         round_start_time = int(time.time() * 1000)
         self.metadata.round_start_time = round_start_time
@@ -474,14 +544,13 @@ class GameRoom:
         self.metadata.round_start_time = None
         self.metadata.game_phase = "lobby"
 
-    def mark_player_ready(self, player_id: str) -> dict[str, int | str]:
+    def mark_player_ready(self, player_id: str) -> ReadyStatusEvent:
         """Record that a player is ready and return the shared ready-status payload."""
         self.metadata.ready_players.add(player_id)
-        return {
-            "type": "ready_status",
-            "readyCount": len(self.metadata.ready_players),
-            "totalPlayers": len(self.players),
-        }
+        return ReadyStatusEvent(
+            readyCount=len(self.metadata.ready_players),
+            totalPlayers=len(self.players),
+        )
 
     async def record_guess_submission(
         self,
@@ -491,9 +560,8 @@ class GameRoom:
         guesses: list[str],
     ) -> None:
         """Store a guess submission and score immediately when all players are done."""
-        self.metadata.guess_submissions.append(
-            {"playerId": player_id, "targetPlayerId": target_player_id, "guesses": guesses},
-        )
+        submission = GuessSubmissionState(playerId=player_id, targetPlayerId=target_player_id, guesses=guesses)
+        self.metadata.guess_submissions.append(submission.model_dump(by_alias=True))
         self.metadata.submitted_players.add(player_id)
         submitted = len(self.metadata.submitted_players)
         expected = self.metadata.player_count_for_scoring
@@ -506,16 +574,15 @@ class GameRoom:
         if expected > 0 and submitted >= expected:
             await self.score_and_broadcast_round()
 
-    async def broadcast(self, message: dict, exclude: str | None = None) -> None:
+    async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
         """Broadcast a message to all players in the room."""
-        message_str = json.dumps(message)
         disconnected_players = []
 
         for player_id, player in self.players.items():
             if exclude and player_id == exclude:
                 continue
             try:
-                await player.websocket.send_text(message_str)
+                await send_ws_message(player.websocket, message)
             except Exception:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
                 disconnected_players.append(player_id)
@@ -523,14 +590,14 @@ class GameRoom:
         # Clean up disconnected players after the loop (safe: we snapshotted the list)
         for player_id in disconnected_players:
             await self.remove_player(player_id)
-            await self.broadcast({"type": "player_left", "playerId": player_id})
+            await self.broadcast(PlayerLeftEvent(playerId=player_id))
 
-    async def send_to_player(self, player_id: str, message: dict) -> None:
+    async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""
         if player_id in self.players:
             player = self.players[player_id]
             try:
-                await player.websocket.send_text(json.dumps(message))
+                await send_ws_message(player.websocket, message)
             except Exception:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
                 await self.remove_player(player_id)
@@ -539,27 +606,27 @@ class GameRoom:
         """Get the list of all players in the room."""
         return [{"id": p.id, "name": p.name} for p in self.players.values()]
 
-    async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> dict:
+    async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> KickVoteResult:
         """Initiate a vote to kick a player.
 
-        Returns dict with status and info about the vote
+        Returns a JSON-safe status payload with info about the vote.
         """
         # Validate players exist
         if initiator_id not in self.players:
-            return {"success": False, "error": "Initiator not in room"}
+            return KickVoteResult(success=False, error="Initiator not in room")
 
         if target_player_id not in self.players:
-            return {"success": False, "error": "Target player not in room"}
+            return KickVoteResult(success=False, error="Target player not in room")
 
         # Can't kick yourself
         if initiator_id == target_player_id:
-            return {"success": False, "error": "Cannot kick yourself"}
+            return KickVoteResult(success=False, error="Cannot kick yourself")
 
         # Check if vote already exists
         if target_player_id in self.active_kick_votes:
             vote = self.active_kick_votes[target_player_id]
             if time.time() < vote.expires_at:
-                return {"success": False, "error": "Vote already in progress"}
+                return KickVoteResult(success=False, error="Vote already in progress")
             # Clean up expired vote
             del self.active_kick_votes[target_player_id]
 
@@ -570,7 +637,7 @@ class GameRoom:
         if is_host_kicking and not target_is_host:
             # Host kicks non-host player directly
             await self.kick_player(target_player_id, "Kicked by host")
-            return {"success": True, "immediate": True, "reason": "Host kicked player"}
+            return KickVoteResult(success=True, immediate=True, reason="Host kicked player")
 
         # Create vote
         target_player = self.players[target_player_id]
@@ -584,15 +651,14 @@ class GameRoom:
 
         # Broadcast vote started
         await self.broadcast(
-            {
-                "type": "kick_vote_started",
-                "targetPlayerId": target_player_id,
-                "targetPlayerName": target_player.name,
-                "initiatorId": initiator_id,
-                "requiredVotes": self._get_required_votes(target_is_host),
-                "currentVotes": 1,
-                "expiresAt": vote.expires_at * 1000,  # Convert to ms for frontend
-            },
+            KickVoteStartedEvent(
+                targetPlayerId=target_player_id,
+                targetPlayerName=target_player.name,
+                initiatorId=initiator_id,
+                requiredVotes=self._get_required_votes(target_is_host=target_is_host),
+                currentVotes=1,
+                expiresAt=vote.expires_at * 1000,
+            ),
         )
 
         logger.info(
@@ -602,45 +668,44 @@ class GameRoom:
             self.players[initiator_id].name,
         )
 
-        return {"success": True, "immediate": False, "vote_id": target_player_id}
+        return KickVoteResult(success=True, immediate=False, vote_id=target_player_id)
 
-    async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> dict:
+    async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> KickVoteResult:
         """Cast a vote to kick a player."""
         # Validate voter exists
         if voter_id not in self.players:
-            return {"success": False, "error": "Voter not in room"}
+            return KickVoteResult(success=False, error="Voter not in room")
 
         # Check if vote exists
         if target_player_id not in self.active_kick_votes:
-            return {"success": False, "error": "No active vote for this player"}
+            return KickVoteResult(success=False, error="No active vote for this player")
 
         vote = self.active_kick_votes[target_player_id]
 
         # Check if vote expired
         if time.time() > vote.expires_at:
             del self.active_kick_votes[target_player_id]
-            await self.broadcast({"type": "kick_vote_expired", "targetPlayerId": target_player_id})
-            return {"success": False, "error": "Vote has expired"}
+            await self.broadcast(KickVoteExpiredEvent(targetPlayerId=target_player_id))
+            return KickVoteResult(success=False, error="Vote has expired")
 
         # Can't vote to kick yourself
         if voter_id == target_player_id:
-            return {"success": False, "error": "Cannot vote to kick yourself"}
+            return KickVoteResult(success=False, error="Cannot vote to kick yourself")
 
         # Add vote
         vote.voters.add(voter_id)
 
         target_is_host = target_player_id == self.host_id
-        required_votes = self._get_required_votes(target_is_host)
+        required_votes = self._get_required_votes(target_is_host=target_is_host)
         current_votes = len(vote.voters)
 
         # Broadcast vote update
         await self.broadcast(
-            {
-                "type": "kick_vote_updated",
-                "targetPlayerId": target_player_id,
-                "currentVotes": current_votes,
-                "requiredVotes": required_votes,
-            },
+            KickVoteUpdatedEvent(
+                targetPlayerId=target_player_id,
+                currentVotes=current_votes,
+                requiredVotes=required_votes,
+            ),
         )
 
         logger.info(
@@ -655,11 +720,16 @@ class GameRoom:
         if current_votes >= required_votes:
             await self.kick_player(target_player_id, "Kicked by vote")
             del self.active_kick_votes[target_player_id]
-            return {"success": True, "vote_passed": True}
+            return KickVoteResult(success=True, vote_passed=True)
 
-        return {"success": True, "vote_passed": False, "current_votes": current_votes, "required_votes": required_votes}
+        return KickVoteResult(
+            success=True,
+            vote_passed=False,
+            current_votes=current_votes,
+            required_votes=required_votes,
+        )
 
-    def _get_required_votes(self, target_is_host: bool) -> int:
+    def _get_required_votes(self, *, target_is_host: bool) -> int:
         """Calculate required votes to kick a player."""
         total_players = len(self.players)
 
@@ -678,6 +748,17 @@ class GameRoom:
         player = self.players[player_id]
         logger.info("[GameRoom %s] Kicking player %s (%s): %s", self.room_id, player.name, player_id, reason)
 
+        # Broadcast the explicit kick event before the connection teardown so
+        # other clients see the reasoned event ahead of the generic leave event.
+        await self.broadcast(
+            PlayerKickedEvent(
+                playerId=player_id,
+                playerName=player.name,
+                reason=reason,
+            ),
+            exclude=player_id,
+        )
+
         # Close their websocket connection
         try:
             await player.websocket.close(code=1008, reason=reason)
@@ -687,16 +768,11 @@ class GameRoom:
         # Remove from room
         await self.remove_player(player_id)
 
-        # Broadcast kick event
-        await self.broadcast(
-            {"type": "player_kicked", "playerId": player_id, "playerName": player.name, "reason": reason},
-        )
-
         # Clean up any vote for this player
         if player_id in self.active_kick_votes:
             del self.active_kick_votes[player_id]
 
-    def cleanup_expired_votes(self):
+    def cleanup_expired_votes(self) -> int:
         """Remove expired kick votes."""
         now = time.time()
         expired = [target_id for target_id, vote in self.active_kick_votes.items() if now > vote.expires_at]
@@ -711,45 +787,70 @@ class GameRoom:
     # Redis persistence                                                    #
     # ------------------------------------------------------------------ #
 
-    def to_redis_dict(self) -> dict:
-        """Serialize room state to a JSON-safe dict for Redis storage."""
-        meta = asdict(self.metadata)
-        # sets are not JSON-serializable — convert to lists
-        meta["ready_players"] = list(self.metadata.ready_players)
-        meta["submitted_players"] = list(self.metadata.submitted_players)
-        return {
-            "room_id": self.room_id,
-            "host_id": self.host_id,
-            "_last_host_id": self._last_host_id,
-            "_created_at": self._created_at,
-            "_emptied_at": self._emptied_at,
-            "is_hibernated": self.is_hibernated,
-            "metadata": meta,
-        }
+    def to_state(self) -> RoomState:
+        """Serialize room state to a validated model for Redis storage."""
+        metadata = RoomMetadataState.model_validate(
+            {
+                "categories": self.metadata.categories,
+                "game_phase": self.metadata.game_phase,
+                "round_start_time": self.metadata.round_start_time,
+                "round_length": self.metadata.round_length,
+                "difficulty": self.metadata.difficulty,
+                "max_rounds": self.metadata.max_rounds,
+                "current_round": self.metadata.current_round,
+                "pad_visibility": self.metadata.pad_visibility,
+                "ready_players": self.metadata.ready_players,
+                "is_private": self.metadata.is_private,
+                "language": self.metadata.language,
+                "player_cards": self.metadata.player_cards,
+                "guess_submissions": self.metadata.guess_submissions,
+                "submitted_players": self.metadata.submitted_players,
+                "player_count_for_scoring": self.metadata.player_count_for_scoring,
+                "player_scores": self.metadata.player_scores,
+            },
+        )
+        return RoomState(
+            room_id=self.room_id,
+            host_id=self.host_id,
+            last_host_id=self._last_host_id,
+            created_at=self._created_at,
+            emptied_at=self._emptied_at,
+            is_hibernated=self.is_hibernated,
+            metadata=metadata,
+        )
 
     @classmethod
-    def from_redis_dict(cls, data: dict) -> GameRoom:
-        """Restore a room from a Redis-persisted dict (no players — they reconnect)."""
-        room = cls(data["room_id"])
-        room.host_id = data.get("host_id")
-        room._last_host_id = data.get("_last_host_id")
-        room._created_at = data.get("_created_at", time.time())
-        room._emptied_at = data.get("_emptied_at")
-        room.is_hibernated = data.get("is_hibernated", False)
-
-        meta = data.get("metadata", {})
-        # Restore sets from the serialized lists
-        meta["ready_players"] = set(meta.get("ready_players", []))
-        meta["submitted_players"] = set(meta.get("submitted_players", []))
-        room.metadata = RoomMetadata(**meta)
-
+    def from_state(cls, state: RoomState) -> GameRoom:
+        """Restore a room from a Redis-persisted state model (no players reconnect yet)."""
+        room = cls(state.room_id)
+        room.host_id = state.host_id
+        room._last_host_id = state.last_host_id
+        room._created_at = state.created_at
+        room._emptied_at = state.emptied_at
+        room.is_hibernated = state.is_hibernated
+        room.metadata = RoomMetadata(
+            categories=list(state.metadata.categories),
+            game_phase=state.metadata.game_phase,
+            round_start_time=state.metadata.round_start_time,
+            round_length=state.metadata.round_length,
+            difficulty=state.metadata.difficulty,
+            max_rounds=state.metadata.max_rounds,
+            current_round=state.metadata.current_round,
+            pad_visibility=state.metadata.pad_visibility,
+            ready_players=set(state.metadata.ready_players),
+            is_private=state.metadata.is_private,
+            language=state.metadata.language,
+            player_cards={player_id: card.model_dump() for player_id, card in state.metadata.player_cards.items()},
+            guess_submissions=[submission.model_dump(by_alias=True) for submission in state.metadata.guess_submissions],
+            submitted_players=set(state.metadata.submitted_players),
+            player_count_for_scoring=state.metadata.player_count_for_scoring,
+            player_scores=dict(state.metadata.player_scores),
+        )
         return room
 
     async def persist(self) -> None:
         """Write current room state to Redis."""
-        from app.redis_store import save_room_state
-
-        await save_room_state(self.room_id, self.to_redis_dict())
+        await save_room_state(self.room_id, self.to_state())
 
     # ------------------------------------------------------------------ #
 
@@ -802,18 +903,13 @@ class GameRoom:
     async def cleanup_custom_categories(self) -> None:
         """Delete all custom categories created for this room."""
         try:
-            from sqlalchemy import delete
-
-            from app.database import get_session_maker
-            from app.db_models import Category
-
             async with get_session_maker()() as session:
                 # Delete all categories with this room_id
                 stmt = delete(Category).where(Category.room_id == self.room_id)
                 result = await session.execute(stmt)
                 await session.commit()
 
-                deleted_count = result.rowcount
+                deleted_count = int(getattr(result, "rowcount", 0) or 0)
                 if deleted_count > 0:
                     logger.info("[GameRoom %s] Cleaned up %s custom categories", self.room_id, deleted_count)
         except Exception:
@@ -852,15 +948,10 @@ class RoomManager:
 
     async def _restore_from_redis(self) -> None:
         """Load persisted room states from Redis on startup."""
-        from app.redis_store import load_all_room_states
-
         states = await load_all_room_states()
         for state in states:
-            room_id = state.get("room_id")
-            if not room_id:
-                continue
-            room = GameRoom.from_redis_dict(state)
-            self.rooms[room_id] = room
+            room = GameRoom.from_state(state)
+            self.rooms[state.room_id] = room
             await room.start_idle_check()
         if states:
             logger.info("[RoomManager] Restored %s room(s) from Redis", len(states))
@@ -908,7 +999,7 @@ class RoomManager:
                 rooms_to_hibernate.append((room_id, room))
 
         # Hibernate rooms
-        for room_id, room in rooms_to_hibernate:
+        for _room_id, room in rooms_to_hibernate:
             await room.hibernate()
             hibernated_count += 1
 
@@ -945,8 +1036,6 @@ class RoomManager:
             await room.stop_idle_check()
             await room.cleanup_custom_categories()  # Clean up custom categories
             del self.rooms[room_id]
-            from app.redis_store import delete_room_state
-
             await delete_room_state(room_id)
             logger.info("[RoomManager] Removed room %s (total rooms: %s)", room_id, len(self.rooms))
 
@@ -956,7 +1045,7 @@ class RoomManager:
         for room_id in empty_rooms:
             await self.remove_room(room_id)
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> RoomStats:
         """Get room manager statistics."""
         total_rooms = len(self.rooms)
         active_rooms = sum(1 for room in self.rooms.values() if not room.is_empty())
@@ -987,10 +1076,10 @@ class RoomManager:
             for room_id, room in self.rooms.items()
             if not room.metadata.is_private
             and 0 < len(room.players) < max_players
-            and room.metadata.game_phase == "lobby"
+            and room.metadata.game_phase == LOBBY_PHASE
         ]
 
-        return random.choice(available_rooms) if available_rooms else None
+        return secrets.choice(available_rooms) if available_rooms else None
 
 
 # Global room manager instance

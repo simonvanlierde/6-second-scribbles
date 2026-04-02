@@ -3,7 +3,11 @@
 Uses rapidfuzz for high-performance fuzzy string matching
 """
 
+from __future__ import annotations
+
 from rapidfuzz import fuzz
+
+from app.result_models import GuessMatchDetailResult, GuessMatchResult, ScoreGuessesResult
 
 
 class GuessMatcher:
@@ -89,7 +93,12 @@ class GuessMatcher:
         similarity = max(token_score, partial_score)
         return similarity >= self.FUZZY_MATCH_THRESHOLD, similarity
 
-    def match_guess(self, guess: str, correct_answers: list[str], alternatives: list[str] | None = None) -> dict:
+    def match_guess(
+        self,
+        guess: str,
+        correct_answers: list[str],
+        alternatives: list[str] | None = None,
+    ) -> GuessMatchResult:
         """Match a guess against a list of correct answers.
 
         Args:
@@ -106,18 +115,18 @@ class GuessMatcher:
             }
         """
         if not self.normalize(guess):
-            return {"matched": False, "matched_item": None, "similarity": 0.0, "method": "none"}
+            return GuessMatchResult(matched=False, matched_item=None, similarity=0.0, method="none")
 
         # Check exact matches first
         for answer in correct_answers:
             if self.exact_match(guess, answer):
-                return {"matched": True, "matched_item": answer, "similarity": 100.0, "method": "exact"}
+                return GuessMatchResult(matched=True, matched_item=answer, similarity=100.0, method="exact")
 
         # Check alternatives if provided
         if alternatives:
             for alt in alternatives:
                 if self.exact_match(guess, alt):
-                    return {"matched": True, "matched_item": alt, "similarity": 100.0, "method": "alternative"}
+                    return GuessMatchResult(matched=True, matched_item=alt, similarity=100.0, method="alternative")
 
         # Try fuzzy matching
         best_match = None
@@ -132,16 +141,16 @@ class GuessMatcher:
                 best_item = answer
 
         if best_match:
-            return {"matched": True, "matched_item": best_item, "similarity": best_score, "method": "fuzzy"}
+            return GuessMatchResult(matched=True, matched_item=best_item, similarity=best_score, method="fuzzy")
 
-        return {"matched": False, "matched_item": None, "similarity": best_score, "method": "none"}
+        return GuessMatchResult(matched=False, matched_item=None, similarity=best_score, method="none")
 
     def score_guesses(
         self,
         guesses: list[str],
         correct_answers: list[str],
         alternatives_map: dict[str, list[str]] | None = None,
-    ) -> dict:
+    ) -> ScoreGuessesResult:
         """Score a list of guesses against correct answers.
 
         Args:
@@ -160,32 +169,32 @@ class GuessMatcher:
         # Flatten all alternatives once, rather than rebuilding per guess
         all_alternatives = [alt for alts in (alternatives_map or {}).values() for alt in alts]
 
-        matched_answers = set()
-        match_details = []
+        matched_answers: set[str] = set()
+        match_details: list[GuessMatchDetailResult] = []
 
         for guess in guesses:
             result = self.match_guess(guess, correct_answers, all_alternatives)
 
-            if result["matched"] and result["matched_item"] not in matched_answers:
-                matched_answers.add(result["matched_item"])
+            if result.matched and result.matched_item is not None and result.matched_item not in matched_answers:
+                matched_answers.add(result.matched_item)
                 match_details.append(
-                    {
-                        "guess": guess,
-                        "matched_item": result["matched_item"],
-                        "similarity": result["similarity"],
-                        "method": result["method"],
-                    },
+                    GuessMatchDetailResult(
+                        guess=guess,
+                        matched_item=result.matched_item,
+                        similarity=result.similarity,
+                        method=result.method,
+                    ),
                 )
 
         unmatched = [ans for ans in correct_answers if ans not in matched_answers]
 
-        return {
-            "score": len(matched_answers),
-            "total": len(correct_answers),
-            "percentage": (len(matched_answers) / len(correct_answers) * 100) if correct_answers else 0,
-            "matches": match_details,
-            "unmatched_answers": unmatched,
-        }
+        return ScoreGuessesResult(
+            score=len(matched_answers),
+            total=len(correct_answers),
+            percentage=(len(matched_answers) / len(correct_answers) * 100) if correct_answers else 0,
+            matches=match_details,
+            unmatched_answers=unmatched,
+        )
 
 
 # Global instance

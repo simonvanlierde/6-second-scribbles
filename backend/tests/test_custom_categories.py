@@ -160,6 +160,28 @@ class TestCustomCategoryAPI:
             assert "includes_custom" in data
             assert data["includes_custom"] is True
 
+    def test_create_custom_category_rejects_invalid_difficulty(self, test_client) -> None:
+        """Test request validation rejects unsupported difficulty values."""
+        room_id = "BAD_DIFFICULTY_TEST"
+
+        room = GameRoom(room_id)
+        ws = AsyncMock()
+        room.players["host-123"] = PlayerInfo(id="host-123", name="Host Player", websocket=ws)
+        room.host_id = "host-123"
+        room_manager.rooms[room_id] = room
+
+        response = test_client.post(
+            f"/api/rooms/{room_id}/categories",
+            json={
+                "name": "Bad Difficulty",
+                "items": ["one", "two", "three", "four", "five"],
+                "difficulty": "expert",
+                "created_by": "host-123",
+            },
+        )
+
+        assert response.status_code == 422
+
 
 class TestCustomCategoryCleanup:
     """Test cleanup of custom categories."""
@@ -170,9 +192,7 @@ class TestCustomCategoryCleanup:
         room = GameRoom(room_id)
 
         for i in range(3):
-            category = Category(
-                name=f"Temp Category {i}", difficulty="medium", room_id=room_id, created_by="test-user"
-            )
+            category = Category(name=f"Temp Category {i}", difficulty="medium", room_id=room_id, created_by="test-user")
             test_db.add(category)
 
         await test_db.commit()
