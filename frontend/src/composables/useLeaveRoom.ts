@@ -1,8 +1,8 @@
+import type { ShallowRef } from "vue";
 import { useRouter } from "vue-router";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { useGameStore } from "@/stores/game";
 import type { useGameEngine } from "@/composables/useGameEngine";
-import type { ShallowRef } from "vue";
+import { useGameStore } from "@/stores/game";
 
 /**
  * Shared leave-room logic. Disconnects the WebSocket, clears the game engine

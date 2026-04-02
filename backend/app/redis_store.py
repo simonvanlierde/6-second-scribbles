@@ -3,6 +3,7 @@
 Rooms are serialized to Redis on every state change and restored on server startup.
 TTL matches the hibernation timeout (5 minutes) so abandoned rooms expire automatically.
 """
+
 # spell-checker: ignore setex
 import json
 import logging
@@ -13,18 +14,13 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-REDIS_URL = settings.redis_url
-
-# Keep rooms alive in Redis for as long as the hibernation timeout
-ROOM_TTL_SECONDS = 5 * 60  # 5 minutes
-
 _redis_client: redis.Redis | None = None
 
 
 async def get_redis() -> redis.Redis:
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        _redis_client = redis.from_url(settings.redis_url, decode_responses=True)
     return _redis_client
 
 
@@ -42,7 +38,7 @@ def _room_key(room_id: str) -> str:
 async def save_room_state(room_id: str, state: dict) -> None:
     try:
         r = await get_redis()
-        await r.setex(_room_key(room_id), ROOM_TTL_SECONDS, json.dumps(state))
+        await r.setex(_room_key(room_id), settings.room_ttl_seconds, json.dumps(state))
     except Exception:
         logger.exception("[Redis] Failed to save room %s", room_id)
 

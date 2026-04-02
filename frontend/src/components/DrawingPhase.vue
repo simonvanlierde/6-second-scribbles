@@ -10,7 +10,7 @@ const store = useGameStore();
 const { send } = useGameConnection();
 const canvas = useDrawingCanvas();
 // biome-ignore lint/style/noNonNullAssertion: always provided by App.vue
-const gameEngineRef = inject(gameEngineKey)!
+const gameEngineRef = inject(gameEngineKey)!;
 const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
 
 const canvasElement = ref<HTMLCanvasElement | null>(null);

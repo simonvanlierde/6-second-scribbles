@@ -61,11 +61,7 @@ onMounted(() => {
       clearInterval(interval);
       // Host drives the next round after the countdown.
       if (store.isHost && !isLastRound.value) {
-        gameEngineRef?.value?.startRound(
-          store.currentRound + 1,
-          store.difficulty,
-          store.roundLength,
-        );
+        gameEngineRef?.value?.startRound(store.currentRound + 1, store.difficulty, store.roundLength);
       }
     }
   }, 1000);

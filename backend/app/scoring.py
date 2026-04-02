@@ -19,10 +19,8 @@ class GuessMatcher:
     # Similarity thresholds
     EXACT_MATCH_THRESHOLD = 100
     FUZZY_MATCH_THRESHOLD = 85  # 85% similarity required for fuzzy match
-    PARTIAL_MATCH_THRESHOLD = 90  # For partial ratio matching
 
     def __init__(self):
-        """Initialize the guess matcher."""
         self.cache: dict[str, set[str]] = {}  # Cache for performance
 
     def normalize(self, text: str) -> str:
@@ -39,11 +37,11 @@ class GuessMatcher:
         - With trailing 's' (plural form)
         - With trailing 'es' (plural form)
         """
-        if word in self.cache:
-            return self.cache[word]
-
-        variants = {self.normalize(word)}
         normalized = self.normalize(word)
+        if normalized in self.cache:
+            return self.cache[normalized]
+
+        variants = {normalized}
 
         # Add plural/singular variants
         if normalized.endswith("s"):
@@ -61,15 +59,12 @@ class GuessMatcher:
         if normalized.endswith("ing"):
             variants.add(normalized[:-3])  # Remove 'ing'
 
-        self.cache[word] = variants
+        self.cache[normalized] = variants
         return variants
 
     def exact_match(self, guess: str, target: str) -> bool:
         """Check if guess exactly matches target (case-insensitive, with variants)."""
-        guess_variants = self.generate_variants(guess)
-        target_variants = self.generate_variants(target)
-
-        return bool(guess_variants & target_variants)
+        return bool(self.generate_variants(guess) & self.generate_variants(target))
 
     def fuzzy_match(self, guess: str, target: str) -> tuple[bool, float]:
         """Check if guess fuzzy matches target.
@@ -91,13 +86,8 @@ class GuessMatcher:
         # Partial ratio: handles substring matches
         partial_score = fuzz.partial_ratio(guess_norm, target_norm)
 
-        # Use the highest score
         similarity = max(token_score, partial_score)
-
-        # Check if it meets threshold
-        is_match = similarity >= self.FUZZY_MATCH_THRESHOLD
-
-        return is_match, similarity
+        return similarity >= self.FUZZY_MATCH_THRESHOLD, similarity
 
     def match_guess(self, guess: str, correct_answers: list[str], alternatives: list[str] | None = None) -> dict:
         """Match a guess against a list of correct answers.
@@ -115,9 +105,7 @@ class GuessMatcher:
                 'method': 'exact' | 'fuzzy' | 'alternative' | 'none'
             }
         """
-        guess_norm = self.normalize(guess)
-
-        if not guess_norm:
+        if not self.normalize(guess):
             return {"matched": False, "matched_item": None, "similarity": 0.0, "method": "none"}
 
         # Check exact matches first
@@ -149,7 +137,10 @@ class GuessMatcher:
         return {"matched": False, "matched_item": None, "similarity": best_score, "method": "none"}
 
     def score_guesses(
-        self, guesses: list[str], correct_answers: list[str], alternatives_map: dict[str, list[str]] | None = None
+        self,
+        guesses: list[str],
+        correct_answers: list[str],
+        alternatives_map: dict[str, list[str]] | None = None,
     ) -> dict:
         """Score a list of guesses against correct answers.
 
@@ -166,17 +157,14 @@ class GuessMatcher:
                 'unmatched_answers': List[str]  # Answers not guessed
             }
         """
-        alternatives_map = alternatives_map or {}
+        # Flatten all alternatives once, rather than rebuilding per guess
+        all_alternatives = [alt for alts in (alternatives_map or {}).values() for alt in alts]
+
         matched_answers = set()
         match_details = []
 
         for guess in guesses:
-            alternatives = []
-            for answer in correct_answers:
-                if answer in alternatives_map:
-                    alternatives.extend(alternatives_map[answer])
-
-            result = self.match_guess(guess, correct_answers, alternatives)
+            result = self.match_guess(guess, correct_answers, all_alternatives)
 
             if result["matched"] and result["matched_item"] not in matched_answers:
                 matched_answers.add(result["matched_item"])
@@ -186,7 +174,7 @@ class GuessMatcher:
                         "matched_item": result["matched_item"],
                         "similarity": result["similarity"],
                         "method": result["method"],
-                    }
+                    },
                 )
 
         unmatched = [ans for ans in correct_answers if ans not in matched_answers]

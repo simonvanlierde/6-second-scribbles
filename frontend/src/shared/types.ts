@@ -87,6 +87,7 @@ export type GameMessage =
   | {
       type: "room_state";
       players: Array<{ id: string; name: string }>;
+      hostId?: string;
       categories: string[];
       gamePhase: "lobby" | "drawing" | "guessing" | "scoring" | "complete";
       roundStartTime?: number;
@@ -94,7 +95,13 @@ export type GameMessage =
       padVisibility?: boolean;
       language?: string;
     }
-  | { type: "player_joined"; playerId: string; name: string; players: Array<{ id: string; name: string }> }
+  | {
+      type: "player_joined";
+      playerId: string;
+      name: string;
+      players: Array<{ id: string; name: string }>;
+      isHost?: boolean;
+    }
   | { type: "player_left"; playerId: string }
   | { type: "host_changed"; newHostId: string }
   | { type: "start_round"; round: number; roundStartTime: number; cards: Record<string, Card> }

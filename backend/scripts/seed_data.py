@@ -10,7 +10,7 @@ from pathlib import Path
 
 from sqlalchemy import delete, select
 
-from app.database import async_session_maker, init_db
+from app.database import get_session_maker, init_db
 from app.db_models import Card, Category
 
 CARD_DECKS = json.loads((Path(__file__).parent / "seed_data.json").read_text())
@@ -23,7 +23,7 @@ async def seed_database() -> None:
     await init_db()
     print("✅ Database tables initialized")
 
-    async with async_session_maker() as session:
+    async with get_session_maker()() as session:
         try:
             result = await session.execute(select(Category))
             existing = result.scalars().all()
@@ -78,7 +78,7 @@ async def clear_database() -> None:
     """Clear all data from the database (use with caution!)."""
     print("⚠️  Clearing database...")
 
-    async with async_session_maker() as session:
+    async with get_session_maker()() as session:
         try:
             await session.execute(delete(Category))
             await session.commit()

@@ -1,8 +1,9 @@
 """Tests for game room management functionality"""
 
 import asyncio
+import json
 import time
-from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
 
@@ -31,11 +32,9 @@ class TestGameRoom:
         assert game_room.host_id == player_id
         assert game_room.players[player_id].name == player_name
 
-    async def test_add_multiple_players(self, game_room):
+    async def test_add_multiple_players(self, game_room, make_ws):
         """Test adding multiple players to a room"""
-        ws1 = AsyncMock()
-        ws2 = AsyncMock()
-        ws3 = AsyncMock()
+        ws1, ws2, ws3 = make_ws(), make_ws(), make_ws()
 
         await game_room.add_player("player-1", "Alice", ws1)
         await game_room.add_player("player-2", "Bob", ws2)
@@ -52,25 +51,27 @@ class TestGameRoom:
         await game_room.remove_player("player-1")
         assert len(game_room.players) == 0
 
-    async def test_host_transfer_on_host_leave(self, game_room):
+    async def test_host_transfer_on_host_leave(self, game_room, make_ws):
         """Test that host is transferred when the host leaves"""
-        ws1 = AsyncMock()
-        ws2 = AsyncMock()
-        ws2.send_text = AsyncMock()
+        ws1, ws2 = make_ws(), make_ws()
 
         await game_room.add_player("player-1", "Alice", ws1)
         await game_room.add_player("player-2", "Bob", ws2)
 
         assert game_room.host_id == "player-1"
 
-        # Host leaves
-        await game_room.remove_player("player-1")
+        with patch("app.game_room.asyncio.sleep"):
+            await game_room.remove_player("player-1")
+            await asyncio.sleep(0)  # yield to let the transfer task run
 
-        # Bob should become the new host after HOST_TRANSFER_DELAY_MS (1 second)
-        await asyncio.sleep(1.5)
         assert game_room.host_id == "player-2"
-        # Should broadcast host_changed message
-        ws2.send_text.assert_called()
+
+        # Verify the host_changed message content was broadcast to Bob
+        call_args = ws2.send_text.call_args_list
+        messages = [json.loads(c[0][0]) for c in call_args]
+        host_changed = next((m for m in messages if m.get("type") == "host_changed"), None)
+        assert host_changed is not None
+        assert host_changed["newHostId"] == "player-2"
 
     async def test_no_host_when_room_empty(self, game_room, mock_websocket):
         """Test that host_id is None when all players leave"""
@@ -82,13 +83,12 @@ class TestGameRoom:
 
     async def test_update_player_activity(self, game_room, mock_websocket):
         """Test updating player's last activity timestamp"""
-        await game_room.add_player("player-1", "Alice", mock_websocket)
+        with patch("app.game_room.time.time", side_effect=[1000.0, 1000.0, 1001.0]):
+            await game_room.add_player("player-1", "Alice", mock_websocket)
+            initial_time = game_room.players["player-1"].last_activity
 
-        initial_time = game_room.players["player-1"].last_activity
-        await asyncio.sleep(0.1)  # Small delay
-
-        game_room.update_player_activity("player-1")
-        updated_time = game_room.players["player-1"].last_activity
+            game_room.update_player_activity("player-1")
+            updated_time = game_room.players["player-1"].last_activity
 
         assert updated_time > initial_time
 
@@ -98,9 +98,10 @@ class TestGameRoom:
 
         await room_with_players.broadcast(message)
 
-        # Both players should receive the message
         for player in room_with_players.players.values():
             player.websocket.send_text.assert_called_once()
+            sent = json.loads(player.websocket.send_text.call_args[0][0])
+            assert sent == message
 
     async def test_broadcast_exclude_player(self, room_with_players):
         """Test broadcasting with exclusion"""
@@ -108,7 +109,6 @@ class TestGameRoom:
 
         await room_with_players.broadcast(message, exclude="player-1")
 
-        # Only player-2 should receive the message
         player1 = room_with_players.players["player-1"]
         player2 = room_with_players.players["player-2"]
 
@@ -125,6 +125,8 @@ class TestGameRoom:
         player2 = room_with_players.players["player-2"]
 
         player1.websocket.send_text.assert_called_once()
+        sent = json.loads(player1.websocket.send_text.call_args[0][0])
+        assert sent == message
         player2.websocket.send_text.assert_not_called()
 
     async def test_get_player_list(self, room_with_players):
@@ -163,10 +165,9 @@ class TestGameRoom:
         room_with_players.metadata.ready_players.add("player-2")
         assert len(room_with_players.metadata.ready_players) == 2
 
-    async def test_broadcast_handles_disconnected_player(self, game_room):
+    async def test_broadcast_handles_disconnected_player(self, game_room, make_ws):
         """Test that broadcast handles disconnected players gracefully"""
-        ws1 = AsyncMock()
-        ws2 = AsyncMock()
+        ws1, ws2 = make_ws(), make_ws()
         ws2.send_text.side_effect = Exception("Connection closed")
 
         await game_room.add_player("player-1", "Alice", ws1)
@@ -178,6 +179,20 @@ class TestGameRoom:
         # Player 2 should be removed due to error
         assert "player-2" not in game_room.players
         assert "player-1" in game_room.players
+
+    async def test_room_marked_empty_after_all_disconnect(self, game_room, mock_websocket):
+        """Test that room is marked as empty after all players disconnect.
+
+        Note: rooms are not immediately removed — the periodic cleanup loop
+        handles hibernation (1 min) and removal (5 min).
+        """
+        await game_room.add_player("player-1", "Alice", mock_websocket)
+        assert not game_room.is_empty()
+
+        await game_room.remove_player("player-1")
+
+        assert game_room.is_empty()
+        assert game_room._emptied_at is not None
 
 
 class TestRoomManager:
@@ -226,7 +241,7 @@ class TestRoomManager:
         await room_manager.remove_room(room_id)
         assert len(room_manager.rooms) == 0
 
-    async def test_cleanup_empty_rooms(self, room_manager):
+    async def test_cleanup_empty_rooms(self, room_manager, make_ws):
         """Test cleaning up empty rooms"""
         # Create multiple rooms
         room1 = room_manager.get_or_create_room("ROOM01")
@@ -234,8 +249,7 @@ class TestRoomManager:
         room3 = room_manager.get_or_create_room("ROOM03")
 
         # Add players to some rooms
-        ws1 = AsyncMock()
-        ws2 = AsyncMock()
+        ws1, ws2 = make_ws(), make_ws()
         await room1.add_player("p1", "Alice", ws1)
         await room3.add_player("p2", "Bob", ws2)
 
@@ -250,7 +264,6 @@ class TestRoomManager:
 class TestIdlePlayerDetection:
     """Test suite for idle player detection"""
 
-    @pytest.mark.slow
     async def test_idle_check_only_during_active_game(self, game_room, mock_websocket):
         """Test that idle check only runs during active game phases"""
         await game_room.add_player("player-1", "Alice", mock_websocket)
@@ -265,7 +278,6 @@ class TestIdlePlayerDetection:
         await game_room._check_idle_players()
         assert "player-1" in game_room.players
 
-    @pytest.mark.slow
     async def test_idle_player_detection(self, game_room, mock_websocket):
         """Test detecting and disconnecting idle players"""
         await game_room.add_player("player-1", "Alice", mock_websocket)

@@ -67,9 +67,12 @@ export function useGameEngine() {
     });
 
     // After drawing phase, start guessing phase
-    setTimeout(() => {
-      startGuessingPhase();
-    }, roundLengthSeconds * 1000 + 2000); // drawing time + 2s buffer
+    setTimeout(
+      () => {
+        startGuessingPhase();
+      },
+      roundLengthSeconds * 1000 + 2000,
+    ); // drawing time + 2s buffer
   }
 
   function startGuessingPhase() {

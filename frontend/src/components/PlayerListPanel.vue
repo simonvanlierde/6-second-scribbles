@@ -74,7 +74,12 @@ const targetIsHost = computed(() => store.playersList.find((p) => p.id === showK
         </div>
 
         <!-- Kick / Vote Kick button -->
-        <button v-else-if="canKickPlayer(player.id)" type="button" class="btn btn-small btn-kick" @click="initiateKick(player.id)">
+        <button
+          v-else-if="canKickPlayer(player.id)"
+          type="button"
+          class="btn btn-small btn-kick"
+          @click="initiateKick(player.id)"
+        >
           {{ store.isHost ? 'Kick' : 'Vote Kick' }}
         </button>
       </li>

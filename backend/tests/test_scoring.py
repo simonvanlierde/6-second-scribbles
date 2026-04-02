@@ -1,27 +1,28 @@
-"""Tests for fuzzy matching and scoring functionality"""
+"""Tests for fuzzy matching and scoring functionality."""
 
 # spell-checker: ignore elefant, girafe, rabit, aple, bannana, pinapple, gutar, paino, violen, trumpit
+# ruff: noqa: PLR2004 # Magic values are used for fuzzy matching assertions
 import pytest
 
 from app.scoring import GuessMatcher
 
 
 class TestGuessMatcher:
-    """Test suite for GuessMatcher class"""
+    """Test suite for GuessMatcher class."""
 
     @pytest.fixture
-    def matcher(self):
-        """Create a GuessMatcher instance"""
+    def matcher(self) -> GuessMatcher:
+        """Create a GuessMatcher instance."""
         return GuessMatcher()
 
-    def test_normalize(self, matcher):
-        """Test text normalization"""
+    def test_normalize(self, matcher: GuessMatcher) -> None:
+        """Test text normalization."""
         assert matcher.normalize("Hello World") == "hello world"
         assert matcher.normalize("  spaces  ") == "spaces"
         assert matcher.normalize("UPPERCASE") == "uppercase"
 
-    def test_generate_variants(self, matcher):
-        """Test variant generation"""
+    def test_generate_variants(self, matcher: GuessMatcher) -> None:
+        """Test variant generation."""
         variants = matcher.generate_variants("cat")
         assert "cat" in variants
         assert "cats" in variants
@@ -31,21 +32,21 @@ class TestGuessMatcher:
         assert "dogs" in dog_variants
         assert "dog" in dog_variants
 
-    def test_exact_match_simple(self, matcher):
-        """Test exact matching"""
+    def test_exact_match_simple(self, matcher: GuessMatcher) -> None:
+        """Test exact matching."""
         assert matcher.exact_match("cat", "cat") is True
         assert matcher.exact_match("Cat", "cat") is True  # Case insensitive
         assert matcher.exact_match("cat", "dog") is False
 
-    def test_exact_match_plural(self, matcher):
-        """Test exact matching with plurals"""
+    def test_exact_match_plural(self, matcher: GuessMatcher) -> None:
+        """Test exact matching with plurals."""
         assert matcher.exact_match("cat", "cats") is True
         assert matcher.exact_match("cats", "cat") is True
         assert matcher.exact_match("box", "boxes") is True
         assert matcher.exact_match("boxes", "box") is True
 
-    def test_fuzzy_match_typo(self, matcher):
-        """Test fuzzy matching with typos"""
+    def test_fuzzy_match_typo(self, matcher: GuessMatcher) -> None:
+        """Test fuzzy matching with typos."""
         # girafe/giraffe: ~92% similarity — well above threshold
         is_match, score = matcher.fuzzy_match("girafe", "giraffe")
         assert is_match is True
@@ -62,14 +63,14 @@ class TestGuessMatcher:
         assert is_match is False
         assert score < 85
 
-    def test_fuzzy_match_no_match(self, matcher):
-        """Test fuzzy matching with completely different words"""
+    def test_fuzzy_match_no_match(self, matcher: GuessMatcher) -> None:
+        """Test fuzzy matching with completely different words."""
         is_match, score = matcher.fuzzy_match("cat", "elephant")
         assert is_match is False
         assert score < 85
 
-    def test_match_guess_exact(self, matcher):
-        """Test matching a guess with exact match"""
+    def test_match_guess_exact(self, matcher: GuessMatcher) -> None:
+        """Test matching a guess with exact match."""
         correct = ["cat", "dog", "bird"]
         result = matcher.match_guess("cat", correct)
 
@@ -78,8 +79,8 @@ class TestGuessMatcher:
         assert result["similarity"] == 100.0
         assert result["method"] == "exact"
 
-    def test_match_guess_fuzzy(self, matcher):
-        """Test matching a guess with fuzzy match"""
+    def test_match_guess_fuzzy(self, matcher: GuessMatcher) -> None:
+        """Test matching a guess with fuzzy match."""
         correct = ["giraffe", "elephant", "zebra"]
         # girafe scores ~92% against giraffe — above the 85% threshold
         result = matcher.match_guess("girafe", correct)
@@ -89,8 +90,8 @@ class TestGuessMatcher:
         assert result["similarity"] >= 85
         assert result["method"] == "fuzzy"
 
-    def test_match_guess_with_alternatives(self, matcher):
-        """Test matching with alternative spellings"""
+    def test_match_guess_with_alternatives(self, matcher: GuessMatcher) -> None:
+        """Test matching with alternative spellings."""
         correct = ["color"]
         alternatives = ["colour"]  # British spelling
 
@@ -99,8 +100,8 @@ class TestGuessMatcher:
         assert result["matched"] is True
         assert result["method"] == "alternative"
 
-    def test_match_guess_no_match(self, matcher):
-        """Test no match found"""
+    def test_match_guess_no_match(self, matcher: GuessMatcher) -> None:
+        """Test no match found."""
         correct = ["cat", "dog"]
         result = matcher.match_guess("elephant", correct)
 
@@ -108,8 +109,8 @@ class TestGuessMatcher:
         assert result["matched_item"] is None
         assert result["method"] == "none"
 
-    def test_score_guesses_perfect_score(self, matcher):
-        """Test scoring with all correct guesses"""
+    def test_score_guesses_perfect_score(self, matcher: GuessMatcher) -> None:
+        """Test scoring with all correct guesses."""
         guesses = ["cat", "dog", "bird"]
         correct = ["cat", "dog", "bird"]
 
@@ -121,8 +122,8 @@ class TestGuessMatcher:
         assert len(result["matches"]) == 3
         assert len(result["unmatched_answers"]) == 0
 
-    def test_score_guesses_partial_score(self, matcher):
-        """Test scoring with some correct guesses"""
+    def test_score_guesses_partial_score(self, matcher: GuessMatcher) -> None:
+        """Test scoring with some correct guesses."""
         guesses = ["cat", "elephant", "bird"]
         correct = ["cat", "dog", "bird", "fish"]
 
@@ -134,8 +135,8 @@ class TestGuessMatcher:
         assert "dog" in result["unmatched_answers"]
         assert "fish" in result["unmatched_answers"]
 
-    def test_score_guesses_with_typos(self, matcher):
-        """Test scoring with typos (fuzzy matching)"""
+    def test_score_guesses_with_typos(self, matcher: GuessMatcher) -> None:
+        """Test scoring with typos (fuzzy matching)."""
         # girafe (~92%), monky (~91%), zebra (exact) — all above the 85% threshold
         guesses = ["girafe", "monky", "zebra"]
         correct = ["giraffe", "monkey", "zebra"]
@@ -146,8 +147,8 @@ class TestGuessMatcher:
         assert result["total"] == 3
         assert result["percentage"] == 100.0
 
-    def test_score_guesses_no_duplicates(self, matcher):
-        """Test that duplicate guesses don't count twice"""
+    def test_score_guesses_no_duplicates(self, matcher: GuessMatcher) -> None:
+        """Test that duplicate guesses don't count twice."""
         guesses = ["cat", "cat", "cat", "dog"]
         correct = ["cat", "dog", "bird"]
 
@@ -156,8 +157,8 @@ class TestGuessMatcher:
         assert result["score"] == 2  # Only cat and dog (no duplicates)
         assert result["total"] == 3
 
-    def test_score_guesses_with_alternatives(self, matcher):
-        """Test scoring with alternative spellings"""
+    def test_score_guesses_with_alternatives(self, matcher: GuessMatcher) -> None:
+        """Test scoring with alternative spellings."""
         guesses = ["colour", "gray", "centre"]
         correct = ["color", "grey", "center"]
         alternatives_map = {"color": ["colour"], "grey": ["gray"], "center": ["centre"]}
@@ -167,8 +168,8 @@ class TestGuessMatcher:
         assert result["score"] == 3
         assert result["percentage"] == 100.0
 
-    def test_score_guesses_empty_guesses(self, matcher):
-        """Test scoring with no guesses"""
+    def test_score_guesses_empty_guesses(self, matcher: GuessMatcher) -> None:
+        """Test scoring with no guesses."""
         guesses = []
         correct = ["cat", "dog"]
 
@@ -178,8 +179,8 @@ class TestGuessMatcher:
         assert result["total"] == 2
         assert result["percentage"] == 0.0
 
-    def test_score_guesses_empty_correct(self, matcher):
-        """Test scoring with no correct answers"""
+    def test_score_guesses_empty_correct(self, matcher: GuessMatcher) -> None:
+        """Test scoring with no correct answers."""
         guesses = ["cat", "dog"]
         correct = []
 
@@ -189,8 +190,8 @@ class TestGuessMatcher:
         assert result["total"] == 0
         assert result["percentage"] == 0.0
 
-    def test_case_insensitive_matching(self, matcher):
-        """Test that matching is case insensitive"""
+    def test_case_insensitive_matching(self, matcher: GuessMatcher) -> None:
+        """Test that matching is case insensitive."""
         guesses = ["CAT", "Dog", "BIRD"]
         correct = ["cat", "dog", "bird"]
 
@@ -199,8 +200,8 @@ class TestGuessMatcher:
         assert result["score"] == 3
         assert result["percentage"] == 100.0
 
-    def test_whitespace_handling(self, matcher):
-        """Test that extra whitespace is handled"""
+    def test_whitespace_handling(self, matcher: GuessMatcher) -> None:
+        """Test that extra whitespace is handled."""
         guesses = ["  cat  ", "dog", "  bird"]
         correct = ["cat", "dog", "bird"]
 
@@ -208,8 +209,8 @@ class TestGuessMatcher:
 
         assert result["score"] == 3
 
-    def test_match_details(self, matcher):
-        """Test that match details are returned"""
+    def test_match_details(self, matcher: GuessMatcher) -> None:
+        """Test that match details are returned."""
         # Use girafe/giraffe (~92%) instead of elefant/elephant (~80%)
         # since only scores above the 85% threshold are fuzzy matches.
         guesses = ["cat", "girafe"]
@@ -233,14 +234,15 @@ class TestGuessMatcher:
 
 
 class TestRealWorldScenarios:
-    """Test real-world game scenarios"""
+    """Test real-world game scenarios."""
 
     @pytest.fixture
-    def matcher(self):
+    def matcher(self) -> GuessMatcher:
+        """Create a GuessMatcher instance."""
         return GuessMatcher()
 
-    def test_animals_category(self, matcher):
-        """Test with animals category"""
+    def test_animals_category(self, matcher: GuessMatcher) -> None:
+        """Test with animals category."""
         correct = ["cat", "dog", "fish", "bird", "rabbit", "cow", "duck", "sheep", "pig", "horse"]
         guesses = ["cat", "dogs", "fsh", "bir", "rabit", "elephant"]  # Mix of correct and typos
 
@@ -249,8 +251,8 @@ class TestRealWorldScenarios:
         # Should match: cat, dogs->dog, fsh->fish (maybe), bird, rabit->rabbit
         assert result["score"] >= 4  # At least these should match
 
-    def test_drawing_game_scenario(self, matcher):
-        """Test realistic drawing game scenario"""
+    def test_drawing_game_scenario(self, matcher: GuessMatcher) -> None:
+        """Test realistic drawing game scenario."""
         # What the drawer was supposed to draw
         correct = ["mango", "banana", "grapes", "pear", "watermelon"]
 
@@ -265,8 +267,8 @@ class TestRealWorldScenarios:
         assert result["total"] == 5
         assert "orange" not in [m["matched_item"] for m in result["matches"]]
 
-    def test_musical_instruments(self, matcher):
-        """Test with musical instruments"""
+    def test_musical_instruments(self, matcher: GuessMatcher) -> None:
+        """Test with musical instruments."""
         correct = ["guitar", "drums", "trumpet", "clarinet", "accordion"]
         # gutar/guitar=91%, drum/drums=exact, trumpit/trumpet=86%,
         # clarnet/clarinet=93%, accordian/accordion=89%

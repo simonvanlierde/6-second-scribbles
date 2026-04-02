@@ -62,7 +62,9 @@ watch(
 // Clear canvas when server clears it
 watch(
   () => store.currentStrokes.length,
-  (len) => { if (len === 0) canvas.clear(); },
+  (len) => {
+    if (len === 0) canvas.clear();
+  },
 );
 
 watch(color, (v) => canvas.setColor(v));

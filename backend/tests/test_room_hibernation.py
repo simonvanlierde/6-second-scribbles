@@ -1,305 +1,205 @@
-"""Tests for room hibernation and automatic garbage collection"""
+"""Tests for room hibernation and automatic garbage collection."""
 
 import time
+from typing import TYPE_CHECKING
 
 import pytest
-from httpx import AsyncClient
 
-from app.game_room import GameRoom, RoomManager
+from app.game_room import GameRoom, RoomManager, room_manager
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
 
 class TestRoomHibernation:
-    """Test suite for room hibernation functionality"""
+    """Test suite for room hibernation functionality."""
 
-    @pytest.mark.asyncio
-    async def test_room_marked_empty_on_last_player_leave(self):
-        """Test that room is marked when last player leaves"""
-        from app.game_room import room_manager
-
+    async def test_room_marked_empty_on_last_player_leave(self, make_ws) -> None:
+        """Test that room is marked when last player leaves."""
         room_id = "EMPTY_TEST"
         room = room_manager.get_or_create_room(room_id)
 
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Add a player
-        ws = MockWebSocket()
+        ws = make_ws()
         await room.add_player("player_1", "Player 1", ws)
         assert room.is_empty() is False
         assert room._emptied_at is None
 
-        # Remove the player
         await room.remove_player("player_1")
         assert room.is_empty() is True
         assert room._emptied_at is not None
 
-    @pytest.mark.asyncio
-    async def test_room_enters_hibernation_after_1_minute(self):
-        """Test that room enters hibernation after being empty for 1 minute"""
+    async def test_room_enters_hibernation_after_1_minute(self, make_ws):
+        """Test that room enters hibernation after being empty for 1 minute."""
         room = GameRoom("HIBERNATE_TEST")
 
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Add and remove player to mark as empty
-        ws = MockWebSocket()
+        ws = make_ws()
         await room.add_player("player_1", "Player 1", ws)
         await room.remove_player("player_1")
 
-        # Initially not hibernated
         assert room.is_hibernated is False
         assert room.should_hibernate() is False
 
-        # Simulate time passing (1 minute)
-        room._emptied_at = time.time() - 65  # 65 seconds ago
+        # Simulate time passing (1 minute) — direct state manipulation is the correct approach
+        room._emptied_at = time.time() - 65
 
-        # Should now be eligible for hibernation
         assert room.should_hibernate() is True
 
-        # Hibernate the room
         await room.hibernate()
         assert room.is_hibernated is True
 
-    @pytest.mark.asyncio
-    async def test_room_removed_after_5_minutes(self):
-        """Test that room is marked for removal after 5 minutes empty"""
+    async def test_room_removed_after_5_minutes(self, make_ws):
+        """Test that room is marked for removal after 5 minutes empty."""
         room = GameRoom("REMOVAL_TEST")
 
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Add and remove player
-        ws = MockWebSocket()
+        ws = make_ws()
         await room.add_player("player_1", "Player 1", ws)
         await room.remove_player("player_1")
 
-        # Initially should not be removed
         assert room.should_be_removed() is False
 
-        # Simulate 5+ minutes passing
-        room._emptied_at = time.time() - (5 * 60 + 10)  # 5 minutes 10 seconds ago
+        room._emptied_at = time.time() - (5 * 60 + 10)
 
-        # Should now be eligible for removal
         assert room.should_be_removed() is True
 
-    @pytest.mark.asyncio
-    async def test_room_wakes_from_hibernation_on_join(self):
-        """Test that hibernated room wakes up when player joins"""
+    async def test_room_wakes_from_hibernation_on_join(self, make_ws):
+        """Test that hibernated room wakes up when player joins."""
         room = GameRoom("WAKE_TEST")
 
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Manually set as hibernated
         room.is_hibernated = True
         room._emptied_at = time.time() - 120
 
-        # Add player
-        ws = MockWebSocket()
+        ws = make_ws()
         player, _ = await room.add_player("player_1", "Player 1", ws)
 
-        # Should be awake now
         assert room.is_hibernated is False
         assert room._emptied_at is None
 
 
 class TestRoomManagerCleanup:
-    """Test suite for RoomManager periodic cleanup"""
+    """Test suite for RoomManager periodic cleanup."""
 
-    @pytest.mark.asyncio
     async def test_room_manager_starts_and_stops(self):
-        """Test that room manager can start and stop cleanly"""
+        """Test that room manager can start and stop cleanly."""
         manager = RoomManager()
 
-        # Start
         await manager.start()
         assert manager._is_running is True
         assert manager._cleanup_task is not None
 
-        # Stop
         await manager.stop()
         assert manager._is_running is False
 
-    @pytest.mark.asyncio
-    async def test_periodic_cleanup_hibernates_rooms(self):
-        """Test that periodic cleanup hibernates empty rooms"""
-        manager = RoomManager()
-        await manager.start()
-
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Create room and make it empty
-        room = manager.get_or_create_room("CLEANUP_TEST")
-        ws = MockWebSocket()
+    @pytest.mark.parametrize(
+        ("empty_seconds", "expect_hibernated", "expect_removed"),
+        [
+            (65, True, False),  # 1 min → hibernate only
+            (5 * 60 + 10, True, True),  # 5 min → remove
+        ],
+    )
+    async def test_cleanup_state_transitions(
+        self,
+        managed_room_manager,
+        make_ws,
+        empty_seconds,
+        expect_hibernated,
+        expect_removed,
+    ):
+        """Test periodic cleanup transitions: hibernate after 1 min, remove after 5 min."""
+        room = managed_room_manager.get_or_create_room("CLEANUP_STATE_TEST")
+        ws = make_ws()
         await room.add_player("player_1", "Player 1", ws)
         await room.remove_player("player_1")
 
-        # Simulate room being empty for >1 minute
-        room._emptied_at = time.time() - 65
+        room._emptied_at = time.time() - empty_seconds
 
-        # Run cleanup
-        await manager._run_cleanup()
+        await managed_room_manager._run_cleanup()
 
-        # Room should be hibernated but not removed
-        assert room.is_hibernated is True
-        assert "CLEANUP_TEST" in manager.rooms
+        if expect_removed:
+            assert "CLEANUP_STATE_TEST" not in managed_room_manager.rooms
+        else:
+            assert "CLEANUP_STATE_TEST" in managed_room_manager.rooms
+            assert room.is_hibernated is expect_hibernated
 
-        await manager.stop()
-
-    @pytest.mark.asyncio
-    async def test_periodic_cleanup_removes_old_rooms(self):
-        """Test that periodic cleanup removes rooms empty for >5 minutes"""
-        manager = RoomManager()
-        await manager.start()
-
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Create room and make it empty
-        room = manager.get_or_create_room("OLD_ROOM")
-        ws = MockWebSocket()
-        await room.add_player("player_1", "Player 1", ws)
-        await room.remove_player("player_1")
-
-        # Simulate room being empty for >5 minutes
-        room._emptied_at = time.time() - (5 * 60 + 10)
-
-        # Run cleanup
-        await manager._run_cleanup()
-
-        # Room should be removed
-        assert "OLD_ROOM" not in manager.rooms
-
-        await manager.stop()
-
-    @pytest.mark.asyncio
-    async def test_cleanup_keeps_active_rooms(self):
-        """Test that cleanup doesn't affect rooms with players"""
-        manager = RoomManager()
-        await manager.start()
-
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
-        # Create active room with player
-        room = manager.get_or_create_room("ACTIVE_ROOM")
-        ws = MockWebSocket()
+    async def test_cleanup_keeps_active_rooms(self, managed_room_manager, make_ws):
+        """Test that cleanup doesn't affect rooms with players."""
+        room = managed_room_manager.get_or_create_room("ACTIVE_ROOM")
+        ws = make_ws()
         await room.add_player("player_1", "Player 1", ws)
 
-        # Run cleanup
-        await manager._run_cleanup()
+        await managed_room_manager._run_cleanup()
 
-        # Room should still exist and not be hibernated
-        assert "ACTIVE_ROOM" in manager.rooms
+        assert "ACTIVE_ROOM" in managed_room_manager.rooms
         assert room.is_hibernated is False
-
-        await manager.stop()
 
 
 class TestRoomManagerStats:
-    """Test suite for room manager statistics"""
+    """Test suite for room manager statistics."""
 
-    @pytest.mark.asyncio
-    async def test_get_stats_with_no_rooms(self):
-        """Test stats endpoint with no rooms"""
+    async def test_get_stats_with_mixed_rooms(self, make_ws):
+        """Test stats with active, empty, and hibernated rooms."""
         manager = RoomManager()
-        stats = manager.get_stats()
-
-        assert stats["total_rooms"] == 0
-        assert stats["active_rooms"] == 0
-        assert stats["hibernated_rooms"] == 0
-        assert stats["empty_rooms"] == 0
-        assert stats["total_players"] == 0
-
-    @pytest.mark.asyncio
-    async def test_get_stats_with_mixed_rooms(self):
-        """Test stats with active, empty, and hibernated rooms"""
-        manager = RoomManager()
-
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
 
         # Active room with players
         active_room = manager.get_or_create_room("ACTIVE")
-        ws1 = MockWebSocket()
+        ws1 = make_ws()
         await active_room.add_player("player_1", "Player 1", ws1)
 
         # Empty room (not hibernated yet)
         empty_room = manager.get_or_create_room("EMPTY")
-        ws2 = MockWebSocket()
+        ws2 = make_ws()
         await empty_room.add_player("player_2", "Player 2", ws2)
         await empty_room.remove_player("player_2")
 
         # Hibernated room
         hibernated_room = manager.get_or_create_room("HIBERNATED")
-        ws3 = MockWebSocket()
+        ws3 = make_ws()
         await hibernated_room.add_player("player_3", "Player 3", ws3)
         await hibernated_room.remove_player("player_3")
         hibernated_room.is_hibernated = True
 
-        # Get stats
         stats = manager.get_stats()
 
         assert stats["total_rooms"] == 3
-        assert stats["active_rooms"] == 1  # ACTIVE room
-        assert stats["hibernated_rooms"] == 1  # HIBERNATED room
-        assert stats["empty_rooms"] == 1  # EMPTY room
-        assert stats["total_players"] == 1  # 1 player in ACTIVE room
+        assert stats["active_rooms"] == 1
+        assert stats["hibernated_rooms"] == 1
+        assert stats["empty_rooms"] == 1
+        assert stats["total_players"] == 1
 
 
 class TestStatsEndpoint:
-    """Test suite for /api/stats endpoint"""
+    """Test suite for /api/stats endpoint."""
 
-    @pytest.mark.asyncio
-    async def test_stats_endpoint_returns_stats(self, async_client: AsyncClient):
-        """Test that /api/stats returns server statistics"""
+    async def test_stats_endpoint_returns_stats(self, async_client: "AsyncClient"):
+        """Test that /api/stats returns server statistics with correct structure."""
+        # Baseline: no rooms
         response = await async_client.get("/api/stats")
-
         assert response.status_code == 200
-        data = response.json()
+        data_before = response.json()
 
-        assert data["status"] == "ok"
-        assert "total_rooms" in data
-        assert "active_rooms" in data
-        assert "hibernated_rooms" in data
-        assert "empty_rooms" in data
-        assert "total_players" in data
+        assert data_before["status"] == "ok"
+        for key in ("total_rooms", "active_rooms", "hibernated_rooms", "empty_rooms", "total_players"):
+            assert key in data_before
+            assert isinstance(data_before[key], int)
 
-        # All values should be integers
-        assert isinstance(data["total_rooms"], int)
-        assert isinstance(data["active_rooms"], int)
-        assert isinstance(data["total_players"], int)
+        # Create a room and verify total_rooms increases
+        room_manager.get_or_create_room("STATS_TEST_ROOM")
+        response = await async_client.get("/api/stats")
+        assert response.status_code == 200
+        data_after = response.json()
+        assert data_after["total_rooms"] == data_before["total_rooms"] + 1
 
 
 class TestRoomLifecycle:
-    """Test complete room lifecycle"""
+    """Test complete room lifecycle."""
 
-    @pytest.mark.asyncio
-    async def test_complete_room_lifecycle(self):
-        """Test room from creation to hibernation to removal"""
-        manager = RoomManager()
-        await manager.start()
-
-        class MockWebSocket:
-            async def send_text(self, message):
-                pass
-
+    async def test_complete_room_lifecycle(self, managed_room_manager, make_ws):
+        """Test room from creation to hibernation to removal."""
         # 1. Create room
-        room = manager.get_or_create_room("LIFECYCLE_TEST")
-        assert "LIFECYCLE_TEST" in manager.rooms
+        room = managed_room_manager.get_or_create_room("LIFECYCLE_TEST")
+        assert "LIFECYCLE_TEST" in managed_room_manager.rooms
 
         # 2. Players join
-        ws1 = MockWebSocket()
-        ws2 = MockWebSocket()
+        ws1, ws2 = make_ws(), make_ws()
         await room.add_player("player_1", "Player 1", ws1)
         await room.add_player("player_2", "Player 2", ws2)
         assert len(room.players) == 2
@@ -312,13 +212,11 @@ class TestRoomLifecycle:
 
         # 4. Room enters hibernation after 1 minute
         room._emptied_at = time.time() - 65
-        await manager._run_cleanup()
+        await managed_room_manager._run_cleanup()
         assert room.is_hibernated is True
-        assert "LIFECYCLE_TEST" in manager.rooms
+        assert "LIFECYCLE_TEST" in managed_room_manager.rooms
 
         # 5. Room is removed after 5 minutes total
         room._emptied_at = time.time() - (5 * 60 + 10)
-        await manager._run_cleanup()
-        assert "LIFECYCLE_TEST" not in manager.rooms
-
-        await manager.stop()
+        await managed_room_manager._run_cleanup()
+        assert "LIFECYCLE_TEST" not in managed_room_manager.rooms

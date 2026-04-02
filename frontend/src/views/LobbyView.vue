@@ -78,9 +78,10 @@ async function joinRandomRoom() {
     const response = await fetch(`${API_HOST}/api/rooms/random`);
 
     if (!response.ok) {
-      error.value = response.status === 404
-        ? "No available rooms found. Try creating a new room!"
-        : "Failed to find a room. Please try again.";
+      error.value =
+        response.status === 404
+          ? "No available rooms found. Try creating a new room!"
+          : "Failed to find a room. Please try again.";
       return;
     }
 

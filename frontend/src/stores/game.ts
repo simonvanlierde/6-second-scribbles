@@ -6,11 +6,24 @@ import type { Card, Difficulty, DrawStroke, KickVote, Player, RoundResult } from
 
 export const useGameStore = defineStore("game", () => {
   // Load from localStorage if available (guard for test environments where localStorage may be limited)
-  const savedState = (() => { try { return localStorage.getItem("gameState"); } catch { return null; } })();
+  const savedState = (() => {
+    try {
+      return localStorage.getItem("gameState");
+    } catch {
+      return null;
+    }
+  })();
   const initialState = savedState ? JSON.parse(savedState) : null;
 
   // Load user's name from localStorage
-  const savedName = (() => { try { return localStorage.getItem("playerName"); } catch { return null; } })() || "";
+  const savedName =
+    (() => {
+      try {
+        return localStorage.getItem("playerName");
+      } catch {
+        return null;
+      }
+    })() || "";
   const localPlayerName = ref<string>(savedName);
 
   // State
@@ -45,7 +58,11 @@ export const useGameStore = defineStore("game", () => {
   function setLocalPlayer(id: string, name: string) {
     localPlayerId.value = id;
     localPlayerName.value = name;
-    try { localStorage.setItem("playerName", name); } catch { /* unavailable */ }
+    try {
+      localStorage.setItem("playerName", name);
+    } catch {
+      /* unavailable */
+    }
   }
 
   function setRoomCode(code: string) {
@@ -205,7 +222,9 @@ export const useGameStore = defineStore("game", () => {
           language: language.value,
         }),
       );
-    } catch { /* localStorage unavailable (e.g. test environment) */ }
+    } catch {
+      /* localStorage unavailable (e.g. test environment) */
+    }
   }
 
   // Automatically persist relevant fields whenever any of them change.

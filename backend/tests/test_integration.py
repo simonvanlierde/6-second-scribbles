@@ -1,6 +1,7 @@
 """Integration tests for complete game flows"""
 
 import json
+from contextlib import ExitStack
 
 import pytest
 
@@ -34,7 +35,7 @@ class TestCompleteGameFlow:
 
                 # Host starts game (1 round so the test stays fast)
                 ws1.send_text(
-                    json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 1, "roundLength": 10})
+                    json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 1, "roundLength": 10}),
                 )
 
                 start1 = json.loads(ws1.receive_text())
@@ -52,8 +53,8 @@ class TestCompleteGameFlow:
                                 "p1": {"category": "Animals", "items": ["cat", "dog"]},
                                 "p2": {"category": "Foods", "items": ["pizza", "burger"]},
                             },
-                        }
-                    )
+                        },
+                    ),
                 )
 
                 round1 = json.loads(ws1.receive_text())
@@ -70,8 +71,8 @@ class TestCompleteGameFlow:
                             "type": "draw_stroke",
                             "playerId": "p1",
                             "stroke": {"color": "#000", "width": 2, "points": [{"x": 10, "y": 20}]},
-                        }
-                    )
+                        },
+                    ),
                 )
 
                 draw1 = json.loads(ws1.receive_text())
@@ -96,8 +97,8 @@ class TestCompleteGameFlow:
                             "playerId": "p1",
                             "targetPlayerId": "p2",
                             "guesses": ["pizza", "burger"],
-                        }
-                    )
+                        },
+                    ),
                 )
                 ws2.send_text(
                     json.dumps(
@@ -106,8 +107,8 @@ class TestCompleteGameFlow:
                             "playerId": "p2",
                             "targetPlayerId": "p1",
                             "guesses": ["cat", "dog"],
-                        }
-                    )
+                        },
+                    ),
                 )
 
                 # Server broadcasts round_complete once both guesses are in
@@ -146,8 +147,8 @@ class TestCompleteGameFlow:
                                 "width": 3,
                                 "points": [{"x": 50, "y": 50}, {"x": 100, "y": 100}],
                             },
-                        }
-                    )
+                        },
+                    ),
                 )
 
                 # Both players see the stroke
@@ -184,7 +185,7 @@ class TestCompleteGameFlow:
 
                 # Host updates settings
                 ws1.send_text(
-                    json.dumps({"type": "settings_update", "difficulty": "hard", "rounds": 10, "roundLength": 45})
+                    json.dumps({"type": "settings_update", "difficulty": "hard", "rounds": 10, "roundLength": 45}),
                 )
 
                 # Both receive settings update
@@ -198,7 +199,7 @@ class TestCompleteGameFlow:
 
                 # Non-host tries to update (should be ignored)
                 ws2.send_text(
-                    json.dumps({"type": "settings_update", "difficulty": "easy", "rounds": 3, "roundLength": 30})
+                    json.dumps({"type": "settings_update", "difficulty": "easy", "rounds": 3, "roundLength": 30}),
                 )
 
                 # Should not receive any update (timeout if we wait)
@@ -231,72 +232,43 @@ class TestCompleteGameFlow:
 class TestMultiRoomScenarios:
     """Test scenarios with multiple rooms"""
 
-    def test_multiple_rooms_independent(self, test_client):
-        """Test that multiple rooms operate independently"""
-        # Room 1
-        with test_client.websocket_connect("/party/ROOM01") as ws1:
-            ws1.receive_text()
-
-            ws1.send_text(json.dumps({"type": "join", "playerId": "p1", "name": "Alice"}))
-            ws1.receive_text()
-
-            # Room 2
-            with test_client.websocket_connect("/party/ROOM02") as ws2:
-                ws2.receive_text()
-
-                ws2.send_text(json.dumps({"type": "join", "playerId": "p2", "name": "Bob"}))
-                ws2.receive_text()
-
-                # Room 1 starts game
-                ws1.send_text(
-                    json.dumps({"type": "settings_update", "difficulty": "hard", "rounds": 10, "roundLength": 45})
-                )
-
-                # Room 1 should receive update
-                msg1 = json.loads(ws1.receive_text())
-                assert msg1["type"] == "settings_update"
-
-                # Room 2 should NOT receive anything (independent rooms)
-
     def test_concurrent_games(self, test_client):
         """Test multiple games running concurrently"""
-        rooms = []
+        with ExitStack() as stack:
+            rooms = []
+            for i in range(3):
+                room_id = f"CONCURRENT0{i + 1}"
 
-        # Create 3 concurrent games
-        for i in range(3):
-            room_id = f"CONCURRENT0{i + 1}"
-            ws1 = test_client.websocket_connect(f"/party/{room_id}")
-            ws1.__enter__()
-            ws1.receive_text()
+                ws1 = stack.enter_context(test_client.websocket_connect(f"/party/{room_id}"))
+                ws1.receive_text()
+                ws1.send_text(json.dumps({"type": "join", "playerId": f"p{i}-1", "name": f"Player {i}-1"}))
+                ws1.receive_text()
 
-            ws1.send_text(json.dumps({"type": "join", "playerId": f"p{i}-1", "name": f"Player {i}-1"}))
-            ws1.receive_text()
+                ws2 = stack.enter_context(test_client.websocket_connect(f"/party/{room_id}"))
+                ws2.receive_text()
+                ws2.send_text(json.dumps({"type": "join", "playerId": f"p{i}-2", "name": f"Player {i}-2"}))
+                ws1.receive_text()
+                ws2.receive_text()
 
-            ws2 = test_client.websocket_connect(f"/party/{room_id}")
-            ws2.__enter__()
-            ws2.receive_text()
+                rooms.append((ws1, ws2))
 
-            ws2.send_text(json.dumps({"type": "join", "playerId": f"p{i}-2", "name": f"Player {i}-2"}))
-            ws1.receive_text()
-            ws2.receive_text()
+            # All games should work independently
+            for ws1, ws2 in rooms:
+                ws1.send_text(
+                    json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60})
+                )
+                msg1 = json.loads(ws1.receive_text())
+                msg2 = json.loads(ws2.receive_text())
 
-            rooms.append((ws1, ws2))
+                assert msg1["type"] == "start_game"
+                assert msg2["type"] == "start_game"
 
-        # All games should work independently
-        for i, (ws1, ws2) in enumerate(rooms):
-            # Start game in this room
-            ws1.send_text(json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60}))
 
-            msg1 = json.loads(ws1.receive_text())
-            msg2 = json.loads(ws2.receive_text())
-
-            assert msg1["type"] == "start_game"
-            assert msg2["type"] == "start_game"
-
-        # Cleanup
-        for ws1, ws2 in rooms:
-            ws1.__exit__(None, None, None)
-            ws2.__exit__(None, None, None)
+def _drain(connections: list, count: int = 1) -> None:
+    """Drain `count` pending messages from each connection in the list."""
+    for conn in connections:
+        for _ in range(count):
+            conn.receive_text()
 
 
 @pytest.mark.integration
@@ -307,37 +279,30 @@ class TestLoadScenarios:
     def test_max_players_in_room(self, test_client):
         """Test room with maximum players (10)"""
         room_id = "MAX_PLAYERS"
-        connections = []
 
-        try:
+        with ExitStack() as stack:
+            connections = []
+
             # Add 10 players, draining all pending messages after each join so
             # no connection has a stale queue that would cause later reads to hang.
             for i in range(10):
-                ws = test_client.websocket_connect(f"/party/{room_id}")
-                ws.__enter__()
+                ws = stack.enter_context(test_client.websocket_connect(f"/party/{room_id}"))
                 ws.receive_text()  # Initial room_state
 
                 ws.send_text(json.dumps({"type": "join", "playerId": f"player-{i}", "name": f"Player {i}"}))
 
                 # The server broadcasts player_joined to ALL current connections.
-                # Drain the new connection (gets 1 message) and each existing
-                # connection (each also gets 1 message) so no queue builds up.
                 ws.receive_text()  # player_joined on new connection
-                for existing_ws in connections:
-                    existing_ws.receive_text()  # player_joined on each previous connection
+                _drain(connections)  # drain each existing connection
 
                 connections.append(ws)
 
             # Verify all players can receive a broadcast from the host
             host_ws = connections[0]
             host_ws.send_text(
-                json.dumps({"type": "settings_update", "difficulty": "hard", "rounds": 5, "roundLength": 45})
+                json.dumps({"type": "settings_update", "difficulty": "hard", "rounds": 5, "roundLength": 45}),
             )
 
             for ws in connections:
                 msg = json.loads(ws.receive_text())
                 assert msg["type"] == "settings_update"
-
-        finally:
-            for ws in connections:
-                ws.__exit__(None, None, None)

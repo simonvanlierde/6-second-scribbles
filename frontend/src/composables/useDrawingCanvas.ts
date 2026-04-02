@@ -11,7 +11,9 @@ export function useDrawingCanvas() {
   const strokes = ref<DrawStroke[]>([]);
   const currentColor = ref("#000000");
   const currentWidth = ref(5);
-  let onStrokeProgress: ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void) | null = null;
+  let onStrokeProgress:
+    | ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void)
+    | null = null;
   let stopResizeObserver: (() => void) | null = null;
   let stopEventListeners: (() => void) | null = null;
 
@@ -37,7 +39,9 @@ export function useDrawingCanvas() {
       useEventListener(canvas, "pointerup", stopDrawing),
       useEventListener(canvas, "pointercancel", stopDrawing),
     ];
-    stopEventListeners = () => { for (const fn of cleanups) fn(); };
+    stopEventListeners = () => {
+      for (const fn of cleanups) fn();
+    };
 
     // ResizeObserver fires immediately with the initial size and handles all
     // future layout changes: window resize, orientation change, flex reflow.
@@ -146,13 +150,18 @@ export function useDrawingCanvas() {
     if (!parent) return;
 
     const cssWidth = parent.clientWidth;
-    const cssHeight = parent.clientHeight;
+    // Read height from the canvas element itself (CSS class), not from the
+    // parent. Using parent.clientHeight creates a feedback loop: setting
+    // canvas style.height makes the parent taller, which fires ResizeObserver
+    // again, growing the canvas indefinitely.
+    const cssHeight = canvasRef.value.offsetHeight;
     const dpr = window.devicePixelRatio || 1;
 
     canvasRef.value.width = Math.round(cssWidth * dpr);
     canvasRef.value.height = Math.round(cssHeight * dpr);
     canvasRef.value.style.width = `${cssWidth}px`;
-    canvasRef.value.style.height = `${cssHeight}px`;
+    // Do not set style.height — the CSS class controls the height and setting
+    // it here would re-trigger the ResizeObserver.
 
     // Scale context so drawing coordinates map to CSS pixels.
     ctx.value.setTransform(dpr, 0, 0, dpr, 0, 0);

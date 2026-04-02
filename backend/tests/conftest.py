@@ -33,33 +33,37 @@ def redis_container():
 def _configure_db(postgres_container, redis_container, monkeypatch):
     """Point the app at the test containers for every test.
 
-    Patches module-level engine and session_maker so all code paths
-    (lifespan, test_db fixture, cleanup_custom_categories, etc.) use the
-    containerised database without needing a running event loop here.
+    Patches the lazy engine/session_maker singletons in database.py and
+    the redis URL in settings so all code paths use the containerised
+    services without a running event loop at fixture setup time.
     """
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
     import app.database as db_mod
     import app.redis_store as redis_mod
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from app.config import settings
 
     db_url = postgres_container.get_connection_url()
     redis_url = f"redis://{redis_container.get_container_host_ip()}:{redis_container.get_exposed_port(6379)}"
 
-    monkeypatch.setenv("DATABASE_URL", db_url)
-    monkeypatch.setenv("REDIS_URL", redis_url)
-    monkeypatch.setattr(db_mod, "DATABASE_URL", db_url)
-    monkeypatch.setattr(redis_mod, "REDIS_URL", redis_url)
+    # Patch settings so lazily-read values pick up the test URLs
+    monkeypatch.setattr(settings, "redis_url", redis_url)
+    monkeypatch.setattr(settings, "database_url_override", db_url)
 
     engine = create_async_engine(db_url, echo=False, future=True, pool_pre_ping=True, pool_size=5, max_overflow=10)
     session_maker = async_sessionmaker(
         engine,
-        class_=db_mod.AsyncSession,
+        class_=AsyncSession,
         expire_on_commit=False,
         autocommit=False,
         autoflush=False,
     )
-    monkeypatch.setattr(db_mod, "engine", engine)
-    monkeypatch.setattr(db_mod, "async_session_maker", session_maker)
 
+    # Inject pre-built engine/session_maker into the lazy singletons
+    monkeypatch.setattr(db_mod, "_engine", engine)
+    monkeypatch.setattr(db_mod, "_session_maker", session_maker)
+
+    # Reset the redis client so get_redis() reconnects with the patched URL
     redis_mod._redis_client = None
 
 
@@ -127,9 +131,52 @@ async def room_with_players(game_room: GameRoom, mock_websocket) -> GameRoom:
 
 
 @pytest.fixture
+def make_ws():
+    """Factory that creates lightweight mock websockets.
+
+    Use instead of defining inline AsyncMock or MockWebSocket classes in tests.
+    Each call returns a fresh mock with send_text and close tracked.
+    """
+
+    def _factory():
+        ws = AsyncMock()
+        ws.send_text = AsyncMock()
+        ws.close = AsyncMock()
+        return ws
+
+    return _factory
+
+
+@pytest.fixture
 def room_manager() -> RoomManager:
     """Fresh room manager instance"""
     return RoomManager()
+
+
+@pytest.fixture
+async def managed_room_manager():
+    """RoomManager with lifecycle management (started and stopped)."""
+    manager = RoomManager()
+    await manager.start()
+    yield manager
+    await manager.stop()
+
+
+@pytest.fixture
+async def test_db():
+    """Provide a database session pointing at the test container.
+
+    The _configure_db autouse fixture patches app.database engine/session_maker
+    to point at a containerised Postgres instance. Creates tables and yields a session.
+    """
+    import app.database as db_mod
+
+    async with db_mod._get_engine().begin() as conn:
+        await conn.run_sync(db_mod.Base.metadata.create_all)
+
+    async with db_mod._get_session_maker()() as session:
+        yield session
+        await session.rollback()
 
 
 @pytest.fixture

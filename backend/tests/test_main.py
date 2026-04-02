@@ -102,15 +102,6 @@ class TestWebSocketConnection:
                 assert len(msg1["players"]) == 2
                 assert len(msg2["players"]) == 2
 
-    async def test_player_disconnect_cleanup(self, game_room, mock_websocket):
-        """Test that players are removed from the room when they disconnect."""
-        await game_room.add_player("player-1", "Alice", mock_websocket)
-        assert len(game_room.players) == 1
-
-        await game_room.remove_player("player-1")
-
-        assert len(game_room.players) == 0
-
     def test_player_leaves_broadcast_visible(self, test_client):
         """Test that remaining players see a player_left broadcast on disconnect."""
         with test_client.websocket_connect("/party/DISC01") as ws1:
@@ -167,35 +158,6 @@ class TestMessageHandling:
                 assert msg2["type"] == "start_game"
                 assert msg1["difficulty"] == "medium"
                 assert msg1["rounds"] == 5
-
-    def test_start_game_requires_two_players(self, test_client, sample_messages):
-        """Test that game cannot start with less than 2 players"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            websocket.receive_text()  # Initial state
-
-            # Only one player joins
-            websocket.send_text(json.dumps(sample_messages["join"]))
-            websocket.receive_text()  # player_joined
-
-            # Try to start game (should be ignored)
-            websocket.send_text(json.dumps(sample_messages["start_game"]))
-
-            # Should not receive start_game message (would timeout if we waited)
-            # This is a limitation of TestClient - we can't easily test no-response
-
-    def test_heartbeat_message(self, test_client, sample_messages):
-        """Test heartbeat messages update player activity"""
-        with test_client.websocket_connect("/party/TEST01") as websocket:
-            websocket.receive_text()  # Initial state
-
-            # Join
-            websocket.send_text(json.dumps(sample_messages["join"]))
-            websocket.receive_text()  # player_joined
-
-            # Send heartbeat (should not cause any broadcast)
-            websocket.send_text(json.dumps(sample_messages["heartbeat"]))
-
-            # No response expected for heartbeat
 
     def test_settings_update_from_host(self, test_client, sample_messages):
         """Test that only host can update settings"""
@@ -316,53 +278,24 @@ class TestMessageHandling:
             assert len(msg["players"]) == 1
 
 
-class TestHostTransfer:
-    """Test suite for host transfer logic"""
-
-    async def test_host_transfer_on_disconnect(self, room_with_players):
-        """Test that host is transferred when original host disconnects.
-
-        Uses the room_with_players fixture (Alice=host, Bob=player-2) with
-        mock websockets to avoid sync TestClient timing issues.
-        """
-        import asyncio
-
-        room = room_with_players
-        assert room.host_id == "player-1"
-
-        # Remove the host
-        await room.remove_player("player-1")
-
-        # Wait for the delayed host transfer (1 second + buffer)
-        await asyncio.sleep(1.5)
-
-        assert room.host_id == "player-2"
-
-
 class TestErrorHandling:
     """Test suite for error handling"""
 
-    def test_invalid_json_message(self, test_client):
-        """Test handling of invalid JSON messages"""
+    def test_invalid_json_message(self, test_client, sample_messages):
+        """Test that invalid JSON is handled non-fatally — connection stays alive"""
         with test_client.websocket_connect("/party/TEST01") as websocket:
             websocket.receive_text()  # Initial state
 
-            # Send invalid JSON
+            websocket.send_text(json.dumps(sample_messages["join"]))
+            websocket.receive_text()  # player_joined
+
+            # Send invalid JSON — should not crash the connection
             websocket.send_text("not valid json{")
 
-            # Connection should still be open (error is logged but not fatal)
-            # We can continue sending valid messages
+            # Connection is still live: a valid heartbeat is accepted without error
+            websocket.send_text(json.dumps(sample_messages["heartbeat"]))
 
-    async def test_room_marked_empty_after_all_disconnect(self, game_room, mock_websocket):
-        """Test that room is marked as empty after all players disconnect.
-
-        Note: rooms are not immediately removed — the periodic cleanup loop
-        handles hibernation (1 min) and removal (5 min).
-        """
-        await game_room.add_player("player-1", "Alice", mock_websocket)
-        assert not game_room.is_empty()
-
-        await game_room.remove_player("player-1")
-
-        assert game_room.is_empty()
-        assert game_room._emptied_at is not None
+            # A subsequent valid message still gets a response, proving the connection survived
+            websocket.send_text(json.dumps({"type": "request_game_state", "playerId": "player-123"}))
+            msg = json.loads(websocket.receive_text())
+            assert msg["type"] == "room_state"

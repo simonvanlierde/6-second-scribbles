@@ -26,7 +26,7 @@
     "ruff>=0.14.6",
     "testcontainers>=4.14.2",
     "ty>=0.0.27",
-]
+  ]
 
 [tool.pytest.ini_options]
   addopts = [
@@ -45,3 +45,36 @@
     "slow: mark a test as slow.",
     "unit: mark a test as a unit test.",
   ]
+
+[tool.ruff]
+  line-length    = 120
+  target-version = "py314"
+
+  extend-exclude = ["*/.venv/*", "*/.vscode/*", "*/alembic/versions/*", "*/migrations/*"]
+
+  format.docstring-code-format = true
+
+  lint.fixable = ["ALL"]
+  lint.select  = ["ALL"]
+
+  lint.ignore = [
+    # Avoid conflicts with the formatter
+    "COM812", # missing-trailing-comma
+
+    # Overly strict rules
+    "ANN204", # missing-return-type-special-method
+    "D105",   # undocumented-magic-method
+    "D107",   # undocumented-public-init
+  ]
+
+  lint.flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+  ] # Allow default arguments for FastAPI functions
+
+  lint.per-file-ignores."test*.py" = ["S101"] # allow assert in test files
+
+  lint.pydocstyle.convention = "google"
+
+  lint.pylint.allow-magic-value-types = ["int"]
+  lint.pylint.max-args                = 10

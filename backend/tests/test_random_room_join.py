@@ -2,8 +2,6 @@
 
 import json
 
-import pytest
-
 
 class TestRandomRoomJoin:
     """Test suite for random room join feature"""
@@ -60,8 +58,7 @@ class TestRandomRoomJoin:
         """Test that full rooms (10 players) are not returned by random join."""
         from unittest.mock import AsyncMock
 
-        from app.game_room import GameRoom, PlayerInfo
-        from app.game_room import room_manager
+        from app.game_room import GameRoom, PlayerInfo, room_manager
 
         room_id = "FULL_ROOM"
         # Build the room without get_or_create_room (which needs an event loop
@@ -70,7 +67,9 @@ class TestRandomRoomJoin:
         for i in range(10):
             ws = AsyncMock()
             room.players[f"player-{i}"] = PlayerInfo(
-                id=f"player-{i}", name=f"Player {i}", websocket=ws
+                id=f"player-{i}",
+                name=f"Player {i}",
+                websocket=ws,
             )
         room.host_id = "player-0"
         room_manager.rooms[room_id] = room
@@ -93,7 +92,9 @@ class TestRandomRoomJoin:
                 ws1.receive_text()
                 ws2.receive_text()
 
-                ws1.send_text(json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60}))
+                ws1.send_text(
+                    json.dumps({"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60})
+                )
                 ws1.receive_text()  # start_game broadcast
                 ws2.receive_text()
 
@@ -142,7 +143,7 @@ class TestPrivacyToggle:
             with test_client.websocket_connect(f"/party/{room_id}") as ws2:
                 ws2.receive_text()
                 ws2.send_text(json.dumps({"type": "join", "playerId": "player2", "name": "Player 2"}))
-                ws.receive_text()   # player_joined on ws1
+                ws.receive_text()  # player_joined on ws1
                 ws2.receive_text()  # player_joined on ws2
 
                 # Non-host tries to set privacy (should be ignored)

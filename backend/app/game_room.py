@@ -11,15 +11,29 @@ import asyncio
 import contextlib
 import json
 import logging
+import random
 import time
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import asdict, dataclass, field
+from typing import TYPE_CHECKING, Any
 
-from fastapi import WebSocket
-
+from app.config import settings
 from app.scoring import guess_matcher
 
+if TYPE_CHECKING:
+    from fastapi import WebSocket
+
 logger = logging.getLogger(__name__)
+
+
+def _create_logged_task(coro, name: str) -> asyncio.Task:
+    """Create a fire-and-forget task that logs any unhandled exception."""
+    task = asyncio.create_task(coro, name=name)
+    task.add_done_callback(
+        lambda t: logger.error("[Task %s] unhandled exception: %s", name, t.exception())
+        if not t.cancelled() and t.exception()
+        else None,
+    )
+    return task
 
 
 @dataclass
@@ -28,7 +42,7 @@ class PlayerInfo:
 
     id: str
     name: str
-    websocket: WebSocket
+    websocket: "WebSocket"
     categories: list[str] = field(default_factory=list)
     last_activity: float = field(default_factory=time.time)
 
@@ -71,19 +85,7 @@ class RoomMetadata:
 class GameRoom:
     """Manages a single game room with multiple players."""
 
-    # Idle timeout configuration (3 minutes of inactivity during game)
-    IDLE_TIMEOUT_MS = 3 * 60 * 1000
-
-    # Host transfer delay (1 second to allow for reconnections)
-    HOST_TRANSFER_DELAY_MS = 1000
-
-    # Maximum players per room
-    MAX_PLAYERS = 10
-
-    # Room hibernation timeout (5 minutes of being empty)
-    HIBERNATION_TIMEOUT_SECONDS = 5 * 60
-
-    # Kick vote timeout (1 minute)
+    # Kick vote timeout (1 minute) — not yet configurable via settings
     KICK_VOTE_TIMEOUT_SECONDS = 60
 
     def __init__(self, room_id: str):
@@ -171,7 +173,10 @@ class GameRoom:
 
         # On the final round, broadcast game_complete after countdown
         if self.metadata.current_round >= self.metadata.max_rounds:
-            asyncio.create_task(self._broadcast_game_complete_after_delay())
+            _create_logged_task(
+                self._broadcast_game_complete_after_delay(),
+                name=f"game_complete_{self.room_id}",
+            )
 
     async def _broadcast_game_complete_after_delay(self):
         """Wait for the round-results countdown, then broadcast game_complete."""
@@ -196,7 +201,10 @@ class GameRoom:
         """Start a fallback scoring task in case not all players submit in time."""
         if self._round_scoring_task:
             self._round_scoring_task.cancel()
-        self._round_scoring_task = asyncio.create_task(self._scoring_timeout(timeout_seconds))
+        self._round_scoring_task = _create_logged_task(
+            self._scoring_timeout(timeout_seconds),
+            name=f"scoring_timeout_{self.room_id}",
+        )
 
     async def _scoring_timeout(self, timeout_seconds: int):
         try:
@@ -215,7 +223,10 @@ class GameRoom:
 
     async def start_idle_check(self):
         """Start periodic idle player check"""
-        self._idle_check_task = asyncio.create_task(self._idle_check_loop())
+        self._idle_check_task = _create_logged_task(
+            self._idle_check_loop(),
+            name=f"idle_check_{self.room_id}",
+        )
 
     async def stop_idle_check(self):
         """Stop idle player check and any pending scoring tasks."""
@@ -244,18 +255,18 @@ class GameRoom:
     async def _check_idle_players(self):
         """Check for and disconnect idle players during active game phases"""
         if self.metadata.game_phase not in ["lobby", "complete"]:
-            now = time.time() * 1000  # Convert to milliseconds
+            now = time.time()
             idle_players = []
 
             for player_id, player in self.players.items():
-                idle_time = now - (player.last_activity * 1000)
-                if idle_time > self.IDLE_TIMEOUT_MS:
+                idle_time = now - player.last_activity
+                if idle_time > settings.idle_timeout_seconds:
                     logger.info(
                         "[GameRoom %s] Player %s (%s) is idle for %ss",
                         self.room_id,
                         player.name,
                         player_id,
-                        idle_time / 1000,
+                        idle_time,
                     )
                     idle_players.append(player_id)
 
@@ -267,15 +278,15 @@ class GameRoom:
                     with contextlib.suppress(Exception):
                         await player.websocket.close(code=1000, reason="Disconnected due to inactivity")
 
-    async def add_player(self, player_id: str, name: str, websocket: WebSocket):
+    async def add_player(self, player_id: str, name: str, websocket: "WebSocket"):
         """Add a player to the room
 
         Returns tuple: (player, is_reconnecting_host)
         Raises ValueError if room is full
         """
         # Check if room is at capacity (but allow existing player to reconnect)
-        if player_id not in self.players and len(self.players) >= self.MAX_PLAYERS:
-            raise ValueError(f"Room is full (maximum {self.MAX_PLAYERS} players)")
+        if player_id not in self.players and len(self.players) >= settings.max_players:
+            raise ValueError(f"Room is full (maximum {settings.max_players} players)")
 
         # Room is no longer empty - wake from hibernation if needed
         if self.is_hibernated:
@@ -288,12 +299,10 @@ class GameRoom:
         # Check if this is the previous host reconnecting
         is_reconnecting_host = player_id == self._last_host_id and player_id not in self.players
 
-        categories = self._generate_categories_for_player()
         player = PlayerInfo(
             id=player_id,
             name=name,
             websocket=websocket,
-            categories=categories,
             last_activity=time.time(),
         )
         self.players[player_id] = player
@@ -334,7 +343,7 @@ class GameRoom:
                 logger.info(
                     "[GameRoom %s] Host disconnected, scheduling transfer in %sms...",
                     self.room_id,
-                    self.HOST_TRANSFER_DELAY_MS,
+                    settings.host_transfer_delay_ms,
                 )
 
                 # Cancel any existing pending transfer
@@ -342,7 +351,10 @@ class GameRoom:
                     self._pending_host_transfer.cancel()
 
                 # Schedule new transfer
-                self._pending_host_transfer = asyncio.create_task(self._delayed_host_transfer(player_id))
+                self._pending_host_transfer = _create_logged_task(
+                    self._delayed_host_transfer(player_id),
+                    name=f"host_transfer_{self.room_id}",
+                )
             else:
                 # No players left, room is effectively closed
                 self.host_id = None
@@ -352,7 +364,7 @@ class GameRoom:
         """Transfer host after a delay, allowing for reconnection"""
         try:
             # Wait for the delay
-            await asyncio.sleep(self.HOST_TRANSFER_DELAY_MS / 1000)
+            await asyncio.sleep(settings.host_transfer_delay_ms / 1000)
 
             # Check if host reconnected during the delay
             if old_host_id in self.players:
@@ -362,7 +374,7 @@ class GameRoom:
 
             # Transfer host if there are still players
             if len(self.players) > 0:
-                new_host = list(self.players.values())[0]
+                new_host = next(iter(self.players.values()))
                 self.host_id = new_host.id
                 self._last_host_id = new_host.id
 
@@ -385,21 +397,20 @@ class GameRoom:
             self.players[player_id].last_activity = time.time()
 
     async def broadcast(self, message: dict, exclude: str | None = None):
-        """Broadcast a message to all players in the room"""
+        """Broadcast a message to all players in the room."""
         message_str = json.dumps(message)
         disconnected_players = []
 
         for player_id, player in self.players.items():
             if exclude and player_id == exclude:
                 continue
-
             try:
                 await player.websocket.send_text(message_str)
             except Exception:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
                 disconnected_players.append(player_id)
 
-        # Clean up disconnected players
+        # Clean up disconnected players after the loop (safe: we snapshotted the list)
         for player_id in disconnected_players:
             await self.remove_player(player_id)
             await self.broadcast({"type": "player_left", "playerId": player_id})
@@ -417,11 +428,6 @@ class GameRoom:
     def get_player_list(self) -> list[dict[str, str]]:
         """Get the list of all players in the room"""
         return [{"id": p.id, "name": p.name} for p in self.players.values()]
-
-    def _generate_categories_for_player(self) -> list[str]:
-        """Generate categories for a player (placeholder)"""
-        # Replace with actual category generation logic
-        return ["Category1", "Category2", "Category3"]
 
     async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> dict:
         """Initiate a vote to kick a player
@@ -597,6 +603,10 @@ class GameRoom:
 
     def to_redis_dict(self) -> dict:
         """Serialize room state to a JSON-safe dict for Redis storage."""
+        meta = asdict(self.metadata)
+        # sets are not JSON-serializable — convert to lists
+        meta["ready_players"] = list(self.metadata.ready_players)
+        meta["submitted_players"] = list(self.metadata.submitted_players)
         return {
             "room_id": self.room_id,
             "host_id": self.host_id,
@@ -604,28 +614,11 @@ class GameRoom:
             "_created_at": self._created_at,
             "_emptied_at": self._emptied_at,
             "is_hibernated": self.is_hibernated,
-            "metadata": {
-                "categories": self.metadata.categories,
-                "game_phase": self.metadata.game_phase,
-                "round_start_time": self.metadata.round_start_time,
-                "round_length": self.metadata.round_length,
-                "difficulty": self.metadata.difficulty,
-                "max_rounds": self.metadata.max_rounds,
-                "current_round": self.metadata.current_round,
-                "pad_visibility": self.metadata.pad_visibility,
-                "ready_players": list(self.metadata.ready_players),
-                "is_private": self.metadata.is_private,
-                "language": self.metadata.language,
-                "player_cards": self.metadata.player_cards,
-                "guess_submissions": self.metadata.guess_submissions,
-                "submitted_players": list(self.metadata.submitted_players),
-                "player_count_for_scoring": self.metadata.player_count_for_scoring,
-                "player_scores": self.metadata.player_scores,
-            },
+            "metadata": meta,
         }
 
     @classmethod
-    def from_redis_dict(cls, data: dict) -> GameRoom:
+    def from_redis_dict(cls, data: dict) -> "GameRoom":
         """Restore a room from a Redis-persisted dict (no players — they reconnect)."""
         room = cls(data["room_id"])
         room.host_id = data.get("host_id")
@@ -635,22 +628,10 @@ class GameRoom:
         room.is_hibernated = data.get("is_hibernated", False)
 
         meta = data.get("metadata", {})
-        room.metadata.categories = meta.get("categories", [])
-        room.metadata.game_phase = meta.get("game_phase", "lobby")
-        room.metadata.round_start_time = meta.get("round_start_time")
-        room.metadata.round_length = meta.get("round_length")
-        room.metadata.difficulty = meta.get("difficulty", "medium")
-        room.metadata.max_rounds = meta.get("max_rounds", 5)
-        room.metadata.current_round = meta.get("current_round", 0)
-        room.metadata.pad_visibility = meta.get("pad_visibility", True)
-        room.metadata.ready_players = set(meta.get("ready_players", []))
-        room.metadata.is_private = meta.get("is_private", False)
-        room.metadata.language = meta.get("language", "en")
-        room.metadata.player_cards = meta.get("player_cards", {})
-        room.metadata.guess_submissions = meta.get("guess_submissions", [])
-        room.metadata.submitted_players = set(meta.get("submitted_players", []))
-        room.metadata.player_count_for_scoring = meta.get("player_count_for_scoring", 0)
-        room.metadata.player_scores = meta.get("player_scores", {})
+        # Restore sets from the serialized lists
+        meta["ready_players"] = set(meta.get("ready_players", []))
+        meta["submitted_players"] = set(meta.get("submitted_players", []))
+        room.metadata = RoomMetadata(**meta)
 
         return room
 
@@ -688,7 +669,7 @@ class GameRoom:
 
         # Remove room if empty for longer than hibernation timeout
         empty_duration = time.time() - self._emptied_at
-        return empty_duration >= self.HIBERNATION_TIMEOUT_SECONDS
+        return empty_duration >= settings.room_ttl_seconds
 
     def get_age_seconds(self) -> float:
         """Get room age in seconds"""
@@ -708,18 +689,15 @@ class GameRoom:
         logger.info("[GameRoom %s] Entering hibernation mode (age: %.0fs)", self.room_id, self.get_age_seconds())
         self.is_hibernated = True
 
-        # Could persist room state here if needed
-        # For now, we just mark it as hibernated
-
     async def cleanup_custom_categories(self):
         """Delete all custom categories created for this room"""
         try:
             from sqlalchemy import delete
 
-            from app.database import async_session_maker
+            from app.database import get_session_maker
             from app.db_models import Category
 
-            async with async_session_maker() as session:
+            async with get_session_maker()() as session:
                 # Delete all categories with this room_id
                 stmt = delete(Category).where(Category.room_id == self.room_id)
                 result = await session.execute(stmt)
@@ -756,7 +734,10 @@ class RoomManager:
 
         self._is_running = True
         await self._restore_from_redis()
-        self._cleanup_task = asyncio.create_task(self._periodic_cleanup_loop())
+        self._cleanup_task = _create_logged_task(
+            self._periodic_cleanup_loop(),
+            name="room_manager_cleanup",
+        )
         logger.info("[RoomManager] Started with cleanup interval of %ss", self.CLEANUP_INTERVAL_SECONDS)
 
     async def _restore_from_redis(self):
@@ -770,7 +751,7 @@ class RoomManager:
                 continue
             room = GameRoom.from_redis_dict(state)
             self.rooms[room_id] = room
-            asyncio.create_task(room.start_idle_check())
+            await room.start_idle_check()
         if states:
             logger.info("[RoomManager] Restored %s room(s) from Redis", len(states))
 
@@ -841,7 +822,7 @@ class RoomManager:
         if room_id not in self.rooms:
             room = GameRoom(room_id)
             self.rooms[room_id] = room
-            asyncio.create_task(room.start_idle_check())
+            _create_logged_task(room.start_idle_check(), name=f"idle_check_start_{room_id}")
             logger.info("[RoomManager] Created new room: %s (total rooms: %s)", room_id, len(self.rooms))
         return self.rooms[room_id]
 
@@ -862,9 +843,8 @@ class RoomManager:
             logger.info("[RoomManager] Removed room %s (total rooms: %s)", room_id, len(self.rooms))
 
     async def cleanup_empty_rooms(self):
-        """Remove empty rooms (called on disconnect for immediate cleanup)"""
+        """Remove all currently empty rooms."""
         empty_rooms = [room_id for room_id, room in self.rooms.items() if room.is_empty()]
-
         for room_id in empty_rooms:
             await self.remove_room(room_id)
 
@@ -894,24 +874,15 @@ class RoomManager:
 
         Returns room_id if found, None otherwise
         """
-        import random
+        available_rooms = [
+            room_id
+            for room_id, room in self.rooms.items()
+            if not room.metadata.is_private
+            and 0 < len(room.players) < max_players
+            and room.metadata.game_phase == "lobby"
+        ]
 
-        available_rooms = []
-
-        for room_id, room in self.rooms.items():
-            # Check if room meets criteria
-            if (
-                not room.metadata.is_private
-                and len(room.players) < max_players
-                and len(room.players) > 0
-                and room.metadata.game_phase == "lobby"
-            ):
-                available_rooms.append(room_id)
-
-        if available_rooms:
-            return random.choice(available_rooms)
-
-        return None
+        return random.choice(available_rooms) if available_rooms else None
 
 
 # Global room manager instance

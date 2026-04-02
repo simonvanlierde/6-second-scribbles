@@ -89,6 +89,7 @@ export function useGameConnection() {
 
       case "room_state":
         for (const p of message.players) store.addPlayer(p.id, p.name);
+        if (message.hostId) store.setHost(message.hostId);
         store.setCategories(message.categories);
         store.setGamePhase(message.gamePhase);
         if (message.roundStartTime) store.setRoundStartTime(message.roundStartTime);
@@ -99,6 +100,7 @@ export function useGameConnection() {
 
       case "player_joined":
         for (const p of message.players) store.addPlayer(p.id, p.name);
+        if (message.isHost) store.setHost(message.playerId);
         break;
 
       case "player_left":
