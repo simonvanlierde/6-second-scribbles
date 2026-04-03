@@ -1,7 +1,16 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.9/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
   "files": {
-    "includes": ["**", "!.astro", "!dist", "!node_modules", "!coverage", "!playwright-report"]
+    "includes": [
+      "**",
+      "!.astro",
+      "!dist",
+      "!node_modules",
+      "!coverage",
+      "!playwright-report",
+      "!test-results",
+      "!src/generated"
+    ]
   },
   "vcs": {
     "useIgnoreFile": true

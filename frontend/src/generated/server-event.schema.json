@@ -1,0 +1,829 @@
+{
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "room_state",
+          "title": "Type",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "title": "Id",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "categories": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Categories",
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "title": "PlayerSnapshot",
+            "type": "object"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "hostId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hostid"
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "gamePhase": {
+          "enum": [
+            "lobby",
+            "drawing",
+            "guessing",
+            "scoring",
+            "complete"
+          ],
+          "type": "string"
+        },
+        "difficulty": {
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "type": "string"
+        },
+        "maxRounds": {
+          "title": "Maxrounds",
+          "type": "integer"
+        },
+        "roundStartTime": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Roundstarttime"
+        },
+        "roundLength": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "padVisibility": {
+          "title": "Padvisibility",
+          "type": "boolean"
+        },
+        "language": {
+          "pattern": "^[a-z]{2,5}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "difficulty",
+        "gamePhase",
+        "language",
+        "maxRounds",
+        "padVisibility",
+        "players",
+        "type"
+      ],
+      "title": "RoomStateEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "player_joined",
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "title": "Playerid",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "title": "Id",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "title": "PlayerListItem",
+            "type": "object"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "isHost": {
+          "title": "Ishost",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "isHost",
+        "name",
+        "playerId",
+        "players",
+        "type"
+      ],
+      "title": "PlayerJoinedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "host_restored",
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message",
+        "type"
+      ],
+      "title": "HostRestoredEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "description": "Recoverable in-band protocol error for an accepted websocket.",
+      "properties": {
+        "type": {
+          "enum": [
+            "protocol_error",
+            "permission_error",
+            "player_ready_error",
+            "submit_guess_error",
+            "join_error",
+            "kick_error"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "error",
+        "type"
+      ],
+      "title": "ProtocolErrorEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "start_round",
+          "title": "Type",
+          "type": "string"
+        },
+        "round": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Round"
+        },
+        "cards": {
+          "additionalProperties": {
+            "properties": {
+              "category": {
+                "title": "Category",
+                "type": "string"
+              },
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Items",
+                "type": "array"
+              },
+              "alternatives": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Alternatives"
+              },
+              "is_custom": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Is Custom"
+              }
+            },
+            "required": [
+              "category",
+              "items"
+            ],
+            "title": "PlayerCardPayload",
+            "type": "object"
+          },
+          "title": "Cards",
+          "type": "object"
+        },
+        "roundStartTime": {
+          "title": "Roundstarttime",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cards",
+        "roundStartTime",
+        "type"
+      ],
+      "title": "StartRoundBroadcastEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "ready_status",
+          "title": "Type",
+          "type": "string"
+        },
+        "readyCount": {
+          "title": "Readycount",
+          "type": "integer"
+        },
+        "totalPlayers": {
+          "title": "Totalplayers",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "readyCount",
+        "totalPlayers",
+        "type"
+      ],
+      "title": "ReadyStatusEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "host_changed",
+          "title": "Type",
+          "type": "string"
+        },
+        "newHostId": {
+          "title": "Newhostid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "newHostId",
+        "type"
+      ],
+      "title": "HostChangedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "language_update",
+          "title": "Type",
+          "type": "string"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        }
+      },
+      "required": [
+        "language",
+        "type"
+      ],
+      "title": "LanguageUpdatedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "player_left",
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "title": "Playerid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "playerId",
+        "type"
+      ],
+      "title": "PlayerLeftEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "kick_vote_started",
+          "title": "Type",
+          "type": "string"
+        },
+        "targetPlayerId": {
+          "title": "Targetplayerid",
+          "type": "string"
+        },
+        "targetPlayerName": {
+          "title": "Targetplayername",
+          "type": "string"
+        },
+        "initiatorId": {
+          "title": "Initiatorid",
+          "type": "string"
+        },
+        "requiredVotes": {
+          "title": "Requiredvotes",
+          "type": "integer"
+        },
+        "currentVotes": {
+          "title": "Currentvotes",
+          "type": "integer"
+        },
+        "expiresAt": {
+          "title": "Expiresat",
+          "type": "number"
+        }
+      },
+      "required": [
+        "currentVotes",
+        "expiresAt",
+        "initiatorId",
+        "requiredVotes",
+        "targetPlayerId",
+        "targetPlayerName",
+        "type"
+      ],
+      "title": "KickVoteStartedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "kick_vote_updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "targetPlayerId": {
+          "title": "Targetplayerid",
+          "type": "string"
+        },
+        "currentVotes": {
+          "title": "Currentvotes",
+          "type": "integer"
+        },
+        "requiredVotes": {
+          "title": "Requiredvotes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currentVotes",
+        "requiredVotes",
+        "targetPlayerId",
+        "type"
+      ],
+      "title": "KickVoteUpdatedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "kick_vote_expired",
+          "title": "Type",
+          "type": "string"
+        },
+        "targetPlayerId": {
+          "title": "Targetplayerid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "targetPlayerId",
+        "type"
+      ],
+      "title": "KickVoteExpiredEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "player_kicked",
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "title": "Playerid",
+          "type": "string"
+        },
+        "playerName": {
+          "title": "Playername",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "playerId",
+        "playerName",
+        "reason",
+        "type"
+      ],
+      "title": "PlayerKickedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "round_complete",
+          "title": "Type",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "playerId": {
+                "title": "Playerid",
+                "type": "string"
+              },
+              "targetPlayerId": {
+                "title": "Targetplayerid",
+                "type": "string"
+              },
+              "correctGuesses": {
+                "title": "Correctguesses",
+                "type": "integer"
+              },
+              "totalItems": {
+                "title": "Totalitems",
+                "type": "integer"
+              },
+              "pointsEarned": {
+                "title": "Pointsearned",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "correctGuesses",
+              "playerId",
+              "pointsEarned",
+              "targetPlayerId",
+              "totalItems"
+            ],
+            "title": "RoundResultItem",
+            "type": "object"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "scores": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Scores",
+          "type": "object"
+        }
+      },
+      "required": [
+        "results",
+        "scores",
+        "type"
+      ],
+      "title": "RoundCompleteBroadcastEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "game_complete",
+          "title": "Type",
+          "type": "string"
+        },
+        "finalScores": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Finalscores",
+          "type": "object"
+        },
+        "winner": {
+          "title": "Winner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finalScores",
+        "type",
+        "winner"
+      ],
+      "title": "GameCompleteBroadcastEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "start_game",
+          "title": "Type",
+          "type": "string"
+        },
+        "difficulty": {
+          "anyOf": [
+            {
+              "enum": [
+                "easy",
+                "medium",
+                "hard"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rounds": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "roundLength": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "StartGameEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "start_guessing",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "StartGuessingEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "restart_game",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "RestartGameEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "settings_update",
+          "title": "Type",
+          "type": "string"
+        },
+        "difficulty": {
+          "anyOf": [
+            {
+              "enum": [
+                "easy",
+                "medium",
+                "hard"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rounds": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "roundLength": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "SettingsUpdateEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "draw_stroke",
+            "draw_stroke_partial"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Playerid"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DrawStrokeEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "drawpad_clear",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DrawpadClearEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "pad_visibility",
+          "title": "Type",
+          "type": "string"
+        },
+        "visible": {
+          "default": true,
+          "title": "Visible",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "PadVisibilityEvent",
+      "type": "object"
+    }
+  ]
+}

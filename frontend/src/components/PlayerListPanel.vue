@@ -20,7 +20,7 @@ function initiateKick(targetPlayerId: string) {
 }
 
 function confirmKick(targetPlayerId: string) {
-  send({ type: "initiate_kick", playerId: store.localPlayerId, targetPlayerId });
+  send({ type: "initiate_kick", targetPlayerId });
   showKickConfirm.value = null;
 }
 
@@ -29,7 +29,7 @@ function cancelKick() {
 }
 
 function voteToKick(targetPlayerId: string) {
-  send({ type: "cast_kick_vote", playerId: store.localPlayerId, targetPlayerId });
+  send({ type: "cast_kick_vote", targetPlayerId });
 }
 
 const targetPlayerName = computed(() => store.playersList.find((p) => p.id === showKickConfirm.value)?.name);

@@ -1,143 +1,143 @@
-set shell := ["zsh", "-euo", "pipefail", "-c"]
+set shell := ["bash", "-euo", "pipefail", "-c"]
 set dotenv-load := true
 
-# List available recipes
+# List available recipes.
 default:
     @just --list
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
-# Start everything: infra + backend + frontend
+# Start Docker, then the frontend and backend dev servers.
 [group('dev')]
 dev: up
-    pnpm --dir frontend run dev:web &
-    cd backend && uv run uvicorn app.main:app --reload --port 8000
-
-# Start only the frontend Vite dev server
-[group('dev')]
-dev-frontend:
-    pnpm --dir frontend run dev:web
-
-# Start only the backend API server
-[group('dev')]
-dev-backend:
-    cd backend && uv run uvicorn app.main:app --reload --port 8000
+    just frontend/dev &
+    just backend/dev
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
-# Start Docker services (postgres + redis)
+# Start infra only (PostgreSQL + Redis) — used by `just dev` for local backend development.
 [group('docker')]
 up:
     docker compose up -d
 
-# Stop Docker services
+# Stop infra services.
 [group('docker')]
 down:
     docker compose down
 
-# Stop Docker services and remove volumes (destructive!)
+# Stop infra services and remove volumes.
 [confirm("This will delete all local database data. Continue? (y/n)")]
 [group('docker')]
 down-clean:
     docker compose down -v
 
+# Start full dev stack in Docker (infra + backend with hot reload).
+[group('docker')]
+up-dev:
+    docker compose -f compose.yml -f compose.dev.yml up -d --build
+
+# Stop full dev stack.
+[group('docker')]
+down-dev:
+    docker compose -f compose.yml -f compose.dev.yml down
+
+# Start full prod stack in Docker (infra + backend, optimised build).
+[group('docker')]
+up-prod:
+    docker compose -f compose.yml -f compose.prod.yml up -d --build
+
+# Stop full prod stack.
+[group('docker')]
+down-prod:
+    docker compose -f compose.yml -f compose.prod.yml down
+
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-# Run all tests (frontend unit + backend)
+# Run all tests.
 [group('test')]
 test: test-frontend test-backend
 
-# Run frontend unit tests
+# Run frontend unit tests.
 [group('test')]
 test-frontend:
-    pnpm --dir frontend run test:unit -- --run
+    just frontend/test
 
-# Run frontend e2e tests (requires dev server running)
+# Run frontend e2e tests.
 [group('test')]
 test-e2e:
-    pnpm --dir frontend run test:e2e
+    just frontend/test-e2e
 
-# Run backend tests
+# Run backend tests.
 [group('test')]
 test-backend:
-    cd backend && uv run pytest -x --tb=short
+    just backend/test
 
-# Run backend tests with coverage report
-[group('test')]
-test-cov:
-    cd backend && uv run pytest --cov=app --cov-report=html --cov-report=term-missing
+# ── Check & Format ────────────────────────────────────────────────────────────
 
-# ── Lint & Format ─────────────────────────────────────────────────────────────
+# Check everything.
+[group('check')]
+check: check-frontend check-backend
 
-# Lint everything
-[group('lint')]
-lint: lint-frontend lint-backend
+# Check the frontend.
+[group('check')]
+check-frontend:
+    just frontend/check
 
-# Lint frontend
-[group('lint')]
-lint-frontend:
-    pnpm --dir frontend run lint
+# Check the backend.
+[group('check')]
+check-backend:
+    just backend/check
 
-# Lint backend (ruff)
-[group('lint')]
-lint-backend:
-    cd backend && uv run ruff check . --fix
-
-# Format everything
-[group('lint')]
+# Format everything.
+[group('format')]
 format: format-frontend format-backend
 
-# Format frontend (prettier)
-[group('lint')]
+# Format the frontend.
+[group('format')]
 format-frontend:
-    pnpm --dir frontend run format
+    just frontend/format
 
-# Format backend (ruff)
-[group('lint')]
+# Format the backend.
+[group('format')]
 format-backend:
-    cd backend && uv run ruff format .
+    just backend/format
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-# Build frontend for production
+# Build the frontend.
 [group('build')]
 build:
-    pnpm --dir frontend run build
-
-# Type-check frontend
-[group('build')]
-type-check:
-    pnpm --dir frontend run type-check
+    just frontend/build
 
 # ── Database ──────────────────────────────────────────────────────────────────
 
-# Run all pending database migrations
+# Run all pending database migrations.
 [group('db')]
 migrate:
-    cd backend && uv run alembic upgrade head
+    just backend/migrate
 
-# Create a new migration (usage: just migrate-new "add user table")
+# Create a new migration.
 [group('db')]
 migrate-new name:
-    cd backend && uv run alembic revision --autogenerate -m "{{ name }}"
+    just backend/migrate-new "{{ name }}"
 
-# Seed the database with card deck data
+# Seed the database with card deck data.
 [group('db')]
 seed:
-    cd backend && uv run python scripts/seed_data.py
+    just backend/seed
 
 # ── Install ───────────────────────────────────────────────────────────────────
 
-# Install all dependencies
+# Install all dependencies.
 [group('install')]
 install: install-frontend install-backend
 
-# Install all dependencies (root + frontend via pnpm workspaces + backend)
+# Install frontend dependencies.
 [group('install')]
 install-frontend:
-    pnpm install
+    just frontend/install
 
-# Install backend Python dependencies
+# Install backend dependencies.
 [group('install')]
 install-backend:
-    cd backend && uv sync --all-groups
+    just backend/install

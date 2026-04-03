@@ -1,74 +1,46 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# List available recipes
+# List available recipes.
 default:
     @just --list
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
-# Start Vite dev server
+# Start the frontend dev server.
 [group('dev')]
 dev:
-    npm run dev:web
+    pnpm run dev
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-# Run unit tests once
+# Run unit tests.
 [group('test')]
 test:
-    npm run test:unit
+    pnpm run test:unit
 
-# Run unit tests in watch mode
-[group('test')]
-test-watch:
-    npm run test:unit:watch
-
-# Run unit tests once (CI mode)
-[group('test')]
-test-ci:
-    npm run test:unit
-
-# Run e2e tests with Playwright
+# Run e2e tests.
 [group('test')]
 test-e2e:
-    npm run test:e2e
+    pnpm run test:e2e
 
-# Run e2e tests with Playwright UI
-[group('test')]
-test-e2e-ui:
-    npx playwright test --ui
+# ── Check & Format ────────────────────────────────────────────────────────────
 
-# ── Lint & Format ─────────────────────────────────────────────────────────────
-
-# Run all linters
-[group('lint')]
-lint:
-    npm run lint
-
+# Run all checks (lint, type-check).
+[group('check')]
 check:
-    npm run lint
-    npm run type-check
+    pnpm run lint
+    pnpm run type-check
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-# Type-check with vue-tsc
-[group('build')]
-type-check:
-    npm run type-check
-
-# Build for production
+# Build the frontend for production.
 [group('build')]
 build:
-    npm run build
-
-# Preview production build locally
-[group('build')]
-preview:
-    npm run preview
+    pnpm run build
 
 # ── Install ───────────────────────────────────────────────────────────────────
 
-# Install dependencies
+# Install frontend dependencies.
 [group('install')]
 install:
-    npm install
+    pnpm install

@@ -1,0 +1,21 @@
+# compose.prod.yml - Docker Compose overrides for production environment
+
+services:
+
+  backend:
+    build:
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - backend/.env.prod
+    
+
+  backend_migrations:
+    build:
+      target: migrations
+    env_file:
+      - backend/.env.prod
+
+  database:
+    env_file:
+      - backend/.env.prod

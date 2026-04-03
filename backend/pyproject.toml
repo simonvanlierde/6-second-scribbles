@@ -6,6 +6,7 @@
     "pydantic-settings>=2.12.0",
     "rapidfuzz>=3.14.3",
     "redis>=5.0",
+    "sqlalchemy>=2.0",
   ]
   description = "Backend for 6-second-scribbles"
   name = "backend"
@@ -15,7 +16,6 @@
 
 [dependency-groups]
   dev = [
-    "commitizen>=4.10.0",
     "fakeredis>=2.34.1",
     "greenlet>=3.3.2",
     "httpx>=0.28.1",

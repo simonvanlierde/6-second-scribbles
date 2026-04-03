@@ -29,7 +29,7 @@ onMounted(() => {
       const saved = localStorage.getItem("drawingState");
       if (saved) {
         const parsed = JSON.parse(saved);
-        store.setLocalPlayerCard(parsed.localPlayerCard);
+        store.localPlayerCard = parsed.localPlayerCard;
         canvas.loadDrawing(parsed.drawing);
       }
     } catch {
@@ -104,7 +104,6 @@ function stopTimer() {
 function endDrawingPhase() {
   if (store.gamePhase !== "drawing") return;
 
-  send({ type: "drawing_complete", playerId: store.localPlayerId, drawing: canvas.toDataURL() });
   send({ type: "player_ready", playerId: store.localPlayerId });
   localStorage.removeItem("drawingState");
 }
@@ -228,7 +227,6 @@ function handleBrushSizeChange(event: Event) {
   display: flex;
   gap: 2rem;
   padding: 2rem;
-  flex: 1;
 }
 
 .category-card {
@@ -262,6 +260,7 @@ function handleBrushSizeChange(event: Event) {
 
 .canvas-container {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: white;

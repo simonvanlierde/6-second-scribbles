@@ -24,3 +24,10 @@ export const GAME_SETTINGS = {
   rounds: ROUNDS,
   roundLengthSeconds: ROUND_LENGTH_SECONDS,
 };
+
+export const UI_TIMINGS = {
+  HEARTBEAT_INTERVAL_MS: 60_000,
+  JOIN_ERROR_REDIRECT_MS: 2_000,
+  SETTINGS_FLASH_MS: 900,
+  COPY_TOOLTIP_MS: 800,
+} as const;

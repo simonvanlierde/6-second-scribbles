@@ -3,11 +3,11 @@
     <div class="canvas-tools">
       <div class="tool-group">
         <label>Color:</label>
-        <input type="color" v-model="color">
+        <input v-model="color" type="color">
       </div>
       <div class="tool-group">
         <label>Size:</label>
-        <input type="range" min="1" max="20" v-model.number="width">
+        <input v-model.number="width" type="range" min="1" max="20">
       </div>
       <div class="tool-group"><button type="button" class="btn btn-small" @click="clearLocal">Clear</button></div>
     </div>

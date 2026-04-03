@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Import your models and Base
-from app.config import settings
-from app.database import Base
+from app.core.config import settings
+from app.core.database import Base
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection

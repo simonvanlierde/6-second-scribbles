@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from app.game_room import GameRoom, RoomManager, room_manager
+from app.rooms.manager import GameRoom, RoomManager, room_manager
 
 if TYPE_CHECKING:
     from httpx import AsyncClient

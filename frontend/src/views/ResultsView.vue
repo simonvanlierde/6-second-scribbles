@@ -69,7 +69,7 @@ function playAgain() {
     store.resetRound();
 
     // Reset game state to lobby
-    store.setGamePhase("lobby");
+    store.gamePhase = "lobby";
 
     // Clear game engine for fresh start
     gameEngineRef.value = null;

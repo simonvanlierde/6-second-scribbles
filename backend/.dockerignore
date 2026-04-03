@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+
+# Test / coverage
+tests/
+.pytest_cache/
+.coverage
+.coveragerc
+htmlcov/
+
+# Linting / type-checking caches
+.ruff_cache/
+.mypy_cache/
+
+# Secrets — use environment variables or secrets at runtime
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI / tooling config not needed at runtime
+.github/
+.pre-commit-config.yaml
+README.md

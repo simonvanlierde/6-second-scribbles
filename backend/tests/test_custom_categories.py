@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock
 
 from sqlalchemy import select
 
-from app.db_models import Card, Category
-from app.game_room import GameRoom, PlayerInfo, room_manager
+from app.categories.models import Card, Category
+from app.rooms.manager import GameRoom, PlayerInfo, room_manager
 
 if TYPE_CHECKING:
     from httpx import AsyncClient

@@ -56,14 +56,19 @@ export function useGameEngine() {
   }
 
   function startRound(roundNumber: number, difficulty: Difficulty, roundLengthSeconds: number) {
-    const cards = assignCards(difficulty);
+    const rawCards = assignCards(difficulty);
+    const cards = Object.fromEntries(
+      Object.entries(rawCards).map(([id, card]) => [
+        id,
+        { ...card, alternatives: card.alternatives ?? null, is_custom: card.is_custom ?? null },
+      ]),
+    );
 
     // Send start_round to server (server will add roundStartTime and broadcast)
     send({
       type: "start_round",
       round: roundNumber,
       cards,
-      roundStartTime: 0, // Will be replaced by server
     });
 
     // After drawing phase, start guessing phase
@@ -77,16 +82,10 @@ export function useGameEngine() {
 
   function startGuessingPhase() {
     // Broadcast to start guessing
-    send({
-      type: "start_guessing",
-      assignments: {}, // Simple: everyone guesses everyone
-      roundStartTime: Date.now(), // Guessing phase start time
-    });
+    send({ type: "start_guessing" });
   }
 
   function startGame(difficulty: Difficulty, maxRounds: number, roundLengthSeconds: number) {
-    store.setDifficulty(difficulty);
-    store.setMaxRounds(maxRounds);
     store.startGame(difficulty, maxRounds, roundLengthSeconds);
 
     // Start the first round

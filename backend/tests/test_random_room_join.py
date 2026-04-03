@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
-from app.game_room import GameRoom, PlayerInfo, room_manager
+from app.rooms.manager import GameRoom, PlayerInfo, room_manager
 from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.game_room import GameRoom, PlayerInfo, room_manager
+from app.rooms.manager import GameRoom, PlayerInfo, room_manager
 
 
 class TestDelayedHostTransfer:
@@ -15,7 +15,7 @@ class TestDelayedHostTransfer:
         """Test that host retains status when reconnecting before transfer completes."""
         room_id = "HOST_RECONNECT_TEST"
         room = room_manager.get_or_create_room(room_id)
-        monkeypatch.setattr("app.game_room.settings.host_transfer_delay_ms", 3600_000)
+        monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 3600_000)
 
         ws1, ws2 = make_ws(), make_ws()
 
@@ -43,7 +43,7 @@ class TestDelayedHostTransfer:
         """Test that host is transferred if they don't reconnect in time."""
         room_id = "HOST_TRANSFER_TEST"
         room = room_manager.get_or_create_room(room_id)
-        monkeypatch.setattr("app.game_room.settings.host_transfer_delay_ms", 0)
+        monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 0)
 
         ws1, ws2 = make_ws(), make_ws()
 

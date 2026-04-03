@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useClipboard } from "@vueuse/core";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 
@@ -17,15 +18,17 @@ const route = useRoute();
 const store = useGameStore();
 const { send } = useGameConnection();
 const { showNotification } = useNotifications();
+const { copy } = useClipboard();
 const gameEngineRef = injectGameEngine();
 const { leaveRoom } = useLeaveRoom(gameEngineRef);
 
 const leaveDialogRef = ref<HTMLDialogElement | null>(null);
-const showCopyTooltip = ref(false);
 
 const showDrawpad = computed({
   get: () => store.showDrawpad,
-  set: (v: boolean) => store.setShowDrawpad(v),
+  set: (v: boolean) => {
+    store.showDrawpad = v;
+  },
 });
 
 const roomCode = computed(() => route.params.roomCode as string);
@@ -35,7 +38,7 @@ const canStart = computed(() => store.canStartGame && store.isHost);
 function handleClear() {
   if (store.isHost) {
     store.clearStrokes();
-    send({ type: "drawpad_clear", playerId: store.localPlayerId });
+    send({ type: "drawpad_clear" });
   }
 }
 
@@ -43,7 +46,7 @@ function toggleDrawpad() {
   const newVal = !showDrawpad.value;
   showDrawpad.value = newVal;
   if (store.isHost) {
-    send({ type: "pad_visibility", playerId: store.localPlayerId, visible: newVal });
+    send({ type: "pad_visibility", visible: newVal });
   }
 }
 
@@ -64,14 +67,8 @@ function startGame() {
 }
 
 async function copyRoomCode() {
-  try {
-    await navigator.clipboard.writeText(roomCode.value);
-    showNotification("Copied!");
-    showCopyTooltip.value = true;
-    setTimeout(() => (showCopyTooltip.value = false), 800);
-  } catch {
-    // clipboard not available
-  }
+  await copy(roomCode.value);
+  showNotification("Copied!");
 }
 
 function showLeaveConfirmation() {
@@ -88,8 +85,8 @@ function confirmLeave() {
 }
 
 function toggleRoomPadVisibility() {
-  store.setShowPadForRoom(!store.showPadForRoom);
-  send({ type: "pad_visibility", playerId: store.localPlayerId, visible: store.showPadForRoom });
+  store.showPadForRoom = !store.showPadForRoom;
+  send({ type: "pad_visibility", visible: store.showPadForRoom });
 }
 </script>
 

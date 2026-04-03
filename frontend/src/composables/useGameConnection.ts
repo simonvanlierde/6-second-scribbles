@@ -1,8 +1,8 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from "@/composables/notifications";
-import { BACKEND_HOST, GAME_SETTINGS } from "@/config/gameConfig";
-import type { GameMessage } from "@/shared/types";
+import { BACKEND_HOST, GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
+import { type ClientEvent, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
 import { useGameStore } from "@/stores/game";
 
 // Singleton WebSocket connection shared across all components
@@ -44,8 +44,12 @@ export function useGameConnection() {
 
     ws.onmessage = (event: MessageEvent) => {
       try {
-        const message: GameMessage = JSON.parse(event.data);
-        handleMessage(message);
+        const result = ServerEventSchema.safeParse(JSON.parse(event.data));
+        if (!result.success) {
+          console.error("[WebSocket] Invalid message from server:", result.error.issues, "Raw:", event.data);
+          return;
+        }
+        handleMessage(result.data);
       } catch (error) {
         console.error("[WebSocket] Failed to parse message:", error, "Raw:", event.data);
         connectionError.value = "Failed to process server message";
@@ -65,22 +69,21 @@ export function useGameConnection() {
     };
   }
 
-  function send(message: GameMessage) {
+  function send(message: ClientEvent) {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
     }
   }
 
-  function handleMessage(message: GameMessage) {
-    if (import.meta.env.DEV) console.log("[WebSocket] Received:", message.type);
+  // ── Connection & player events ────────────────────────────────────────────
 
+  function handleConnectionEvent(message: ServerEvent) {
     switch (message.type) {
-      case "join_error": {
+      case "join_error":
         showNotification(message.message || "Unable to join room", "error");
         console.error("[WebSocket] Join error:", message.message);
-        setTimeout(() => router.push("/"), 2000);
+        setTimeout(() => router.push("/"), UI_TIMINGS.JOIN_ERROR_REDIRECT_MS);
         break;
-      }
 
       case "host_restored":
         console.log("[WebSocket] Host status restored");
@@ -89,20 +92,20 @@ export function useGameConnection() {
 
       case "room_state":
         store.setPlayers(message.players);
-        if (message.hostId) store.setHost(message.hostId);
-        store.setCategories(message.categories);
-        store.setGamePhase(message.gamePhase);
-        if (message.difficulty) store.setDifficulty(message.difficulty);
-        if (message.maxRounds) store.setMaxRounds(message.maxRounds);
-        if (message.roundStartTime) store.setRoundStartTime(message.roundStartTime);
-        if (message.roundLength) store.setRoundLength(message.roundLength);
-        if (message.padVisibility !== undefined) store.setShowPadForRoom(message.padVisibility);
-        if (message.language) store.setLanguage(message.language);
+        if (message.hostId) store.hostId = message.hostId;
+        store.categories = message.categories ?? [];
+        store.gamePhase = message.gamePhase;
+        if (message.difficulty) store.difficulty = message.difficulty;
+        if (message.maxRounds) store.maxRounds = message.maxRounds;
+        if (message.roundStartTime) store.roundStartTime = message.roundStartTime;
+        if (message.roundLength) store.roundLength = message.roundLength;
+        if (message.padVisibility !== undefined) store.showPadForRoom = message.padVisibility;
+        if (message.language) store.language = message.language;
         break;
 
       case "player_joined":
         store.setPlayers(message.players);
-        if (message.isHost) store.setHost(message.playerId);
+        if (message.isHost) store.hostId = message.playerId;
         break;
 
       case "player_left":
@@ -110,9 +113,15 @@ export function useGameConnection() {
         break;
 
       case "host_changed":
-        store.setHost(message.newHostId);
+        store.hostId = message.newHostId;
         break;
+    }
+  }
 
+  // ── Game flow events ──────────────────────────────────────────────────────
+
+  function handleGameFlowEvent(message: ServerEvent) {
+    switch (message.type) {
       case "start_game":
         store.startGame(
           message.difficulty || GAME_SETTINGS.difficulty.DEFAULT,
@@ -124,8 +133,8 @@ export function useGameConnection() {
 
       case "start_round":
         if (typeof message.cards === "object" && message.cards !== null) {
-          store.setRoundStartTime(message.roundStartTime);
-          store.startRound(message.round, message.cards);
+          store.roundStartTime = message.roundStartTime;
+          store.startRound(message.round ?? 1, message.cards);
           if (router.currentRoute.value.name !== "game") {
             router.push(`/game/${store.roomCode}`);
           }
@@ -134,19 +143,14 @@ export function useGameConnection() {
         }
         break;
 
-      case "drawing_complete":
-        store.setPlayerDrawing(message.playerId, message.drawing);
-        break;
-
       case "start_guessing":
-        store.setRoundStartTime(message.roundStartTime);
-        store.setGamePhase("guessing");
+        store.gamePhase = "guessing";
         break;
 
       case "round_complete":
         store.setRoundResults(message.results);
         store.updateScores(message.scores);
-        store.setGamePhase("scoring");
+        store.gamePhase = "scoring";
         router.push(`/round-results/${store.roomCode}`);
         // RoundResultsView owns the 5-second countdown and calls startRound from there.
         break;
@@ -159,22 +163,29 @@ export function useGameConnection() {
 
       case "restart_game":
         store.resetRound();
-        store.setGamePhase("lobby");
+        store.gamePhase = "lobby";
         break;
 
       case "ready_status":
-        store.setReadyStatus(message.readyCount, message.totalPlayers);
+        store.readyCount = message.readyCount;
+        store.totalPlayers = message.totalPlayers;
         break;
 
       case "settings_update":
-        store.setDifficulty(message.difficulty);
-        store.setMaxRounds(message.rounds);
-        store.setRoundLength(message.roundLength);
+        if (message.difficulty) store.difficulty = message.difficulty;
+        if (message.rounds !== null) store.maxRounds = message.rounds ?? store.maxRounds;
+        if (message.roundLength !== null) store.roundLength = message.roundLength ?? store.roundLength;
         if (!store.isHost) {
           showNotification("Host updated game settings");
         }
         break;
+    }
+  }
 
+  // ── Drawing events ────────────────────────────────────────────────────────
+
+  function handleDrawingEvent(message: ServerEvent) {
+    switch (message.type) {
       case "draw_stroke":
       case "draw_stroke_partial":
         if (message.stroke && message.playerId !== store.localPlayerId) {
@@ -186,18 +197,23 @@ export function useGameConnection() {
         store.clearStrokes();
         break;
 
-      case "pad_visibility": {
-        store.setShowPadForRoom(message.visible);
-        store.setShowDrawpad(message.visible);
+      case "pad_visibility":
+        store.showPadForRoom = message.visible;
+        store.showDrawpad = message.visible;
         if (!store.isHost) {
           showNotification(
             message.visible ? "Host showed the drawpad for the room" : "Host hid the drawpad for the room",
           );
         }
         break;
-      }
+    }
+  }
 
-      case "kick_vote_started": {
+  // ── Kick & moderation events ──────────────────────────────────────────────
+
+  function handleKickEvent(message: ServerEvent) {
+    switch (message.type) {
+      case "kick_vote_started":
         store.startKickVote(message.targetPlayerId, {
           currentVotes: message.currentVotes,
           requiredVotes: message.requiredVotes,
@@ -209,7 +225,6 @@ export function useGameConnection() {
           showNotification(`Kick vote started for ${message.targetPlayerName}`);
         }
         break;
-      }
 
       case "kick_vote_updated":
         store.updateKickVote(message.targetPlayerId, {
@@ -232,32 +247,63 @@ export function useGameConnection() {
 
       case "kick_vote_expired":
         store.removeKickVote(message.targetPlayerId);
-        showNotification(`Kick vote for ${message.targetPlayerName} expired`);
+        showNotification(`Kick vote for ${message.targetPlayerId} expired`);
         break;
 
       case "kick_error":
         showNotification(message.error || "Failed to process kick request", "error");
         break;
 
-      case "language_update": {
+      case "language_update":
         if (message.language) {
-          store.setLanguage(message.language);
+          store.language = message.language;
           if (!store.isHost) {
             const langNames: Record<string, string> = { en: "English", es: "Español", fr: "Français" };
             showNotification(`Language changed to ${langNames[message.language] || message.language}`);
           }
         }
         break;
-      }
+    }
+  }
 
-      case "custom_category_added":
-        store.setCategories([...store.categories, message.category.name]);
-        showNotification(`Added custom category: ${message.category.name}`);
+  function handleMessage(message: ServerEvent) {
+    if (import.meta.env.DEV) console.log("[WebSocket] Received:", message.type);
+
+    switch (message.type) {
+      case "join_error":
+      case "host_restored":
+      case "room_state":
+      case "player_joined":
+      case "player_left":
+      case "host_changed":
+        handleConnectionEvent(message);
         break;
 
-      case "custom_category_removed":
-        store.setCategories(store.categories.filter((name) => name !== message.category_name));
-        showNotification(`Removed custom category: ${message.category_name}`);
+      case "start_game":
+      case "start_round":
+      case "start_guessing":
+      case "round_complete":
+      case "game_complete":
+      case "restart_game":
+      case "ready_status":
+      case "settings_update":
+        handleGameFlowEvent(message);
+        break;
+
+      case "draw_stroke":
+      case "draw_stroke_partial":
+      case "drawpad_clear":
+      case "pad_visibility":
+        handleDrawingEvent(message);
+        break;
+
+      case "kick_vote_started":
+      case "kick_vote_updated":
+      case "player_kicked":
+      case "kick_vote_expired":
+      case "kick_error":
+      case "language_update":
+        handleKickEvent(message);
         break;
     }
   }
@@ -265,8 +311,8 @@ export function useGameConnection() {
   function startHeartbeat() {
     stopHeartbeat();
     heartbeatInterval = window.setInterval(() => {
-      send({ type: "heartbeat", playerId: store.localPlayerId });
-    }, 60000);
+      send({ type: "heartbeat" });
+    }, UI_TIMINGS.HEARTBEAT_INTERVAL_MS);
   }
 
   function stopHeartbeat() {

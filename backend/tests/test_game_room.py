@@ -4,7 +4,8 @@ import json
 import time
 from unittest.mock import patch
 
-from app.game_room import GameRoom
+from app.rooms.manager import GameRoom
+from app.rooms.state import GuessSubmissionState, PlayerCardState
 
 
 class TestGameRoom:
@@ -51,7 +52,7 @@ class TestGameRoom:
     async def test_host_transfer_on_host_leave(self, game_room, make_ws, monkeypatch) -> None:
         """Test that host is transferred when the host leaves."""
         ws1, ws2 = make_ws(), make_ws()
-        monkeypatch.setattr("app.game_room.settings.host_transfer_delay_ms", 0)
+        monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 0)
 
         await game_room.add_player("player-1", "Alice", ws1)
         await game_room.add_player("player-2", "Bob", ws2)
@@ -80,7 +81,7 @@ class TestGameRoom:
 
     async def test_update_player_activity(self, game_room, mock_websocket) -> None:
         """Test updating player's last activity timestamp."""
-        with patch("app.game_room.time.time", side_effect=[1000.0, 1000.0, 1001.0]):
+        with patch("app.rooms.manager.time.time", side_effect=[1000.0, 1000.0, 1001.0]):
             await game_room.add_player("player-1", "Alice", mock_websocket)
             initial_time = game_room.players["player-1"].last_activity
 
@@ -242,15 +243,15 @@ class TestGameRoom:
         game_room.metadata.ready_players.add("host-1")
         game_room.metadata.submitted_players.add("player-2")
         game_room.metadata.player_cards = {
-            "player-1": {
-                "category": "Animals",
-                "items": ["cat", "dog"],
-                "alternatives": {"cat": ["kitty"]},
-                "is_custom": False,
-            },
+            "player-1": PlayerCardState(
+                category="Animals",
+                items=["cat", "dog"],
+                alternatives={"cat": ["kitty"]},
+                is_custom=False,
+            ),
         }
         game_room.metadata.guess_submissions = [
-            {"playerId": "player-2", "targetPlayerId": "player-1", "guesses": ["cat"]},
+            GuessSubmissionState(player_id="player-2", target_player_id="player-1", guesses=["cat"]),
         ]
 
         restored_room = GameRoom.from_state(game_room.to_state())
@@ -260,10 +261,9 @@ class TestGameRoom:
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
         assert restored_room.metadata.submitted_players == {"player-2"}
-        assert restored_room.metadata.player_cards["player-1"]["alternatives"] == {"cat": ["kitty"]}
-        assert restored_room.metadata.guess_submissions == [
-            {"playerId": "player-2", "targetPlayerId": "player-1", "guesses": ["cat"]},
-        ]
+        assert restored_room.metadata.player_cards["player-1"].alternatives == {"cat": ["kitty"]}
+        assert restored_room.metadata.guess_submissions[0].player_id == "player-2"
+        assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
 
 
 class TestRoomManager:
@@ -311,25 +311,6 @@ class TestRoomManager:
 
         await room_manager.remove_room(room_id)
         assert len(room_manager.rooms) == 0
-
-    async def test_cleanup_empty_rooms(self, room_manager, make_ws) -> None:
-        """Test cleaning up empty rooms."""
-        # Create multiple rooms
-        room1 = room_manager.get_or_create_room("ROOM01")
-        room_manager.get_or_create_room("ROOM02")
-        room3 = room_manager.get_or_create_room("ROOM03")
-
-        # Add players to some rooms
-        ws1, ws2 = make_ws(), make_ws()
-        await room1.add_player("p1", "Alice", ws1)
-        await room3.add_player("p2", "Bob", ws2)
-
-        # room2 is empty, should be cleaned up
-        await room_manager.cleanup_empty_rooms()
-
-        assert "ROOM01" in room_manager.rooms
-        assert "ROOM02" not in room_manager.rooms
-        assert "ROOM03" in room_manager.rooms
 
 
 class TestIdlePlayerDetection:

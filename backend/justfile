@@ -1,98 +1,56 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set dotenv-load := true
 
-# List available recipes
+# List available recipes.
 default:
     @just --list
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
-# Start FastAPI dev server with hot reload
+# Start the backend dev server.
 [group('dev')]
 dev:
     uv run uvicorn app.main:app --reload --port 8000
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-# Run tests (fail fast)
+# Run backend tests.
 [group('test')]
 test:
     uv run pytest -x --tb=short
 
-# Run tests with coverage report
-[group('test')]
-test-cov:
-    uv run pytest --cov=app --cov-report=html --cov-report=term-missing
+# ── Check & Format ────────────────────────────────────────────────────────────
 
-# Run only unit tests
-[group('test')]
-test-unit:
-    uv run pytest -m unit --tb=short
-
-# Run only integration tests
-[group('test')]
-test-integration:
-    uv run pytest -m integration --tb=short
-
-# Run tests in watch mode (requires pytest-watch)
-[group('test')]
-test-watch:
-    uv run ptw -- --tb=short
-
-# ── Lint & Format ─────────────────────────────────────────────────────────────
-
-# Lint with ruff (auto-fix)
-[group('lint')]
-lint:
-    uv run ruff check . --fix
-
-# Format with ruff
-[group('lint')]
+# Format the backend.
+[group('format')]
 format:
     uv run ruff format .
 
-# Lint + format in one pass
-[group('lint')]
+# Run backend checks.
+[group('check')]
 check:
-    uv run ruff check . --fix && uv run ruff format . && uv run ty check .
+    uv run ruff check . && uv run ruff format --check . && uv run ty check .
 
 # ── Database ──────────────────────────────────────────────────────────────────
 
-# Run all pending migrations
+# Run all pending migrations.
 [group('db')]
 migrate:
     uv run alembic upgrade head
 
-# Roll back one migration
-[group('db')]
-migrate-down:
-    uv run alembic downgrade -1
-
-# Show current migration status
-[group('db')]
-migrate-status:
-    uv run alembic current
-
-# Create a new auto-generated migration (usage: just migrate-new "add user table")
+# Create a new auto-generated migration.
 [group('db')]
 migrate-new name:
     uv run alembic revision --autogenerate -m "{{ name }}"
 
-# Seed the database with card deck data
+# Seed the database with card deck data.
 [group('db')]
 seed:
     uv run python scripts/seed_data.py
 
 # ── Install ───────────────────────────────────────────────────────────────────
 
-# Install all dependencies (including dev)
+# Install backend dependencies.
 [group('install')]
 install:
     uv sync --all-groups
-
-# ── Misc ──────────────────────────────────────────────────────────────────────
-
-# Open an interactive Python shell with app context
-[group('misc')]
-shell:
-    uv run python -c "import asyncio; import app.main; print('App loaded. Use asyncio.run() for async.')" && uv run python

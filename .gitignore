@@ -1,9 +1,7 @@
 ### Environment
 .env
-.env.local
-.env.*.local
-*.local
-.env.production
+.env.*
+!.env.example
 
 ### OS
 .DS_Store

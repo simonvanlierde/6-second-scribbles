@@ -113,42 +113,15 @@ export const useGameStore = defineStore("game", () => {
     players.value = new Map();
   }
 
-  function setHost(id: string) {
-    hostId.value = id;
-  }
-
-  function setGamePhase(phase: typeof gamePhase.value) {
-    gamePhase.value = phase;
-  }
-
-  function setDifficulty(diff: Difficulty) {
-    difficulty.value = diff;
-  }
-
-  function setMaxRounds(rounds: number) {
-    maxRounds.value = rounds;
-  }
-
-  function setRoundStartTime(t: number | undefined) {
-    roundStartTime.value = t;
-  }
-
-  function setRoundLength(s: number) {
-    roundLength.value = s;
-  }
-
-  function setLocalPlayerCard(card: Card | undefined) {
-    localPlayerCard.value = card;
-  }
-
   function startGame(gameDifficulty: Difficulty, gameRounds: number, roundLengthSec: number) {
     difficulty.value = gameDifficulty;
     maxRounds.value = gameRounds;
     roundLength.value = roundLengthSec;
     currentRound.value = 0;
-    players.value.forEach((player) => {
-      player.score = 0;
-    });
+
+    const next = new Map(players.value);
+    for (const [id, p] of next) next.set(id, { ...p, score: 0 });
+    players.value = next;
   }
 
   function startRound(roundNumber: number, cards: Record<string, Card>) {
@@ -170,9 +143,9 @@ export const useGameStore = defineStore("game", () => {
   /** Resets round counter and all player scores (used when restarting a game). */
   function resetRound() {
     currentRound.value = 0;
-    players.value.forEach((player) => {
-      player.score = 0;
-    });
+    const next = new Map(players.value);
+    for (const [id, p] of next) next.set(id, { ...p, score: 0 });
+    players.value = next;
   }
 
   function addStroke(stroke: DrawStroke) {
@@ -283,14 +256,6 @@ export const useGameStore = defineStore("game", () => {
     saveState,
   );
 
-  function setShowDrawpad(val: boolean) {
-    showDrawpad.value = val;
-  }
-
-  function setShowPadForRoom(val: boolean) {
-    showPadForRoom.value = val;
-  }
-
   function setRoomCodeAndSave(code: string) {
     setRoomCode(code);
     saveState();
@@ -299,19 +264,6 @@ export const useGameStore = defineStore("game", () => {
   function setLocalPlayerAndSave(id: string, name: string) {
     setLocalPlayer(id, name);
     saveState();
-  }
-
-  function setCategories(newCategories: string[]) {
-    categories.value = newCategories;
-  }
-
-  function setReadyStatus(ready: number, total: number) {
-    readyCount.value = ready;
-    totalPlayers.value = total;
-  }
-
-  function setLanguage(lang: string) {
-    language.value = lang;
   }
 
   function startKickVote(targetPlayerId: string, vote: KickVote) {
@@ -342,7 +294,7 @@ export const useGameStore = defineStore("game", () => {
   }
 
   return {
-    // State
+    // State (exposed as writable refs — set directly: store.difficulty = 'hard')
     roomCode,
     localPlayerId,
     localPlayerName,
@@ -371,20 +323,13 @@ export const useGameStore = defineStore("game", () => {
     canStartGame,
     isHost,
 
-    // Actions
+    // Actions (complex mutations with side-effects)
     setLocalPlayer,
     setRoomCode,
     addPlayer,
     setPlayers,
     removePlayer,
     clearPlayers,
-    setHost,
-    setGamePhase,
-    setDifficulty,
-    setMaxRounds,
-    setRoundStartTime,
-    setRoundLength,
-    setLocalPlayerCard,
     startGame,
     startRound,
     resetRound,
@@ -400,11 +345,6 @@ export const useGameStore = defineStore("game", () => {
     saveState,
     setRoomCodeAndSave,
     setLocalPlayerAndSave,
-    setCategories,
-    setReadyStatus,
-    setShowDrawpad,
-    setShowPadForRoom,
-    setLanguage,
     startKickVote,
     updateKickVote,
     removeKickVote,

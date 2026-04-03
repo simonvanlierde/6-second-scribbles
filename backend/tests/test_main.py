@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-from app.game_room import room_manager
+from app.rooms.manager import room_manager
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 

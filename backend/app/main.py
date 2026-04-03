@@ -10,24 +10,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.exceptions import RedisError
 
-from app.config import settings
-from app.database import close_db, init_db
-from app.game_room import room_manager
-from app.redis_store import bind_app, close_redis, get_redis
-from app.routers.categories import router as categories_router
-from app.routers.rooms import router as rooms_router
-from app.routers.system import router as system_router
-from app.routers.ws import router as ws_router
+from app.categories.router import router as categories_router
+from app.core.config import settings
+from app.core.database import close_db, init_db
+from app.core.logging import configure_logging
+from app.core.redis import close_redis, get_redis
+from app.rooms.manager import room_manager
+from app.rooms.router import router as rooms_router
+from app.rooms.ws_router import router as ws_router
+from app.system.router import router as system_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+configure_logging()
 logger = logging.getLogger(__name__)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
 
 
 @asynccontextmanager
@@ -61,7 +58,6 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
-bind_app(app)
 
 app.add_middleware(
     CORSMiddleware,

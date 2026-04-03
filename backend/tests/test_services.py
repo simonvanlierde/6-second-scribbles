@@ -2,19 +2,46 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
 
-from app.api_schemas import CustomCategoryCreate, GuessRequest
-from app.db_models import Card, Category
-from app.game_room import GameRoom, PlayerInfo, room_manager
-from app.services import category_service, room_service, websocket_action_service, websocket_service
-from app.ws_protocol import RequestGameStateEvent
+from app.categories import service as category_service
+from app.categories.models import Card, Category
+from app.categories.schemas import GuessRequest
+from app.rooms import (
+    actions as websocket_action_service,
+)
+from app.rooms import (
+    kick_vote as kick_vote_service,
+)
+from app.rooms import (
+    lifecycle as room_lifecycle_service,
+)
+from app.rooms import (
+    mutations as room_mutation_service,
+)
+from app.rooms import (
+    player_lifecycle as player_lifecycle_service,
+)
+from app.rooms import (
+    rounds as round_service,
+)
+from app.rooms import (
+    router as room_service,
+)
+from app.rooms import (
+    ws_router as websocket_service,
+)
+from app.rooms.manager import GameRoom, PlayerInfo, RoomManager, room_manager
+from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent
+from app.rooms.schemas import CustomCategoryCreate
+from app.rooms.state import GuessSubmissionState, PlayerCardState
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -126,6 +153,96 @@ class TestRoomService:
         assert exc_info.value.detail == "Player ID is required"
 
 
+class TestKickVoteService:
+    async def test_cleanup_expired_votes_removes_only_elapsed_votes(self) -> None:
+        room = GameRoom("ROOM-KICK")
+        room.active_kick_votes = {
+            "expired-player": kick_vote_service.KickVote(
+                target_player_id="expired-player",
+                target_player_name="Expired",
+                initiated_by="host-1",
+                expires_at=time.time() - 1,
+            ),
+            "active-player": kick_vote_service.KickVote(
+                target_player_id="active-player",
+                target_player_name="Active",
+                initiated_by="host-1",
+                expires_at=time.time() + 30,
+            ),
+        }
+
+        removed = kick_vote_service.cleanup_expired_votes(room)
+
+        assert removed == 1
+        assert list(room.active_kick_votes) == ["active-player"]
+
+
+class TestRoomLifecycleService:
+    async def test_run_cleanup_hibernates_empty_room_after_threshold(self, make_ws) -> None:
+        manager = RoomManager()
+        room = manager.get_or_create_room("ROOM-HIBERNATE")
+        await room.add_player("player-1", "Player 1", cast("WebSocket", make_ws()))
+        await room.remove_player("player-1")
+        room._emptied_at = time.time() - 65
+
+        hibernated_count, removed_count = await room_lifecycle_service.run_cleanup(manager)
+
+        assert hibernated_count == 1
+        assert removed_count == 0
+        assert room.is_hibernated is True
+
+
+class TestRoundService:
+    async def test_score_round_updates_scores_and_returns_broadcast_event(self, make_ws) -> None:
+        room = GameRoom("ROOM-SCORE")
+        await room.add_player("player-1", "Alice", cast("WebSocket", make_ws()))
+        await room.add_player("player-2", "Bob", cast("WebSocket", make_ws()))
+        room.metadata.current_round = 1
+        room.metadata.max_rounds = 3
+        room.metadata.player_cards = {
+            "player-2": PlayerCardState(category="Animals", items=["cat", "dog"], alternatives={}, is_custom=False),
+        }
+        room.metadata.guess_submissions = [
+            GuessSubmissionState(player_id="player-1", target_player_id="player-2", guesses=["cat", "dog"]),
+        ]
+
+        event = round_service.score_round(room)
+
+        assert event.type == "round_complete"
+        assert event.scores == {"player-1": 20, "player-2": 20}
+        assert event.results[0].correct_guesses == 2
+        assert room.metadata.game_phase == "scoring"
+        assert room.metadata.player_scores == {"player-1": 20, "player-2": 20}
+
+
+class TestPlayerLifecycleService:
+    async def test_is_host_reflects_current_host_assignment(self, make_ws) -> None:
+        room = GameRoom("ROOM-HOST")
+        await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
+
+        assert player_lifecycle_service.is_host(room, "host-1") is True
+        assert player_lifecycle_service.is_host(room, "other-player") is False
+
+
+class TestRoomMutationService:
+    def test_apply_settings_update_updates_only_provided_fields(self) -> None:
+        room = GameRoom("ROOM-MUTATE")
+        room.metadata.difficulty = "medium"
+        room.metadata.max_rounds = 5
+        room.metadata.round_length = 30
+
+        room_mutation_service.apply_settings_update(
+            room,
+            difficulty="hard",
+            rounds=None,
+            round_length=45,
+        )
+
+        assert room.metadata.difficulty == "hard"
+        assert room.metadata.max_rounds == 5
+        assert room.metadata.round_length == 45
+
+
 class TestWebSocketService:
     async def test_handle_room_websocket_connection_runs_and_disconnects(self, monkeypatch) -> None:
         websocket = AsyncMock()
@@ -147,7 +264,7 @@ class TestWebSocketService:
         monkeypatch.setattr(websocket_service, "room_manager", fake_manager)
         monkeypatch.setattr(websocket_service, "RoomWebSocketSession", FakeSession)
 
-        await websocket_service.handle_room_websocket_connection(websocket, room_id="ROOMWS")
+        await websocket_service.websocket_endpoint(websocket, room_id="ROOMWS")
 
         websocket.accept.assert_awaited_once()
         assert events == ["run", "disconnect"]
@@ -168,21 +285,21 @@ class _FakeSession:
 
 
 class TestWebSocketActionService:
-    async def test_reject_if_not_host_uses_protocol_context(self, make_ws) -> None:
+    async def test_require_host_uses_protocol_context(self, make_ws) -> None:
         room = GameRoom("ROOM-ACT")
         await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
         session = _FakeSession(room=room, websocket=AsyncMock(), player_id="not-host")
 
-        rejected = await websocket_action_service.reject_if_not_host(session, "start the game")
+        allowed = await websocket_action_service.require_host(session, "start the game")  # ty: ignore[invalid-argument-type]
 
-        assert rejected is True
+        assert allowed is False
         assert session.error_calls == [("permission_error", "host_only", "Only the host can start the game.")]
 
     async def test_handle_request_game_state_uses_protocol_context(self, monkeypatch) -> None:
         room = GameRoom("ROOM-STATE")
         websocket = AsyncMock()
         session = _FakeSession(room=room, websocket=websocket)
-        sent_messages: list[object] = []
+        sent_messages: list[Any] = []
 
         async def fake_send_ws_message(websocket_arg, message) -> None:
             assert websocket_arg is websocket
@@ -191,9 +308,20 @@ class TestWebSocketActionService:
         monkeypatch.setattr(websocket_action_service, "send_ws_message", fake_send_ws_message)
 
         await websocket_action_service.handle_request_game_state(
-            session,
-            RequestGameStateEvent(type="request_game_state", playerId=None),
+            session,  # ty: ignore[invalid-argument-type]
+            RequestGameStateEvent(type="request_game_state"),
         )
 
         assert len(sent_messages) == 1
         assert sent_messages[0].type == "room_state"
+
+    async def test_dispatch_event_ignores_heartbeat(self) -> None:
+        room = GameRoom("ROOM-HEARTBEAT")
+        session = _FakeSession(room=room, websocket=AsyncMock())
+
+        await websocket_action_service.dispatch_event(
+            session,  # ty: ignore[invalid-argument-type]
+            HeartbeatEvent(type="heartbeat"),
+        )
+
+        assert session.error_calls == []

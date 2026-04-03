@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { useTimeoutFn, watchDebounced } from "@vueuse/core";
 import { ref, watch } from "vue";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { GAME_SETTINGS } from "@/config/gameConfig";
+import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import type { Difficulty } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
@@ -15,31 +16,30 @@ const roundsError = ref<string | null>(null);
 const isPrivateRoom = ref(false);
 const settingsFlash = ref(false);
 
-let settingsBroadcastTimeout: number | null = null;
+const { start: startFlash } = useTimeoutFn(() => {
+  settingsFlash.value = false;
+}, UI_TIMINGS.SETTINGS_FLASH_MS);
 
 function broadcastSettings() {
-  if (settingsBroadcastTimeout) clearTimeout(settingsBroadcastTimeout);
-  settingsBroadcastTimeout = window.setTimeout(() => {
-    if (store.isHost) {
-      send({
-        type: "settings_update",
-        difficulty: difficulty.value,
-        rounds: rounds.value,
-        roundLength: roundLength.value,
-      });
-    }
-  }, 300);
+  if (store.isHost && !roundsError.value) {
+    send({
+      type: "settings_update",
+      difficulty: difficulty.value,
+      rounds: rounds.value,
+      roundLength: roundLength.value,
+    });
+  }
 }
 
 function changeLanguage(newLanguage: string) {
   if (store.isHost) {
-    send({ type: "language_update", playerId: store.localPlayerId, language: newLanguage });
+    send({ type: "language_update", language: newLanguage });
   }
 }
 
 function togglePrivacy() {
   if (store.isHost) {
-    send({ type: "privacy_changed", playerId: store.localPlayerId, isPrivate: isPrivateRoom.value });
+    send({ type: "privacy_changed", isPrivate: isPrivateRoom.value });
   }
 }
 
@@ -54,10 +54,10 @@ function clampRounds() {
   if (rounds.value < GAME_SETTINGS.rounds.MIN) rounds.value = GAME_SETTINGS.rounds.MIN;
   if (rounds.value > GAME_SETTINGS.rounds.MAX) rounds.value = GAME_SETTINGS.rounds.MAX;
   rounds.value = Math.floor(rounds.value);
-  store.setMaxRounds(rounds.value);
+  store.maxRounds = rounds.value;
 }
 
-// Host: validate + broadcast on any setting change
+// Host: validate rounds on change
 watch(rounds, (val) => {
   if (!Number.isFinite(val)) {
     roundsError.value = "Please enter a valid number";
@@ -67,42 +67,30 @@ watch(rounds, (val) => {
     roundsError.value = `Must be between ${GAME_SETTINGS.rounds.MIN} and ${GAME_SETTINGS.rounds.MAX}`;
   } else {
     roundsError.value = null;
-    store.setMaxRounds(Math.floor(val));
+    store.maxRounds = Math.floor(val);
   }
 });
 
 watch(roundLength, (val) => {
-  if (Number.isFinite(val)) store.setRoundLength(val);
+  if (Number.isFinite(val)) store.roundLength = val;
 });
 
-watch([difficulty, rounds, roundLength], () => {
-  if (store.isHost && !roundsError.value) broadcastSettings();
-});
+// Host: debounced broadcast whenever any setting changes (auto-cleaned on unmount)
+watchDebounced([difficulty, rounds, roundLength], broadcastSettings, { debounce: 300 });
 
-// Non-host: sync settings from store when host changes them
-watch(
-  () => store.difficulty,
-  (val) => {
-    if (!store.isHost) difficulty.value = val;
-  },
-);
-watch(
-  () => store.maxRounds,
-  (val) => {
-    if (!store.isHost) rounds.value = val;
-  },
-);
-watch(
-  () => store.roundLength,
-  (val) => {
-    if (!store.isHost) roundLength.value = val;
-  },
-);
+// Non-host: sync all settings from store in one watcher
+watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], ([d, r, rl]) => {
+  if (!store.isHost) {
+    difficulty.value = d;
+    rounds.value = r;
+    roundLength.value = rl;
+  }
+});
 
 // Flash settings when they change (visible to all players)
 watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], () => {
   settingsFlash.value = true;
-  setTimeout(() => (settingsFlash.value = false), 900);
+  startFlash();
 });
 </script>
 

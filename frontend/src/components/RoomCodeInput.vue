@@ -99,14 +99,14 @@ onMounted(() => {
   <div class="room-code-inputs" @paste.prevent="onPaste">
     <template v-for="(val, i) in codeInputs" :key="i">
       <input
-        class="code-input"
         :ref="(el) => setRef(el, i)"
+        class="code-input"
         :value="codeInputs[i]"
-        @input="(e) => onInput(e, i)"
-        @keydown="(e) => onKeyDown(e, i)"
         maxlength="1"
         inputmode="text"
         aria-label="Room code digit {{ i + 1 }} of {{ codeInputs.length }}"
+        @input="(e) => onInput(e, i)"
+        @keydown="(e) => onKeyDown(e, i)"
       >
     </template>
     <div class="sr-only" aria-live="polite">{{ liveAnnouncement }}</div>

@@ -6,12 +6,17 @@ Run this after setting up the database:
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 from sqlalchemy import delete, select
 
-from app.database import get_session_maker, init_db
-from app.db_models import Card, Category
+from app.categories.models import Card, Category
+from app.core.database import get_session_maker, init_db
+from app.core.logging import configure_logging
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 CARD_DECKS = json.loads((Path(__file__).parent / "seed_data.json").read_text())
 CLEAR_FLAG = "--clear"

@@ -8,6 +8,7 @@ reserved for explicitly marked integration coverage.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Self, cast
 from uuid import uuid4
@@ -16,6 +17,7 @@ import pytest
 from fakeredis.aioredis import FakeRedis
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
 from sqlalchemy.sql.operators import eq, in_op, is_
@@ -23,11 +25,12 @@ from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
 import app.main as main_module
-from app import database, redis_store
-from app.config import settings
-from app.db_models import Card, Category
-from app.game_room import GameRoom, RoomManager
-from app.game_room import room_manager as global_room_manager
+from app.categories.models import Card, Category
+from app.core import database
+from app.core import redis as redis_module
+from app.core.config import settings
+from app.rooms.manager import GameRoom, RoomManager
+from app.rooms.manager import room_manager as global_room_manager
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator, Iterable
@@ -40,16 +43,16 @@ def _is_integration_test(request: pytest.FixtureRequest) -> bool:
     return request.node.get_closest_marker("integration") is not None
 
 
-def _postgres_async_url(container: PostgresContainer) -> str:
+def _postgres_host_port(container: PostgresContainer) -> tuple[str, int]:
     host = container.get_container_host_ip()
-    port = container.get_exposed_port(5432)
-    return f"postgresql+asyncpg://postgres:{_POSTGRES_PASSWORD}@{host}:{port}/scribbles_test"
+    port = int(container.get_exposed_port(5432))
+    return host, port
 
 
-def _redis_url(container: RedisContainer) -> str:
+def _redis_host_port(container: RedisContainer) -> tuple[str, int]:
     host = container.get_container_host_ip()
-    port = container.get_exposed_port(6379)
-    return f"redis://{host}:{port}/0"
+    port = int(container.get_exposed_port(6379))
+    return host, port
 
 
 _POSTGRES_PASSWORD = uuid4().hex
@@ -57,7 +60,7 @@ _POSTGRES_PASSWORD = uuid4().hex
 
 async def _reset_real_infra() -> None:
     await database.close_db()
-    await redis_store.close_redis()
+    await redis_module.close_redis()
 
     await database.init_db()
 
@@ -66,9 +69,9 @@ async def _reset_real_infra() -> None:
         async with database._get_engine().begin() as conn:
             await conn.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
 
-    redis_client = await redis_store.get_redis()
+    redis_client = await redis_module.get_redis()
     await redis_client.flushdb()
-    await redis_store.close_redis()
+    await redis_module.close_redis()
     await database.close_db()
 
 
@@ -92,6 +95,9 @@ class TestWebSocket:
         if self.send_error is not None:
             raise self.send_error
         self.sent_texts.append(message)
+
+    async def send_json(self, data: object) -> None:
+        await self.send_text(json.dumps(data))
 
     async def close(self, code: int | None = None, reason: str | None = None) -> None:
         self.close_calls.append({"code": code, "reason": reason})
@@ -298,21 +304,28 @@ async def configure_test_services(
 ):
     if _is_integration_test(request):
         postgres = request.getfixturevalue("postgres_container")
-        redis = request.getfixturevalue("redis_container")
+        redis_container = request.getfixturevalue("redis_container")
 
-        monkeypatch.setattr(settings, "database_url_override", _postgres_async_url(postgres))
-        monkeypatch.setattr(settings, "redis_url", _redis_url(redis))
+        pg_host, pg_port = _postgres_host_port(postgres)
+        monkeypatch.setattr(settings, "postgres_host", pg_host)
+        monkeypatch.setattr(settings, "postgres_port", pg_port)
+        monkeypatch.setattr(settings, "postgres_password", SecretStr(_POSTGRES_PASSWORD))
+        monkeypatch.setattr(settings, "postgres_db", "scribbles_test")
 
-        main_module.app.state.redis_client = None
+        redis_host, redis_port = _redis_host_port(redis_container)
+        monkeypatch.setattr(settings, "redis_host", redis_host)
+        monkeypatch.setattr(settings, "redis_port", redis_port)
+
+        redis_module._redis_client = None
 
         main_module.app.dependency_overrides.clear()
 
         await _reset_real_infra()
         yield
         main_module.app.dependency_overrides.clear()
-        main_module.app.state.redis_client = None
+        redis_module._redis_client = None
         await database.close_db()
-        await redis_store.close_redis()
+        await redis_module.close_redis()
         return
 
     session_maker = _FakeSessionMaker(fake_db_store)
@@ -331,14 +344,13 @@ async def configure_test_services(
     monkeypatch.setattr(database, "init_db", fake_init_db)
     monkeypatch.setattr(database, "close_db", fake_close_db)
 
-    main_module.app.state.redis_client = fake_redis
+    monkeypatch.setattr(redis_module, "_redis_client", fake_redis)
     monkeypatch.setattr(main_module, "init_db", fake_init_db)
     monkeypatch.setattr(main_module, "close_db", fake_close_db)
 
     main_module.app.dependency_overrides[database.get_async_session] = override_get_db
     yield
     main_module.app.dependency_overrides.clear()
-    main_module.app.state.redis_client = None
     await fake_redis.aclose()
 
 
@@ -388,7 +400,7 @@ def mock_websocket() -> TestWebSocket:
 async def game_room(room_id: str) -> AsyncGenerator[GameRoom]:
     """Create a fresh game room for testing."""
     room = GameRoom(room_id)
-    await room.start_idle_check()
+    room.start_idle_check()
     yield room
     await room.stop_idle_check()
 

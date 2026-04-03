@@ -9,7 +9,8 @@ from unittest.mock import AsyncMock
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
-from app.game_room import PlayerInfo, RoomManager, room_manager
+from app.rooms.manager import PlayerInfo, RoomManager, room_manager
+from app.rooms.state import GuessSubmissionState, PlayerCardState
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
@@ -224,15 +225,15 @@ async def test_room_manager_restores_room_state_from_real_redis() -> None:
     room.metadata.current_round = 2
     room.metadata.ready_players.add("host-1")
     room.metadata.player_cards = {
-        "host-1": {
-            "category": "Animals",
-            "items": ["cat", "dog"],
-            "alternatives": {"cat": ["kitty"]},
-            "is_custom": False,
-        },
+        "host-1": PlayerCardState(
+            category="Animals",
+            items=["cat", "dog"],
+            alternatives={"cat": ["kitty"]},
+            is_custom=False,
+        ),
     }
     room.metadata.guess_submissions = [
-        {"playerId": "host-1", "targetPlayerId": "host-1", "guesses": ["cat"]},
+        GuessSubmissionState(player_id="host-1", target_player_id="host-1", guesses=["cat"]),
     ]
 
     await room.persist()
@@ -246,9 +247,8 @@ async def test_room_manager_restores_room_state_from_real_redis() -> None:
         assert restored_room.metadata.game_phase == "drawing"
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
-        assert restored_room.metadata.player_cards["host-1"]["category"] == "Animals"
-        assert restored_room.metadata.guess_submissions == [
-            {"playerId": "host-1", "targetPlayerId": "host-1", "guesses": ["cat"]},
-        ]
+        assert restored_room.metadata.player_cards["host-1"].category == "Animals"
+        assert restored_room.metadata.guess_submissions[0].player_id == "host-1"
+        assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
     finally:
         await restored_manager.stop()

@@ -25,27 +25,17 @@ This is a fast-paced drawing game for 2-10 players. These are the rules:
 
 ### Prerequisites
 
-* **Node.js:**: v20.19.0 or later. Download the latest LTS version from [nodejs.org](https://nodejs.org/).
-* **Python:**: 3.8 or later. Download from [python.org](https://www.python.org/).
+* **Node.js:** v24 or later. Download the latest LTS version from [nodejs.org](https://nodejs.org/).
+* **Python:** 3.8 or later. Download from [python.org](https://www.python.org/).
 
 ### Installation
 
 ```bash
-# Install Node dependencies
-npm install
+# Install dependencies
+just install
 
-# Install Python dependencies for the backend
-pip install -r backend/requirements.txt
-
-# Start both frontend and backend (recommended)
-npm run dev
-
-# OR run them separately:
-# Terminal 1: Start the frontend (Vite dev server)
-npm run dev:web
-
-# Terminal 2: Start the backend (FastAPI WebSocket server)
-npm run dev:server
+# Start everything (Docker + frontend + backend)
+just dev
 ```
 
 Open `http://localhost:3001` in your browser and start drawing!
@@ -57,10 +47,10 @@ Open `http://localhost:3001` in your browser and start drawing!
 | Layer | Technology | Version |
 |-------|------------|---------|
 | **Framework** | Vue 3 | 3.5.22 |
-| **State** | Pinia | 3.0.3 |
-| **Routing** | Vue Router | 4.6.3 |
-| **Language** | TypeScript | 5.9.0 |
-| **Bundler** | Vite | 7.2.2 |
+| **State** | Pinia | 3.0.4 |
+| **Routing** | Vue Router | 5.0.4 |
+| **Language** | TypeScript | 6.0.2 |
+| **Bundler** | Vite | 8.0.3 |
 | **Backend** | FastAPI | 0.115.6 |
 | **Protocol** | WebSockets | - |
 
@@ -68,37 +58,37 @@ Open `http://localhost:3001` in your browser and start drawing!
 
 ```sh
 six-second-scribbles/
-├── src/
-│   ├── main.ts                  # Vue app entry point
-│   ├── App.vue                  # Root component
-│   ├── router/
-│   │   └── index.ts            # Vue Router config
-│   ├── stores/
-│   │   └── game.ts             # Pinia store (all game state)
-│   ├── composables/
-│   │   ├── useGameConnection.ts # WebSocket logic
-│   │   └── useDrawingCanvas.ts  # Canvas drawing logic
-│   ├── views/
-│   │   ├── LobbyView.vue       # Home screen
-│   │   ├── WaitingRoomView.vue # Pre-game lobby
-│   │   ├── GameView.vue        # The main game
-│   │   └── ResultsView.vue     # Final scores
-│   ├── data/
-│   │   └── deck.ts             # All 111+ game cards
-│   ├── shared/
-│   │   └── types.ts            # Shared TS types
-│   └── assets/
-│       └── main.css            # Global styles
+├── frontend/
+│   ├── src/
+│   │   ├── main.ts               # Vue app entry point
+│   │   ├── App.vue               # Root component
+│   │   ├── router/
+│   │   │   └── index.ts          # Vue Router config
+│   │   ├── stores/
+│   │   │   └── game.ts           # Pinia store (all game state)
+│   │   ├── composables/
+│   │   │   ├── useGameConnection.ts # WebSocket logic
+│   │   │   └── useDrawingCanvas.ts  # Canvas drawing logic
+│   │   ├── views/
+│   │   │   ├── LobbyView.vue     # Home screen
+│   │   │   ├── WaitingRoomView.vue # Pre-game lobby
+│   │   │   ├── GameView.vue      # The main game
+│   │   │   └── ResultsView.vue   # Final scores
+│   │   ├── data/
+│   │   │   └── deck.ts           # All 111+ game cards
+│   │   ├── shared/
+│   │   │   └── types.ts          # Shared TS types
+│   │   └── assets/
+│   │       └── main.css          # Global styles
+│   └── package.json
 │
 ├── backend/
-│   ├── main.py                 # FastAPI application
-│   ├── game_room.py            # Game room management
-│   ├── models.py               # Message type definitions
-│   └── requirements.txt        # Python dependencies
+│   ├── app/
+│   └── pyproject.toml
 │
+├── justfile
 ├── package.json
-├── tsconfig.json
-└── vite.config.ts
+└── pnpm-lock.yaml
 ```
 
 ## 🎮 How to Play
@@ -129,14 +119,10 @@ six-second-scribbles/
 ### Available Scripts
 
 ```bash
-npm run dev            # Start both frontend and backend
-npm run dev:web        # Start Vite dev server (frontend only)
-npm run dev:server     # Start FastAPI server (backend only)
-npm run build          # Build production frontend
-npm run type-check     # Run TypeScript checks
-npm run lint           # Run biome
-npm run format         # Format code with Prettier
-npm run preview        # Preview the production build
+just dev               # Start Docker + frontend + backend
+just build             # Build the frontend
+just check             # Run frontend and backend checks
+just format            # Format frontend and backend
 ```
 
 ### Backend Testing
@@ -155,10 +141,10 @@ pytest --cov=. --cov-report=html
 pytest -m integration     # Integration tests
 pytest -m "not slow"      # Skip slow tests
 
-# Using the Makefile (recommended)
-make test                 # Run all tests
-make coverage            # Run tests with coverage
-make ci                  # Run all CI checks
+# Using just (recommended)
+just test                 # Run all backend tests
+just check                # Run frontend and backend checks
+just format               # Format frontend and backend
 ```
 
 See `backend/README.md` for detailed testing documentation.
@@ -232,7 +218,7 @@ Now you'll prepare and deploy the website.
 Run the build command to package your website into a static `dist/` folder.
 
 ```bash
-npm run build
+just build
 ```
 
 #### 3. Deploy the Static Site

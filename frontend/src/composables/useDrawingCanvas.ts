@@ -83,21 +83,27 @@ export function useDrawingCanvas() {
     isDrawing.value = true;
     const coords = getCoordinates(event);
     currentStroke.value = [coords];
-
-    ctx.value.beginPath();
-    ctx.value.moveTo(coords.x, coords.y);
   }
 
   function draw(event: PointerEvent) {
     if (!isDrawing.value || !ctx.value) return;
 
     const coords = getCoordinates(event);
+    const prevCoords = currentStroke.value[currentStroke.value.length - 1];
     currentStroke.value.push(coords);
 
-    ctx.value.strokeStyle = currentColor.value;
-    ctx.value.lineWidth = currentWidth.value;
-    ctx.value.lineTo(coords.x, coords.y);
-    ctx.value.stroke();
+    // Draw only the incremental segment from the previous point to the current
+    // one. The previous approach kept a single open path and called stroke()
+    // each time, re-rendering the entire path on every pointermove — O(n) per
+    // event. This is O(1) regardless of stroke length.
+    if (prevCoords) {
+      ctx.value.strokeStyle = currentColor.value;
+      ctx.value.lineWidth = currentWidth.value;
+      ctx.value.beginPath();
+      ctx.value.moveTo(prevCoords.x, prevCoords.y);
+      ctx.value.lineTo(coords.x, coords.y);
+      ctx.value.stroke();
+    }
 
     if (onStrokeProgress) {
       onStrokeProgress({
@@ -149,7 +155,10 @@ export function useDrawingCanvas() {
     const parent = canvasRef.value.parentElement;
     if (!parent) return;
 
-    const cssWidth = parent.clientWidth;
+    const style = window.getComputedStyle(parent);
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const cssWidth = parent.clientWidth - paddingLeft - paddingRight;
     // Read height from the canvas element itself (CSS class), not from the
     // parent. Using parent.clientHeight creates a feedback loop: setting
     // canvas style.height makes the parent taller, which fires ResizeObserver

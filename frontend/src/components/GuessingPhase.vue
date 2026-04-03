@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
+import { injectGameEngine } from "@/composables/injectionKeys";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const { send } = useGameConnection();
+const gameEngineRef = injectGameEngine();
+const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
 
 const playerGuesses = ref<Record<string, string[]>>({});
 const submittedPlayers = ref<string[]>([]);
 const allGuessesSubmitted = ref(false);
+const leaveDialogRef = ref<HTMLDialogElement | null>(null);
+const emptyGuessDialogTarget = ref<string | null>(null);
+const emptyGuessDialogRef = ref<HTMLDialogElement | null>(null);
 
 const otherPlayers = computed(() => store.playersList.filter((p) => p.id !== store.localPlayerId));
 
@@ -27,8 +34,27 @@ function guessesFor(playerId: string): string[] {
 
 function submitGuessesForPlayer(targetPlayerId: string) {
   const guesses = (playerGuesses.value[targetPlayerId] || []).filter((g) => g.trim() !== "");
-  if (guesses.length === 0) return;
+  if (guesses.length === 0) {
+    emptyGuessDialogTarget.value = targetPlayerId;
+    emptyGuessDialogRef.value?.showModal();
+    return;
+  }
+  doSubmitGuesses(targetPlayerId, guesses);
+}
 
+function confirmSkipGuesses() {
+  emptyGuessDialogRef.value?.close();
+  const targetPlayerId = emptyGuessDialogTarget.value;
+  emptyGuessDialogTarget.value = null;
+  if (targetPlayerId) doSubmitGuesses(targetPlayerId, []);
+}
+
+function cancelSkipGuesses() {
+  emptyGuessDialogRef.value?.close();
+  emptyGuessDialogTarget.value = null;
+}
+
+function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
   send({ type: "submit_guess", playerId: store.localPlayerId, targetPlayerId, guesses });
   if (!submittedPlayers.value.includes(targetPlayerId)) {
     submittedPlayers.value = [...submittedPlayers.value, targetPlayerId];
@@ -39,12 +65,28 @@ function submitGuessesForPlayer(targetPlayerId: string) {
     send({ type: "player_ready", playerId: store.localPlayerId });
   }
 }
+
+function showLeaveConfirmation() {
+  leaveDialogRef.value?.showModal();
+}
+
+function cancelLeave() {
+  leaveDialogRef.value?.close();
+}
+
+function confirmLeave() {
+  leaveDialogRef.value?.close();
+  _leaveRoom();
+}
 </script>
 
 <template>
   <div class="guessing-screen">
     <div class="container">
-      <h2>Guess what others drew!</h2>
+      <div class="guessing-header">
+        <h2>Guess what others drew!</h2>
+        <button type="button" class="btn btn-secondary btn-leave" @click="showLeaveConfirmation">🚪 Leave</button>
+      </div>
       <p class="info-text">Look at each player's drawing and guess what they drew</p>
 
       <div class="ready-status">
@@ -81,6 +123,26 @@ function submitGuessesForPlayer(targetPlayerId: string) {
         </div>
       </div>
     </div>
+
+    <!-- Leave confirmation dialog -->
+    <dialog ref="leaveDialogRef" class="confirm-dialog" @click.self="cancelLeave">
+      <h2>Leave Room?</h2>
+      <p>Are you sure you want to leave this room?</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" @click="cancelLeave">Cancel</button>
+        <button type="button" class="btn btn-danger" @click="confirmLeave">Leave</button>
+      </div>
+    </dialog>
+
+    <!-- Skip guesses confirmation dialog -->
+    <dialog ref="emptyGuessDialogRef" class="confirm-dialog" @click.self="cancelSkipGuesses">
+      <h2>Submit with no guesses?</h2>
+      <p>You haven't entered any guesses. Submit anyway?</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" @click="cancelSkipGuesses">Go back</button>
+        <button type="button" class="btn btn-primary" @click="confirmSkipGuesses">Submit anyway</button>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -88,6 +150,56 @@ function submitGuessesForPlayer(targetPlayerId: string) {
 .guessing-screen {
   padding: 2rem;
   min-height: 100vh;
+}
+
+.guessing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.guessing-header h2 {
+  margin: 0;
+}
+
+.confirm-dialog {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.confirm-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.confirm-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--color-text);
+}
+
+.confirm-dialog p {
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
 }
 
 .info-text {
