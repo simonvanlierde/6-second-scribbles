@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import logging
+import random
 import time
 from typing import TYPE_CHECKING
 
+from app.core.types import GamePhase
 from app.rooms.protocol import (
-    GameCompleteBroadcastEvent,
+    GameCompleteServerEvent,
     ReadyStatusEvent,
-    RoundCompleteBroadcastEvent,
+    RoundCompleteServerEvent,
     RoundResultItem,
     StartGuessingEvent,
 )
@@ -44,18 +46,21 @@ def _build_round_result_item(
 def configure_game(
     room: GameRoom,
     *,
-    round_length: int | None,
+    drawing_time_limit: int | None,
+    guessing_time_limit: int | None,
     difficulty: Difficulty | None,
     max_rounds: int | None,
 ) -> None:
     """Initialize a new game from the lobby state."""
-    room.metadata.round_length = round_length
+    room.metadata.drawing_time_limit = drawing_time_limit
+    room.metadata.guessing_time_limit = guessing_time_limit or 60
     room.metadata.difficulty = difficulty or room.metadata.difficulty
     room.metadata.max_rounds = max_rounds or 5
-    room.metadata.game_phase = "lobby"
+    room.metadata.game_phase = GamePhase.LOBBY
     room.metadata.current_round = 0
     room.metadata.round_start_time = None
     room.metadata.player_cards = {}
+    room.metadata.guess_targets = {}
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
     room.metadata.player_scores = dict.fromkeys(room.players, 0)
@@ -66,9 +71,11 @@ def start_round(room: GameRoom, *, round_number: int | None, cards: dict[str, Pl
     """Transition the room into a new drawing round and return the start timestamp."""
     round_start_time = int(time.time() * 1000)
     room.metadata.round_start_time = round_start_time
-    room.metadata.game_phase = "drawing"
+    room.metadata.guessing_start_time = None
+    room.metadata.game_phase = GamePhase.DRAWING
     room.metadata.current_round = round_number or (room.metadata.current_round + 1)
     room.metadata.player_cards = cards or {}
+    room.metadata.guess_targets = {}
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
     room.metadata.player_count_for_scoring = len(room.players)
@@ -80,15 +87,22 @@ def start_round(room: GameRoom, *, round_number: int | None, cards: dict[str, Pl
 
 def start_guessing(room: GameRoom) -> int:
     """Transition into the guessing phase and return the scoring timeout."""
-    room.metadata.game_phase = "guessing"
+    room.metadata.guessing_start_time = int(time.time() * 1000)
+    room.metadata.game_phase = GamePhase.GUESSING
+    room.metadata.guess_targets = assign_guess_targets(list(room.players))
     room.metadata.player_count_for_scoring = len(room.players)
-    return room.metadata.round_length or 30
+    room.metadata.ready_players.clear()
+    return room.metadata.guessing_time_limit or 60
 
 
 def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
     """Transition into guessing and return the broadcast event."""
     start_guessing(room)
-    return StartGuessingEvent()
+    return StartGuessingEvent(
+        type="start_guessing",
+        guessingStartTime=room.metadata.guessing_start_time,
+        guessTargets=dict(room.metadata.guess_targets),
+    )
 
 
 def reset_game(room: GameRoom) -> None:
@@ -98,9 +112,11 @@ def reset_game(room: GameRoom) -> None:
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
     room.metadata.player_cards = {}
+    room.metadata.guess_targets = {}
     room.metadata.ready_players.clear()
     room.metadata.round_start_time = None
-    room.metadata.game_phase = "lobby"
+    room.metadata.guessing_start_time = None
+    room.metadata.game_phase = GamePhase.LOBBY
 
 
 def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
@@ -114,6 +130,17 @@ def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
 
 def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id: str, guesses: list[str]) -> bool:
     """Store a guess submission and report whether scoring should begin immediately."""
+    assigned_target = room.metadata.guess_targets.get(player_id)
+    if assigned_target != target_player_id:
+        logger.warning(
+            "[GameRoom %s] Player %s submitted guesses for unexpected target %s (assigned: %s)",
+            room.room_id,
+            player_id,
+            target_player_id,
+            assigned_target,
+        )
+        return False
+
     submission = GuessSubmissionState(player_id=player_id, target_player_id=target_player_id, guesses=guesses)
     room.metadata.guess_submissions.append(submission)
     room.metadata.submitted_players.add(player_id)
@@ -128,7 +155,26 @@ def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id:
     return expected > 0 and submitted >= expected
 
 
-def score_round(room: GameRoom) -> RoundCompleteBroadcastEvent:
+def assign_guess_targets(player_ids: list[str]) -> dict[str, str]:
+    """Assign each player exactly one other player's drawing to guess."""
+    if len(player_ids) < 2:
+        return {}
+
+    shuffled = player_ids[:]
+    random.shuffle(shuffled)
+
+    for index, player_id in enumerate(shuffled):
+        next_player_id = shuffled[(index + 1) % len(shuffled)]
+        if player_id == next_player_id:
+            return assign_guess_targets(player_ids)
+
+    return {
+        player_id: shuffled[(index + 1) % len(shuffled)]
+        for index, player_id in enumerate(shuffled)
+    }
+
+
+def score_round(room: GameRoom) -> RoundCompleteServerEvent:
     """Score the current round and update cumulative room scores."""
     results: list[RoundResultItem] = []
     round_points: dict[str, int] = dict.fromkeys(room.players, 0)
@@ -167,22 +213,22 @@ def score_round(room: GameRoom) -> RoundCompleteBroadcastEvent:
     for player_id, points in round_points.items():
         room.metadata.player_scores[player_id] = room.metadata.player_scores.get(player_id, 0) + points
 
-    room.metadata.game_phase = "scoring"
-    return RoundCompleteBroadcastEvent(
+    room.metadata.game_phase = GamePhase.SCORING
+    return RoundCompleteServerEvent(
         results=results,
         scores=dict(room.metadata.player_scores),
     )
 
 
-def game_complete_event(room: GameRoom) -> GameCompleteBroadcastEvent:
+def game_complete_event(room: GameRoom) -> GameCompleteServerEvent:
     """Build the final game-complete event and update the room phase."""
     winner_id = (
         max(room.metadata.player_scores, key=lambda pid: room.metadata.player_scores[pid])
         if room.metadata.player_scores
         else ""
     )
-    room.metadata.game_phase = "complete"
-    return GameCompleteBroadcastEvent(
+    room.metadata.game_phase = GamePhase.COMPLETE
+    return GameCompleteServerEvent(
         finalScores=dict(room.metadata.player_scores),
         winner=winner_id,
     )

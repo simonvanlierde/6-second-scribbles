@@ -51,7 +51,7 @@ class CategorySummary(BaseModel):
             name=category.name,
             difficulty=cast("Difficulty", category.difficulty),
             description=category.description,
-            language=cast("LanguageCode", category.language),
+            language=category.language,
             room_id=category.room_id,
             created_by=category.created_by,
             is_custom=category.room_id is not None,

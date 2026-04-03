@@ -15,7 +15,65 @@ const isReady = ref(false);
 const autoRestartTimeout = ref<number | null>(null);
 
 const finalScores = computed(() => store.getFinalScores());
-const winner = computed(() => store.getWinner());
+
+const rankedScores = computed(() => {
+  const scores = finalScores.value;
+  const ranked: Array<
+    (typeof scores)[number] & {
+      rank: number;
+      isTied: boolean;
+    }
+  > = [];
+
+  let index = 0;
+  while (index < scores.length) {
+    const score = scores[index]?.score ?? 0;
+    let groupEnd = index + 1;
+
+    while (groupEnd < scores.length && scores[groupEnd]?.score === score) {
+      groupEnd += 1;
+    }
+
+    const rank = index + 1;
+    const isTied = groupEnd - index > 1;
+
+    for (let i = index; i < groupEnd; i += 1) {
+      const player = scores[i];
+      if (!player) continue;
+      ranked.push({ ...player, rank, isTied });
+    }
+
+    index = groupEnd;
+  }
+
+  return ranked;
+});
+
+const winners = computed(() => rankedScores.value.filter((player) => player.rank === 1));
+const winnerHeading = computed(() => (winners.value.length > 1 ? "Winners" : "Winner"));
+const winnerNames = computed(() => formatNames(winners.value.map((player) => player.playerName)));
+const winnerScoreText = computed(() =>
+  winners.value.length > 1
+    ? `Tied at ${winners.value[0]?.score ?? 0} points`
+    : `${winners.value[0]?.score ?? 0} points`,
+);
+
+function formatNames(names: string[]) {
+  if (names.length <= 1) return names[0] || "Unknown";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return names.join(", ");
+}
+
+function formatOrdinal(rank: number) {
+  const remainder100 = rank % 100;
+  if (remainder100 >= 11 && remainder100 <= 13) return `${rank}th`;
+
+  const remainder10 = rank % 10;
+  if (remainder10 === 1) return `${rank}st`;
+  if (remainder10 === 2) return `${rank}nd`;
+  if (remainder10 === 3) return `${rank}rd`;
+  return `${rank}th`;
+}
 
 // Watch for game phase changes (when host starts new game)
 watch(
@@ -99,26 +157,28 @@ onUnmounted(() => {
 
       <div class="card winner-card">
         <div class="trophy-icon">🎉</div>
-        <h2>Winner: {{ winner?.playerName || 'Unknown' }}</h2>
-        <p class="winner-score">{{ winner?.score || 0 }} points</p>
+        <h2>{{ winnerHeading }}: {{ winnerNames }}</h2>
+        <p class="winner-score">{{ winnerScoreText }}</p>
       </div>
 
       <div class="card">
         <h2>Final Scores</h2>
         <div class="scores-list">
           <div
-            v-for="(player, index) in finalScores"
+            v-for="player in rankedScores"
             :key="player.playerId"
             class="score-item"
             :class="{
-              winner: index === 0,
+              winner: player.rank === 1,
+              tied: player.isTied,
               'current-player': player.playerId === store.localPlayerId,
             }"
           >
-            <div class="rank">{{ index + 1 }}</div>
+            <div class="rank">{{ player.rank }}</div>
             <div class="player-info">
               <span class="player-name">{{ player.playerName }}</span>
               <span v-if="player.playerId === store.localPlayerId" class="player-badge">(You)</span>
+              <span v-if="player.isTied" class="player-badge tie-badge">Tied for {{ formatOrdinal(player.rank) }}</span>
             </div>
             <div class="player-score">{{ player.score }} pts</div>
           </div>
@@ -243,6 +303,11 @@ onUnmounted(() => {
   color: #ffd700;
 }
 
+.score-item.tied .rank {
+  background-color: #f0ad4e;
+  color: white;
+}
+
 .player-info {
   flex: 1;
   display: flex;
@@ -265,6 +330,11 @@ onUnmounted(() => {
 .score-item.winner .player-badge {
   background-color: rgba(255, 255, 255, 0.5);
   color: #000;
+}
+
+.tie-badge {
+  background-color: rgba(52, 152, 219, 0.15);
+  color: #1f6fb2;
 }
 
 .player-score {

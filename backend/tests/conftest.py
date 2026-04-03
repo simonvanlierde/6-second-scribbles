@@ -4,7 +4,7 @@ Default tests run against in-memory fakes for the database and Redis so unit and
 app tests stay fast and deterministic. Container-backed dependencies should be
 reserved for explicitly marked integration coverage.
 """
-# spell-checker: ignore getfixturevalue
+# spell-checker: ignore ASGI, getfixturevalue
 
 from __future__ import annotations
 
@@ -460,7 +460,7 @@ def sample_messages() -> dict:
     """Collection of sample game messages."""
     return {
         "join": {"type": "join", "playerId": "player-123", "name": "Test Player"},
-        "start_game": {"type": "start_game", "difficulty": "medium", "rounds": 5, "roundLength": 60},
+        "start_game": {"type": "start_game", "difficulty": "medium", "rounds": 5, "drawingTimeLimit": 60},
         "start_round": {
             "type": "start_round",
             "round": 1,
@@ -472,7 +472,7 @@ def sample_messages() -> dict:
             "stroke": {"color": "#000000", "width": 2, "points": [{"x": 10, "y": 20}, {"x": 30, "y": 40}]},
         },
         "heartbeat": {"type": "heartbeat", "playerId": "player-1"},
-        "settings_update": {"type": "settings_update", "difficulty": "hard", "rounds": 7, "roundLength": 45},
+        "settings_update": {"type": "settings_update", "difficulty": "hard", "rounds": 7, "drawingTimeLimit": 45},
         "player_ready": {"type": "player_ready", "playerId": "player-1"},
         "restart_game": {"type": "restart_game"},
     }

@@ -60,11 +60,12 @@ describe("client message handlers", () => {
     store.localPlayerName = "Player";
     const { handleMessage } = useGameConnection();
 
-    handleMessage({ type: "settings_update", difficulty: "hard", rounds: 8, roundLength: 75 });
+    handleMessage({ type: "settings_update", difficulty: "hard", rounds: 8, drawingTimeLimit: 75, guessingTimeLimit: 60 });
 
     expect(store.difficulty).toBe("hard");
     expect(store.maxRounds).toBe(8);
-    expect(store.roundLength).toBe(75);
+    expect(store.drawingTimeLimit).toBe(75);
+    expect(store.guessingTimeLimit).toBe(60);
   });
 
   it("replaces the player roster from room_state", () => {
@@ -85,7 +86,10 @@ describe("client message handlers", () => {
       difficulty: "medium",
       maxRounds: 5,
       roundStartTime: null,
-      roundLength: null,
+      guessingStartTime: null,
+      drawingTimeLimit: null,
+      guessingTimeLimit: 60,
+      guessTargets: {},
       padVisibility: true,
       isPrivate: true,
       language: "en",

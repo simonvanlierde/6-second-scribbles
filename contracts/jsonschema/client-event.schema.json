@@ -84,7 +84,19 @@
           ],
           "default": null
         },
-        "roundLength": {
+        "drawingTimeLimit": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guessingTimeLimit": {
           "anyOf": [
             {
               "minimum": 1,
@@ -238,6 +250,25 @@
           "const": "start_guessing",
           "title": "Type",
           "type": "string"
+        },
+        "guessingStartTime": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guessingstarttime"
+        },
+        "guessTargets": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Guesstargets",
+          "type": "object"
         }
       },
       "required": [
@@ -253,12 +284,12 @@
           "title": "Type",
           "type": "string"
         },
-        "playerId": {
-          "title": "Playerid",
-          "type": "string"
-        },
         "targetPlayerId": {
           "title": "Targetplayerid",
+          "type": "string"
+        },
+        "playerId": {
+          "title": "Playerid",
           "type": "string"
         },
         "guesses": {
@@ -340,7 +371,19 @@
           ],
           "default": null
         },
-        "roundLength": {
+        "drawingTimeLimit": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guessingTimeLimit": {
           "anyOf": [
             {
               "minimum": 1,

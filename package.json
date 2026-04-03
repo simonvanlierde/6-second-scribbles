@@ -6,12 +6,28 @@
 		"node": ">=24.0.0"
 	},
 	"scripts": {
-		"check:contracts": "node scripts/check-contracts.mjs",
-		"generate:contracts": "cd backend && UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/uv-cache} uv run python scripts/generate_protocol_contracts.py && cd ../frontend && npm run generate:asyncapi",
-		"generate:types": "cd frontend && npm run generate:types"
+		"prepare": "lefthook install",
+		"dev": "just dev",
+		"format": "just format",
+		"check": "just check",
+		"test": "just test",
+		"test:e2e": "just test-e2e",
+		"test:e2e:ui": "just test-e2e-ui",
+		"build": "just build",
+		"install": "just install",
+		"lint": "pnpm --dir frontend run lint && uv run --project backend ruff check backend",
+		"type-check": "pnpm --dir frontend run type-check && uv run --project backend ty check backend",
+		"cspell": "pnpm exec cspell lint --config .cspell.yml",
+		"contracts": "just contracts",
+		"contracts:check": "node scripts/check-contracts.mjs",
+		"contracts:validate": "pnpm run contracts:types && pnpm --dir frontend run contracts:validate",
+		"contracts:generate": "uv run --project backend python backend/scripts/generate_protocol_contracts.py && pnpm --dir frontend run contracts:asyncapi",
+		"contracts:types": "pnpm --dir frontend run contracts:types"
 	},
 	"devDependencies": {
 		"@cspell/dict-es-es": "^3.0.8",
-		"@cspell/dict-fr-fr": "^2.3.2"
+		"@cspell/dict-fr-fr": "^2.3.2",
+		"cspell": "^9.7.0",
+		"lefthook": "^2.1.4"
 	}
 }

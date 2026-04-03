@@ -202,12 +202,13 @@ describe("startGame", () => {
     store.addPlayer("p1", "Alice");
     store.addPlayer("p2", "Bob");
     store.updateScores({ p1: 10, p2: 5 });
-    store.startGame("hard", 8, 90);
+    store.startGame("hard", 8, 90, 60);
     expect(store.playersList.every((p) => p.score === 0)).toBe(true);
     expect(store.currentRound).toBe(0);
     expect(store.difficulty).toBe("hard");
     expect(store.maxRounds).toBe(8);
-    expect(store.roundLength).toBe(90);
+    expect(store.drawingTimeLimit).toBe(90);
+    expect(store.guessingTimeLimit).toBe(60);
   });
 });
 
@@ -215,11 +216,17 @@ describe("startRound", () => {
   it("sets phase to drawing and clears strokes", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
+    store.addPlayer("p2", "Bob");
+    store.setReadyStatus(2, 2);
+    store.setPlayerDrawing("p1", "data:image/png;base64,old");
     store.addStroke({ color: "#000", width: 2, points: [{ x: 0, y: 0 }] });
     store.startRound(1, { p1: { category: "Animals", items: ["cat", "dog"] } });
     expect(store.gamePhase).toBe("drawing");
     expect(store.currentStrokes).toHaveLength(0);
     expect(store.currentRound).toBe(1);
+    expect(store.readyCount).toBe(0);
+    expect(store.totalPlayers).toBe(2);
+    expect(store.playersList[0]?.drawing).toBeUndefined();
   });
 
   it("assigns the local player card", () => {
@@ -229,6 +236,23 @@ describe("startRound", () => {
     const card = { category: "Animals", items: ["dog", "cat"] };
     store.startRound(1, { p1: card });
     expect(store.localPlayerCard).toEqual(card);
+  });
+});
+
+describe("startGuessing", () => {
+  it("resets ready status and stores the server start time", () => {
+    const store = useGameStore();
+    store.addPlayer("p1", "Alice");
+    store.addPlayer("p2", "Bob");
+    store.setReadyStatus(2, 2);
+
+    store.startGuessing(12345, { p1: "p2", p2: "p1" });
+
+    expect(store.gamePhase).toBe("guessing");
+    expect(store.guessingStartTime).toBe(12345);
+    expect(store.guessTargets).toEqual({ p1: "p2", p2: "p1" });
+    expect(store.readyCount).toBe(0);
+    expect(store.totalPlayers).toBe(2);
   });
 });
 
@@ -245,10 +269,15 @@ describe("resetRound", () => {
 });
 
 describe("endGame", () => {
-  it("sets phase to complete", () => {
+  it("sets phase to complete and resets ready status", () => {
     const store = useGameStore();
+    store.addPlayer("p1", "Alice");
+    store.addPlayer("p2", "Bob");
+    store.setReadyStatus(2, 2);
     store.endGame();
     expect(store.gamePhase).toBe("complete");
+    expect(store.readyCount).toBe(0);
+    expect(store.totalPlayers).toBe(2);
   });
 });
 

@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "kick_vote_started",
+      "title": "Type",
+      "type": "string"
+    },
+    "targetPlayerId": {
+      "title": "Targetplayerid",
+      "type": "string"
+    },
+    "targetPlayerName": {
+      "title": "Targetplayername",
+      "type": "string"
+    },
+    "initiatorId": {
+      "title": "Initiatorid",
+      "type": "string"
+    },
+    "requiredVotes": {
+      "title": "Requiredvotes",
+      "type": "integer"
+    },
+    "currentVotes": {
+      "title": "Currentvotes",
+      "type": "integer"
+    },
+    "expiresAt": {
+      "title": "Expiresat",
+      "type": "number"
+    }
+  },
+  "required": [
+    "currentVotes",
+    "expiresAt",
+    "initiatorId",
+    "requiredVotes",
+    "targetPlayerId",
+    "targetPlayerName",
+    "type"
+  ],
+  "title": "KickVoteStartedEvent",
+  "type": "object"
+}

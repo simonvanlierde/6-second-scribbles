@@ -1,0 +1,14 @@
+{
+  "properties": {
+    "type": {
+      "const": "restart_game",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "RestartGameEvent",
+  "type": "object"
+}

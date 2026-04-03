@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 const dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(dir, "../..");
 const contractsDir = resolve(root, "contracts");
-const eventCatalogPath = resolve(contractsDir, "catalog/room-events.json");
-const metadataPath = resolve(contractsDir, "asyncapi/room-websocket.metadata.json");
-const asyncapiPath = resolve(contractsDir, "asyncapi/room-websocket.asyncapi.yaml");
+const eventCatalogPath = resolve(contractsDir, "room-events.json");
+const metadataPath = resolve(contractsDir, "room-websocket.metadata.json");
+const asyncapiPath = resolve(contractsDir, "room-websocket.asyncapi.yaml");
 
 const eventCatalog = JSON.parse(readFileSync(eventCatalogPath, "utf8"));
 const metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
@@ -74,6 +74,40 @@ function formatScalar(value) {
 
 const clientExamples = readExamples(metadata.messages.clientEvent.examplesRef);
 const serverExamples = readExamples(metadata.messages.serverEvent.examplesRef);
+const exampleMap = {
+  client: Object.fromEntries(clientExamples.map((example) => [example.payload.type, example])),
+  server: Object.fromEntries(serverExamples.map((example) => [example.payload.type, example])),
+};
+
+function eventMessageKey(direction, eventType) {
+  return `${direction}_${eventType}`;
+}
+
+function eventSchemaRef(direction, eventType) {
+  return `jsonschema/${direction}-events/${eventType}.schema.json`;
+}
+
+function buildEventMessages(direction) {
+  return Object.fromEntries(
+    Object.entries(eventCatalog[direction]).map(([eventType, config]) => [
+      eventMessageKey(direction, eventType),
+      {
+        name: eventType,
+        title: eventType,
+        summary: config.summary,
+        contentType: "application/json",
+        payload: { $ref: eventSchemaRef(direction, eventType) },
+        examples: exampleMap[direction][eventType] ? [exampleMap[direction][eventType]] : [],
+      },
+    ]),
+  );
+}
+
+function buildOperationMessageRefs(direction) {
+  return Object.keys(eventCatalog[direction]).map((eventType) => ({
+    $ref: `#/components/messages/${eventMessageKey(direction, eventType)}`,
+  }));
+}
 
 const document = {
   asyncapi: "3.1.0",
@@ -111,18 +145,20 @@ const document = {
       title: metadata.operations.sendClientEvent.title,
       summary: metadata.operations.sendClientEvent.summary,
       channel: { $ref: `#/channels/${metadata.channel.name}` },
-      messages: [{ $ref: `#/channels/${metadata.channel.name}/messages/clientEvent` }],
+      messages: buildOperationMessageRefs("client"),
     },
     receiveServerEvent: {
       action: metadata.operations.receiveServerEvent.action,
       title: metadata.operations.receiveServerEvent.title,
       summary: metadata.operations.receiveServerEvent.summary,
       channel: { $ref: `#/channels/${metadata.channel.name}` },
-      messages: [{ $ref: `#/channels/${metadata.channel.name}/messages/serverEvent` }],
+      messages: buildOperationMessageRefs("server"),
     },
   },
   components: {
     messages: {
+      ...buildEventMessages("client"),
+      ...buildEventMessages("server"),
       clientEvent: {
         name: "clientEvent",
         title: metadata.messages.clientEvent.title,
@@ -144,4 +180,4 @@ const document = {
 };
 
 writeFileSync(asyncapiPath, `${toYaml(document)}\n`);
-console.log("✓ Generated contracts/asyncapi/room-websocket.asyncapi.yaml");
+console.log("✓ Generated contracts/room-websocket.asyncapi.yaml");

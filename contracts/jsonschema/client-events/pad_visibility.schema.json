@@ -1,0 +1,19 @@
+{
+  "properties": {
+    "type": {
+      "const": "pad_visibility",
+      "title": "Type",
+      "type": "string"
+    },
+    "visible": {
+      "default": true,
+      "title": "Visible",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "PadVisibilityEvent",
+  "type": "object"
+}

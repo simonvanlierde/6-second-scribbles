@@ -1,0 +1,32 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "join_error",
+      "title": "Type",
+      "type": "string"
+    },
+    "error": {
+      "title": "Error",
+      "type": "string"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    }
+  },
+  "required": [
+    "error",
+    "type"
+  ],
+  "title": "JoinErrorEvent",
+  "type": "object"
+}

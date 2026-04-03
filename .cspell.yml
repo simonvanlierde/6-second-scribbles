@@ -13,38 +13,56 @@ dictionaries:
 # Include hidden files
 enableGlobDot: true
 
+# Files we actually spell-check in this repo.
+files:
+  - "README.md"
+  - "justfile"
+  - "backend/app/**/*.py"
+  - "backend/scripts/**/*.py"
+  - "backend/tests/**/*.py"
+  - "backend/justfile"
+  - "frontend/src/**/*.{ts,vue}"
+  - "frontend/tests/**/*.ts"
+  - "frontend/scripts/**/*.mjs"
+  - "frontend/justfile"
+  - "contracts/**/*.{json,yaml,yml,md}"
+
 # Exclude files in .gitignore
 useGitignore: true
 ignorePaths:
-  - .git
+  - ".git"
   - "*-lock.*"
+  - ".vscode/**"
+  - "frontend/src/generated/**"
+  - "contracts/jsonschema/**"
 
 words:
   # Names
-  - Culley
   - Lierde
-  - Lange
 
   # Software terms
-  - ASGI
-  - onupdate
-  - ondelete
-  - htmlcov
-  - Partykit
+  - justfile
+  - pipefail
+  - sessionmaker
   - vueuse
+  - drawpad
+  - Drawpad
+  - autouse
+  - serialisation
+  - serialised
+  - ROOMWS
+  - uppercases
+  - initialises
+  - authorise
 
   # Language names
   - Español
   - Français
 
+  # Names
+  - Culley
+  - Lange
+
 import:
   - "@cspell/dict-es-es/cspell-ext.json"
   - "@cspell/dict-fr-fr/cspell-ext.json"
-
-# Multilingual category data
-overrides:
-  - filename: "**/{seed_data.py,seed_data.json}"
-    language: "en,es,fr"
-  - filename: "README.md"
-    # cSpell doesn't recognize html-style comments in markdown, so we declare the README spelling configuration here 
-    ignoreWords: [ "elefant" ]

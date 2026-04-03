@@ -11,7 +11,8 @@ const { send } = useGameConnection();
 
 const difficulty = ref<Difficulty>(store.difficulty);
 const rounds = ref<number>(store.maxRounds);
-const roundLength = ref<number>(store.roundLength);
+const drawingTimeLimit = ref<number>(store.drawingTimeLimit);
+const guessingTimeLimit = ref<number>(store.guessingTimeLimit);
 const roundsError = ref<string | null>(null);
 const settingsFlash = ref(false);
 const isPrivateRoom = computed({
@@ -29,7 +30,8 @@ function broadcastSettings() {
       type: "settings_update",
       difficulty: difficulty.value,
       rounds: rounds.value,
-      roundLength: roundLength.value,
+      drawingTimeLimit: drawingTimeLimit.value,
+      guessingTimeLimit: guessingTimeLimit.value,
     });
   }
 }
@@ -47,9 +49,16 @@ function togglePrivacy() {
 }
 
 function adjustRoundLength(delta: number) {
-  const newLength = roundLength.value + delta;
-  if (newLength >= GAME_SETTINGS.roundLengthSeconds.MIN && newLength <= GAME_SETTINGS.roundLengthSeconds.MAX) {
-    roundLength.value = newLength;
+  const newLength = drawingTimeLimit.value + delta;
+  if (newLength >= GAME_SETTINGS.drawingTimeLimitSeconds.MIN && newLength <= GAME_SETTINGS.drawingTimeLimitSeconds.MAX) {
+    drawingTimeLimit.value = newLength;
+  }
+}
+
+function adjustGuessLength(delta: number) {
+  const newLength = guessingTimeLimit.value + delta;
+  if (newLength >= GAME_SETTINGS.guessingTimeLimitSeconds.MIN && newLength <= GAME_SETTINGS.guessingTimeLimitSeconds.MAX) {
+    guessingTimeLimit.value = newLength;
   }
 }
 
@@ -74,24 +83,29 @@ watch(rounds, (val) => {
   }
 });
 
-watch(roundLength, (val) => {
-  if (Number.isFinite(val)) store.roundLength = val;
+watch(drawingTimeLimit, (val) => {
+  if (Number.isFinite(val)) store.drawingTimeLimit = val;
+});
+
+watch(guessingTimeLimit, (val) => {
+  if (Number.isFinite(val)) store.guessingTimeLimit = val;
 });
 
 // Host: debounced broadcast whenever any setting changes (auto-cleaned on unmount)
-watchDebounced([difficulty, rounds, roundLength], broadcastSettings, { debounce: 300 });
+watchDebounced([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], broadcastSettings, { debounce: 300 });
 
 // Non-host: sync all settings from store in one watcher
-watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], ([d, r, rl]) => {
+watch([() => store.difficulty, () => store.maxRounds, () => store.drawingTimeLimit, () => store.guessingTimeLimit], ([d, r, rl, gl]) => {
   if (!store.isHost) {
     difficulty.value = d;
     rounds.value = r;
-    roundLength.value = rl;
+    drawingTimeLimit.value = rl;
+    guessingTimeLimit.value = gl;
   }
 });
 
 // Flash settings when they change (visible to all players)
-watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], () => {
+watch([() => store.difficulty, () => store.maxRounds, () => store.drawingTimeLimit, () => store.guessingTimeLimit], () => {
   settingsFlash.value = true;
   startFlash();
 });
@@ -106,7 +120,9 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
       •
       <span class="setting-compact">{{ rounds }} rounds</span>
       •
-      <span class="setting-compact">{{ roundLength }}s per round</span>
+      <span class="setting-compact">{{ drawingTimeLimit }}s draw</span>
+      •
+      <span class="setting-compact">{{ guessingTimeLimit }}s guess</span>
     </div>
   </div>
 
@@ -151,22 +167,45 @@ watch([() => store.difficulty, () => store.maxRounds, () => store.roundLength], 
     <details>
       <summary>Advanced Settings</summary>
       <div class="setting-group">
-        <label for="round-time">Round Time (seconds):</label>
+        <label for="round-time">Drawing Time (seconds):</label>
         <div class="round-time-controls">
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="roundLength <= GAME_SETTINGS.roundLengthSeconds.MIN"
+            :disabled="drawingTimeLimit <= GAME_SETTINGS.drawingTimeLimitSeconds.MIN"
             @click="adjustRoundLength(-10)"
           >
             -10s
           </button>
-          <span>{{ roundLength }} seconds</span>
+          <span>{{ drawingTimeLimit }} seconds</span>
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="roundLength >= GAME_SETTINGS.roundLengthSeconds.MAX"
+            :disabled="drawingTimeLimit >= GAME_SETTINGS.drawingTimeLimitSeconds.MAX"
             @click="adjustRoundLength(10)"
+          >
+            +10s
+          </button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <label for="guess-time">Guessing Time (seconds):</label>
+        <div class="round-time-controls">
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="guessingTimeLimit <= GAME_SETTINGS.guessingTimeLimitSeconds.MIN"
+            @click="adjustGuessLength(-10)"
+          >
+            -10s
+          </button>
+          <span>{{ guessingTimeLimit }} seconds</span>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="guessingTimeLimit >= GAME_SETTINGS.guessingTimeLimitSeconds.MAX"
+            @click="adjustGuessLength(10)"
           >
             +10s
           </button>

@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "kick_vote_updated",
+      "title": "Type",
+      "type": "string"
+    },
+    "targetPlayerId": {
+      "title": "Targetplayerid",
+      "type": "string"
+    },
+    "currentVotes": {
+      "title": "Currentvotes",
+      "type": "integer"
+    },
+    "requiredVotes": {
+      "title": "Requiredvotes",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "currentVotes",
+    "requiredVotes",
+    "targetPlayerId",
+    "type"
+  ],
+  "title": "KickVoteUpdatedEvent",
+  "type": "object"
+}

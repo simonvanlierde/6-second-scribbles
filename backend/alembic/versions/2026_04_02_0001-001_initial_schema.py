@@ -5,6 +5,7 @@ Revises:
 Create Date: 2026-04-02 00:01:00.000000
 
 """
+# spell-checker: ignore ondelete, onupdate
 
 from typing import TYPE_CHECKING
 

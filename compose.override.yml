@@ -17,11 +17,28 @@ services:
       retries: 5
       start_period: 15s
 
-  backend_migrations:
+  backend-migrations:
     build:
-      target: migrations
+      target: db-ops
     env_file:
       - backend/.env.dev
+
+  backend-seed:
+    build:
+      context: ./backend
+      target: db-ops
+    depends_on:
+      database:
+        condition: service_healthy
+      backend-migrations:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_HOST: database
+    env_file:
+      - backend/.env.dev
+    command: ["python", "scripts/seed_data.py"]
+    profiles:
+      - dev-tools
 
   cache:
     ports:

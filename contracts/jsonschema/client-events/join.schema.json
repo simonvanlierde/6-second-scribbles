@@ -1,0 +1,24 @@
+{
+  "properties": {
+    "type": {
+      "const": "join",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "playerId",
+    "type"
+  ],
+  "title": "JoinEvent",
+  "type": "object"
+}

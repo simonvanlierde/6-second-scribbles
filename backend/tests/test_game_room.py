@@ -2,9 +2,13 @@
 
 import json
 import time
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from app.rooms.manager import GameRoom
+from fastapi import HTTPException
+
+from app.categories import service as category_service
+from app.core.types import GamePhase
+from app.rooms.manager import GameRoom, PlayerInfo
 from app.rooms.state import GuessSubmissionState, PlayerCardState
 
 
@@ -17,7 +21,7 @@ class TestGameRoom:
         assert room.room_id == room_id
         assert len(room.players) == 0
         assert room.host_id is None
-        assert room.metadata.game_phase == "lobby"
+        assert room.metadata.game_phase == GamePhase.LOBBY
 
     async def test_add_first_player_becomes_host(self, game_room, mock_websocket) -> None:
         """Test that the first player to join becomes the host."""
@@ -143,7 +147,7 @@ class TestGameRoom:
 
     async def test_metadata_initialization(self, game_room) -> None:
         """Test that room metadata is properly initialized."""
-        assert game_room.metadata.game_phase == "lobby"
+        assert game_room.metadata.game_phase == GamePhase.LOBBY
         assert game_room.metadata.difficulty == "medium"
         assert game_room.metadata.max_rounds == 5
         assert game_room.metadata.pad_visibility is True
@@ -168,6 +172,17 @@ class TestGameRoom:
             "readyCount": 1,
             "totalPlayers": 2,
         }
+
+    async def test_start_guessing_resets_ready_players_and_sets_timestamp(self, room_with_players) -> None:
+        """Guessing starts with a fresh ready state and an explicit phase start time."""
+        room_with_players.metadata.ready_players.update({"player-1", "player-2"})
+
+        timeout_seconds = room_with_players.start_guessing()
+
+        assert timeout_seconds == 30
+        assert room_with_players.metadata.game_phase == GamePhase.GUESSING
+        assert room_with_players.metadata.ready_players == set()
+        assert room_with_players.metadata.guessing_start_time is not None
 
     async def test_broadcast_handles_disconnected_player(self, game_room, make_ws) -> None:
         """Test that broadcast handles disconnected players gracefully."""
@@ -197,6 +212,27 @@ class TestGameRoom:
 
         assert game_room.is_empty()
         assert game_room._emptied_at is not None
+
+    async def test_start_round_with_server_cards_recovers_when_categories_missing(self, make_ws, monkeypatch) -> None:
+        """Test that the round task does not crash when no matching categories exist."""
+        room = GameRoom("ROOM-NO-CATEGORIES")
+        room.players["player-1"] = PlayerInfo(id="player-1", name="Alice", websocket=make_ws())
+        room.players["player-2"] = PlayerInfo(id="player-2", name="Bob", websocket=make_ws())
+        room.broadcast = AsyncMock()
+        room.persist = AsyncMock()
+
+        monkeypatch.setattr(
+            category_service,
+            "get_random_category_cards",
+            AsyncMock(side_effect=HTTPException(status_code=404, detail="No categories found for difficulty: medium")),
+        )
+
+        await room.start_round_with_server_cards()
+
+        assert room.metadata.game_phase == GamePhase.LOBBY
+        room.broadcast.assert_awaited_once()
+        assert room.broadcast.await_args.args[0].type == "room_state"
+        room.persist.assert_awaited_once()
 
     async def test_initiate_kick_vote_broadcasts_modeled_payload(self, game_room, make_ws) -> None:
         """Test kick vote start broadcast preserves the expected protocol shape."""
@@ -242,7 +278,7 @@ class TestGameRoom:
         """Test persisted room state preserves structured metadata."""
         game_room.host_id = "host-1"
         game_room._last_host_id = "host-1"
-        game_room.metadata.game_phase = "drawing"
+        game_room.metadata.game_phase = GamePhase.DRAWING
         game_room.metadata.current_round = 2
         game_room.metadata.ready_players.add("host-1")
         game_room.metadata.submitted_players.add("player-2")
@@ -261,7 +297,7 @@ class TestGameRoom:
         restored_room = GameRoom.from_state(game_room.to_state())
 
         assert restored_room.host_id == "host-1"
-        assert restored_room.metadata.game_phase == "drawing"
+        assert restored_room.metadata.game_phase == GamePhase.DRAWING
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
         assert restored_room.metadata.submitted_players == {"player-2"}
@@ -325,12 +361,12 @@ class TestIdlePlayerDetection:
         await game_room.add_player("player-1", "Alice", mock_websocket)
 
         # In lobby phase, no idle checks
-        game_room.metadata.game_phase = "lobby"
+        game_room.metadata.game_phase = GamePhase.LOBBY
         await game_room._check_idle_players()
         assert "player-1" in game_room.players
 
         # In complete phase, no idle checks
-        game_room.metadata.game_phase = "complete"
+        game_room.metadata.game_phase = GamePhase.COMPLETE
         await game_room._check_idle_players()
         assert "player-1" in game_room.players
 
@@ -339,7 +375,7 @@ class TestIdlePlayerDetection:
         await game_room.add_player("player-1", "Alice", mock_websocket)
 
         # Set game to active phase
-        game_room.metadata.game_phase = "drawing"
+        game_room.metadata.game_phase = GamePhase.DRAWING
 
         # Simulate old activity (more than 3 minutes ago)
         old_time = time.time() - (4 * 60)  # 4 minutes ago
@@ -355,7 +391,7 @@ class TestIdlePlayerDetection:
         """Test that active players are not disconnected."""
         await game_room.add_player("player-1", "Alice", mock_websocket)
 
-        game_room.metadata.game_phase = "drawing"
+        game_room.metadata.game_phase = GamePhase.DRAWING
 
         # Update activity to now
         game_room.update_player_activity("player-1")

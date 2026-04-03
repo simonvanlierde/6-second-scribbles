@@ -1,0 +1,22 @@
+{
+  "join": "join.schema.json",
+  "start_game": "start_game.schema.json",
+  "start_round": "start_round.schema.json",
+  "round_complete": "round_complete.schema.json",
+  "game_complete": "game_complete.schema.json",
+  "player_ready": "player_ready.schema.json",
+  "start_guessing": "start_guessing.schema.json",
+  "submit_guess": "submit_guess.schema.json",
+  "restart_game": "restart_game.schema.json",
+  "heartbeat": "heartbeat.schema.json",
+  "settings_update": "settings_update.schema.json",
+  "language_update": "language_update.schema.json",
+  "draw_stroke": "draw_stroke.schema.json",
+  "draw_stroke_partial": "draw_stroke_partial.schema.json",
+  "drawpad_clear": "drawpad_clear.schema.json",
+  "pad_visibility": "pad_visibility.schema.json",
+  "privacy_changed": "privacy_changed.schema.json",
+  "initiate_kick": "initiate_kick.schema.json",
+  "cast_kick_vote": "cast_kick_vote.schema.json",
+  "request_game_state": "request_game_state.schema.json"
+}

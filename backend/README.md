@@ -1,3 +1,6 @@
+---
+# spell-checker: ignore elefant, htmlcov
+---
 # FastAPI Backend
 
 ## Overview

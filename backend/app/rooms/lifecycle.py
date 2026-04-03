@@ -41,9 +41,9 @@ def from_state(state: RoomState, *, room_factory: type[GameRoom], metadata_facto
     room._emptied_at = state.emptied_at
     room.is_hibernated = state.is_hibernated
     # Convert the Pydantic state model to a dict, then fix up fields whose
-    # Python types differ from their JSON/Pydantic serialisation:
-    #   - sets are serialised as lists → convert back
-    #   - nested Pydantic models are serialised to plain dicts → keep the
+    # Python types differ from their JSON/Pydantic serialization:
+    #   - sets are serialized as lists → convert back
+    #   - nested Pydantic models are serialized to plain dicts → keep the
     #     original typed instances so the dataclass fields stay strongly typed
     metadata_data = state.metadata.model_dump()
     metadata_data["ready_players"] = set(metadata_data["ready_players"])

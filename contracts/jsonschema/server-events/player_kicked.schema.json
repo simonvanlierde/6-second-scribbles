@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "player_kicked",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    },
+    "playerName": {
+      "title": "Playername",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "playerId",
+    "playerName",
+    "reason",
+    "type"
+  ],
+  "title": "PlayerKickedEvent",
+  "type": "object"
+}

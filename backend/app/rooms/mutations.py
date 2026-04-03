@@ -14,12 +14,14 @@ def apply_settings_update(
     *,
     difficulty: Difficulty | None,
     rounds: int | None,
-    round_length: int | None,
+    drawing_time_limit: int | None,
+    guessing_time_limit: int | None,
 ) -> None:
     """Apply lobby/game settings updates to room metadata."""
     room.metadata.difficulty = difficulty or room.metadata.difficulty
     room.metadata.max_rounds = rounds or room.metadata.max_rounds
-    room.metadata.round_length = round_length or room.metadata.round_length
+    room.metadata.drawing_time_limit = drawing_time_limit or room.metadata.drawing_time_limit
+    room.metadata.guessing_time_limit = guessing_time_limit or room.metadata.guessing_time_limit
 
 
 def set_language(room: GameRoom, language: LanguageCode) -> None:

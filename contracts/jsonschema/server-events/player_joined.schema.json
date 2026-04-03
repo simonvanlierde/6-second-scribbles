@@ -1,0 +1,54 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "player_joined",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "players": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PlayerListItem",
+        "type": "object"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "isHost": {
+      "title": "Ishost",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "isHost",
+    "name",
+    "playerId",
+    "players",
+    "type"
+  ],
+  "title": "PlayerJoinedEvent",
+  "type": "object"
+}

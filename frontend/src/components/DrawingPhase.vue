@@ -12,8 +12,9 @@ const canvas = useDrawingCanvas();
 const { leaveRoom: _leaveRoom } = useLeaveRoom();
 
 const canvasElement = ref<HTMLCanvasElement | null>(null);
-const timeLeft = ref(store.roundLength);
+const timeLeft = ref(store.drawingTimeLimit);
 const timerInterval = ref<number | null>(null);
+const hasSubmittedDrawing = ref(false);
 
 const category = computed(() => store.localPlayerCard?.category || "Loading...");
 const items = computed(() => store.localPlayerCard?.items || []);
@@ -64,10 +65,10 @@ onUnmounted(() => {
   canvas.cleanup();
 });
 
-// Recalculate timeLeft if roundLength is updated (e.g. late settings sync).
+// Recalculate timeLeft if drawingTimeLimit is updated (e.g. late settings sync).
 // Must account for already-elapsed time, not just swap in the new length.
 watch(
-  () => store.roundLength,
+  () => store.drawingTimeLimit,
   (newRoundLength) => {
     const roundStartTime = store.roundStartTime;
     if (roundStartTime && !Number.isNaN(roundStartTime)) {
@@ -82,22 +83,22 @@ watch(
 function startDrawingTimer() {
   if (timerInterval.value) return;
 
-  const roundLength = store.roundLength;
+  const drawingTimeLimit = store.drawingTimeLimit;
   const roundStartTime = store.roundStartTime;
 
   if (roundStartTime && !Number.isNaN(roundStartTime)) {
     const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
-    timeLeft.value = elapsed < 0 || elapsed > roundLength ? roundLength : Math.max(0, roundLength - elapsed);
+    timeLeft.value = elapsed < 0 || elapsed > drawingTimeLimit ? drawingTimeLimit : Math.max(0, drawingTimeLimit - elapsed);
   } else {
-    timeLeft.value = roundLength;
+    timeLeft.value = drawingTimeLimit;
   }
 
   timerInterval.value = window.setInterval(() => {
     if (roundStartTime && !Number.isNaN(roundStartTime)) {
       const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
-      timeLeft.value = Math.max(0, roundLength - elapsed);
+      timeLeft.value = Math.max(0, drawingTimeLimit - elapsed);
     } else {
-      timeLeft.value = roundLength;
+      timeLeft.value = drawingTimeLimit;
     }
 
     if (timeLeft.value <= 0) {
@@ -115,7 +116,14 @@ function stopTimer() {
 }
 
 function endDrawingPhase() {
-  if (store.gamePhase !== "drawing") return;
+  if (store.gamePhase !== "drawing" || hasSubmittedDrawing.value) return;
+  hasSubmittedDrawing.value = true;
+  stopTimer();
+
+  const drawing = canvas.canvasRef.value?.toDataURL("image/png");
+  if (drawing) {
+    send({ type: "draw_stroke", playerId: store.localPlayerId, drawing });
+  }
 
   send({ type: "player_ready", playerId: store.localPlayerId });
   localStorage.removeItem(STORAGE_KEYS.DRAWING_STATE);
@@ -141,6 +149,14 @@ function handleBrushSizeChange(event: Event) {
       <div class="round-info">Round {{ store.currentRound }} of {{ store.maxRounds }}</div>
       <div class="timer" :class="{ warning: timeLeft <= 10 }">{{ timeLeft }}</div>
       <div class="score">Score: {{ currentScore }}</div>
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="hasSubmittedDrawing"
+        @click="endDrawingPhase"
+      >
+        {{ hasSubmittedDrawing ? "Waiting..." : "Finish Drawing" }}
+      </button>
       <button type="button" class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
     </div>
 

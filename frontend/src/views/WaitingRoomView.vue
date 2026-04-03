@@ -50,7 +50,8 @@ function startGame() {
     type: "start_game",
     difficulty: store.difficulty || GAME_SETTINGS.difficulty.DEFAULT,
     rounds: store.maxRounds || GAME_SETTINGS.rounds.DEFAULT,
-    roundLength: store.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT,
+    drawingTimeLimit: store.drawingTimeLimit || GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT,
+    guessingTimeLimit: store.guessingTimeLimit || GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT,
   });
 }
 

@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 
+from app.core.types import GamePhase
 from app.categories import service as category_service
 from app.categories.models import Card, Category
 from app.categories.schemas import GuessRequest
@@ -211,7 +212,7 @@ class TestRoundService:
         assert event.type == "round_complete"
         assert event.scores == {"player-1": 20, "player-2": 20}
         assert event.results[0].correct_guesses == 2
-        assert room.metadata.game_phase == "scoring"
+        assert room.metadata.game_phase == GamePhase.SCORING
         assert room.metadata.player_scores == {"player-1": 20, "player-2": 20}
 
 
@@ -229,24 +230,24 @@ class TestRoomMutationService:
         room = GameRoom("ROOM-MUTATE")
         room.metadata.difficulty = "medium"
         room.metadata.max_rounds = 5
-        room.metadata.round_length = 30
+        room.metadata.drawing_time_limit = 30
 
         room_mutation_service.apply_settings_update(
             room,
             difficulty="hard",
             rounds=None,
-            round_length=45,
+            drawing_time_limit=45,
         )
 
         assert room.metadata.difficulty == "hard"
         assert room.metadata.max_rounds == 5
-        assert room.metadata.round_length == 45
+        assert room.metadata.drawing_time_limit == 45
 
 
 class TestWebSocketService:
     async def test_handle_room_websocket_connection_runs_and_disconnects(self, monkeypatch) -> None:
         websocket = AsyncMock()
-        room = GameRoom("ROOMWS")
+        room = GameRoom("ROOM_WS")
         fake_manager = SimpleNamespace(get_or_create_room=lambda _room_id: room)
         events: list[str] = []
 
@@ -264,7 +265,7 @@ class TestWebSocketService:
         monkeypatch.setattr(websocket_service, "room_manager", fake_manager)
         monkeypatch.setattr(websocket_service, "RoomWebSocketSession", FakeSession)
 
-        await websocket_service.websocket_endpoint(websocket, room_id="ROOMWS")
+        await websocket_service.websocket_endpoint(websocket, room_id="ROOM_WS")
 
         websocket.accept.assert_awaited_once()
         assert events == ["run", "disconnect"]

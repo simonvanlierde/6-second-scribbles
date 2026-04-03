@@ -9,7 +9,7 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
-      backend_migrations:
+      backend-migrations:
         condition: service_completed_successfully
     environment:
       POSTGRES_HOST: database
@@ -21,7 +21,7 @@ services:
       retries: 3
       start_period: 30s
 
-  backend_migrations:
+  backend-migrations:
     build:
       context: ./backend
     depends_on:

@@ -16,6 +16,7 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypedDict
 
+from fastapi import HTTPException
 from sqlalchemy import delete
 
 from app.categories import service as category_service
@@ -24,9 +25,6 @@ from app.core.config import settings
 from app.core.database import get_session_maker
 from app.core.redis import delete_room_state
 from app.core.types import (
-    COMPLETE_PHASE,
-    GUESSING_PHASE,
-    LOBBY_PHASE,
     Difficulty,
     GamePhase,
     LanguageCode,
@@ -34,16 +32,16 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import lifecycle as room_lifecycle
 from app.rooms.protocol import (
-    PlayerLeftEvent,
     PlayerCardPayload,
+    PlayerLeftEvent,
     PlayerSnapshot,
     ReadyStatusEvent,
     RoomStateEvent,
-    StartRoundBroadcastEvent,
+    StartRoundServerEvent,
     WebSocketMessage,
     send_ws_message,
 )
-from app.rooms.state import (  # noqa: TC001 - used in RoomMetadata dataclass field types at runtime
+from app.rooms.state import (
     GuessSubmissionState,
     PlayerCardState,
 )
@@ -99,9 +97,11 @@ class RoomMetadata:
     """Metadata and state information for a game room."""
 
     categories: list[str] = field(default_factory=list)
-    game_phase: GamePhase = "lobby"
+    game_phase: GamePhase = GamePhase.LOBBY
     round_start_time: int | None = None
-    round_length: int | None = None
+    guessing_start_time: int | None = None
+    drawing_time_limit: int | None = None
+    guessing_time_limit: int | None = None
     difficulty: Difficulty = "medium"
     max_rounds: int = 5
     current_round: int = 0
@@ -111,6 +111,7 @@ class RoomMetadata:
     language: LanguageCode = "en"  # Language code (ISO 639-1): en, es, fr, etc.
     # Server-side scoring state
     player_cards: dict[str, PlayerCardState] = field(default_factory=dict)
+    guess_targets: dict[str, str] = field(default_factory=dict)
     guess_submissions: list[GuessSubmissionState] = field(default_factory=list)
     submitted_players: set[str] = field(default_factory=set)  # playerIds that have submitted at least once
     player_count_for_scoring: int = 0  # expected number of submitters (snapshot at start_guessing)
@@ -212,11 +213,10 @@ class GameRoom:
     async def _start_guessing_after_delay(self, timeout_seconds: int) -> None:
         try:
             await asyncio.sleep(timeout_seconds + settings.drawing_to_guessing_buffer_seconds)
-            await self.broadcast(
-                rounds.start_guessing_event(self),
-            )
+            guessing_event = rounds.start_guessing_event(self)
+            await self.broadcast(guessing_event)
             await self.persist()
-            self.start_scoring_timeout(self.metadata.round_length or 30)
+            self.start_scoring_timeout(self.metadata.guessing_time_limit or 60)
         except asyncio.CancelledError:
             pass
 
@@ -242,22 +242,32 @@ class GameRoom:
 
     async def start_round_with_server_cards(self, *, round_number: int | None = None) -> None:
         """Assign cards server-side, start a round, and broadcast the payload."""
-        cards = await self._build_server_round_cards()
+        try:
+            cards = await self._build_server_round_cards()
+        except HTTPException as exc:
+            logger.warning(
+                "[GameRoom %s] Unable to start round %s with server cards: %s",
+                self.room_id,
+                round_number or (self.metadata.current_round + 1),
+                exc,
+            )
+            await self.broadcast(self.room_state_event())
+            await self.persist()
+            return
         next_round = round_number or (self.metadata.current_round + 1)
         round_start_time = self.start_round(round_number=next_round, cards=cards)
         await self.broadcast(
-            StartRoundBroadcastEvent(
+            StartRoundServerEvent(
                 type="start_round",
                 round=next_round,
                 cards={
-                    player_id: PlayerCardPayload.model_validate(card.model_dump())
-                    for player_id, card in cards.items()
+                    player_id: PlayerCardPayload.model_validate(card.model_dump()) for player_id, card in cards.items()
                 },
                 roundStartTime=round_start_time,
             ),
         )
         await self.persist()
-        self.start_guessing_timeout(self.metadata.round_length or 30)
+        self.start_guessing_timeout(self.metadata.drawing_time_limit or 30)
 
     async def _build_server_round_cards(self) -> dict[str, PlayerCardState]:
         """Fetch one random category set per player from the category service."""
@@ -345,7 +355,7 @@ class GameRoom:
 
     async def _check_idle_players(self) -> None:
         """Check for and disconnect idle players during active game phases."""
-        if self.metadata.game_phase not in (LOBBY_PHASE, COMPLETE_PHASE):
+        if self.metadata.game_phase not in (GamePhase.LOBBY, GamePhase.COMPLETE):
             now = time.time()
             idle_players = []
 
@@ -397,7 +407,7 @@ class GameRoom:
         )
         # If a player disconnects during guessing without having submitted, adjust
         # the expected count so scoring can trigger without waiting for the timeout.
-        if self.metadata.game_phase == GUESSING_PHASE and player_id not in self.metadata.submitted_players:
+        if self.metadata.game_phase == GamePhase.GUESSING and player_id not in self.metadata.submitted_players:
             self.metadata.player_count_for_scoring = max(0, self.metadata.player_count_for_scoring - 1)
             expected = self.metadata.player_count_for_scoring
             submitted = len(self.metadata.submitted_players)
@@ -434,7 +444,10 @@ class GameRoom:
                 "difficulty": self.metadata.difficulty,
                 "maxRounds": self.metadata.max_rounds,
                 "roundStartTime": self.metadata.round_start_time,
-                "roundLength": self.metadata.round_length,
+                "guessingStartTime": self.metadata.guessing_start_time,
+                "drawingTimeLimit": self.metadata.drawing_time_limit,
+                "guessingTimeLimit": self.metadata.guessing_time_limit,
+                "guessTargets": self.metadata.guess_targets,
                 "padVisibility": self.metadata.pad_visibility,
                 "isPrivate": self.metadata.is_private,
                 "language": self.metadata.language,
@@ -444,14 +457,16 @@ class GameRoom:
     def configure_game(
         self,
         *,
-        round_length: int | None,
+        drawing_time_limit: int | None,
+        guessing_time_limit: int | None,
         difficulty: Difficulty | None,
         max_rounds: int | None,
     ) -> None:
         """Initialize a new game from the lobby state."""
         rounds.configure_game(
             self,
-            round_length=round_length,
+            drawing_time_limit=drawing_time_limit,
+            guessing_time_limit=guessing_time_limit,
             difficulty=difficulty,
             max_rounds=max_rounds,
         )
@@ -641,7 +656,7 @@ class GameRoom:
 
 
 class RoomManager:
-    """Manages all game rooms with PartyKit-like lifecycle.
+    """Manages all game rooms.
 
     Features:
     - Automatic hibernation of empty rooms after 1 minute
@@ -760,7 +775,7 @@ class RoomManager:
             for room_id, room in self.rooms.items()
             if not room.metadata.is_private
             and 0 < len(room.players) < max_players
-            and room.metadata.game_phase == LOBBY_PHASE
+            and room.metadata.game_phase == GamePhase.LOBBY
         ]
 
         return secrets.choice(available_rooms) if available_rooms else None

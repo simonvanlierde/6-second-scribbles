@@ -32,7 +32,10 @@ export interface GameState {
   currentRound: number;
   maxRounds: number;
   roundStartTime?: number; // Unix timestamp when the current round started (server-generated)
-  roundLength?: number; // Duration of each round in seconds (host-configured)
+  guessingStartTime?: number; // Unix timestamp when the guessing phase started (server-generated)
+  drawingTimeLimit?: number; // Drawing duration in seconds (host-configured)
+  guessingTimeLimit?: number; // Guessing duration in seconds (host-configured)
+  guessTargets?: Record<string, string>; // One assigned drawing target per player
   gamePhase: "lobby" | "drawing" | "guessing" | "scoring" | "complete";
 }
 

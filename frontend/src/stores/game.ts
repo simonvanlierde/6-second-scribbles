@@ -35,8 +35,11 @@ export const useGameStore = defineStore("game", () => {
   const maxRounds = ref<number>(initialState?.maxRounds || GAME_SETTINGS.rounds.DEFAULT);
   const difficulty = ref<Difficulty>(initialState?.difficulty || GAME_SETTINGS.difficulty.DEFAULT);
   const gamePhase = ref<"lobby" | "drawing" | "guessing" | "scoring" | "complete">(initialState?.gamePhase || "lobby");
-  const roundLength = ref<number>(initialState?.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT);
+  const drawingTimeLimit = ref<number>(initialState?.drawingTimeLimit || GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT);
+  const guessingTimeLimit = ref<number>(initialState?.guessingTimeLimit || GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT);
   const roundStartTime = ref<number | undefined>(initialState?.roundStartTime);
+  const guessingStartTime = ref<number | undefined>(initialState?.guessingStartTime);
+  const guessTargets = ref<Record<string, string>>(initialState?.guessTargets || {});
   const currentStrokes = ref<DrawStroke[]>([]);
   const localPadVisible = ref<boolean>(initialState?.localPadVisible ?? true);
   const roomPadVisible = ref<boolean>(true);
@@ -114,10 +117,11 @@ export const useGameStore = defineStore("game", () => {
     players.value = new Map();
   }
 
-  function startGame(gameDifficulty: Difficulty, gameRounds: number, roundLengthSec: number) {
+  function startGame(gameDifficulty: Difficulty, gameRounds: number, drawingTimeLimitSec: number, guessingTimeLimitSec: number) {
     difficulty.value = gameDifficulty;
     maxRounds.value = gameRounds;
-    roundLength.value = roundLengthSec;
+    drawingTimeLimit.value = drawingTimeLimitSec;
+    guessingTimeLimit.value = guessingTimeLimitSec;
     currentRound.value = 0;
 
     const next = new Map(players.value);
@@ -128,17 +132,28 @@ export const useGameStore = defineStore("game", () => {
   function startRound(roundNumber: number, cards: Record<string, Card>) {
     currentRound.value = roundNumber;
     gamePhase.value = "drawing";
+    readyCount.value = 0;
+    totalPlayers.value = players.value.size;
+    guessingStartTime.value = undefined;
+    guessTargets.value = {};
     clearStrokes();
 
-    for (const [playerId, card] of Object.entries(cards)) {
-      const player = players.value.get(playerId);
-      if (player) {
-        player.currentCard = card;
-      }
+    const next = new Map(players.value);
+    localPlayerCard.value = undefined;
+
+    for (const [playerId, player] of next) {
+      next.set(playerId, {
+        ...player,
+        currentCard: cards[playerId],
+        drawing: undefined,
+      });
+
       if (playerId === localPlayerId.value) {
-        localPlayerCard.value = card;
+        localPlayerCard.value = cards[playerId];
       }
     }
+
+    players.value = next;
   }
 
   /** Resets round counter and all player scores (used when restarting a game). */
@@ -177,8 +192,18 @@ export const useGameStore = defineStore("game", () => {
     lastRoundResults.value = results;
   }
 
+  function startGuessing(startTime?: number | null, targets?: Record<string, string>) {
+    gamePhase.value = "guessing";
+    guessingStartTime.value = startTime ?? Date.now();
+    guessTargets.value = targets ?? {};
+    readyCount.value = 0;
+    totalPlayers.value = players.value.size;
+  }
+
   function endGame() {
     gamePhase.value = "complete";
+    readyCount.value = 0;
+    totalPlayers.value = players.value.size;
   }
 
   function setHost(id: string | null) {
@@ -209,11 +234,13 @@ export const useGameStore = defineStore("game", () => {
   function applySettingsUpdate(settings: {
     difficulty?: Difficulty | null;
     rounds?: number | null;
-    roundLength?: number | null;
+    drawingTimeLimit?: number | null;
+    guessingTimeLimit?: number | null;
   }) {
     if (settings.difficulty) difficulty.value = settings.difficulty;
     if (settings.rounds !== null && settings.rounds !== undefined) maxRounds.value = settings.rounds;
-    if (settings.roundLength !== null && settings.roundLength !== undefined) roundLength.value = settings.roundLength;
+    if (settings.drawingTimeLimit !== null && settings.drawingTimeLimit !== undefined) drawingTimeLimit.value = settings.drawingTimeLimit;
+    if (settings.guessingTimeLimit !== null && settings.guessingTimeLimit !== undefined) guessingTimeLimit.value = settings.guessingTimeLimit;
   }
 
   function applyRoomState(roomState: {
@@ -224,7 +251,10 @@ export const useGameStore = defineStore("game", () => {
     difficulty?: Difficulty | null;
     maxRounds?: number | null;
     roundStartTime?: number | null;
-    roundLength?: number | null;
+    guessingStartTime?: number | null;
+    drawingTimeLimit?: number | null;
+    guessingTimeLimit?: number | null;
+    guessTargets?: Record<string, string> | null;
     padVisibility?: boolean;
     language?: string | null;
     isPrivate?: boolean;
@@ -236,9 +266,12 @@ export const useGameStore = defineStore("game", () => {
     applySettingsUpdate({
       difficulty: roomState.difficulty,
       rounds: roomState.maxRounds,
-      roundLength: roomState.roundLength,
+      drawingTimeLimit: roomState.drawingTimeLimit,
+      guessingTimeLimit: roomState.guessingTimeLimit,
     });
     roundStartTime.value = roomState.roundStartTime ?? undefined;
+    guessingStartTime.value = roomState.guessingStartTime ?? undefined;
+    guessTargets.value = roomState.guessTargets ?? {};
     if (roomState.padVisibility !== undefined) roomPadVisible.value = roomState.padVisibility;
     if (roomState.language) language.value = roomState.language;
     if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
@@ -254,7 +287,10 @@ export const useGameStore = defineStore("game", () => {
     difficulty.value = GAME_SETTINGS.difficulty.DEFAULT;
     gamePhase.value = "lobby";
     roundStartTime.value = undefined;
-    roundLength.value = GAME_SETTINGS.roundLengthSeconds.DEFAULT;
+    guessingStartTime.value = undefined;
+    drawingTimeLimit.value = GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT;
+    guessingTimeLimit.value = GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT;
+    guessTargets.value = {};
     currentStrokes.value = [];
     localPlayerCard.value = undefined;
     lastRoundResults.value = [];
@@ -292,7 +328,10 @@ export const useGameStore = defineStore("game", () => {
           difficulty: difficulty.value,
           gamePhase: gamePhase.value,
           roundStartTime: roundStartTime.value,
-          roundLength: roundLength.value,
+          guessingStartTime: guessingStartTime.value,
+          drawingTimeLimit: drawingTimeLimit.value,
+          guessingTimeLimit: guessingTimeLimit.value,
+          guessTargets: guessTargets.value,
           localPadVisible: localPadVisible.value,
           language: language.value,
         }),
@@ -313,7 +352,9 @@ export const useGameStore = defineStore("game", () => {
       difficulty,
       gamePhase,
       roundStartTime,
-      roundLength,
+      guessingStartTime,
+      drawingTimeLimit,
+      guessingTimeLimit,
       localPadVisible,
       language,
     ],
@@ -369,11 +410,14 @@ export const useGameStore = defineStore("game", () => {
     difficulty,
     gamePhase,
     roundStartTime,
-    roundLength,
+    guessingStartTime,
+    drawingTimeLimit,
+    guessingTimeLimit,
     currentStrokes,
     localPlayerCard,
     lastRoundResults,
     categories,
+    guessTargets,
     readyCount,
     totalPlayers,
     language,
@@ -403,6 +447,7 @@ export const useGameStore = defineStore("game", () => {
     setPlayerDrawing,
     updateScores,
     setRoundResults,
+    startGuessing,
     endGame,
     setHost,
     setLanguage,

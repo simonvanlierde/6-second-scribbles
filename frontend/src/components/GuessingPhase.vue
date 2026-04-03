@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
@@ -15,16 +15,79 @@ const allGuessesSubmitted = ref(false);
 const leaveDialogRef = ref<HTMLDialogElement | null>(null);
 const emptyGuessDialogTarget = ref<string | null>(null);
 const emptyGuessDialogRef = ref<HTMLDialogElement | null>(null);
+const timeLeft = ref(store.guessingTimeLimit);
+const timerInterval = ref<number | null>(null);
 
-const otherPlayers = computed(() => store.playersList.filter((p) => p.id !== store.localPlayerId));
+const assignedTargetPlayerId = computed(() => store.guessTargets[store.localPlayerId] || null);
+const assignedTargetPlayer = computed(() =>
+  assignedTargetPlayerId.value ? store.playersList.find((p) => p.id === assignedTargetPlayerId.value) || null : null,
+);
 const brokenImages = ref<Set<string>>(new Set());
 
 onMounted(() => {
   submittedPlayers.value = [];
-  for (const player of otherPlayers.value) {
-    playerGuesses.value[player.id] = Array(10).fill("");
+  if (assignedTargetPlayerId.value) {
+    playerGuesses.value[assignedTargetPlayerId.value] = Array(10).fill("");
   }
+  startGuessingTimer();
 });
+
+onUnmounted(() => {
+  stopTimer();
+});
+
+watch(
+  () => store.guessingTimeLimit,
+  (newGuessLength) => {
+    const guessingStartTime = store.guessingStartTime;
+    if (guessingStartTime && !Number.isNaN(guessingStartTime)) {
+      const elapsed = Math.floor((Date.now() - guessingStartTime) / 1000);
+      timeLeft.value = Math.max(0, newGuessLength - elapsed);
+    } else {
+      timeLeft.value = newGuessLength;
+    }
+  },
+);
+
+watch(
+  () => store.guessingStartTime,
+  () => {
+    stopTimer();
+    startGuessingTimer();
+  },
+);
+
+function startGuessingTimer() {
+  if (timerInterval.value) return;
+
+  const updateTimeLeft = () => {
+    const guessingStartTime = store.guessingStartTime;
+    const guessingTimeLimit = store.guessingTimeLimit;
+
+    if (guessingStartTime && !Number.isNaN(guessingStartTime)) {
+      const elapsed = Math.floor((Date.now() - guessingStartTime) / 1000);
+      timeLeft.value = elapsed < 0 || elapsed > guessingTimeLimit ? 0 : Math.max(0, guessingTimeLimit - elapsed);
+      return;
+    }
+
+    timeLeft.value = guessingTimeLimit;
+  };
+
+  updateTimeLeft();
+  timerInterval.value = window.setInterval(() => {
+    updateTimeLeft();
+    if (timeLeft.value <= 0) {
+      stopTimer();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval.value) {
+    clearInterval(timerInterval.value);
+    timerInterval.value = null;
+  }
+}
 
 function guessesFor(playerId: string): string[] {
   if (!playerGuesses.value[playerId]) playerGuesses.value[playerId] = Array(10).fill("");
@@ -59,7 +122,7 @@ function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
     submittedPlayers.value = [...submittedPlayers.value, targetPlayerId];
   }
 
-  if (submittedPlayers.value.length === otherPlayers.value.length) {
+  if (assignedTargetPlayerId.value && submittedPlayers.value.includes(assignedTargetPlayerId.value)) {
     allGuessesSubmitted.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
   }
@@ -88,30 +151,33 @@ function confirmLeave() {
     <div class="container">
       <div class="guessing-header">
         <h2>Guess what others drew!</h2>
-        <button type="button" class="btn btn-secondary btn-leave" @click="showLeaveConfirmation">🚪 Leave</button>
+        <div class="header-actions">
+          <div class="timer" :class="{ warning: timeLeft <= 10 }">{{ timeLeft }}</div>
+          <button type="button" class="btn btn-secondary btn-leave" @click="showLeaveConfirmation">🚪 Leave</button>
+        </div>
       </div>
-      <p class="info-text">Look at each player's drawing and guess what they drew</p>
+      <p class="info-text">Look at each player's drawing and guess what they drew before the timer runs out</p>
 
       <div class="ready-status">
         <p class="ready-count">{{ store.readyCount }} / {{ store.totalPlayers }} players finished guessing</p>
       </div>
 
       <div class="players-drawings">
-        <div v-for="player in otherPlayers" :key="player.id" class="drawing-card">
-          <h3>{{ player.name }}'s Drawing</h3>
+        <div v-if="assignedTargetPlayer" class="drawing-card">
+          <h3>{{ assignedTargetPlayer.name }}'s Drawing</h3>
           <div class="drawing-display">
             <img
-              v-if="player.drawing && !brokenImages.has(player.id)"
-              :src="player.drawing"
+              v-if="assignedTargetPlayer.drawing && !brokenImages.has(assignedTargetPlayer.id)"
+              :src="assignedTargetPlayer.drawing"
               alt="Player drawing"
               class="player-drawing"
-              @error="handleImageError(player.id)"
+              @error="handleImageError(assignedTargetPlayer.id)"
             >
-            <p v-else-if="brokenImages.has(player.id)" class="waiting-text">Drawing failed to load.</p>
+            <p v-else-if="brokenImages.has(assignedTargetPlayer.id)" class="waiting-text">Drawing failed to load.</p>
             <p v-else class="waiting-text">Waiting for drawing...</p>
           </div>
 
-          <div v-if="submittedPlayers.includes(player.id)" class="submitted-message">
+          <div v-if="submittedPlayers.includes(assignedTargetPlayer.id)" class="submitted-message">
             <p>✓ Guesses submitted! Waiting for other players...</p>
           </div>
           <div v-else class="guess-inputs">
@@ -120,17 +186,18 @@ function confirmLeave() {
               <input
                 v-for="index in 10"
                 :key="index"
-                v-model="guessesFor(player.id)[index - 1]"
+                v-model="guessesFor(assignedTargetPlayer.id)[index - 1]"
                 type="text"
                 :placeholder="`Guess ${index}`"
                 class="guess-input"
               >
             </div>
-            <button type="button" class="btn btn-primary" @click="submitGuessesForPlayer(player.id)">
-              Submit Guesses for {{ player.name }}
+            <button type="button" class="btn btn-primary" @click="submitGuessesForPlayer(assignedTargetPlayer.id)">
+              Submit Guesses for {{ assignedTargetPlayer.name }}
             </button>
           </div>
         </div>
+        <p v-else class="waiting-text">Waiting for your assigned drawing...</p>
       </div>
     </div>
 
@@ -171,6 +238,38 @@ function confirmLeave() {
 
 .guessing-header h2 {
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.timer {
+  font-size: 2rem;
+  font-weight: bold;
+  padding: 0.5rem 1.5rem;
+  background-color: #3498db;
+  border-radius: var(--radius-md);
+  min-width: 100px;
+  text-align: center;
+  color: white;
+}
+
+.timer.warning {
+  background-color: #e74c3c;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 .confirm-dialog {

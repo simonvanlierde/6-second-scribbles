@@ -1,0 +1,19 @@
+{
+  "properties": {
+    "type": {
+      "const": "player_ready",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "playerId",
+    "type"
+  ],
+  "title": "PlayerReadyEvent",
+  "type": "object"
+}

@@ -2,7 +2,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
-import { type ClientEvent, type ServerEvent, type ServerEventGroup, ServerEventSchema } from "@/generated/protocol";
+import { type ClientEvent, type ServerEvent, type ServerEventGroup, type ServerEventOf, ServerEventSchema } from "@/generated/protocol";
 import { useGameStore } from "@/stores/game";
 
 // Singleton WebSocket connection shared across all components
@@ -11,7 +11,9 @@ const isConnected = ref(false);
 const connectionError = ref<string | null>(null);
 let heartbeatInterval: number | null = null;
 
-type ConnectionEvent = ServerEventGroup<"connection">;
+type ConnectionEvent =
+  | ServerEventGroup<"connection">
+  | ServerEventOf<"host_changed">;
 type GameFlowEvent = ServerEventGroup<"gameFlow" | "roomSettings">;
 type DrawingEvent = ServerEventGroup<"drawing">;
 type KickEvent = ServerEventGroup<"moderation">;
@@ -123,7 +125,8 @@ export function useGameConnection() {
         store.startGame(
           message.difficulty || GAME_SETTINGS.difficulty.DEFAULT,
           message.rounds || GAME_SETTINGS.rounds.DEFAULT,
-          message.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT,
+          message.drawingTimeLimit || GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT,
+          message.guessingTimeLimit || GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT,
         );
         router.push(`/game/${store.roomCode}`);
         break;
@@ -141,13 +144,25 @@ export function useGameConnection() {
         break;
 
       case "start_guessing":
-        store.gamePhase = "guessing";
+        if (typeof store.startGuessing === "function") {
+          store.startGuessing(message.guessingStartTime, message.guessTargets ?? {});
+        } else {
+          // HMR can briefly keep an older Pinia store instance alive while this
+          // module has already reloaded, so fall back to direct state updates.
+          store.gamePhase = "guessing";
+          store.guessingStartTime = message.guessingStartTime ?? Date.now();
+          store.guessTargets = message.guessTargets ?? {};
+          store.readyCount = 0;
+          store.totalPlayers = store.playersList.length;
+        }
         break;
 
       case "round_complete":
         store.setRoundResults(message.results);
         store.updateScores(message.scores);
         store.gamePhase = "scoring";
+        store.readyCount = 0;
+        store.totalPlayers = store.playersList.length;
         router.push(`/round-results/${store.roomCode}`);
         // RoundResultsView owns the 5-second countdown and calls startRound from there.
         break;
@@ -192,6 +207,11 @@ export function useGameConnection() {
     switch (message.type) {
       case "draw_stroke":
       case "draw_stroke_partial":
+        if (typeof message.drawing === "string" && message.playerId && message.playerId !== store.localPlayerId) {
+          store.setPlayerDrawing(message.playerId, message.drawing);
+          break;
+        }
+
         if (message.stroke && message.playerId !== store.localPlayerId) {
           store.addStroke(message.stroke);
         }

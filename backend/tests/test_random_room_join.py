@@ -71,7 +71,7 @@ class TestRandomRoomJoin:
             room_id,
             [JoinedPlayer("player1", "Player 1"), JoinedPlayer("player2", "Player 2")],
         ) as (ws1, ws2):
-            send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60})
+            send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "drawingTimeLimit": 60})
             assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
 
             response = test_client.get("/api/rooms/random")

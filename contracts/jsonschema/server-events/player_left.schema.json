@@ -1,0 +1,20 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "player_left",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "playerId",
+    "type"
+  ],
+  "title": "PlayerLeftEvent",
+  "type": "object"
+}

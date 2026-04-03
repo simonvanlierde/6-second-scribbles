@@ -1,0 +1,32 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "kick_error",
+      "title": "Type",
+      "type": "string"
+    },
+    "error": {
+      "title": "Error",
+      "type": "string"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    }
+  },
+  "required": [
+    "error",
+    "type"
+  ],
+  "title": "KickErrorEvent",
+  "type": "object"
+}

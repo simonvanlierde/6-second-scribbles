@@ -2,7 +2,7 @@
   "info": {
     "title": "6 Second Scribbles Room WebSocket",
     "version": "0.1.0",
-    "description": "Published realtime websocket contract for the multiplayer game.\n\nThe current implementation source of truth remains the Pydantic models in `backend/app/rooms/protocol.py`, with generated JSON Schema artifacts published under `contracts/jsonschema/`.\n\nRepresentative payload examples live in `contracts/examples/`."
+    "description": "Published realtime websocket contract for the multiplayer game.\n\nThe current implementation source of truth remains the Pydantic models in `backend/app/rooms/protocol.py`, with generated JSON Schema artifacts published under `contracts/jsonschema/`.\n\nRepresentative payload examples live in `contracts/`."
   },
   "tags": ["realtime", "websocket", "multiplayer"],
   "server": {
@@ -36,14 +36,14 @@
     "clientEvent": {
       "title": "Client Event",
       "summary": "Any validated client-to-server room event.",
-      "schemaRef": "../jsonschema/client-event.schema.json",
-      "examplesRef": "../examples/client-events.json"
+      "schemaRef": "jsonschema/client-event.schema.json",
+      "examplesRef": "client-events.examples.json"
     },
     "serverEvent": {
       "title": "Server Event",
       "summary": "Any validated server-to-client room event.",
-      "schemaRef": "../jsonschema/server-event.schema.json",
-      "examplesRef": "../examples/server-events.json"
+      "schemaRef": "jsonschema/server-event.schema.json",
+      "examplesRef": "server-events.examples.json"
     }
   }
 }

@@ -6,7 +6,7 @@ from time import time
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.types import Difficulty, GamePhase, LanguageCode  # noqa: TC001 - used by Pydantic at runtime
+from app.core.types import Difficulty, GamePhase, LanguageCode
 
 
 class PlayerCardState(BaseModel):
@@ -36,9 +36,11 @@ class RoomMetadataState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     categories: list[str] = Field(default_factory=list)
-    game_phase: GamePhase = "lobby"
+    game_phase: GamePhase = GamePhase.LOBBY
     round_start_time: int | None = None
-    round_length: int | None = None
+    guessing_start_time: int | None = None
+    drawing_time_limit: int | None = None
+    guessing_time_limit: int | None = None
     difficulty: Difficulty = "medium"
     max_rounds: int = 5
     current_round: int = 0
@@ -47,6 +49,7 @@ class RoomMetadataState(BaseModel):
     is_private: bool = False
     language: LanguageCode = "en"
     player_cards: dict[str, PlayerCardState] = Field(default_factory=dict)
+    guess_targets: dict[str, str] = Field(default_factory=dict)
     guess_submissions: list[GuessSubmissionState] = Field(default_factory=list)
     submitted_players: set[str] = Field(default_factory=set)
     player_count_for_scoring: int = 0

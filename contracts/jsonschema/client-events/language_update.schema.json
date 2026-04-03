@@ -1,0 +1,18 @@
+{
+  "properties": {
+    "type": {
+      "const": "language_update",
+      "title": "Type",
+      "type": "string"
+    },
+    "language": {
+      "pattern": "^[a-z]{2,5}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "LanguageUpdateEvent",
+  "type": "object"
+}

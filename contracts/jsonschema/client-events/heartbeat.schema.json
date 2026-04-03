@@ -1,0 +1,14 @@
+{
+  "properties": {
+    "type": {
+      "const": "heartbeat",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "HeartbeatEvent",
+  "type": "object"
+}

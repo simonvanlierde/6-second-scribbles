@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
+from app.core.types import GamePhase
 from app.rooms.manager import room_manager
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
@@ -25,11 +26,11 @@ async def test_room_status_for_existing_and_missing_room(async_client) -> None:
 
     room = room_manager.get_or_create_room("TEST01")
     await room.add_player("player-1", "Alice", AsyncMock())
-    room.metadata.game_phase = "drawing"
+    room.metadata.game_phase = GamePhase.DRAWING
 
     existing_response = await async_client.get("/rooms/TEST01/status")
     assert existing_response.status_code == 200
-    assert existing_response.json() == {"exists": True, "players": 1, "game_phase": "drawing"}
+    assert existing_response.json() == {"exists": True, "players": 1, "game_phase": GamePhase.DRAWING.value}
 
 
 def test_join_broadcast_lists_all_players(test_client) -> None:
@@ -138,7 +139,7 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client) -> No
         "PROTO02",
         [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
     ) as (_ws1, ws2):
-        send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "roundLength": 30})
+        send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "drawingTimeLimit": 30})
 
         assert receive_json(ws2) == {
             "type": "protocol_error",

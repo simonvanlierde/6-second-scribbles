@@ -124,13 +124,17 @@ build:
 # Generate shared websocket contract artifacts.
 [group('contracts')]
 contracts:
-    npm run generate:contracts
-    npm run generate:types
+    npm run contracts:types
+
+# Generate and validate shared websocket contract artifacts.
+[group('contracts')]
+validate-contracts:
+    npm run contracts:validate
 
 # Validate that contract-related generated files are up to date.
 [group('check')]
 check-contracts:
-    npm run check:contracts
+    npm run contracts:check
 
 # ── Database ──────────────────────────────────────────────────────────────────
 

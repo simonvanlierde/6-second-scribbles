@@ -1,0 +1,162 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "room_state",
+      "title": "Type",
+      "type": "string"
+    },
+    "players": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PlayerSnapshot",
+        "type": "object"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "hostId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hostid"
+    },
+    "categories": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Categories",
+      "type": "array"
+    },
+    "gamePhase": {
+      "description": "Valid room lifecycle phases for game flow state.",
+      "enum": [
+        "lobby",
+        "drawing",
+        "guessing",
+        "scoring",
+        "complete"
+      ],
+      "title": "GamePhase",
+      "type": "string"
+    },
+    "difficulty": {
+      "enum": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "type": "string"
+    },
+    "maxRounds": {
+      "title": "Maxrounds",
+      "type": "integer"
+    },
+    "roundStartTime": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Roundstarttime"
+    },
+    "guessingStartTime": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Guessingstarttime"
+    },
+    "drawingTimeLimit": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "guessingTimeLimit": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "guessTargets": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Guesstargets",
+      "type": "object"
+    },
+    "padVisibility": {
+      "title": "Padvisibility",
+      "type": "boolean"
+    },
+    "isPrivate": {
+      "title": "Isprivate",
+      "type": "boolean"
+    },
+    "language": {
+      "pattern": "^[a-z]{2,5}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "difficulty",
+    "gamePhase",
+    "isPrivate",
+    "language",
+    "maxRounds",
+    "padVisibility",
+    "players",
+    "type"
+  ],
+  "title": "RoomStateEvent",
+  "type": "object"
+}

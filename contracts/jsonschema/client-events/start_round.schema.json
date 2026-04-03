@@ -1,0 +1,82 @@
+{
+  "properties": {
+    "type": {
+      "const": "start_round",
+      "title": "Type",
+      "type": "string"
+    },
+    "round": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Round"
+    },
+    "cards": {
+      "additionalProperties": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "alternatives": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Alternatives"
+          },
+          "is_custom": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Is Custom"
+          }
+        },
+        "required": [
+          "category",
+          "items"
+        ],
+        "title": "PlayerCardPayload",
+        "type": "object"
+      },
+      "title": "Cards",
+      "type": "object"
+    }
+  },
+  "required": [
+    "cards",
+    "type"
+  ],
+  "title": "StartRoundEvent",
+  "type": "object"
+}

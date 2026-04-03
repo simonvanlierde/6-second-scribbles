@@ -33,17 +33,34 @@ class ClientEventModel(BaseModel):
     type: str
 
 
-class JoinEvent(ClientEventModel):
-    type: Literal["join"]
+class ClientPlayerEventModel(ClientEventModel):
+    """Client event with a required player id."""
+
     player_id: str = Field(alias="playerId")
+
+
+class ClientTargetPlayerEventModel(ClientEventModel):
+    """Client event with a required target player id."""
+
+    target_player_id: str = Field(alias="targetPlayerId")
+
+
+class JoinEvent(ClientPlayerEventModel):
+    type: Literal["join"]
     name: str
 
 
-class StartGameEvent(ClientEventModel):
-    type: Literal["start_game"]
+class GameSettingsEventModel(ClientEventModel):
+    """Shared client payload fields for updating game settings."""
+
     difficulty: Difficulty | None = None
     rounds: PositiveRoundCount | None = None
-    round_length: PositiveRoundLengthSeconds | None = Field(default=None, alias="roundLength")
+    drawing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
+    guessing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
+
+
+class StartGameEvent(GameSettingsEventModel):
+    type: Literal["start_game"]
 
 
 class PlayerCardPayload(BaseModel):
@@ -69,19 +86,18 @@ class GameCompleteEvent(ClientEventModel):
     type: Literal["game_complete"]
 
 
-class PlayerReadyEvent(ClientEventModel):
+class PlayerReadyEvent(ClientPlayerEventModel):
     type: Literal["player_ready"]
-    player_id: str = Field(alias="playerId")
 
 
 class StartGuessingEvent(ClientEventModel):
     type: Literal["start_guessing"]
+    guessing_start_time: int | None = Field(default=None, alias="guessingStartTime")
+    guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
 
 
-class SubmitGuessEvent(ClientEventModel):
+class SubmitGuessEvent(ClientPlayerEventModel, ClientTargetPlayerEventModel):
     type: Literal["submit_guess"]
-    player_id: str = Field(alias="playerId")
-    target_player_id: str = Field(alias="targetPlayerId")
     guesses: list[str] = Field(default_factory=list)
 
 
@@ -93,11 +109,8 @@ class HeartbeatEvent(ClientEventModel):
     type: Literal["heartbeat"]
 
 
-class SettingsUpdateEvent(ClientEventModel):
+class SettingsUpdateEvent(GameSettingsEventModel):
     type: Literal["settings_update"]
-    difficulty: Difficulty | None = None
-    rounds: PositiveRoundCount | None = None
-    round_length: PositiveRoundLengthSeconds | None = Field(default=None, alias="roundLength")
 
 
 class LanguageUpdateEvent(ClientEventModel):
@@ -133,14 +146,12 @@ class PrivacyChangedEvent(ClientEventModel):
     is_private: bool = Field(alias="isPrivate")
 
 
-class InitiateKickEvent(ClientEventModel):
+class InitiateKickEvent(ClientTargetPlayerEventModel):
     type: Literal["initiate_kick"]
-    target_player_id: str = Field(alias="targetPlayerId")
 
 
-class CastKickVoteEvent(ClientEventModel):
+class CastKickVoteEvent(ClientTargetPlayerEventModel):
     type: Literal["cast_kick_vote"]
-    target_player_id: str = Field(alias="targetPlayerId")
 
 
 class RequestGameStateEvent(ClientEventModel):
@@ -193,6 +204,18 @@ class ServerEventModel(BaseModel):
     type: str
 
 
+class ServerPlayerEventModel(ServerEventModel):
+    """Server event with a required player id."""
+
+    player_id: str = Field(alias="playerId")
+
+
+class ServerTargetPlayerEventModel(ServerEventModel):
+    """Server event with a required target player id."""
+
+    target_player_id: str = Field(alias="targetPlayerId")
+
+
 class PlayerSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -217,15 +240,17 @@ class RoomStateEvent(ServerEventModel):
     difficulty: Difficulty
     max_rounds: int = Field(alias="maxRounds")
     round_start_time: int | None = Field(default=None, alias="roundStartTime")
-    round_length: PositiveRoundLengthSeconds | None = Field(default=None, alias="roundLength")
+    guessing_start_time: int | None = Field(default=None, alias="guessingStartTime")
+    drawing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
+    guessing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
+    guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
     pad_visibility: bool = Field(alias="padVisibility")
     is_private: bool = Field(alias="isPrivate")
     language: LanguageCode
 
 
-class PlayerJoinedEvent(ServerEventModel):
+class PlayerJoinedEvent(ServerPlayerEventModel):
     type: Literal["player_joined"] = "player_joined"
-    player_id: str = Field(alias="playerId")
     name: str
     players: list[PlayerListItem]
     is_host: bool = Field(alias="isHost")
@@ -267,7 +292,7 @@ class KickErrorEvent(RecoverableErrorEvent):
     type: Literal["kick_error"] = "kick_error"
 
 
-class StartRoundBroadcastEvent(ServerEventModel):
+class StartRoundServerEvent(ServerEventModel):
     type: Literal["start_round"] = "start_round"
     round: int | None = None
     cards: dict[str, PlayerCardPayload]
@@ -285,19 +310,17 @@ class HostChangedEvent(ServerEventModel):
     new_host_id: str = Field(alias="newHostId")
 
 
-class LanguageUpdatedEvent(ServerEventModel):
+class LanguageUpdateServerEvent(ServerEventModel):
     type: Literal["language_update"] = "language_update"
     language: str
 
 
-class PlayerLeftEvent(ServerEventModel):
+class PlayerLeftEvent(ServerPlayerEventModel):
     type: Literal["player_left"] = "player_left"
-    player_id: str = Field(alias="playerId")
 
 
-class KickVoteStartedEvent(ServerEventModel):
+class KickVoteStartedEvent(ServerTargetPlayerEventModel):
     type: Literal["kick_vote_started"] = "kick_vote_started"
-    target_player_id: str = Field(alias="targetPlayerId")
     target_player_name: str = Field(alias="targetPlayerName")
     initiator_id: str = Field(alias="initiatorId")
     required_votes: int = Field(alias="requiredVotes")
@@ -305,21 +328,18 @@ class KickVoteStartedEvent(ServerEventModel):
     expires_at: float = Field(alias="expiresAt")
 
 
-class KickVoteUpdatedEvent(ServerEventModel):
+class KickVoteUpdatedEvent(ServerTargetPlayerEventModel):
     type: Literal["kick_vote_updated"] = "kick_vote_updated"
-    target_player_id: str = Field(alias="targetPlayerId")
     current_votes: int = Field(alias="currentVotes")
     required_votes: int = Field(alias="requiredVotes")
 
 
-class KickVoteExpiredEvent(ServerEventModel):
+class KickVoteExpiredEvent(ServerTargetPlayerEventModel):
     type: Literal["kick_vote_expired"] = "kick_vote_expired"
-    target_player_id: str = Field(alias="targetPlayerId")
 
 
-class PlayerKickedEvent(ServerEventModel):
+class PlayerKickedEvent(ServerPlayerEventModel):
     type: Literal["player_kicked"] = "player_kicked"
-    player_id: str = Field(alias="playerId")
     player_name: str = Field(alias="playerName")
     reason: str
 
@@ -334,13 +354,13 @@ class RoundResultItem(BaseModel):
     points_earned: int = Field(alias="pointsEarned")
 
 
-class RoundCompleteBroadcastEvent(ServerEventModel):
+class RoundCompleteServerEvent(ServerEventModel):
     type: Literal["round_complete"] = "round_complete"
     results: list[RoundResultItem]
     scores: dict[str, int]
 
 
-class GameCompleteBroadcastEvent(ServerEventModel):
+class GameCompleteServerEvent(ServerEventModel):
     type: Literal["game_complete"] = "game_complete"
     final_scores: dict[str, int] = Field(alias="finalScores")
     winner: str
@@ -385,17 +405,17 @@ ServerEvent = Annotated[
     | PlayerJoinedEvent
     | HostRestoredEvent
     | ServerErrorEvent
-    | StartRoundBroadcastEvent
+    | StartRoundServerEvent
     | ReadyStatusEvent
     | HostChangedEvent
-    | LanguageUpdatedEvent
+    | LanguageUpdateServerEvent
     | PlayerLeftEvent
     | KickVoteStartedEvent
     | KickVoteUpdatedEvent
     | KickVoteExpiredEvent
     | PlayerKickedEvent
-    | RoundCompleteBroadcastEvent
-    | GameCompleteBroadcastEvent
+    | RoundCompleteServerEvent
+    | GameCompleteServerEvent
     | CustomCategoryAddedEvent
     | CustomCategoryRemovedEvent
     | RelayedClientEvent,
@@ -413,28 +433,25 @@ type ErrorEventType = Literal[
     "kick_error",
 ]
 
+ERROR_EVENT_MODELS: dict[ErrorEventType, type[ServerErrorEvent]] = {
+    "protocol_error": ProtocolErrorEvent,
+    "permission_error": PermissionErrorEvent,
+    "player_ready_error": PlayerReadyErrorEvent,
+    "submit_guess_error": SubmitGuessErrorEvent,
+    "join_error": JoinErrorEvent,
+    "kick_error": KickErrorEvent,
+}
+
 
 def make_error_event(event_type: ErrorEventType, *, error: str, message: str | None = None) -> ServerErrorEvent:
     """Build a concrete recoverable server error event for one error type."""
-    match event_type:
-        case "protocol_error":
-            return ProtocolErrorEvent(error=error, message=message)
-        case "permission_error":
-            return PermissionErrorEvent(error=error, message=message)
-        case "player_ready_error":
-            return PlayerReadyErrorEvent(error=error, message=message)
-        case "submit_guess_error":
-            return SubmitGuessErrorEvent(error=error, message=message)
-        case "join_error":
-            return JoinErrorEvent(error=error, message=message)
-        case "kick_error":
-            return KickErrorEvent(error=error, message=message)
+    return ERROR_EVENT_MODELS[event_type](error=error, message=message)
 
 
 def dump_ws_message(message: WebSocketMessage) -> object:
     """Serialize a websocket message into JSON-compatible data."""
     if isinstance(message, BaseModel):
-        return message.model_dump(by_alias=True, exclude_none=True)
+        return message.model_dump(by_alias=True, exclude_none=True, mode="json")
     return message
 
 

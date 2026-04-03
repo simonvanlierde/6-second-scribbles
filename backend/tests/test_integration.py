@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
+from app.core.types import GamePhase
 from app.rooms.manager import PlayerInfo, RoomManager, room_manager
 from app.rooms.state import GuessSubmissionState, PlayerCardState
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
@@ -25,7 +26,7 @@ def test_full_game_flow(test_client) -> None:
         "GAME01",
         [JoinedPlayer("p1", "Alice"), JoinedPlayer("p2", "Bob")],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 1, "roundLength": 10})
+        send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 1, "drawingTimeLimit": 10})
         start_messages = (receive_json(ws1), receive_json(ws2))
         assert [message["type"] for message in start_messages] == ["start_game", "start_game"]
 
@@ -55,7 +56,15 @@ def test_full_game_flow(test_client) -> None:
         )
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["draw_stroke", "draw_stroke"]
 
-        assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_guessing", "start_guessing"]
+        send_json(ws1, {"type": "player_ready", "playerId": "p1"})
+        ready_messages = (receive_json(ws1), receive_json(ws2))
+        assert ready_messages[0] == {"type": "ready_status", "readyCount": 1, "totalPlayers": 2}
+        assert ready_messages[1] == {"type": "ready_status", "readyCount": 1, "totalPlayers": 2}
+
+        send_json(ws2, {"type": "player_ready", "playerId": "p2"})
+        ready_then_guessing = [receive_json(ws1), receive_json(ws1), receive_json(ws2), receive_json(ws2)]
+        assert [message["type"] for message in ready_then_guessing].count("ready_status") == 2
+        assert [message["type"] for message in ready_then_guessing].count("start_guessing") == 2
 
         send_json(
             ws1,
@@ -90,7 +99,7 @@ def test_server_starts_guessing_after_round_timer(test_client) -> None:
         "AUTO_GUESS_01",
         [JoinedPlayer("p1", "Alice"), JoinedPlayer("p2", "Bob")],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 1, "roundLength": 1})
+        send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 1, "drawingTimeLimit": 1})
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
 
         send_json(
@@ -151,7 +160,7 @@ def test_non_host_cannot_start_round(test_client) -> None:
         send_json(ws1, {"type": "request_game_state", "playerId": "p1"})
         room_state = receive_json(ws1)
         assert room_state["type"] == "room_state"
-        assert room_state["gamePhase"] == "lobby"
+        assert room_state["gamePhase"] == GamePhase.LOBBY.value
 
 
 @pytest.mark.integration
@@ -208,7 +217,7 @@ def test_multiple_rooms_can_progress_independently(test_client) -> None:
             room_sockets.append(joined)
 
         for ws1, ws2 in room_sockets:
-            send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "roundLength": 60})
+            send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "drawingTimeLimit": 60})
             assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
 
 
@@ -245,7 +254,7 @@ async def test_custom_categories_use_real_postgres(async_client: AsyncClient) ->
 async def test_room_manager_restores_room_state_from_real_redis() -> None:
     room = room_manager.get_or_create_room("REDIS01")
     room.host_id = "host-1"
-    room.metadata.game_phase = "drawing"
+    room.metadata.game_phase = GamePhase.DRAWING
     room.metadata.current_round = 2
     room.metadata.ready_players.add("host-1")
     room.metadata.player_cards = {
@@ -268,7 +277,7 @@ async def test_room_manager_restores_room_state_from_real_redis() -> None:
         restored_room = restored_manager.get_room("REDIS01")
         assert restored_room is not None
         assert restored_room.host_id == "host-1"
-        assert restored_room.metadata.game_phase == "drawing"
+        assert restored_room.metadata.game_phase == GamePhase.DRAWING
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
         assert restored_room.metadata.player_cards["host-1"].category == "Animals"

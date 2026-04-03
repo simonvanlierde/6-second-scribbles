@@ -1,3 +1,6 @@
+---
+# spell-checker: words Culley, Lange
+---
 # 6 Second Scribbles (Online Multiplayer)
 
 A fast, real-time multiplayer web version of the **Six Second Scribbles** party game.
@@ -37,6 +40,8 @@ just install
 # Start everything (Docker + frontend + backend)
 just dev
 ```
+
+`pnpm install` at the repo root also installs the configured `lefthook` Git hooks via the root `prepare` script, so local commits run formatting, contract generation/validation, linting, type-checking, and cspell automatically.
 
 Open `http://localhost:3001` in your browser and start drawing!
 

@@ -1,0 +1,26 @@
+{
+  "properties": {
+    "type": {
+      "const": "request_game_state",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Playerid"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "RequestGameStateEvent",
+  "type": "object"
+}

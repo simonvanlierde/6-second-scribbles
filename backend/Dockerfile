@@ -1,31 +1,33 @@
 # syntax=docker/dockerfile:1
+# spell-checker: ignore healthchecks, PYTHONUNBUFFERED, PYTHONDONTWRITEBYTECODE
 
-# ── Base ──────────────────────────────────────────────────────────────────────
-FROM python:3.14-slim AS base
+FROM python:3.14-slim AS runtime-base
 
 # Install curl for healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-# Copy uv binary from the official image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-ENV UV_COMPILE_BYTECODE=1 \
-    # copy instead of hardlinks — required when src and dst are on different filesystems (Docker layers)
-    UV_LINK_MODE=copy \
-    # install venv outside /app so dev volume mounts don't shadow it
-    UV_PROJECT_ENVIRONMENT=/opt/.venv \
+ENV VIRTUAL_ENV=/opt/.venv \
+    PATH="/opt/.venv/bin:$PATH" \
+    PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-# ── Dev ───────────────────────────────────────────────────────────────────────
-FROM base AS dev
+FROM runtime-base AS uv-base
 
-# Pre-install all deps (including dev) for layer caching — project itself excluded
+COPY --from=ghcr.io/astral-sh/uv:0.11.3 /uv /uvx /bin/
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/.venv
+
+# ── Dev ───────────────────────────────────────────────────────────────────────
+FROM uv-base AS dev
+
+COPY pyproject.toml uv.lock ./
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --all-groups --no-install-project
 
 COPY . .
@@ -39,33 +41,63 @@ EXPOSE 8000
 
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-# ── Prod ──────────────────────────────────────────────────────────────────────
-FROM base AS prod
+# ── Dependency Layers ─────────────────────────────────────────────────────────
+FROM uv-base AS prod-deps
 
-# Pre-install prod deps only for layer caching — project itself excluded
+COPY pyproject.toml uv.lock ./
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-dev --no-install-project
 
+FROM uv-base AS db-ops-deps
+
+COPY pyproject.toml uv.lock ./
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --group migrations --no-install-project
+
+# ── Prod ──────────────────────────────────────────────────────────────────────
+FROM uv-base AS prod-builder
+
+COPY --from=prod-deps /opt/.venv /opt/.venv
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# Drop to a non-root user for security
-RUN useradd --no-create-home --shell /bin/false appuser && \
+FROM runtime-base AS prod
+
+COPY --from=prod-builder /opt/.venv /opt/.venv
+COPY . .
+
+RUN useradd --create-home --home-dir /home/appuser --shell /bin/false appuser && \
     chown -R appuser:appuser /app /opt/.venv
+
 USER appuser
 
 ENV SERVER_HOST=0.0.0.0
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
 
-# ── Migrations ────────────────────────────────────────────────────────────────
-# Runs `alembic upgrade head` and exits. Used as a one-shot compose service.
-FROM prod AS migrations
+# ── DB Ops ────────────────────────────────────────────────────────────────────
+FROM uv-base AS db-ops-builder
 
-CMD ["uv", "run", "alembic", "upgrade", "head"]
+COPY --from=db-ops-deps /opt/.venv /opt/.venv
+COPY . .
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --group migrations
+
+FROM runtime-base AS db-ops
+
+COPY --from=db-ops-builder /opt/.venv /opt/.venv
+COPY . .
+
+RUN useradd --create-home --home-dir /home/appuser --shell /bin/false appuser && \
+    chown -R appuser:appuser /app /opt/.venv
+
+USER appuser
+
+CMD ["alembic", "upgrade", "head"]

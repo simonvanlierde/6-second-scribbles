@@ -10,9 +10,9 @@ services:
       - backend/.env.prod
     
 
-  backend_migrations:
+  backend-migrations:
     build:
-      target: migrations
+      target: db-ops
     env_file:
       - backend/.env.prod
 

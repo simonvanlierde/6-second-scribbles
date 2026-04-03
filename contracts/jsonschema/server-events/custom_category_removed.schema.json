@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "custom_category_removed",
+      "title": "Type",
+      "type": "string"
+    },
+    "categoryId": {
+      "title": "Categoryid",
+      "type": "integer"
+    },
+    "categoryName": {
+      "title": "Categoryname",
+      "type": "string"
+    }
+  },
+  "required": [
+    "categoryId",
+    "categoryName",
+    "type"
+  ],
+  "title": "CustomCategoryRemovedEvent",
+  "type": "object"
+}

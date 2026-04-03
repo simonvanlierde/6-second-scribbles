@@ -1,0 +1,14 @@
+{
+  "properties": {
+    "type": {
+      "const": "drawpad_clear",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "DrawpadClearEvent",
+  "type": "object"
+}

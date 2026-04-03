@@ -6,7 +6,7 @@
       "draw_stroke": "#/$defs/DrawStrokeEvent",
       "draw_stroke_partial": "#/$defs/DrawStrokePartialEvent",
       "drawpad_clear": "#/$defs/DrawpadClearEvent",
-      "game_complete": "#/$defs/GameCompleteBroadcastEvent",
+      "game_complete": "#/$defs/GameCompleteServerEvent",
       "host_changed": "#/$defs/HostChangedEvent",
       "host_restored": "#/$defs/HostRestoredEvent",
       "join_error": "#/$defs/JoinErrorEvent",
@@ -14,7 +14,7 @@
       "kick_vote_expired": "#/$defs/KickVoteExpiredEvent",
       "kick_vote_started": "#/$defs/KickVoteStartedEvent",
       "kick_vote_updated": "#/$defs/KickVoteUpdatedEvent",
-      "language_update": "#/$defs/LanguageUpdatedEvent",
+      "language_update": "#/$defs/LanguageUpdateServerEvent",
       "pad_visibility": "#/$defs/PadVisibilityEvent",
       "permission_error": "#/$defs/PermissionErrorEvent",
       "player_joined": "#/$defs/PlayerJoinedEvent",
@@ -25,11 +25,11 @@
       "ready_status": "#/$defs/ReadyStatusEvent",
       "restart_game": "#/$defs/RestartGameEvent",
       "room_state": "#/$defs/RoomStateEvent",
-      "round_complete": "#/$defs/RoundCompleteBroadcastEvent",
+      "round_complete": "#/$defs/RoundCompleteServerEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
       "start_game": "#/$defs/StartGameEvent",
       "start_guessing": "#/$defs/StartGuessingEvent",
-      "start_round": "#/$defs/StartRoundBroadcastEvent",
+      "start_round": "#/$defs/StartRoundServerEvent",
       "submit_guess_error": "#/$defs/SubmitGuessErrorEvent"
     },
     "propertyName": "type"
@@ -93,6 +93,7 @@
           "type": "array"
         },
         "gamePhase": {
+          "description": "Valid room lifecycle phases for game flow state.",
           "enum": [
             "lobby",
             "drawing",
@@ -100,6 +101,7 @@
             "scoring",
             "complete"
           ],
+          "title": "GamePhase",
           "type": "string"
         },
         "difficulty": {
@@ -126,7 +128,19 @@
           "default": null,
           "title": "Roundstarttime"
         },
-        "roundLength": {
+        "guessingStartTime": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guessingstarttime"
+        },
+        "drawingTimeLimit": {
           "anyOf": [
             {
               "minimum": 1,
@@ -137,6 +151,25 @@
             }
           ],
           "default": null
+        },
+        "guessingTimeLimit": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guessTargets": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Guesstargets",
+          "type": "object"
         },
         "padVisibility": {
           "title": "Padvisibility",
@@ -515,7 +548,7 @@
         "roundStartTime",
         "type"
       ],
-      "title": "StartRoundBroadcastEvent",
+      "title": "StartRoundServerEvent",
       "type": "object"
     },
     {
@@ -580,7 +613,7 @@
         "language",
         "type"
       ],
-      "title": "LanguageUpdatedEvent",
+      "title": "LanguageUpdateServerEvent",
       "type": "object"
     },
     {
@@ -787,7 +820,7 @@
         "scores",
         "type"
       ],
-      "title": "RoundCompleteBroadcastEvent",
+      "title": "RoundCompleteServerEvent",
       "type": "object"
     },
     {
@@ -815,7 +848,7 @@
         "type",
         "winner"
       ],
-      "title": "GameCompleteBroadcastEvent",
+      "title": "GameCompleteServerEvent",
       "type": "object"
     },
     {
@@ -907,7 +940,19 @@
           ],
           "default": null
         },
-        "roundLength": {
+        "drawingTimeLimit": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guessingTimeLimit": {
           "anyOf": [
             {
               "minimum": 1,
@@ -932,6 +977,25 @@
           "const": "start_guessing",
           "title": "Type",
           "type": "string"
+        },
+        "guessingStartTime": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guessingstarttime"
+        },
+        "guessTargets": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Guesstargets",
+          "type": "object"
         }
       },
       "required": [
@@ -989,7 +1053,19 @@
           ],
           "default": null
         },
-        "roundLength": {
+        "drawingTimeLimit": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guessingTimeLimit": {
           "anyOf": [
             {
               "minimum": 1,

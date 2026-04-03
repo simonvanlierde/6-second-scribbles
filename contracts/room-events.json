@@ -1,5 +1,9 @@
 {
   "client": {
+    "heartbeat": {
+      "group": "connection",
+      "summary": "Keep the websocket session alive."
+    },
     "join": {
       "group": "connection",
       "summary": "Join a room with the local player identity."
@@ -8,37 +12,37 @@
       "group": "connection",
       "summary": "Request the latest room snapshot."
     },
-    "start_game": {
-      "group": "gameFlow",
-      "summary": "Host starts a game with room settings."
-    },
-    "start_round": {
-      "group": "gameFlow",
-      "summary": "Host starts a drawing round with assigned cards."
-    },
-    "start_guessing": {
-      "group": "gameFlow",
-      "summary": "Host transitions the room into guessing."
-    },
-    "round_complete": {
-      "group": "gameFlow",
-      "summary": "Signal that the current round is complete."
-    },
     "game_complete": {
       "group": "gameFlow",
       "summary": "Signal that the game is complete."
+    },
+    "player_ready": {
+      "group": "gameFlow",
+      "summary": "Mark the current player as ready."
     },
     "restart_game": {
       "group": "gameFlow",
       "summary": "Restart the game from the lobby state."
     },
+    "round_complete": {
+      "group": "gameFlow",
+      "summary": "Signal that the current round is complete."
+    },
     "settings_update": {
       "group": "gameFlow",
       "summary": "Update shared game settings."
     },
-    "player_ready": {
+    "start_game": {
       "group": "gameFlow",
-      "summary": "Mark the current player as ready."
+      "summary": "Host starts a game with room settings."
+    },
+    "start_guessing": {
+      "group": "gameFlow",
+      "summary": "Host transitions the room into guessing."
+    },
+    "start_round": {
+      "group": "gameFlow",
+      "summary": "Host starts a drawing round with assigned cards."
     },
     "submit_guess": {
       "group": "gameFlow",
@@ -52,10 +56,6 @@
       "group": "roomSettings",
       "summary": "Change the room privacy setting."
     },
-    "pad_visibility": {
-      "group": "drawing",
-      "summary": "Show or hide the shared drawpad."
-    },
     "draw_stroke": {
       "group": "drawing",
       "summary": "Broadcast a completed draw stroke."
@@ -68,23 +68,27 @@
       "group": "drawing",
       "summary": "Clear the shared drawpad."
     },
-    "initiate_kick": {
-      "group": "moderation",
-      "summary": "Start a kick vote for a target player."
+    "pad_visibility": {
+      "group": "drawing",
+      "summary": "Show or hide the shared drawpad."
     },
     "cast_kick_vote": {
       "group": "moderation",
       "summary": "Cast a vote in an active kick vote."
     },
-    "heartbeat": {
-      "group": "connection",
-      "summary": "Keep the websocket session alive."
+    "initiate_kick": {
+      "group": "moderation",
+      "summary": "Start a kick vote for a target player."
     }
   },
   "server": {
-    "room_state": {
+    "host_restored": {
       "group": "connection",
-      "summary": "Current room snapshot."
+      "summary": "A reconnecting host regained host status."
+    },
+    "join_error": {
+      "group": "connection",
+      "summary": "Join failed but the connection remained valid."
     },
     "player_joined": {
       "group": "connection",
@@ -94,57 +98,45 @@
       "group": "connection",
       "summary": "A player left the room."
     },
-    "host_changed": {
+    "room_state": {
       "group": "connection",
-      "summary": "Host ownership changed."
-    },
-    "host_restored": {
-      "group": "connection",
-      "summary": "A reconnecting host regained host status."
-    },
-    "join_error": {
-      "group": "connection",
-      "summary": "Join failed but the connection remained valid."
-    },
-    "start_game": {
-      "group": "gameFlow",
-      "summary": "Game start broadcast."
-    },
-    "start_round": {
-      "group": "gameFlow",
-      "summary": "Round start broadcast with assigned cards."
-    },
-    "start_guessing": {
-      "group": "gameFlow",
-      "summary": "Guessing phase started."
-    },
-    "round_complete": {
-      "group": "gameFlow",
-      "summary": "Round completion results broadcast."
+      "summary": "Current room snapshot."
     },
     "game_complete": {
       "group": "gameFlow",
       "summary": "Game completion results broadcast."
     },
+    "ready_status": {
+      "group": "gameFlow",
+      "summary": "Current ready-player counts."
+    },
     "restart_game": {
       "group": "gameFlow",
       "summary": "Game restart broadcast."
     },
-    "ready_status": {
+    "round_complete": {
       "group": "gameFlow",
-      "summary": "Current ready-player counts."
+      "summary": "Round completion results broadcast."
     },
     "settings_update": {
       "group": "gameFlow",
       "summary": "Game settings updated."
     },
+    "start_game": {
+      "group": "gameFlow",
+      "summary": "Game start broadcast."
+    },
+    "start_guessing": {
+      "group": "gameFlow",
+      "summary": "Guessing phase started."
+    },
+    "start_round": {
+      "group": "gameFlow",
+      "summary": "Round start broadcast with assigned cards."
+    },
     "language_update": {
       "group": "roomSettings",
       "summary": "Room language updated."
-    },
-    "pad_visibility": {
-      "group": "drawing",
-      "summary": "Shared drawpad visibility changed."
     },
     "draw_stroke": {
       "group": "drawing",
@@ -158,6 +150,18 @@
       "group": "drawing",
       "summary": "Drawpad cleared."
     },
+    "pad_visibility": {
+      "group": "drawing",
+      "summary": "Shared drawpad visibility changed."
+    },
+    "kick_error": {
+      "group": "moderation",
+      "summary": "Kick workflow error."
+    },
+    "kick_vote_expired": {
+      "group": "moderation",
+      "summary": "Kick vote expired."
+    },
     "kick_vote_started": {
       "group": "moderation",
       "summary": "Kick vote started."
@@ -166,21 +170,9 @@
       "group": "moderation",
       "summary": "Kick vote tally updated."
     },
-    "kick_vote_expired": {
-      "group": "moderation",
-      "summary": "Kick vote expired."
-    },
     "player_kicked": {
       "group": "moderation",
       "summary": "A player was kicked from the room."
-    },
-    "kick_error": {
-      "group": "moderation",
-      "summary": "Kick workflow error."
-    },
-    "protocol_error": {
-      "group": "errors",
-      "summary": "Malformed or invalid websocket payload."
     },
     "permission_error": {
       "group": "errors",
@@ -189,6 +181,10 @@
     "player_ready_error": {
       "group": "errors",
       "summary": "Player-ready validation failed."
+    },
+    "protocol_error": {
+      "group": "errors",
+      "summary": "Malformed or invalid websocket payload."
     },
     "submit_guess_error": {
       "group": "errors",
@@ -201,6 +197,10 @@
     "custom_category_removed": {
       "group": "categories",
       "summary": "A custom category was removed from the room."
+    },
+    "host_changed": {
+      "group": "gameFlow",
+      "summary": "Host ownership changed."
     }
   }
 }

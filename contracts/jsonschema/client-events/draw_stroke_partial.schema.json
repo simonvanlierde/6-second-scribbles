@@ -1,0 +1,27 @@
+{
+  "additionalProperties": true,
+  "properties": {
+    "type": {
+      "const": "draw_stroke_partial",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Playerid"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "DrawStrokePartialEvent",
+  "type": "object"
+}

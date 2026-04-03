@@ -1,0 +1,15 @@
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      run: pnpm run format
+      stage_fixed: true
+    "contracts:validate":
+      run: pnpm run contracts:validate
+      stage_fixed: true
+    lint:
+      run: pnpm run lint
+    type-check:
+      run: pnpm run type-check
+    cspell:
+      run: pnpm run cspell

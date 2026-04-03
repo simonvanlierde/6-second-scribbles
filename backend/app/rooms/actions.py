@@ -5,16 +5,17 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from app.core.types import LOBBY_PHASE
+from app.core.types import GamePhase
 from app.rooms import mutations
 from app.rooms.protocol import (
     HostRestoredEvent,
     JoinErrorEvent,
-    LanguageUpdatedEvent,
+    LanguageUpdateServerEvent,
     PlayerJoinedEvent,
     PlayerLeftEvent,
     PlayerListItem,
-    StartRoundBroadcastEvent,
+    StartGuessingEvent,
+    StartRoundServerEvent,
     send_ws_message,
 )
 from app.rooms.state import PlayerCardState
@@ -96,10 +97,11 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
     """Handle a start-game event."""
     if not await require_host(session, "start the game"):
         return
-    if len(session.room.players) < 2 or session.room.metadata.game_phase != LOBBY_PHASE:
+    if len(session.room.players) < 2 or session.room.metadata.game_phase != GamePhase.LOBBY:
         return
     session.room.configure_game(
-        round_length=event.round_length,
+        drawing_time_limit=event.drawing_time_limit,
+        guessing_time_limit=event.guessing_time_limit,
         difficulty=event.difficulty,
         max_rounds=event.rounds,
     )
@@ -120,14 +122,14 @@ async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEve
     )
     await broadcast_and_persist(
         session,
-        StartRoundBroadcastEvent(
+        StartRoundServerEvent(
             type="start_round",
             round=event.round,
             cards=event.cards,
             roundStartTime=round_start_time,
         ),
     )
-    session.room.start_guessing_timeout(session.room.metadata.round_length or 30)
+    session.room.start_guessing_timeout(session.room.metadata.drawing_time_limit or 30)
 
 
 async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyEvent) -> None:
@@ -135,7 +137,23 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     if event.player_id != session.player_id:
         await session.send_error("player_ready_error", "invalid_player", "Ready updates must match your connection.")
         return
-    await broadcast_and_persist(session, session.room.mark_player_ready(event.player_id))
+    ready_status = session.room.mark_player_ready(event.player_id)
+    await broadcast_and_persist(session, ready_status)
+
+    if (
+        session.room.metadata.game_phase == GamePhase.DRAWING
+        and len(session.room.metadata.ready_players) >= len(session.room.players)
+        and len(session.room.players) > 0
+    ):
+        session.room.start_scoring_timeout(session.room.start_guessing())
+        await broadcast_and_persist(
+            session,
+            StartGuessingEvent(
+                type="start_guessing",
+                guessingStartTime=session.room.metadata.guessing_start_time,
+                guessTargets=dict(session.room.metadata.guess_targets),
+            ),
+        )
 
 
 async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuessingEvent) -> None:
@@ -143,7 +161,14 @@ async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuess
     if not await require_host(session, "start guessing"):
         return
     session.room.start_scoring_timeout(session.room.start_guessing())
-    await broadcast_and_persist(session, event)
+    await broadcast_and_persist(
+        session,
+        StartGuessingEvent(
+            type="start_guessing",
+            guessingStartTime=session.room.metadata.guessing_start_time,
+            guessTargets=dict(session.room.metadata.guess_targets),
+        ),
+    )
 
 
 async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessEvent) -> None:
@@ -178,7 +203,8 @@ async def handle_settings_update(session: RoomWebSocketSession, event: SettingsU
         session.room,
         difficulty=event.difficulty,
         rounds=event.rounds,
-        round_length=event.round_length,
+        drawing_time_limit=event.drawing_time_limit,
+        guessing_time_limit=event.guessing_time_limit,
     )
     await broadcast_and_persist(session, event)
 
@@ -188,7 +214,7 @@ async def handle_language_update(session: RoomWebSocketSession, event: LanguageU
     if not await require_host(session, "update room language"):
         return
     mutations.set_language(session.room, event.language)
-    await broadcast_and_persist(session, LanguageUpdatedEvent(language=event.language))
+    await broadcast_and_persist(session, LanguageUpdateServerEvent(language=event.language))
 
 
 async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClearEvent) -> None:

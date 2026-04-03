@@ -1,0 +1,20 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "host_changed",
+      "title": "Type",
+      "type": "string"
+    },
+    "newHostId": {
+      "title": "Newhostid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "newHostId",
+    "type"
+  ],
+  "title": "HostChangedEvent",
+  "type": "object"
+}

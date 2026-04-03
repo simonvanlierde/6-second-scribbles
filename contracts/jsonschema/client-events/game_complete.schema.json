@@ -1,0 +1,14 @@
+{
+  "properties": {
+    "type": {
+      "const": "game_complete",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "GameCompleteEvent",
+  "type": "object"
+}

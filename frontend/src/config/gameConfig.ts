@@ -13,7 +13,13 @@ export const ROUNDS = {
   MAX: 10,
 } as const;
 
-export const ROUND_LENGTH_SECONDS = {
+export const DRAWING_TIME_LIMIT_SECONDS = {
+  DEFAULT: 60,
+  MIN: 15,
+  MAX: 180,
+} as const;
+
+export const GUESSING_TIME_LIMIT_SECONDS = {
   DEFAULT: 60,
   MIN: 15,
   MAX: 180,
@@ -22,7 +28,8 @@ export const ROUND_LENGTH_SECONDS = {
 export const GAME_SETTINGS = {
   difficulty: { DEFAULT: DEFAULT_DIFFICULTY },
   rounds: ROUNDS,
-  roundLengthSeconds: ROUND_LENGTH_SECONDS,
+  drawingTimeLimitSeconds: DRAWING_TIME_LIMIT_SECONDS,
+  guessingTimeLimitSeconds: GUESSING_TIME_LIMIT_SECONDS,
 };
 
 export const UI_TIMINGS = {

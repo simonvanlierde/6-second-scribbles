@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Converts the pre-processed JSON Schemas into a Zod TypeScript file.
-// Run via: npm run generate:types  (contract export runs first)
+// Run via: npm run contracts:types  (contract export runs first)
 //
 // Note: Zod 4's `z.fromJSONSchema()` is useful for runtime validation, but its
 // current type signature returns a generic `ZodType`, so it does not preserve
@@ -14,7 +14,7 @@ import { jsonSchemaToZod } from "json-schema-to-zod";
 const dir = dirname(fileURLToPath(import.meta.url));
 const generated = join(dir, "../src/generated");
 const contracts = join(dir, "../../contracts/jsonschema");
-const eventCatalogPath = join(dir, "../../contracts/catalog/room-events.json");
+const eventCatalogPath = join(dir, "../../contracts/room-events.json");
 const read = (filename) => JSON.parse(readFileSync(join(contracts, filename), "utf-8"));
 const eventCatalog = JSON.parse(readFileSync(eventCatalogPath, "utf-8"));
 const getDiscriminatorValues = (schema) => {
@@ -40,9 +40,10 @@ const summaryEntries = (entries) =>
 
 const header = `\
 // ⚠️  AUTO-GENERATED — do not edit.
-// Contract:        contracts/asyncapi/room-websocket.asyncapi.yaml
+// Contract:        contracts/room-websocket.asyncapi.yaml
 // Generated from:  backend/app/rooms/protocol.py
-// Regenerate:      npm run generate:types
+// Source schemas:  contracts/jsonschema/
+// Regenerate:      npm run contracts:types
 `;
 
 const schemaSpecs = [

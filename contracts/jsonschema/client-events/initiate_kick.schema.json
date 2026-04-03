@@ -1,0 +1,19 @@
+{
+  "properties": {
+    "type": {
+      "const": "initiate_kick",
+      "title": "Type",
+      "type": "string"
+    },
+    "targetPlayerId": {
+      "title": "Targetplayerid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "targetPlayerId",
+    "type"
+  ],
+  "title": "InitiateKickEvent",
+  "type": "object"
+}
