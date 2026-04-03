@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-import { injectGameEngine } from "@/composables/injectionKeys";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const { send } = useGameConnection();
-const gameEngineRef = injectGameEngine();
-const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
+const { leaveRoom: _leaveRoom } = useLeaveRoom();
 
 const playerGuesses = ref<Record<string, string[]>>({});
 const submittedPlayers = ref<string[]>([]);
@@ -19,6 +17,7 @@ const emptyGuessDialogTarget = ref<string | null>(null);
 const emptyGuessDialogRef = ref<HTMLDialogElement | null>(null);
 
 const otherPlayers = computed(() => store.playersList.filter((p) => p.id !== store.localPlayerId));
+const brokenImages = ref<Set<string>>(new Set());
 
 onMounted(() => {
   submittedPlayers.value = [];
@@ -66,6 +65,10 @@ function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
   }
 }
 
+function handleImageError(playerId: string) {
+  brokenImages.value = new Set([...brokenImages.value, playerId]);
+}
+
 function showLeaveConfirmation() {
   leaveDialogRef.value?.showModal();
 }
@@ -97,7 +100,14 @@ function confirmLeave() {
         <div v-for="player in otherPlayers" :key="player.id" class="drawing-card">
           <h3>{{ player.name }}'s Drawing</h3>
           <div class="drawing-display">
-            <img v-if="player.drawing" :src="player.drawing" alt="Player drawing" class="player-drawing">
+            <img
+              v-if="player.drawing && !brokenImages.has(player.id)"
+              :src="player.drawing"
+              alt="Player drawing"
+              class="player-drawing"
+              @error="handleImageError(player.id)"
+            >
+            <p v-else-if="brokenImages.has(player.id)" class="waiting-text">Drawing failed to load.</p>
             <p v-else class="waiting-text">Waiting for drawing...</p>
           </div>
 

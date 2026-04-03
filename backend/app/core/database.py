@@ -68,12 +68,6 @@ get_db = get_async_session
 AsyncSessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 
-async def init_db() -> None:
-    """Initialize database tables."""
-    async with _get_engine().begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
 async def close_db() -> None:
     """Close database connections."""
     if _state.engine:

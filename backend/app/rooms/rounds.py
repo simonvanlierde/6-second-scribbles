@@ -11,6 +11,7 @@ from app.rooms.protocol import (
     ReadyStatusEvent,
     RoundCompleteBroadcastEvent,
     RoundResultItem,
+    StartGuessingEvent,
 )
 from app.rooms.state import GuessSubmissionState, PlayerCardState
 from app.scoring import guess_matcher
@@ -51,8 +52,12 @@ def configure_game(
     room.metadata.round_length = round_length
     room.metadata.difficulty = difficulty or room.metadata.difficulty
     room.metadata.max_rounds = max_rounds or 5
-    room.metadata.game_phase = "drawing"
+    room.metadata.game_phase = "lobby"
     room.metadata.current_round = 0
+    room.metadata.round_start_time = None
+    room.metadata.player_cards = {}
+    room.metadata.guess_submissions = []
+    room.metadata.submitted_players = set()
     room.metadata.player_scores = dict.fromkeys(room.players, 0)
     room.metadata.ready_players.clear()
 
@@ -78,6 +83,12 @@ def start_guessing(room: GameRoom) -> int:
     room.metadata.game_phase = "guessing"
     room.metadata.player_count_for_scoring = len(room.players)
     return room.metadata.round_length or 30
+
+
+def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
+    """Transition into guessing and return the broadcast event."""
+    start_guessing(room)
+    return StartGuessingEvent()
 
 
 def reset_game(room: GameRoom) -> None:

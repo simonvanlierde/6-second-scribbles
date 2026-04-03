@@ -32,10 +32,6 @@ class ClientEventModel(BaseModel):
 
     type: str
 
-    def to_payload(self) -> Payload:
-        """Convert the event model to a JSON-serializable dict."""
-        return self.model_dump(by_alias=True, exclude_none=True)
-
 
 class JoinEvent(ClientEventModel):
     type: Literal["join"]
@@ -109,11 +105,18 @@ class LanguageUpdateEvent(ClientEventModel):
     language: LanguageCode = "en"
 
 
-class DrawStrokeEvent(ClientEventModel):
+class DrawEventModel(ClientEventModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    type: Literal["draw_stroke", "draw_stroke_partial"]
     player_id: str | None = Field(default=None, alias="playerId")
+
+
+class DrawStrokeEvent(DrawEventModel):
+    type: Literal["draw_stroke"]
+
+
+class DrawStrokePartialEvent(DrawEventModel):
+    type: Literal["draw_stroke_partial"]
 
 
 class DrawpadClearEvent(ClientEventModel):
@@ -159,6 +162,7 @@ ClientEvent = Annotated[
     | SettingsUpdateEvent
     | LanguageUpdateEvent
     | DrawStrokeEvent
+    | DrawStrokePartialEvent
     | DrawpadClearEvent
     | PadVisibilityEvent
     | PrivacyChangedEvent
@@ -188,10 +192,6 @@ class ServerEventModel(BaseModel):
 
     type: str
 
-    def to_payload(self) -> Payload:
-        """Convert the event model to a JSON-serializable dict."""
-        return self.model_dump(by_alias=True, exclude_none=True)
-
 
 class PlayerSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
@@ -219,6 +219,7 @@ class RoomStateEvent(ServerEventModel):
     round_start_time: int | None = Field(default=None, alias="roundStartTime")
     round_length: PositiveRoundLengthSeconds | None = Field(default=None, alias="roundLength")
     pad_visibility: bool = Field(alias="padVisibility")
+    is_private: bool = Field(alias="isPrivate")
     language: LanguageCode
 
 
@@ -235,19 +236,35 @@ class HostRestoredEvent(ServerEventModel):
     message: str
 
 
-class ProtocolErrorEvent(ServerEventModel):
+class RecoverableErrorEvent(ServerEventModel):
     """Recoverable in-band protocol error for an accepted websocket."""
 
-    type: Literal[
-        "protocol_error",
-        "permission_error",
-        "player_ready_error",
-        "submit_guess_error",
-        "join_error",
-        "kick_error",
-    ]
     error: str
     message: str | None = None
+
+
+class ProtocolErrorEvent(RecoverableErrorEvent):
+    type: Literal["protocol_error"] = "protocol_error"
+
+
+class PermissionErrorEvent(RecoverableErrorEvent):
+    type: Literal["permission_error"] = "permission_error"
+
+
+class PlayerReadyErrorEvent(RecoverableErrorEvent):
+    type: Literal["player_ready_error"] = "player_ready_error"
+
+
+class SubmitGuessErrorEvent(RecoverableErrorEvent):
+    type: Literal["submit_guess_error"] = "submit_guess_error"
+
+
+class JoinErrorEvent(RecoverableErrorEvent):
+    type: Literal["join_error"] = "join_error"
+
+
+class KickErrorEvent(RecoverableErrorEvent):
+    type: Literal["kick_error"] = "kick_error"
 
 
 class StartRoundBroadcastEvent(ServerEventModel):
@@ -329,9 +346,89 @@ class GameCompleteBroadcastEvent(ServerEventModel):
     winner: str
 
 
-def event_payload(event_type: str, /, **fields: object) -> Payload:
-    """Fallback helper for lightweight json messages."""
-    return {"type": event_type, **fields}
+class CustomCategoryAddedEvent(ServerEventModel):
+    type: Literal["custom_category_added"] = "custom_category_added"
+    category: dict[str, object]
+    items: list[str]
+
+
+class CustomCategoryRemovedEvent(ServerEventModel):
+    type: Literal["custom_category_removed"] = "custom_category_removed"
+    category_id: int = Field(alias="categoryId")
+    category_name: str = Field(alias="categoryName")
+
+
+RelayedClientEvent = Annotated[
+    StartGameEvent
+    | StartGuessingEvent
+    | RestartGameEvent
+    | SettingsUpdateEvent
+    | DrawStrokeEvent
+    | DrawStrokePartialEvent
+    | DrawpadClearEvent
+    | PadVisibilityEvent,
+    Field(discriminator="type"),
+]
+
+ServerErrorEvent = Annotated[
+    ProtocolErrorEvent
+    | PermissionErrorEvent
+    | PlayerReadyErrorEvent
+    | SubmitGuessErrorEvent
+    | JoinErrorEvent
+    | KickErrorEvent,
+    Field(discriminator="type"),
+]
+
+ServerEvent = Annotated[
+    RoomStateEvent
+    | PlayerJoinedEvent
+    | HostRestoredEvent
+    | ServerErrorEvent
+    | StartRoundBroadcastEvent
+    | ReadyStatusEvent
+    | HostChangedEvent
+    | LanguageUpdatedEvent
+    | PlayerLeftEvent
+    | KickVoteStartedEvent
+    | KickVoteUpdatedEvent
+    | KickVoteExpiredEvent
+    | PlayerKickedEvent
+    | RoundCompleteBroadcastEvent
+    | GameCompleteBroadcastEvent
+    | CustomCategoryAddedEvent
+    | CustomCategoryRemovedEvent
+    | RelayedClientEvent,
+    Field(discriminator="type"),
+]
+
+SERVER_EVENT_ADAPTER = TypeAdapter(ServerEvent)
+
+type ErrorEventType = Literal[
+    "protocol_error",
+    "permission_error",
+    "player_ready_error",
+    "submit_guess_error",
+    "join_error",
+    "kick_error",
+]
+
+
+def make_error_event(event_type: ErrorEventType, *, error: str, message: str | None = None) -> ServerErrorEvent:
+    """Build a concrete recoverable server error event for one error type."""
+    match event_type:
+        case "protocol_error":
+            return ProtocolErrorEvent(error=error, message=message)
+        case "permission_error":
+            return PermissionErrorEvent(error=error, message=message)
+        case "player_ready_error":
+            return PlayerReadyErrorEvent(error=error, message=message)
+        case "submit_guess_error":
+            return SubmitGuessErrorEvent(error=error, message=message)
+        case "join_error":
+            return JoinErrorEvent(error=error, message=message)
+        case "kick_error":
+            return KickErrorEvent(error=error, message=message)
 
 
 def dump_ws_message(message: WebSocketMessage) -> object:

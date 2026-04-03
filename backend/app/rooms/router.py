@@ -12,7 +12,7 @@ from app.categories.schemas import CategorySummary
 from app.core.config import settings
 from app.core.database import AsyncSessionDep  # noqa: TC001 - FastAPI resolves this dependency alias at runtime
 from app.rooms.manager import room_manager
-from app.rooms.protocol import event_payload
+from app.rooms.protocol import CustomCategoryAddedEvent, CustomCategoryRemovedEvent
 from app.rooms.schemas import (
     CustomCategoryCreate,
     CustomCategoryCreateResponse,
@@ -116,7 +116,7 @@ async def create_room_custom_category(
 
     category_summary = CategorySummary.from_model(category)
     await room.broadcast(
-        event_payload("custom_category_added", category=category_summary.model_dump(), items=category_data.items),
+        CustomCategoryAddedEvent(category=category_summary.model_dump(), items=category_data.items),
     )
 
     return CustomCategoryCreateResponse(
@@ -173,7 +173,7 @@ async def delete_room_custom_category(
     await db.commit()
 
     await room.broadcast(
-        event_payload("custom_category_removed", category_id=category_id, category_name=category.name),
+        CustomCategoryRemovedEvent(categoryId=category_id, categoryName=category.name),
     )
 
     return DeleteCustomCategoryResponse(success=True, message=f"Custom category '{category.name}' deleted")

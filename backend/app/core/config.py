@@ -1,13 +1,19 @@
 """Application configuration via pydantic-settings."""
 
+import os
+
 from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# ENV=dev loads .env.dev, ENV=prod loads .env.prod, etc.
+# If the resolved file does not exist, pydantic-settings ignores it silently.
+_ENV = os.getenv("ENV", "dev")
 
 
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables or .env file."""
 
-    model_config = SettingsConfigDict(env_file=".env.dev", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=f".env.{_ENV}", env_file_encoding="utf-8")
 
     # Database configuration
     postgres_host: str = "localhost"
@@ -46,6 +52,9 @@ class Settings(BaseSettings):
     idle_timeout_seconds: int = 180
     room_ttl_seconds: int = 300
     room_hibernation_delay_seconds: int = 60
+    game_start_delay_seconds: int = 1
+    drawing_to_guessing_buffer_seconds: int = 2
+    round_results_countdown_seconds: int = 5
     game_complete_delay_seconds: int = 5
 
 

@@ -1,10 +1,41 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 
-import { GAME_SETTINGS } from "@/config/gameConfig";
+import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+
+  return {
+    get length() {
+      return values.size;
+    },
+    clear() {
+      values.clear();
+    },
+    getItem(key: string) {
+      return values.get(key) ?? null;
+    },
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      values.delete(key);
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value);
+    },
+  };
+}
+
 beforeEach(() => {
+  Object.defineProperty(globalThis, "localStorage", {
+    value: createMemoryStorage(),
+    configurable: true,
+    writable: true,
+  });
   setActivePinia(createPinia());
 });
 
@@ -139,6 +170,25 @@ describe("localPlayer", () => {
     const store = useGameStore();
     store.localPlayerId = "ghost";
     expect(store.localPlayer).toBeUndefined();
+  });
+});
+
+describe("player name persistence", () => {
+  it("hydrates the local player name from localStorage", () => {
+    localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, "Persistent Player");
+
+    const store = useGameStore();
+
+    expect(store.localPlayerName).toBe("Persistent Player");
+  });
+
+  it("persists the local player name when it changes", async () => {
+    const store = useGameStore();
+
+    store.localPlayerName = "Persistent Player";
+    await nextTick();
+
+    expect(localStorage.getItem(STORAGE_KEYS.PLAYER_NAME)).toBe("Persistent Player");
   });
 });
 

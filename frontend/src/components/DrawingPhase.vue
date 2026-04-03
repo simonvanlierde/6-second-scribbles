@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { injectGameEngine } from "@/composables/injectionKeys";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
+import { STORAGE_KEYS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const { send } = useGameConnection();
 const canvas = useDrawingCanvas();
-const gameEngineRef = injectGameEngine();
-const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
+const { leaveRoom: _leaveRoom } = useLeaveRoom();
 
 const canvasElement = ref<HTMLCanvasElement | null>(null);
 const timeLeft = ref(store.roundLength);
@@ -21,48 +20,62 @@ const items = computed(() => store.localPlayerCard?.items || []);
 const currentScore = computed(() => store.localPlayer?.score || 0);
 
 onMounted(() => {
-  // Restore in-progress drawing from localStorage on page reload.
-  // Uses a separate key ("drawingState") so it never clobbers the store's
-  // full "gameState" snapshot which has ~12 fields.
-  if (!store.localPlayerCard) {
-    try {
-      const saved = localStorage.getItem("drawingState");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        store.localPlayerCard = parsed.localPlayerCard;
-        canvas.loadDrawing(parsed.drawing);
-      }
-    } catch {
-      localStorage.removeItem("drawingState");
-    }
-  }
-
   if (canvasElement.value) {
     canvas.initCanvas(canvasElement.value);
+
+    // Restore in-progress drawing from localStorage on page reload.
+    // Storing strokes keeps recovery resilient across resize/reflow.
+    if (!store.localPlayerCard) {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.DRAWING_STATE);
+        if (saved) {
+          const parsed = JSON.parse(saved) as {
+            localPlayerCard?: typeof store.localPlayerCard;
+            strokes?: typeof canvas.strokes.value;
+          };
+          store.localPlayerCard = parsed.localPlayerCard;
+          canvas.replaceStrokes(parsed.strokes ?? []);
+        }
+      } catch {
+        localStorage.removeItem(STORAGE_KEYS.DRAWING_STATE);
+      }
+    }
+
     startDrawingTimer();
   }
 });
 
 onUnmounted(() => {
   // Persist drawing so a page reload can restore it.
-  // Use "drawingState" — a dedicated key that does not collide with the
+  // Use STORAGE_KEYS.DRAWING_STATE — a dedicated key that does not collide with the
   // store's "gameState" watcher.
-  localStorage.setItem(
-    "drawingState",
-    JSON.stringify({
-      localPlayerCard: store.localPlayerCard,
-      drawing: canvas.toDataURL(),
-    }),
-  );
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.DRAWING_STATE,
+      JSON.stringify({
+        localPlayerCard: store.localPlayerCard,
+        strokes: canvas.strokes.value,
+      }),
+    );
+  } catch {
+    /* localStorage unavailable */
+  }
   stopTimer();
   canvas.cleanup();
 });
 
-// Recalculate timeLeft if roundLength is updated (e.g. late settings sync)
+// Recalculate timeLeft if roundLength is updated (e.g. late settings sync).
+// Must account for already-elapsed time, not just swap in the new length.
 watch(
   () => store.roundLength,
   (newRoundLength) => {
-    timeLeft.value = newRoundLength;
+    const roundStartTime = store.roundStartTime;
+    if (roundStartTime && !Number.isNaN(roundStartTime)) {
+      const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
+      timeLeft.value = Math.max(0, newRoundLength - elapsed);
+    } else {
+      timeLeft.value = newRoundLength;
+    }
   },
 );
 
@@ -105,7 +118,7 @@ function endDrawingPhase() {
   if (store.gamePhase !== "drawing") return;
 
   send({ type: "player_ready", playerId: store.localPlayerId });
-  localStorage.removeItem("drawingState");
+  localStorage.removeItem(STORAGE_KEYS.DRAWING_STATE);
 }
 
 function leaveRoom() {

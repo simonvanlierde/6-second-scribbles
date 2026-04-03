@@ -3,28 +3,31 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any
 
 from app.core.types import LOBBY_PHASE
 from app.rooms import mutations
 from app.rooms.protocol import (
     HostRestoredEvent,
+    JoinErrorEvent,
     LanguageUpdatedEvent,
     PlayerJoinedEvent,
     PlayerLeftEvent,
     PlayerListItem,
-    ProtocolErrorEvent,
     StartRoundBroadcastEvent,
     send_ws_message,
 )
 from app.rooms.state import PlayerCardState
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from app.rooms.protocol import (
         CastKickVoteEvent,
         ClientEventModel,
         DrawpadClearEvent,
         DrawStrokeEvent,
+        DrawStrokePartialEvent,
         InitiateKickEvent,
         JoinEvent,
         LanguageUpdateEvent,
@@ -43,6 +46,8 @@ if TYPE_CHECKING:
     from app.rooms.session import RoomWebSocketSession
 
 logger = logging.getLogger(__name__)
+
+type _Handler = Callable[[RoomWebSocketSession, Any], Awaitable[None]]
 
 
 async def require_host(session: RoomWebSocketSession, action: str) -> bool:
@@ -68,7 +73,7 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
         await send_ws_message(
             session.websocket,
-            ProtocolErrorEvent(type="join_error", error="room_full", message=str(exc)),
+            JoinErrorEvent(error="room_full", message=str(exc)),
         )
         await session.websocket.close(code=1008, reason=str(exc))
         return
@@ -99,6 +104,7 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
         max_rounds=event.rounds,
     )
     await broadcast_and_persist(session, event)
+    session.room.start_first_round_timeout()
 
 
 async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEvent) -> None:
@@ -121,6 +127,7 @@ async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEve
             roundStartTime=round_start_time,
         ),
     )
+    session.room.start_guessing_timeout(session.room.metadata.round_length or 30)
 
 
 async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyEvent) -> None:
@@ -231,6 +238,11 @@ async def handle_request_game_state(session: RoomWebSocketSession, event: Reques
     await send_ws_message(session.websocket, session.room.room_state_event())
 
 
+async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEvent | DrawStrokePartialEvent) -> None:
+    """Handle a draw-stroke event (broadcast as-is)."""
+    await session.room.broadcast(event)
+
+
 async def handle_disconnect(session: RoomWebSocketSession) -> None:
     """Remove the session player from the room and broadcast departure."""
     if not session.player_id:
@@ -239,40 +251,32 @@ async def handle_disconnect(session: RoomWebSocketSession) -> None:
     await broadcast_and_persist(session, PlayerLeftEvent(playerId=session.player_id))
 
 
-async def dispatch_event(session: RoomWebSocketSession, event: ClientEventModel) -> None:  # noqa: C901, PLR0912
-    """Dispatch a parsed client event to its action handler."""
-    match event.type:
-        case "join":
-            await handle_join(session, cast("JoinEvent", event))
-        case "start_game":
-            await handle_start_game(session, cast("StartGameEvent", event))
-        case "start_round":
-            await handle_start_round(session, cast("StartRoundEvent", event))
-        case "player_ready":
-            await handle_player_ready(session, cast("PlayerReadyEvent", event))
-        case "start_guessing":
-            await handle_start_guessing(session, cast("StartGuessingEvent", event))
-        case "submit_guess":
-            await handle_submit_guess(session, cast("SubmitGuessEvent", event))
-        case "restart_game":
-            await handle_restart_game(session, cast("RestartGameEvent", event))
-        case "settings_update":
-            await handle_settings_update(session, cast("SettingsUpdateEvent", event))
-        case "language_update":
-            await handle_language_update(session, cast("LanguageUpdateEvent", event))
-        case "draw_stroke" | "draw_stroke_partial":
-            await session.room.broadcast(cast("DrawStrokeEvent", event))
-        case "drawpad_clear":
-            await handle_drawpad_clear(session, cast("DrawpadClearEvent", event))
-        case "pad_visibility":
-            await handle_pad_visibility(session, cast("PadVisibilityEvent", event))
-        case "privacy_changed":
-            await handle_privacy_changed(session, cast("PrivacyChangedEvent", event))
-        case "initiate_kick":
-            await handle_initiate_kick(session, cast("InitiateKickEvent", event))
-        case "cast_kick_vote":
-            await handle_cast_kick_vote(session, cast("CastKickVoteEvent", event))
-        case "request_game_state":
-            await handle_request_game_state(session, cast("RequestGameStateEvent", event))
-        case "round_complete" | "game_complete" | "heartbeat":
-            pass  # server-originated events echoed back; no action needed
+# Dispatch table mapping event type strings to their handler functions.
+# Events not listed here (round_complete, game_complete, heartbeat) are
+# server-originated echoes that require no server-side action.
+_HANDLERS: dict[str, _Handler] = {
+    "join": handle_join,
+    "start_game": handle_start_game,
+    "start_round": handle_start_round,
+    "player_ready": handle_player_ready,
+    "start_guessing": handle_start_guessing,
+    "submit_guess": handle_submit_guess,
+    "restart_game": handle_restart_game,
+    "settings_update": handle_settings_update,
+    "language_update": handle_language_update,
+    "draw_stroke": handle_draw_stroke,
+    "draw_stroke_partial": handle_draw_stroke,
+    "drawpad_clear": handle_drawpad_clear,
+    "pad_visibility": handle_pad_visibility,
+    "privacy_changed": handle_privacy_changed,
+    "initiate_kick": handle_initiate_kick,
+    "cast_kick_vote": handle_cast_kick_vote,
+    "request_game_state": handle_request_game_state,
+}
+
+
+async def dispatch_event(session: RoomWebSocketSession, event: ClientEventModel) -> None:
+    """Dispatch a parsed client event to its handler."""
+    handler = _HANDLERS.get(event.type)
+    if handler:
+        await handler(session, event)

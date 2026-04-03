@@ -208,20 +208,13 @@ export function useDrawingCanvas() {
     ctx.value.stroke();
   }
 
-  function toDataURL(): string {
-    return canvasRef.value?.toDataURL() || "";
-  }
-
-  function loadDrawing(dataUrl: string) {
-    const canvas = canvasRef.value;
-    const context = ctx.value;
-    if (canvas && context) {
-      const image = new Image();
-      image.onload = () => {
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(image, 0, 0);
-      };
-      image.src = dataUrl;
+  function replaceStrokes(nextStrokes: DrawStroke[]) {
+    strokes.value = nextStrokes;
+    if (ctx.value && canvasRef.value) {
+      ctx.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
+      for (const stroke of strokes.value) {
+        drawStroke(stroke);
+      }
     }
   }
 
@@ -237,8 +230,7 @@ export function useDrawingCanvas() {
     setWidth,
     clear,
     drawStroke,
-    toDataURL,
-    loadDrawing,
+    replaceStrokes,
     setStrokeProgressCallback,
   };
 }

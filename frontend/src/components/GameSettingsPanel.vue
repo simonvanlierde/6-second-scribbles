@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTimeoutFn, watchDebounced } from "@vueuse/core";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import type { Difficulty } from "@/shared/types";
@@ -13,8 +13,11 @@ const difficulty = ref<Difficulty>(store.difficulty);
 const rounds = ref<number>(store.maxRounds);
 const roundLength = ref<number>(store.roundLength);
 const roundsError = ref<string | null>(null);
-const isPrivateRoom = ref(false);
 const settingsFlash = ref(false);
+const isPrivateRoom = computed({
+  get: () => store.isPrivateRoom,
+  set: (value: boolean) => store.setPrivacy(value),
+});
 
 const { start: startFlash } = useTimeoutFn(() => {
   settingsFlash.value = false;

@@ -7,3 +7,4 @@ dist/
 ### Test artifacts
 coverage/
 playwright-report/
+test-results/

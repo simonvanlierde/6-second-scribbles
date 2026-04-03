@@ -40,24 +40,17 @@ def from_state(state: RoomState, *, room_factory: type[GameRoom], metadata_facto
     room._created_at = state.created_at
     room._emptied_at = state.emptied_at
     room.is_hibernated = state.is_hibernated
-    room.metadata = metadata_factory(
-        categories=list(state.metadata.categories),
-        game_phase=state.metadata.game_phase,
-        round_start_time=state.metadata.round_start_time,
-        round_length=state.metadata.round_length,
-        difficulty=state.metadata.difficulty,
-        max_rounds=state.metadata.max_rounds,
-        current_round=state.metadata.current_round,
-        pad_visibility=state.metadata.pad_visibility,
-        ready_players=set(state.metadata.ready_players),
-        is_private=state.metadata.is_private,
-        language=state.metadata.language,
-        player_cards=dict(state.metadata.player_cards),
-        guess_submissions=list(state.metadata.guess_submissions),
-        submitted_players=set(state.metadata.submitted_players),
-        player_count_for_scoring=state.metadata.player_count_for_scoring,
-        player_scores=dict(state.metadata.player_scores),
-    )
+    # Convert the Pydantic state model to a dict, then fix up fields whose
+    # Python types differ from their JSON/Pydantic serialisation:
+    #   - sets are serialised as lists → convert back
+    #   - nested Pydantic models are serialised to plain dicts → keep the
+    #     original typed instances so the dataclass fields stay strongly typed
+    metadata_data = state.metadata.model_dump()
+    metadata_data["ready_players"] = set(metadata_data["ready_players"])
+    metadata_data["submitted_players"] = set(metadata_data["submitted_players"])
+    metadata_data["player_cards"] = dict(state.metadata.player_cards)
+    metadata_data["guess_submissions"] = list(state.metadata.guess_submissions)
+    room.metadata = metadata_factory(**metadata_data)
     return room
 
 

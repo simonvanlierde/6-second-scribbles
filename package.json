@@ -5,6 +5,11 @@
 	"engines": {
 		"node": ">=24.0.0"
 	},
+	"scripts": {
+		"check:contracts": "node scripts/check-contracts.mjs",
+		"generate:contracts": "cd backend && UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/uv-cache} uv run python scripts/generate_protocol_contracts.py && cd ../frontend && npm run generate:asyncapi",
+		"generate:types": "cd frontend && npm run generate:types"
+	},
 	"devDependencies": {
 		"@cspell/dict-es-es": "^3.0.8",
 		"@cspell/dict-fr-fr": "^2.3.2"

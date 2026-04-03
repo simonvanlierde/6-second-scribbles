@@ -2,16 +2,15 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
-import { injectGameEngine } from "@/composables/injectionKeys";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
+import { GAME_TIMINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const router = useRouter();
 const { send } = useGameConnection();
-const gameEngineRef = injectGameEngine();
-const { leaveRoom: _leaveRoom } = useLeaveRoom(gameEngineRef);
+const { leaveRoom: _leaveRoom } = useLeaveRoom();
 const isReady = ref(false);
 const autoRestartTimeout = ref<number | null>(null);
 
@@ -46,7 +45,7 @@ watch(
       autoRestartTimeout.value = window.setTimeout(() => {
         console.log("[ResultsView] Auto-restart timeout reached. Restarting game.");
         playAgain();
-      }, 60000); // 60 seconds
+      }, GAME_TIMINGS.AUTO_RESTART_TIMEOUT_MS);
     }
   },
 );
@@ -70,9 +69,6 @@ function playAgain() {
 
     // Reset game state to lobby
     store.gamePhase = "lobby";
-
-    // Clear game engine for fresh start
-    gameEngineRef.value = null;
 
     // Navigate back to waiting room where host can start new game
     router.push(`/room/${store.roomCode}`);

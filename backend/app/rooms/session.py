@@ -13,7 +13,7 @@ from app.rooms.actions import (
 )
 from app.rooms.protocol import (
     JOIN_EVENT_TYPE,
-    ProtocolErrorEvent,
+    make_error_event,
     parse_client_event,
     send_ws_message,
 )
@@ -76,5 +76,5 @@ class RoomWebSocketSession:
         """Send a recoverable protocol error without closing the connection."""
         await send_ws_message(
             self.websocket,
-            ProtocolErrorEvent(type=event_type, error=error, message=message),
+            make_error_event(event_type, error=error, message=message),
         )

@@ -1,4 +1,39 @@
 {
+  "discriminator": {
+    "mapping": {
+      "custom_category_added": "#/$defs/CustomCategoryAddedEvent",
+      "custom_category_removed": "#/$defs/CustomCategoryRemovedEvent",
+      "draw_stroke": "#/$defs/DrawStrokeEvent",
+      "draw_stroke_partial": "#/$defs/DrawStrokePartialEvent",
+      "drawpad_clear": "#/$defs/DrawpadClearEvent",
+      "game_complete": "#/$defs/GameCompleteBroadcastEvent",
+      "host_changed": "#/$defs/HostChangedEvent",
+      "host_restored": "#/$defs/HostRestoredEvent",
+      "join_error": "#/$defs/JoinErrorEvent",
+      "kick_error": "#/$defs/KickErrorEvent",
+      "kick_vote_expired": "#/$defs/KickVoteExpiredEvent",
+      "kick_vote_started": "#/$defs/KickVoteStartedEvent",
+      "kick_vote_updated": "#/$defs/KickVoteUpdatedEvent",
+      "language_update": "#/$defs/LanguageUpdatedEvent",
+      "pad_visibility": "#/$defs/PadVisibilityEvent",
+      "permission_error": "#/$defs/PermissionErrorEvent",
+      "player_joined": "#/$defs/PlayerJoinedEvent",
+      "player_kicked": "#/$defs/PlayerKickedEvent",
+      "player_left": "#/$defs/PlayerLeftEvent",
+      "player_ready_error": "#/$defs/PlayerReadyErrorEvent",
+      "protocol_error": "#/$defs/ProtocolErrorEvent",
+      "ready_status": "#/$defs/ReadyStatusEvent",
+      "restart_game": "#/$defs/RestartGameEvent",
+      "room_state": "#/$defs/RoomStateEvent",
+      "round_complete": "#/$defs/RoundCompleteBroadcastEvent",
+      "settings_update": "#/$defs/SettingsUpdateEvent",
+      "start_game": "#/$defs/StartGameEvent",
+      "start_guessing": "#/$defs/StartGuessingEvent",
+      "start_round": "#/$defs/StartRoundBroadcastEvent",
+      "submit_guess_error": "#/$defs/SubmitGuessErrorEvent"
+    },
+    "propertyName": "type"
+  },
   "anyOf": [
     {
       "additionalProperties": false,
@@ -107,6 +142,10 @@
           "title": "Padvisibility",
           "type": "boolean"
         },
+        "isPrivate": {
+          "title": "Isprivate",
+          "type": "boolean"
+        },
         "language": {
           "pattern": "^[a-z]{2,5}$",
           "type": "string"
@@ -115,6 +154,7 @@
       "required": [
         "difficulty",
         "gamePhase",
+        "isPrivate",
         "language",
         "maxRounds",
         "padVisibility",
@@ -200,17 +240,9 @@
     },
     {
       "additionalProperties": false,
-      "description": "Recoverable in-band protocol error for an accepted websocket.",
       "properties": {
         "type": {
-          "enum": [
-            "protocol_error",
-            "permission_error",
-            "player_ready_error",
-            "submit_guess_error",
-            "join_error",
-            "kick_error"
-          ],
+          "const": "protocol_error",
           "title": "Type",
           "type": "string"
         },
@@ -236,6 +268,166 @@
         "type"
       ],
       "title": "ProtocolErrorEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "permission_error",
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "error",
+        "type"
+      ],
+      "title": "PermissionErrorEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "player_ready_error",
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "error",
+        "type"
+      ],
+      "title": "PlayerReadyErrorEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "submit_guess_error",
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "error",
+        "type"
+      ],
+      "title": "SubmitGuessErrorEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "join_error",
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "error",
+        "type"
+      ],
+      "title": "JoinErrorEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "kick_error",
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "error",
+        "type"
+      ],
+      "title": "KickErrorEvent",
       "type": "object"
     },
     {
@@ -627,6 +819,60 @@
       "type": "object"
     },
     {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "custom_category_added",
+          "title": "Type",
+          "type": "string"
+        },
+        "category": {
+          "additionalProperties": true,
+          "title": "Category",
+          "type": "object"
+        },
+        "items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "category",
+        "items",
+        "type"
+      ],
+      "title": "CustomCategoryAddedEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "custom_category_removed",
+          "title": "Type",
+          "type": "string"
+        },
+        "categoryId": {
+          "title": "Categoryid",
+          "type": "integer"
+        },
+        "categoryName": {
+          "title": "Categoryname",
+          "type": "string"
+        }
+      },
+      "required": [
+        "categoryId",
+        "categoryName",
+        "type"
+      ],
+      "title": "CustomCategoryRemovedEvent",
+      "type": "object"
+    },
+    {
       "properties": {
         "type": {
           "const": "start_game",
@@ -766,10 +1012,7 @@
       "additionalProperties": true,
       "properties": {
         "type": {
-          "enum": [
-            "draw_stroke",
-            "draw_stroke_partial"
-          ],
+          "const": "draw_stroke",
           "title": "Type",
           "type": "string"
         },
@@ -790,6 +1033,33 @@
         "type"
       ],
       "title": "DrawStrokeEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "const": "draw_stroke_partial",
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Playerid"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DrawStrokePartialEvent",
       "type": "object"
     },
     {

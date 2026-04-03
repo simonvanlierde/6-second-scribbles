@@ -55,7 +55,6 @@ def test_full_game_flow(test_client) -> None:
         )
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["draw_stroke", "draw_stroke"]
 
-        send_json(ws1, {"type": "start_guessing"})
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_guessing", "start_guessing"]
 
         send_json(
@@ -82,6 +81,31 @@ def test_full_game_flow(test_client) -> None:
         assert round_complete[1]["type"] == "round_complete"
         assert round_complete[0]["scores"] == round_complete[1]["scores"]
         assert round_complete[0]["results"] == round_complete[1]["results"]
+
+
+@pytest.mark.integration
+def test_server_starts_guessing_after_round_timer(test_client) -> None:
+    with joined_players(
+        test_client,
+        "AUTO_GUESS_01",
+        [JoinedPlayer("p1", "Alice"), JoinedPlayer("p2", "Bob")],
+    ) as (ws1, ws2):
+        send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 1, "roundLength": 1})
+        assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
+
+        send_json(
+            ws1,
+            {
+                "type": "start_round",
+                "round": 1,
+                "cards": {
+                    "p1": {"category": "Animals", "items": ["cat", "dog"]},
+                    "p2": {"category": "Foods", "items": ["pizza", "burger"]},
+                },
+            },
+        )
+        assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_round", "start_round"]
+        assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_guessing", "start_guessing"]
 
 
 @pytest.mark.integration

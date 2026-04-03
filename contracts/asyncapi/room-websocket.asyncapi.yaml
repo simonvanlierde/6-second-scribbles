@@ -1,0 +1,210 @@
+asyncapi: 3.1.0
+info:
+  title: "6 Second Scribbles Room WebSocket"
+  version: 0.1.0
+  description: |
+    Published realtime websocket contract for the multiplayer game.
+    
+    The current implementation source of truth remains the Pydantic models in `backend/app/rooms/protocol.py`, with generated JSON Schema artifacts published under `contracts/jsonschema/`.
+    
+    Representative payload examples live in `contracts/examples/`.
+  tags:
+    - name: realtime
+    - name: websocket
+    - name: multiplayer
+servers:
+  local:
+    host: localhost:8000
+    protocol: ws
+    pathname: /party/{roomId}
+    description: "Local FastAPI websocket endpoint for one room."
+channels:
+  roomConnection:
+    address: /party/{roomId}
+    title: "Room WebSocket"
+    summary: "Bidirectional websocket carrying all room gameplay events."
+    parameters:
+      roomId:
+        description: "Short room code used to connect to a game room."
+    messages:
+      clientEvent:
+        $ref: "#/components/messages/clientEvent"
+      serverEvent:
+        $ref: "#/components/messages/serverEvent"
+operations:
+  sendClientEvent:
+    action: send
+    title: "Client sends room command or event"
+    summary: "Browser sends a validated room event such as `join`, `player_ready`, drawing updates, or room settings changes."
+    channel:
+      $ref: "#/channels/roomConnection"
+    messages:
+      - $ref: "#/channels/roomConnection/messages/clientEvent"
+  receiveServerEvent:
+    action: receive
+    title: "Client receives room state or broadcast"
+    summary: "Server sends room snapshots, game state transitions, drawing relays, moderation events, and custom-category broadcasts."
+    channel:
+      $ref: "#/channels/roomConnection"
+    messages:
+      - $ref: "#/channels/roomConnection/messages/serverEvent"
+components:
+  messages:
+    clientEvent:
+      name: clientEvent
+      title: "Client Event"
+      summary: "Any validated client-to-server room event. Event types: join, request_game_state, start_game, start_round, start_guessing, round_complete, game_complete, restart_game, settings_update, player_ready, submit_guess, language_update, privacy_changed, pad_visibility, draw_stroke, draw_stroke_partial, drawpad_clear, initiate_kick, cast_kick_vote, heartbeat."
+      contentType: application/json
+      payload:
+        $ref: ../jsonschema/client-event.schema.json
+      examples:
+        - name: joinRoom
+          summary: "Join a room when the socket opens."
+          payload:
+            type: join
+            playerId: player-123
+            name: Simon
+        - name: startGame
+          summary: "Host starts a new game with room settings."
+          payload:
+            type: start_game
+            difficulty: medium
+            rounds: 3
+            roundLength: 45
+        - name: drawStroke
+          summary: "Send a completed drawing stroke to the room."
+          payload:
+            type: draw_stroke
+            playerId: player-123
+            stroke:
+              color: "#111111"
+              width: 6
+              points:
+                - x: 10
+                  y: 20
+                - x: 30
+                  y: 40
+        - name: submitGuess
+          summary: "Submit guesses during the guessing phase."
+          payload:
+            type: submit_guess
+            playerId: player-123
+            targetPlayerId: player-456
+            guesses:
+              - cat
+              - mouse
+              - clock
+        - name: requestGameState
+          summary: "Ask the server for the latest room snapshot."
+          payload:
+            type: request_game_state
+            playerId: player-123
+        - name: heartbeat
+          summary: "Keep the websocket session alive."
+          payload:
+            type: heartbeat
+    serverEvent:
+      name: serverEvent
+      title: "Server Event"
+      summary: "Any validated server-to-client room event. Event types: room_state, player_joined, player_left, host_changed, host_restored, join_error, start_game, start_round, start_guessing, round_complete, game_complete, restart_game, ready_status, settings_update, language_update, pad_visibility, draw_stroke, draw_stroke_partial, drawpad_clear, kick_vote_started, kick_vote_updated, kick_vote_expired, player_kicked, kick_error, protocol_error, permission_error, player_ready_error, submit_guess_error, custom_category_added, custom_category_removed."
+      contentType: application/json
+      payload:
+        $ref: ../jsonschema/server-event.schema.json
+      examples:
+        - name: roomSnapshot
+          summary: "Initial room state after connecting."
+          payload:
+            type: room_state
+            players:
+              - id: player-123
+                name: Simon
+                categories:
+                  - animals
+              - id: player-456
+                name: Alex
+                categories:
+                  []
+            hostId: player-123
+            categories:
+              - animals
+              - household
+            gamePhase: lobby
+            difficulty: medium
+            maxRounds: 3
+            roundStartTime: null
+            roundLength: 45
+            padVisibility: true
+            isPrivate: false
+            language: en
+        - name: playerJoined
+          summary: "A new player joined the room."
+          payload:
+            type: player_joined
+            playerId: player-456
+            name: Alex
+            players:
+              - id: player-123
+                name: Simon
+              - id: player-456
+                name: Alex
+            isHost: false
+        - name: playerLeft
+          summary: "A player left the room."
+          payload:
+            type: player_left
+            playerId: player-456
+        - name: hostChanged
+          summary: "Host ownership transferred to another player."
+          payload:
+            type: host_changed
+            newHostId: player-456
+        - name: hostRestored
+          summary: "A reconnecting host regains host status."
+          payload:
+            type: host_restored
+            message: "You are still the host"
+        - name: roundStarted
+          summary: "Server starts the drawing round with assigned cards."
+          payload:
+            type: start_round
+            round: 1
+            cards:
+              player-123:
+                category: animals
+                items:
+                  - cat
+                  - dog
+                  - owl
+                alternatives: null
+                is_custom: false
+            roundStartTime: 1712140800
+        - name: kickVoteStarted
+          summary: "Kick vote opened for a disruptive player."
+          payload:
+            type: kick_vote_started
+            targetPlayerId: player-456
+            targetPlayerName: Alex
+            initiatorId: player-123
+            requiredVotes: 2
+            currentVotes: 1
+            expiresAt: 1712140845
+        - name: joinRejected
+          summary: "Recoverable room join failure."
+          payload:
+            type: join_error
+            error: room_full
+            message: "Room is already full"
+        - name: customCategoryAdded
+          summary: "Host-added custom category broadcast to all players."
+          payload:
+            type: custom_category_added
+            category:
+              id: 42
+              name: Kitchen
+              difficulty: easy
+            items:
+              - fork
+              - spoon
+              - plate
+              - mug
+              - kettle

@@ -6,10 +6,8 @@ import { useRoute } from "vue-router";
 import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
 import PlayerListPanel from "@/components/PlayerListPanel.vue";
 import SharedDrawpad from "@/components/SharedDrawpad.vue";
-import { injectGameEngine } from "@/composables/injectionKeys";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { useGameEngine } from "@/composables/useGameEngine";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { GAME_SETTINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
@@ -19,15 +17,14 @@ const store = useGameStore();
 const { send } = useGameConnection();
 const { showNotification } = useNotifications();
 const { copy } = useClipboard();
-const gameEngineRef = injectGameEngine();
-const { leaveRoom } = useLeaveRoom(gameEngineRef);
+const { leaveRoom } = useLeaveRoom();
 
 const leaveDialogRef = ref<HTMLDialogElement | null>(null);
 
-const showDrawpad = computed({
-  get: () => store.showDrawpad,
+const localPadVisible = computed({
+  get: () => store.localPadVisible,
   set: (v: boolean) => {
-    store.showDrawpad = v;
+    store.setLocalPadVisible(v);
   },
 });
 
@@ -43,11 +40,7 @@ function handleClear() {
 }
 
 function toggleDrawpad() {
-  const newVal = !showDrawpad.value;
-  showDrawpad.value = newVal;
-  if (store.isHost) {
-    send({ type: "pad_visibility", visible: newVal });
-  }
+  localPadVisible.value = !localPadVisible.value;
 }
 
 function startGame() {
@@ -59,11 +52,6 @@ function startGame() {
     rounds: store.maxRounds || GAME_SETTINGS.rounds.DEFAULT,
     roundLength: store.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT,
   });
-
-  if (store.isHost) {
-    gameEngineRef.value = useGameEngine();
-    gameEngineRef.value.startGame(store.difficulty, store.maxRounds, store.roundLength);
-  }
 }
 
 async function copyRoomCode() {
@@ -85,8 +73,9 @@ function confirmLeave() {
 }
 
 function toggleRoomPadVisibility() {
-  store.showPadForRoom = !store.showPadForRoom;
-  send({ type: "pad_visibility", visible: store.showPadForRoom });
+  const visible = !store.roomPadVisible;
+  store.setRoomPadVisible(visible);
+  send({ type: "pad_visibility", visible });
 }
 </script>
 
@@ -127,22 +116,22 @@ function toggleRoomPadVisibility() {
                 Clear drawpad for everyone
               </button>
               <button v-if="store.isHost" type="button" class="btn btn-small" @click="toggleRoomPadVisibility">
-                {{ store.showPadForRoom ? 'Hide drawpad for everyone' : 'Show drawpad for everyone' }}
+                {{ store.roomPadVisible ? 'Hide drawpad for everyone' : 'Show drawpad for everyone' }}
               </button>
               <button type="button" class="btn btn-small" @click="toggleDrawpad">
-                {{ showDrawpad ? 'Hide pad' : 'Show pad' }}
+                {{ localPadVisible ? 'Hide pad' : 'Show pad' }}
               </button>
             </div>
           </div>
 
-          <div v-if="store.showPadForRoom && store.showDrawpad" class="drawpad-container"><SharedDrawpad /></div>
+          <div v-if="store.roomPadVisible && store.localPadVisible" class="drawpad-container"><SharedDrawpad /></div>
         </div>
 
         <div class="share-room">
           <p>Share this room code with friends:</p>
           <div class="room-code-share">
             <span class="room-code-display">{{ roomCode }}</span>
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem">
+            <div class="copy-btn-wrap">
               <button type="button" class="btn btn-small" @click="copyRoomCode">Copy</button>
             </div>
           </div>
@@ -240,6 +229,12 @@ function toggleRoomPadVisibility() {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.copy-btn-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .room-code-display {

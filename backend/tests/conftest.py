@@ -29,6 +29,7 @@ from app.categories.models import Card, Category
 from app.core import database
 from app.core import redis as redis_module
 from app.core.config import settings
+from app.core.migrations import run_migrations
 from app.rooms.manager import GameRoom, RoomManager
 from app.rooms.manager import room_manager as global_room_manager
 
@@ -62,7 +63,7 @@ async def _reset_real_infra() -> None:
     await database.close_db()
     await redis_module.close_redis()
 
-    await database.init_db()
+    await run_migrations()
 
     table_names = ", ".join(table.name for table in reversed(database.Base.metadata.sorted_tables))
     if table_names:
@@ -316,14 +317,14 @@ async def configure_test_services(
         monkeypatch.setattr(settings, "redis_host", redis_host)
         monkeypatch.setattr(settings, "redis_port", redis_port)
 
-        redis_module._redis_client = None
+        redis_module._state.client = None
 
         main_module.app.dependency_overrides.clear()
 
         await _reset_real_infra()
         yield
         main_module.app.dependency_overrides.clear()
-        redis_module._redis_client = None
+        redis_module._state.client = None
         await database.close_db()
         await redis_module.close_redis()
         return
@@ -333,19 +334,14 @@ async def configure_test_services(
     async def override_get_db() -> AsyncGenerator[FakeAsyncSession]:
         yield FakeAsyncSession(fake_db_store)
 
-    async def fake_init_db() -> None:
-        return None
-
     async def fake_close_db() -> None:
         return None
 
     monkeypatch.setattr(database, "get_session_maker", lambda: session_maker)
     monkeypatch.setattr(database, "_get_session_maker", lambda: session_maker)
-    monkeypatch.setattr(database, "init_db", fake_init_db)
     monkeypatch.setattr(database, "close_db", fake_close_db)
 
-    monkeypatch.setattr(redis_module, "_redis_client", fake_redis)
-    monkeypatch.setattr(main_module, "init_db", fake_init_db)
+    monkeypatch.setattr(redis_module._state, "client", fake_redis)
     monkeypatch.setattr(main_module, "close_db", fake_close_db)
 
     main_module.app.dependency_overrides[database.get_async_session] = override_get_db

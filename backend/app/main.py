@@ -12,7 +12,7 @@ from redis.exceptions import RedisError
 
 from app.categories.router import router as categories_router
 from app.core.config import settings
-from app.core.database import close_db, init_db
+from app.core.database import close_db
 from app.core.logging import configure_logging
 from app.core.redis import close_redis, get_redis
 from app.rooms.manager import room_manager
@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown logic."""
     logger.info("Starting Six Second Scribbles API...")
-    await init_db()
-    logger.info("Database initialized")
+    logger.info("Database schema is managed by Alembic migrations")
 
     try:
         await get_redis()

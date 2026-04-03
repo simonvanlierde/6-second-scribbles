@@ -12,7 +12,7 @@ from pathlib import Path
 from sqlalchemy import delete, select
 
 from app.categories.models import Card, Category
-from app.core.database import get_session_maker, init_db
+from app.core.database import get_session_maker
 from app.core.logging import configure_logging
 
 configure_logging()
@@ -24,8 +24,6 @@ CLEAR_FLAG = "--clear"
 
 async def seed_database() -> None:
     """Seed the database with card deck data."""
-    await init_db()
-
     async with get_session_maker()() as session:
         try:
             result = await session.execute(select(Category))

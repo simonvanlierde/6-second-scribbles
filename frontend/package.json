@@ -10,11 +10,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "generate:types": "python ../backend/scripts/generate_frontend_types.py && node scripts/generate-types.mjs",
+    "generate:types": "npm run generate:contracts && node scripts/generate-types.mjs",
+    "generate:contracts": "cd ../backend && UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/uv-cache} uv run python scripts/generate_protocol_contracts.py && cd ../frontend && node scripts/generate-asyncapi.mjs",
+    "generate:asyncapi": "node scripts/generate-asyncapi.mjs",
+    "validate:contracts": "node scripts/validate-contracts.mjs",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui --headed",
     "type-check": "vue-tsc --build",
     "lint": "biome check --write && eslint . --fix"
   },

@@ -88,6 +88,13 @@ describe("RoomCodeInput", () => {
 });
 
 describe("LobbyView", () => {
+  it("keeps the player name input in sync with the store", async () => {
+    const wrapper = mount(LobbyView);
+    await wrapper.find("#player-name").setValue("Persistent Player");
+
+    expect(storeMock.localPlayerName).toBe("Persistent Player");
+  });
+
   it("create room triggers navigation", async () => {
     const wrapper = mount(LobbyView);
     await wrapper.find("#player-name").setValue("Test Player");

@@ -2,7 +2,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
-import { type ClientEvent, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
+import { type ClientEvent, type ServerEvent, type ServerEventGroup, ServerEventSchema } from "@/generated/protocol";
 import { useGameStore } from "@/stores/game";
 
 // Singleton WebSocket connection shared across all components
@@ -10,6 +10,12 @@ let ws: WebSocket | null = null;
 const isConnected = ref(false);
 const connectionError = ref<string | null>(null);
 let heartbeatInterval: number | null = null;
+
+type ConnectionEvent = ServerEventGroup<"connection">;
+type GameFlowEvent = ServerEventGroup<"gameFlow" | "roomSettings">;
+type DrawingEvent = ServerEventGroup<"drawing">;
+type KickEvent = ServerEventGroup<"moderation">;
+type CategoryEvent = ServerEventGroup<"categories">;
 
 export function useGameConnection() {
   const store = useGameStore();
@@ -77,7 +83,7 @@ export function useGameConnection() {
 
   // ── Connection & player events ────────────────────────────────────────────
 
-  function handleConnectionEvent(message: ServerEvent) {
+  function handleConnectionEvent(message: ConnectionEvent) {
     switch (message.type) {
       case "join_error":
         showNotification(message.message || "Unable to join room", "error");
@@ -91,21 +97,12 @@ export function useGameConnection() {
         break;
 
       case "room_state":
-        store.setPlayers(message.players);
-        if (message.hostId) store.hostId = message.hostId;
-        store.categories = message.categories ?? [];
-        store.gamePhase = message.gamePhase;
-        if (message.difficulty) store.difficulty = message.difficulty;
-        if (message.maxRounds) store.maxRounds = message.maxRounds;
-        if (message.roundStartTime) store.roundStartTime = message.roundStartTime;
-        if (message.roundLength) store.roundLength = message.roundLength;
-        if (message.padVisibility !== undefined) store.showPadForRoom = message.padVisibility;
-        if (message.language) store.language = message.language;
+        store.applyRoomState(message);
         break;
 
       case "player_joined":
         store.setPlayers(message.players);
-        if (message.isHost) store.hostId = message.playerId;
+        if (message.isHost) store.setHost(message.playerId);
         break;
 
       case "player_left":
@@ -113,14 +110,14 @@ export function useGameConnection() {
         break;
 
       case "host_changed":
-        store.hostId = message.newHostId;
+        store.setHost(message.newHostId);
         break;
     }
   }
 
   // ── Game flow events ──────────────────────────────────────────────────────
 
-  function handleGameFlowEvent(message: ServerEvent) {
+  function handleGameFlowEvent(message: GameFlowEvent) {
     switch (message.type) {
       case "start_game":
         store.startGame(
@@ -167,16 +164,23 @@ export function useGameConnection() {
         break;
 
       case "ready_status":
-        store.readyCount = message.readyCount;
-        store.totalPlayers = message.totalPlayers;
+        store.setReadyStatus(message.readyCount, message.totalPlayers);
         break;
 
       case "settings_update":
-        if (message.difficulty) store.difficulty = message.difficulty;
-        if (message.rounds !== null) store.maxRounds = message.rounds ?? store.maxRounds;
-        if (message.roundLength !== null) store.roundLength = message.roundLength ?? store.roundLength;
+        store.applySettingsUpdate(message);
         if (!store.isHost) {
           showNotification("Host updated game settings");
+        }
+        break;
+
+      case "language_update":
+        if (message.language) {
+          store.setLanguage(message.language);
+          if (!store.isHost) {
+            const langNames: Record<string, string> = { en: "English", es: "Español", fr: "Français" };
+            showNotification(`Language changed to ${langNames[message.language] || message.language}`);
+          }
         }
         break;
     }
@@ -184,7 +188,7 @@ export function useGameConnection() {
 
   // ── Drawing events ────────────────────────────────────────────────────────
 
-  function handleDrawingEvent(message: ServerEvent) {
+  function handleDrawingEvent(message: DrawingEvent) {
     switch (message.type) {
       case "draw_stroke":
       case "draw_stroke_partial":
@@ -198,8 +202,7 @@ export function useGameConnection() {
         break;
 
       case "pad_visibility":
-        store.showPadForRoom = message.visible;
-        store.showDrawpad = message.visible;
+        store.setRoomPadVisible(message.visible);
         if (!store.isHost) {
           showNotification(
             message.visible ? "Host showed the drawpad for the room" : "Host hid the drawpad for the room",
@@ -211,7 +214,7 @@ export function useGameConnection() {
 
   // ── Kick & moderation events ──────────────────────────────────────────────
 
-  function handleKickEvent(message: ServerEvent) {
+  function handleKickEvent(message: KickEvent) {
     switch (message.type) {
       case "kick_vote_started":
         store.startKickVote(message.targetPlayerId, {
@@ -253,15 +256,13 @@ export function useGameConnection() {
       case "kick_error":
         showNotification(message.error || "Failed to process kick request", "error");
         break;
+    }
+  }
 
-      case "language_update":
-        if (message.language) {
-          store.language = message.language;
-          if (!store.isHost) {
-            const langNames: Record<string, string> = { en: "English", es: "Español", fr: "Français" };
-            showNotification(`Language changed to ${langNames[message.language] || message.language}`);
-          }
-        }
+  function handleCategoryEvent(message: CategoryEvent) {
+    switch (message.type) {
+      case "custom_category_added":
+      case "custom_category_removed":
         break;
     }
   }
@@ -287,6 +288,7 @@ export function useGameConnection() {
       case "restart_game":
       case "ready_status":
       case "settings_update":
+      case "language_update":
         handleGameFlowEvent(message);
         break;
 
@@ -297,12 +299,16 @@ export function useGameConnection() {
         handleDrawingEvent(message);
         break;
 
+      case "custom_category_added":
+      case "custom_category_removed":
+        handleCategoryEvent(message);
+        break;
+
       case "kick_vote_started":
       case "kick_vote_updated":
       case "player_kicked":
       case "kick_vote_expired":
       case "kick_error":
-      case "language_update":
         handleKickEvent(message);
         break;
     }

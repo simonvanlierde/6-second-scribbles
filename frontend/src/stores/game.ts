@@ -1,14 +1,14 @@
 import { defineStore } from "pinia";
 import { computed, ref, watch } from "vue";
 
-import { GAME_SETTINGS } from "@/config/gameConfig";
+import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { Card, Difficulty, DrawStroke, KickVote, Player, RoundResult } from "@/shared/types";
 
 export const useGameStore = defineStore("game", () => {
   // Load from localStorage if available (guard for test environments where localStorage may be limited)
   const savedState = (() => {
     try {
-      return localStorage.getItem("gameState");
+      return localStorage.getItem(STORAGE_KEYS.GAME_STATE);
     } catch {
       return null;
     }
@@ -19,9 +19,9 @@ export const useGameStore = defineStore("game", () => {
   const savedName =
     (() => {
       try {
-        return localStorage.getItem("playerName");
+        return localStorage.getItem(STORAGE_KEYS.PLAYER_NAME) || initialState?.localPlayerName || null;
       } catch {
-        return null;
+        return initialState?.localPlayerName || null;
       }
     })() || "";
   const localPlayerName = ref<string>(savedName);
@@ -38,14 +38,15 @@ export const useGameStore = defineStore("game", () => {
   const roundLength = ref<number>(initialState?.roundLength || GAME_SETTINGS.roundLengthSeconds.DEFAULT);
   const roundStartTime = ref<number | undefined>(initialState?.roundStartTime);
   const currentStrokes = ref<DrawStroke[]>([]);
-  const showDrawpad = ref<boolean>(initialState?.showDrawpad ?? true);
-  const showPadForRoom = ref<boolean>(initialState?.showPadForRoom ?? true);
+  const localPadVisible = ref<boolean>(initialState?.localPadVisible ?? true);
+  const roomPadVisible = ref<boolean>(true);
   const localPlayerCard = ref<Card | undefined>();
   const lastRoundResults = ref<RoundResult[]>([]);
   const categories = ref<string[]>([]);
   const readyCount = ref<number>(0);
   const totalPlayers = ref<number>(0);
   const language = ref<string>(initialState?.language || "en");
+  const isPrivateRoom = ref<boolean>(false);
   const kickVotes = ref<Map<string, KickVote>>(new Map());
 
   // Computed
@@ -59,7 +60,7 @@ export const useGameStore = defineStore("game", () => {
     localPlayerId.value = id;
     localPlayerName.value = name;
     try {
-      localStorage.setItem("playerName", name);
+      localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
     } catch {
       /* unavailable */
     }
@@ -180,6 +181,69 @@ export const useGameStore = defineStore("game", () => {
     gamePhase.value = "complete";
   }
 
+  function setHost(id: string | null) {
+    hostId.value = id;
+  }
+
+  function setLanguage(nextLanguage: string) {
+    language.value = nextLanguage;
+  }
+
+  function setRoomPadVisible(visible: boolean) {
+    roomPadVisible.value = visible;
+  }
+
+  function setLocalPadVisible(visible: boolean) {
+    localPadVisible.value = visible;
+  }
+
+  function setPrivacy(isPrivate: boolean) {
+    isPrivateRoom.value = isPrivate;
+  }
+
+  function setReadyStatus(ready: number, total: number) {
+    readyCount.value = ready;
+    totalPlayers.value = total;
+  }
+
+  function applySettingsUpdate(settings: {
+    difficulty?: Difficulty | null;
+    rounds?: number | null;
+    roundLength?: number | null;
+  }) {
+    if (settings.difficulty) difficulty.value = settings.difficulty;
+    if (settings.rounds !== null && settings.rounds !== undefined) maxRounds.value = settings.rounds;
+    if (settings.roundLength !== null && settings.roundLength !== undefined) roundLength.value = settings.roundLength;
+  }
+
+  function applyRoomState(roomState: {
+    players: Array<{ id: string; name: string }>;
+    hostId?: string | null;
+    categories?: string[] | null;
+    gamePhase: "lobby" | "drawing" | "guessing" | "scoring" | "complete";
+    difficulty?: Difficulty | null;
+    maxRounds?: number | null;
+    roundStartTime?: number | null;
+    roundLength?: number | null;
+    padVisibility?: boolean;
+    language?: string | null;
+    isPrivate?: boolean;
+  }) {
+    setPlayers(roomState.players);
+    hostId.value = roomState.hostId ?? null;
+    categories.value = roomState.categories ?? [];
+    gamePhase.value = roomState.gamePhase;
+    applySettingsUpdate({
+      difficulty: roomState.difficulty,
+      rounds: roomState.maxRounds,
+      roundLength: roomState.roundLength,
+    });
+    roundStartTime.value = roomState.roundStartTime ?? undefined;
+    if (roomState.padVisibility !== undefined) roomPadVisible.value = roomState.padVisibility;
+    if (roomState.language) language.value = roomState.language;
+    if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
+  }
+
   function reset() {
     roomCode.value = "";
     players.value = new Map();
@@ -197,9 +261,10 @@ export const useGameStore = defineStore("game", () => {
     categories.value = [];
     readyCount.value = 0;
     totalPlayers.value = 0;
-    showDrawpad.value = true;
-    showPadForRoom.value = true;
+    localPadVisible.value = true;
+    roomPadVisible.value = true;
     language.value = "en";
+    isPrivateRoom.value = false;
   }
 
   function getFinalScores() {
@@ -215,8 +280,9 @@ export const useGameStore = defineStore("game", () => {
   /** Force a synchronous persist to localStorage. Rarely needed — prefer letting the watcher handle it. */
   function saveState() {
     try {
+      localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, localPlayerName.value);
       localStorage.setItem(
-        "gameState",
+        STORAGE_KEYS.GAME_STATE,
         JSON.stringify({
           roomCode: roomCode.value,
           localPlayerId: localPlayerId.value,
@@ -227,8 +293,7 @@ export const useGameStore = defineStore("game", () => {
           gamePhase: gamePhase.value,
           roundStartTime: roundStartTime.value,
           roundLength: roundLength.value,
-          showDrawpad: showDrawpad.value,
-          showPadForRoom: showPadForRoom.value,
+          localPadVisible: localPadVisible.value,
           language: language.value,
         }),
       );
@@ -249,8 +314,7 @@ export const useGameStore = defineStore("game", () => {
       gamePhase,
       roundStartTime,
       roundLength,
-      showDrawpad,
-      showPadForRoom,
+      localPadVisible,
       language,
     ],
     saveState,
@@ -313,9 +377,10 @@ export const useGameStore = defineStore("game", () => {
     readyCount,
     totalPlayers,
     language,
-    showDrawpad,
-    showPadForRoom,
+    localPadVisible,
+    roomPadVisible,
     kickVotes,
+    isPrivateRoom,
 
     // Computed
     localPlayer,
@@ -339,6 +404,14 @@ export const useGameStore = defineStore("game", () => {
     updateScores,
     setRoundResults,
     endGame,
+    setHost,
+    setLanguage,
+    setRoomPadVisible,
+    setLocalPadVisible,
+    setPrivacy,
+    setReadyStatus,
+    applySettingsUpdate,
+    applyRoomState,
     reset,
     getFinalScores,
     getWinner,

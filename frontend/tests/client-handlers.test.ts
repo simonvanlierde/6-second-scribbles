@@ -46,10 +46,12 @@ describe("client message handlers", () => {
 
   it("applies pad_visibility to the store", () => {
     const store = useGameStore();
+    store.setLocalPadVisible(true);
     const { handleMessage } = useGameConnection();
 
     handleMessage({ type: "pad_visibility", visible: false });
-    expect(store.showDrawpad).toBe(false);
+    expect(store.roomPadVisible).toBe(false);
+    expect(store.localPadVisible).toBe(true);
   });
 
   it("applies settings_update to the store", () => {
@@ -85,11 +87,13 @@ describe("client message handlers", () => {
       roundStartTime: null,
       roundLength: null,
       padVisibility: true,
+      isPrivate: true,
       language: "en",
     });
 
     expect(store.playersList.map((player) => player.id)).toEqual(["p1", "p2"]);
     expect(store.hostId).toBe("p1");
+    expect(store.isPrivateRoom).toBe(true);
   });
 
   it("uses the authoritative player list from player_joined", () => {

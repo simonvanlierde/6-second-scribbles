@@ -69,6 +69,7 @@ def test_request_game_state_returns_current_room_state(test_client) -> None:
         assert room_state["difficulty"] == "medium"
         assert room_state["maxRounds"] == 5
         assert room_state["padVisibility"] is True
+        assert room_state["isPrivate"] is False
 
 
 def test_ready_and_restart_messages_are_broadcast(test_client) -> None:

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import RoomCodeInput from "@/components/RoomCodeInput.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { API_HOST } from "@/config/gameConfig";
+import { API_HOST, STORAGE_KEYS } from "@/config/gameConfig";
 import { generateRoomCode as sharedGenerateRoomCode } from "@/shared/roomCode";
 import { useGameStore } from "@/stores/game";
 
@@ -11,17 +11,22 @@ const router = useRouter();
 const store = useGameStore();
 const { connect } = useGameConnection();
 
-const playerName = ref(store.localPlayerName);
+const playerName = computed({
+  get: () => store.localPlayerName,
+  set: (value: string) => {
+    store.localPlayerName = value;
+  },
+});
 const roomCodeModel = ref("");
 const error = ref("");
 const isJoiningRandom = ref(false);
 
 function getOrCreatePlayerId(): string {
   try {
-    const existingId = localStorage.getItem("player_id");
+    const existingId = localStorage.getItem(STORAGE_KEYS.PLAYER_ID);
     if (existingId) return existingId;
     const newId = crypto.randomUUID();
-    localStorage.setItem("player_id", newId);
+    localStorage.setItem(STORAGE_KEYS.PLAYER_ID, newId);
     return newId;
   } catch {
     return crypto.randomUUID();

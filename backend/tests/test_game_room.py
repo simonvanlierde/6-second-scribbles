@@ -163,7 +163,11 @@ class TestGameRoom:
         """Test ready-state payload serialization uses websocket aliases."""
         payload = room_with_players.mark_player_ready("player-1")
 
-        assert payload.to_payload() == {"type": "ready_status", "readyCount": 1, "totalPlayers": 2}
+        assert payload.model_dump(by_alias=True, exclude_none=True) == {
+            "type": "ready_status",
+            "readyCount": 1,
+            "totalPlayers": 2,
+        }
 
     async def test_broadcast_handles_disconnected_player(self, game_room, make_ws) -> None:
         """Test that broadcast handles disconnected players gracefully."""

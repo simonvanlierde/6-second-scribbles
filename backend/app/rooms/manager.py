@@ -1,9 +1,9 @@
 """Game Room Manager for Six Second Scribbles.
 
-Architecture: Server-side scoring with client-side card assignment.
-- Server accumulates guesses and scores rounds using rapidfuzz
-- Host client handles card assignment and round timing
-- Server broadcasts round_complete and game_complete
+Architecture: server-driven room and game orchestration.
+- Server owns room state, card assignment, phase transitions, scoring, and completion
+- Clients render server state and send user actions
+- Server broadcasts room, round, and scoring state to all clients
 """
 
 from __future__ import annotations
@@ -18,11 +18,13 @@ from typing import TYPE_CHECKING, TypedDict
 
 from sqlalchemy import delete
 
+from app.categories import service as category_service
 from app.categories.models import Category
 from app.core.config import settings
 from app.core.database import get_session_maker
 from app.core.redis import delete_room_state
 from app.core.types import (
+    COMPLETE_PHASE,
     GUESSING_PHASE,
     LOBBY_PHASE,
     Difficulty,
@@ -33,9 +35,11 @@ from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import lifecycle as room_lifecycle
 from app.rooms.protocol import (
     PlayerLeftEvent,
+    PlayerCardPayload,
     PlayerSnapshot,
     ReadyStatusEvent,
     RoomStateEvent,
+    StartRoundBroadcastEvent,
     WebSocketMessage,
     send_ws_message,
 )
@@ -63,7 +67,7 @@ def _create_logged_task(coroutine: Coroutine[object, object, object], name: str)
     task = asyncio.create_task(coroutine, name=name)
     task.add_done_callback(
         lambda t: (
-            logger.error("[Task %s] unhandled exception: %s", name, t.exception())
+            logger.error("[Task %s] unhandled exception", name, exc_info=t.exception())
             if not t.cancelled() and t.exception()
             else None
         ),
@@ -87,7 +91,6 @@ class PlayerInfo:
     id: str
     name: str
     websocket: WebSocket
-    categories: list[str] = field(default_factory=list)
     last_activity: float = field(default_factory=time.time)
 
 
@@ -137,7 +140,10 @@ class GameRoom:
         self.metadata = RoomMetadata()
         self._idle_check_task: asyncio.Task[object] | None = None
         self._pending_host_transfer: asyncio.Task[object] | None = None
+        self._guessing_start_task: asyncio.Task[object] | None = None
+        self._next_round_start_task: asyncio.Task[object] | None = None
         self._round_scoring_task: asyncio.Task[object] | None = None
+        self._game_complete_task: asyncio.Task[object] | None = None
         self._scoring_lock = asyncio.Lock()
         self._last_host_id: str | None = None  # Track last host for reconnection
         self._created_at = time.time()
@@ -168,10 +174,14 @@ class GameRoom:
 
         # On the final round, broadcast game_complete after countdown
         if self.metadata.current_round >= self.metadata.max_rounds:
-            _create_logged_task(
+            self._cancel_game_complete_task()
+            self._game_complete_task = _create_logged_task(
                 self._broadcast_game_complete_after_delay(),
                 name=f"game_complete_{self.room_id}",
             )
+            return
+
+        self.start_next_round_timeout(settings.round_results_countdown_seconds)
 
     async def _broadcast_game_complete_after_delay(self) -> None:
         """Wait for the round-results countdown, then broadcast game_complete."""
@@ -189,6 +199,101 @@ class GameRoom:
             self._scoring_timeout(timeout_seconds),
             name=f"scoring_timeout_{self.room_id}",
         )
+
+    def start_guessing_timeout(self, timeout_seconds: int) -> None:
+        """Start the drawing->guessing transition timer for the active round."""
+        if self._guessing_start_task and not self._guessing_start_task.done():
+            self._guessing_start_task.cancel()
+        self._guessing_start_task = _create_logged_task(
+            self._start_guessing_after_delay(timeout_seconds),
+            name=f"start_guessing_{self.room_id}",
+        )
+
+    async def _start_guessing_after_delay(self, timeout_seconds: int) -> None:
+        try:
+            await asyncio.sleep(timeout_seconds + settings.drawing_to_guessing_buffer_seconds)
+            await self.broadcast(
+                rounds.start_guessing_event(self),
+            )
+            await self.persist()
+            self.start_scoring_timeout(self.metadata.round_length or 30)
+        except asyncio.CancelledError:
+            pass
+
+    def start_first_round_timeout(self) -> None:
+        """Start the initial game-start delay before round 1 begins."""
+        self.start_next_round_timeout(settings.game_start_delay_seconds, round_number=1)
+
+    def start_next_round_timeout(self, timeout_seconds: int, *, round_number: int | None = None) -> None:
+        """Schedule the next round to start after a delay."""
+        if self._next_round_start_task and not self._next_round_start_task.done():
+            self._next_round_start_task.cancel()
+        self._next_round_start_task = _create_logged_task(
+            self._start_next_round_after_delay(timeout_seconds, round_number=round_number),
+            name=f"next_round_{self.room_id}",
+        )
+
+    async def _start_next_round_after_delay(self, timeout_seconds: int, *, round_number: int | None = None) -> None:
+        try:
+            await asyncio.sleep(timeout_seconds)
+            await self.start_round_with_server_cards(round_number=round_number)
+        except asyncio.CancelledError:
+            pass
+
+    async def start_round_with_server_cards(self, *, round_number: int | None = None) -> None:
+        """Assign cards server-side, start a round, and broadcast the payload."""
+        cards = await self._build_server_round_cards()
+        next_round = round_number or (self.metadata.current_round + 1)
+        round_start_time = self.start_round(round_number=next_round, cards=cards)
+        await self.broadcast(
+            StartRoundBroadcastEvent(
+                type="start_round",
+                round=next_round,
+                cards={
+                    player_id: PlayerCardPayload.model_validate(card.model_dump())
+                    for player_id, card in cards.items()
+                },
+                roundStartTime=round_start_time,
+            ),
+        )
+        await self.persist()
+        self.start_guessing_timeout(self.metadata.round_length or 30)
+
+    async def _build_server_round_cards(self) -> dict[str, PlayerCardState]:
+        """Fetch one random category set per player from the category service."""
+        if not self.players:
+            return {}
+
+        session_maker = get_session_maker()
+        async with session_maker() as db:
+            response = await category_service.get_random_category_cards(
+                db,
+                difficulty=self.metadata.difficulty,
+                count=1,
+                player_count=len(self.players),
+                room_id=self.room_id,
+                language=self.metadata.language,
+            )
+
+        selected_sets = list(response.categories.values())
+        player_ids = list(self.players.keys())
+        cards: dict[str, PlayerCardState] = {}
+
+        for index, player_id in enumerate(player_ids):
+            card_set = selected_sets[index]
+            cards[player_id] = PlayerCardState(
+                category=card_set.category,
+                items=card_set.items,
+                alternatives=card_set.alternatives,
+                is_custom=card_set.is_custom,
+            )
+
+        return cards
+
+    def _cancel_game_complete_task(self) -> None:
+        if self._game_complete_task and not self._game_complete_task.done():
+            self._game_complete_task.cancel()
+        self._game_complete_task = None
 
     async def _scoring_timeout(self, timeout_seconds: int) -> None:
         try:
@@ -218,7 +323,13 @@ class GameRoom:
         """Stop idle player check and any pending scoring tasks."""
         await _cancel_task(self._idle_check_task)
         self._idle_check_task = None
+        await _cancel_task(self._guessing_start_task)
+        self._guessing_start_task = None
+        await _cancel_task(self._next_round_start_task)
+        self._next_round_start_task = None
         await self._stop_scoring_timeout()
+        await _cancel_task(self._game_complete_task)
+        self._game_complete_task = None
 
     async def _idle_check_loop(self) -> None:
         """Periodically check for idle players and cleanup expired votes."""
@@ -234,7 +345,7 @@ class GameRoom:
 
     async def _check_idle_players(self) -> None:
         """Check for and disconnect idle players during active game phases."""
-        if self.metadata.game_phase not in ["lobby", "complete"]:
+        if self.metadata.game_phase not in (LOBBY_PHASE, COMPLETE_PHASE):
             now = time.time()
             idle_players = []
 
@@ -316,10 +427,7 @@ class GameRoom:
         """Build the canonical websocket room-state snapshot."""
         return RoomStateEvent.model_validate(
             {
-                "players": [
-                    PlayerSnapshot(id=player.id, name=player.name, categories=player.categories)
-                    for player in self.players.values()
-                ],
+                "players": [PlayerSnapshot(id=player.id, name=player.name) for player in self.players.values()],
                 "hostId": self.host_id,
                 "categories": self.metadata.categories,
                 "gamePhase": self.metadata.game_phase,
@@ -328,6 +436,7 @@ class GameRoom:
                 "roundStartTime": self.metadata.round_start_time,
                 "roundLength": self.metadata.round_length,
                 "padVisibility": self.metadata.pad_visibility,
+                "isPrivate": self.metadata.is_private,
                 "language": self.metadata.language,
             },
         )
@@ -349,20 +458,37 @@ class GameRoom:
 
     def start_round(self, *, round_number: int | None, cards: dict[str, PlayerCardState] | None) -> int:
         """Transition the room into a new drawing round and return the start timestamp."""
+        if self._guessing_start_task and not self._guessing_start_task.done():
+            self._guessing_start_task.cancel()
+        self._guessing_start_task = None
+        if self._next_round_start_task and not self._next_round_start_task.done():
+            self._next_round_start_task.cancel()
+        self._next_round_start_task = None
         if self._round_scoring_task and not self._round_scoring_task.done():
             self._round_scoring_task.cancel()
         self._round_scoring_task = None
+        self._cancel_game_complete_task()
         return rounds.start_round(self, round_number=round_number, cards=cards)
 
     def start_guessing(self) -> int:
         """Transition into the guessing phase and return the scoring timeout."""
+        if self._guessing_start_task and not self._guessing_start_task.done():
+            self._guessing_start_task.cancel()
+        self._guessing_start_task = None
         return rounds.start_guessing(self)
 
     def reset_game(self) -> None:
         """Reset mutable game state back to the lobby."""
+        if self._guessing_start_task and not self._guessing_start_task.done():
+            self._guessing_start_task.cancel()
+        self._guessing_start_task = None
         if self._round_scoring_task and not self._round_scoring_task.done():
             self._round_scoring_task.cancel()
         self._round_scoring_task = None
+        if self._next_round_start_task and not self._next_round_start_task.done():
+            self._next_round_start_task.cancel()
+        self._next_round_start_task = None
+        self._cancel_game_complete_task()
         rounds.reset_game(self)
 
     async def _stop_scoring_timeout(self) -> None:
@@ -403,10 +529,20 @@ class GameRoom:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
                 disconnected_players.append(player_id)
 
-        # Clean up disconnected players after the loop (safe: we snapshotted the list)
+        if not disconnected_players:
+            return
+
+        # Remove all failed players first, then notify remaining players once per removal.
+        # Using a direct send loop (not broadcast) avoids re-entrant cleanup if further
+        # sends fail during the departure notifications.
         for player_id in disconnected_players:
             await self.remove_player(player_id)
-            await self.broadcast(PlayerLeftEvent(playerId=player_id))
+
+        for player_id in disconnected_players:
+            departure = PlayerLeftEvent(playerId=player_id)
+            for player in self.players.values():
+                with contextlib.suppress(Exception):
+                    await send_ws_message(player.websocket, departure)
 
     async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""

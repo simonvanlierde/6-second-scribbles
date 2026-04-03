@@ -1,0 +1,49 @@
+{
+  "info": {
+    "title": "6 Second Scribbles Room WebSocket",
+    "version": "0.1.0",
+    "description": "Published realtime websocket contract for the multiplayer game.\n\nThe current implementation source of truth remains the Pydantic models in `backend/app/rooms/protocol.py`, with generated JSON Schema artifacts published under `contracts/jsonschema/`.\n\nRepresentative payload examples live in `contracts/examples/`."
+  },
+  "tags": ["realtime", "websocket", "multiplayer"],
+  "server": {
+    "name": "local",
+    "host": "localhost:8000",
+    "protocol": "ws",
+    "pathname": "/party/{roomId}",
+    "description": "Local FastAPI websocket endpoint for one room."
+  },
+  "channel": {
+    "name": "roomConnection",
+    "address": "/party/{roomId}",
+    "title": "Room WebSocket",
+    "summary": "Bidirectional websocket carrying all room gameplay events.",
+    "parameterName": "roomId",
+    "parameterDescription": "Short room code used to connect to a game room."
+  },
+  "operations": {
+    "sendClientEvent": {
+      "action": "send",
+      "title": "Client sends room command or event",
+      "summary": "Browser sends a validated room event such as `join`, `player_ready`, drawing updates, or room settings changes."
+    },
+    "receiveServerEvent": {
+      "action": "receive",
+      "title": "Client receives room state or broadcast",
+      "summary": "Server sends room snapshots, game state transitions, drawing relays, moderation events, and custom-category broadcasts."
+    }
+  },
+  "messages": {
+    "clientEvent": {
+      "title": "Client Event",
+      "summary": "Any validated client-to-server room event.",
+      "schemaRef": "../jsonschema/client-event.schema.json",
+      "examplesRef": "../examples/client-events.json"
+    },
+    "serverEvent": {
+      "title": "Server Event",
+      "summary": "Any validated server-to-client room event.",
+      "schemaRef": "../jsonschema/server-event.schema.json",
+      "examplesRef": "../examples/server-events.json"
+    }
+  }
+}

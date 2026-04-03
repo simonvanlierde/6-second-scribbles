@@ -41,7 +41,7 @@ up-dev:
 down-dev:
     docker compose -f compose.yml -f compose.dev.yml down
 
-# Start full prod stack in Docker (infra + backend, optimised build).
+# Start full prod stack in Docker (infra + backend, optimized build).
 [group('docker')]
 up-prod:
     docker compose -f compose.yml -f compose.prod.yml up -d --build
@@ -67,6 +67,16 @@ test-frontend:
 test-e2e:
     just frontend/test-e2e
 
+# Run frontend e2e tests in the Playwright UI.
+[group('test')]
+test-e2e-ui:
+    just frontend/test-e2e-ui
+
+# Backwards-compatible alias for users who prefer the pluralized recipe name.
+[group('test')]
+tests-e2e-ui:
+    just test-e2e-ui
+
 # Run backend tests.
 [group('test')]
 test-backend:
@@ -76,7 +86,7 @@ test-backend:
 
 # Check everything.
 [group('check')]
-check: check-frontend check-backend
+check: check-contracts check-frontend check-backend
 
 # Check the frontend.
 [group('check')]
@@ -108,6 +118,19 @@ format-backend:
 [group('build')]
 build:
     just frontend/build
+
+# ── Contracts ─────────────────────────────────────────────────────────────────
+
+# Generate shared websocket contract artifacts.
+[group('contracts')]
+contracts:
+    npm run generate:contracts
+    npm run generate:types
+
+# Validate that contract-related generated files are up to date.
+[group('check')]
+check-contracts:
+    npm run check:contracts
 
 # ── Database ──────────────────────────────────────────────────────────────────
 

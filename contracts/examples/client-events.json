@@ -1,0 +1,62 @@
+[
+  {
+    "name": "joinRoom",
+    "summary": "Join a room when the socket opens.",
+    "payload": {
+      "type": "join",
+      "playerId": "player-123",
+      "name": "Simon"
+    }
+  },
+  {
+    "name": "startGame",
+    "summary": "Host starts a new game with room settings.",
+    "payload": {
+      "type": "start_game",
+      "difficulty": "medium",
+      "rounds": 3,
+      "roundLength": 45
+    }
+  },
+  {
+    "name": "drawStroke",
+    "summary": "Send a completed drawing stroke to the room.",
+    "payload": {
+      "type": "draw_stroke",
+      "playerId": "player-123",
+      "stroke": {
+        "color": "#111111",
+        "width": 6,
+        "points": [
+          { "x": 10, "y": 20 },
+          { "x": 30, "y": 40 }
+        ]
+      }
+    }
+  },
+  {
+    "name": "submitGuess",
+    "summary": "Submit guesses during the guessing phase.",
+    "payload": {
+      "type": "submit_guess",
+      "playerId": "player-123",
+      "targetPlayerId": "player-456",
+      "guesses": ["cat", "mouse", "clock"]
+    }
+  },
+  {
+    "name": "requestGameState",
+    "summary": "Ask the server for the latest room snapshot.",
+    "payload": {
+      "type": "request_game_state",
+      "playerId": "player-123"
+    }
+  },
+  {
+    "name": "heartbeat",
+    "summary": "Keep the websocket session alive.",
+    "payload": {
+      "type": "heartbeat"
+    }
+  }
+]

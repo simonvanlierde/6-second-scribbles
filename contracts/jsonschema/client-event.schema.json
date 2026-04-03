@@ -3,7 +3,7 @@
     "mapping": {
       "cast_kick_vote": "#/$defs/CastKickVoteEvent",
       "draw_stroke": "#/$defs/DrawStrokeEvent",
-      "draw_stroke_partial": "#/$defs/DrawStrokeEvent",
+      "draw_stroke_partial": "#/$defs/DrawStrokePartialEvent",
       "drawpad_clear": "#/$defs/DrawpadClearEvent",
       "game_complete": "#/$defs/GameCompleteEvent",
       "heartbeat": "#/$defs/HeartbeatEvent",
@@ -381,10 +381,7 @@
       "additionalProperties": true,
       "properties": {
         "type": {
-          "enum": [
-            "draw_stroke",
-            "draw_stroke_partial"
-          ],
+          "const": "draw_stroke",
           "title": "Type",
           "type": "string"
         },
@@ -405,6 +402,33 @@
         "type"
       ],
       "title": "DrawStrokeEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "const": "draw_stroke_partial",
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Playerid"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DrawStrokePartialEvent",
       "type": "object"
     },
     {

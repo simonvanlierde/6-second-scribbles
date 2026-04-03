@@ -68,10 +68,11 @@
     "D107",   # undocumented-public-init
   ]
 
-  lint.flake8-bugbear.extend-immutable-calls = [
-    "fastapi.Depends",
-    "fastapi.Query",
-  ] # Allow default arguments for FastAPI functions
+  # Allow default arguments for FastAPI functions
+  lint.flake8-bugbear.extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
+  # Allow runtime imports for FastAPI dependency injection and Pydantic validation
+  lint.flake8-type-checking.exempt-modules = ["fastapi", "typing.Annotated"]
 
   lint.pydocstyle.convention = "google"
 

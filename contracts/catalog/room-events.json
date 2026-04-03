@@ -1,0 +1,206 @@
+{
+  "client": {
+    "join": {
+      "group": "connection",
+      "summary": "Join a room with the local player identity."
+    },
+    "request_game_state": {
+      "group": "connection",
+      "summary": "Request the latest room snapshot."
+    },
+    "start_game": {
+      "group": "gameFlow",
+      "summary": "Host starts a game with room settings."
+    },
+    "start_round": {
+      "group": "gameFlow",
+      "summary": "Host starts a drawing round with assigned cards."
+    },
+    "start_guessing": {
+      "group": "gameFlow",
+      "summary": "Host transitions the room into guessing."
+    },
+    "round_complete": {
+      "group": "gameFlow",
+      "summary": "Signal that the current round is complete."
+    },
+    "game_complete": {
+      "group": "gameFlow",
+      "summary": "Signal that the game is complete."
+    },
+    "restart_game": {
+      "group": "gameFlow",
+      "summary": "Restart the game from the lobby state."
+    },
+    "settings_update": {
+      "group": "gameFlow",
+      "summary": "Update shared game settings."
+    },
+    "player_ready": {
+      "group": "gameFlow",
+      "summary": "Mark the current player as ready."
+    },
+    "submit_guess": {
+      "group": "gameFlow",
+      "summary": "Submit guesses for another player's drawing."
+    },
+    "language_update": {
+      "group": "roomSettings",
+      "summary": "Change the room language."
+    },
+    "privacy_changed": {
+      "group": "roomSettings",
+      "summary": "Change the room privacy setting."
+    },
+    "pad_visibility": {
+      "group": "drawing",
+      "summary": "Show or hide the shared drawpad."
+    },
+    "draw_stroke": {
+      "group": "drawing",
+      "summary": "Broadcast a completed draw stroke."
+    },
+    "draw_stroke_partial": {
+      "group": "drawing",
+      "summary": "Broadcast an in-progress draw stroke."
+    },
+    "drawpad_clear": {
+      "group": "drawing",
+      "summary": "Clear the shared drawpad."
+    },
+    "initiate_kick": {
+      "group": "moderation",
+      "summary": "Start a kick vote for a target player."
+    },
+    "cast_kick_vote": {
+      "group": "moderation",
+      "summary": "Cast a vote in an active kick vote."
+    },
+    "heartbeat": {
+      "group": "connection",
+      "summary": "Keep the websocket session alive."
+    }
+  },
+  "server": {
+    "room_state": {
+      "group": "connection",
+      "summary": "Current room snapshot."
+    },
+    "player_joined": {
+      "group": "connection",
+      "summary": "A player joined the room."
+    },
+    "player_left": {
+      "group": "connection",
+      "summary": "A player left the room."
+    },
+    "host_changed": {
+      "group": "connection",
+      "summary": "Host ownership changed."
+    },
+    "host_restored": {
+      "group": "connection",
+      "summary": "A reconnecting host regained host status."
+    },
+    "join_error": {
+      "group": "connection",
+      "summary": "Join failed but the connection remained valid."
+    },
+    "start_game": {
+      "group": "gameFlow",
+      "summary": "Game start broadcast."
+    },
+    "start_round": {
+      "group": "gameFlow",
+      "summary": "Round start broadcast with assigned cards."
+    },
+    "start_guessing": {
+      "group": "gameFlow",
+      "summary": "Guessing phase started."
+    },
+    "round_complete": {
+      "group": "gameFlow",
+      "summary": "Round completion results broadcast."
+    },
+    "game_complete": {
+      "group": "gameFlow",
+      "summary": "Game completion results broadcast."
+    },
+    "restart_game": {
+      "group": "gameFlow",
+      "summary": "Game restart broadcast."
+    },
+    "ready_status": {
+      "group": "gameFlow",
+      "summary": "Current ready-player counts."
+    },
+    "settings_update": {
+      "group": "gameFlow",
+      "summary": "Game settings updated."
+    },
+    "language_update": {
+      "group": "roomSettings",
+      "summary": "Room language updated."
+    },
+    "pad_visibility": {
+      "group": "drawing",
+      "summary": "Shared drawpad visibility changed."
+    },
+    "draw_stroke": {
+      "group": "drawing",
+      "summary": "A completed draw stroke relay."
+    },
+    "draw_stroke_partial": {
+      "group": "drawing",
+      "summary": "An in-progress draw stroke relay."
+    },
+    "drawpad_clear": {
+      "group": "drawing",
+      "summary": "Drawpad cleared."
+    },
+    "kick_vote_started": {
+      "group": "moderation",
+      "summary": "Kick vote started."
+    },
+    "kick_vote_updated": {
+      "group": "moderation",
+      "summary": "Kick vote tally updated."
+    },
+    "kick_vote_expired": {
+      "group": "moderation",
+      "summary": "Kick vote expired."
+    },
+    "player_kicked": {
+      "group": "moderation",
+      "summary": "A player was kicked from the room."
+    },
+    "kick_error": {
+      "group": "moderation",
+      "summary": "Kick workflow error."
+    },
+    "protocol_error": {
+      "group": "errors",
+      "summary": "Malformed or invalid websocket payload."
+    },
+    "permission_error": {
+      "group": "errors",
+      "summary": "Unauthorized action attempt."
+    },
+    "player_ready_error": {
+      "group": "errors",
+      "summary": "Player-ready validation failed."
+    },
+    "submit_guess_error": {
+      "group": "errors",
+      "summary": "Guess submission validation failed."
+    },
+    "custom_category_added": {
+      "group": "categories",
+      "summary": "A custom category was added to the room."
+    },
+    "custom_category_removed": {
+      "group": "categories",
+      "summary": "A custom category was removed from the room."
+    }
+  }
+}

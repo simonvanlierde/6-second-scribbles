@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import { injectGameEngine } from "@/composables/injectionKeys";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
+import { GAME_TIMINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const gameEngineRef = injectGameEngine();
-const { leaveRoom } = useLeaveRoom(gameEngineRef);
+const { leaveRoom } = useLeaveRoom();
 
-const countdown = ref(5);
+const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
+let countdownInterval: number | null = null;
 
 const currentScores = computed(() =>
   store.playersList
@@ -54,23 +54,27 @@ const resultsByPlayer = computed(() => {
 const isLastRound = computed(() => store.currentRound >= store.maxRounds);
 
 onMounted(() => {
-  const interval = setInterval(() => {
+  countdownInterval = window.setInterval(() => {
     countdown.value--;
     if (countdown.value <= 0) {
-      clearInterval(interval);
-      // Host drives the next round after the countdown.
-      if (store.isHost && !isLastRound.value) {
-        gameEngineRef?.value?.startRound(store.currentRound + 1, store.difficulty, store.roundLength);
-      }
+      clearInterval(countdownInterval ?? undefined);
+      countdownInterval = null;
     }
   }, 1000);
+});
+
+onUnmounted(() => {
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
 });
 </script>
 
 <template>
   <div class="results-screen">
     <div class="container">
-      <div style="display: flex; justify-content: flex-end">
+      <div class="leave-row">
         <button type="button" class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
       </div>
       <h1>Round {{ store.currentRound }} Results</h1>
@@ -118,6 +122,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.leave-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .results-screen {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
