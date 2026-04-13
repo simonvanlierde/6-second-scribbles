@@ -4,9 +4,9 @@ async function createRoom(page: Parameters<typeof test>[0]["page"], playerName =
   await page.goto("/");
   await page.locator("#player-name").fill(playerName);
   await page.getByRole("button", { name: /create room/i }).click();
-  await expect(page).toHaveURL(/\/room\/[A-Z0-9]{6}$/);
+  await expect(page).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
 
-  const roomCode = page.url().split("/room/")[1];
+  const roomCode = page.url().split("/rooms/")[1];
   if (!roomCode) throw new Error("Expected room code in URL");
   return roomCode;
 }
@@ -31,7 +31,7 @@ test.describe("Waiting room", () => {
     await inputs.nth(4).fill("c");
     await page.getByRole("button", { name: /join room/i }).click();
 
-    await expect(page).toHaveURL(/\/room\/AB12C$/);
+    await expect(page).toHaveURL(/\/rooms\/AB12C$/);
     await expect(page.getByRole("heading", { name: /room: ab12c/i })).toBeVisible();
   });
 
@@ -42,7 +42,7 @@ test.describe("Waiting room", () => {
     await expect(page.getByText(/leave room\?/i)).toBeVisible();
     await page.getByRole("button", { name: /^cancel$/i }).click();
 
-    await expect(page).toHaveURL(new RegExp(`/room/${roomCode}$`));
+    await expect(page).toHaveURL(new RegExp(`/rooms/${roomCode}$`));
     await expect(page.getByRole("heading", { name: new RegExp(`room: ${roomCode}`, "i") })).toBeVisible();
   });
 

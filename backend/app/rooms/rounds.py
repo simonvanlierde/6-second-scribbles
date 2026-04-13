@@ -7,6 +7,7 @@ import random
 import time
 from typing import TYPE_CHECKING
 
+from app.categories import service as category_service
 from app.core.types import GamePhase
 from app.rooms.protocol import (
     GameCompleteServerEvent,
@@ -15,10 +16,12 @@ from app.rooms.protocol import (
     RoundResultItem,
     StartGuessingEvent,
 )
-from app.rooms.state import GuessSubmissionState, PlayerCardState
+from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from app.scoring import guess_matcher
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.core.types import Difficulty
     from app.rooms.manager import GameRoom
 
@@ -59,7 +62,7 @@ def configure_game(
     room.metadata.game_phase = GamePhase.LOBBY
     room.metadata.current_round = 0
     room.metadata.round_start_time = None
-    room.metadata.player_cards = {}
+    room.metadata.player_assignments = {}
     room.metadata.guess_targets = {}
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
@@ -67,14 +70,19 @@ def configure_game(
     room.metadata.ready_players.clear()
 
 
-def start_round(room: GameRoom, *, round_number: int | None, cards: dict[str, PlayerCardState] | None) -> int:
+def start_round(
+    room: GameRoom,
+    *,
+    round_number: int | None,
+    cards: dict[str, PlayerPromptAssignmentState] | None,
+) -> int:
     """Transition the room into a new drawing round and return the start timestamp."""
     round_start_time = int(time.time() * 1000)
     room.metadata.round_start_time = round_start_time
     room.metadata.guessing_start_time = None
     room.metadata.game_phase = GamePhase.DRAWING
     room.metadata.current_round = round_number or (room.metadata.current_round + 1)
-    room.metadata.player_cards = cards or {}
+    room.metadata.player_assignments = cards or {}
     room.metadata.guess_targets = {}
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
@@ -111,7 +119,7 @@ def reset_game(room: GameRoom) -> None:
     room.metadata.current_round = 0
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
-    room.metadata.player_cards = {}
+    room.metadata.player_assignments = {}
     room.metadata.guess_targets = {}
     room.metadata.ready_players.clear()
     room.metadata.round_start_time = None
@@ -168,13 +176,10 @@ def assign_guess_targets(player_ids: list[str]) -> dict[str, str]:
         if player_id == next_player_id:
             return assign_guess_targets(player_ids)
 
-    return {
-        player_id: shuffled[(index + 1) % len(shuffled)]
-        for index, player_id in enumerate(shuffled)
-    }
+    return {player_id: shuffled[(index + 1) % len(shuffled)] for index, player_id in enumerate(shuffled)}
 
 
-def score_round(room: GameRoom) -> RoundCompleteServerEvent:
+async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEvent:
     """Score the current round and update cumulative room scores."""
     results: list[RoundResultItem] = []
     round_points: dict[str, int] = dict.fromkeys(room.players, 0)
@@ -184,14 +189,20 @@ def score_round(room: GameRoom) -> RoundCompleteServerEvent:
         target_player_id = submission.target_player_id
         guesses = submission.guesses
 
-        target_card = room.metadata.player_cards.get(target_player_id)
-        if not target_card:
-            logger.warning("[GameRoom %s] No card found for player %s, skipping", room.room_id, target_player_id)
+        target_assignment = room.metadata.player_assignments.get(target_player_id)
+        if not target_assignment or target_assignment.category_id is None:
+            logger.warning(
+                "[GameRoom %s] No prompt assignment found for player %s, skipping", room.room_id, target_player_id
+            )
             continue
 
-        correct_items = target_card.items
-        alternatives_map = target_card.alternatives
-        scoring_result = guess_matcher.score_guesses(guesses, correct_items, alternatives_map)
+        scoring_targets = await category_service.get_localized_scoring_targets(
+            db,
+            category_id=target_assignment.category_id,
+            prompt_ids=target_assignment.item_ids,
+            preferred_locale=room.get_player_locale(player_id),
+        )
+        scoring_result = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
         correct_count = scoring_result.score
         points_earned = correct_count * 10
 
@@ -205,7 +216,7 @@ def score_round(room: GameRoom) -> RoundCompleteServerEvent:
                 player_id=player_id,
                 target_player_id=target_player_id,
                 correct_guesses=correct_count,
-                total_items=len(correct_items),
+                total_items=len(scoring_targets.targets),
                 points_earned=points_earned,
             ),
         )
@@ -213,7 +224,7 @@ def score_round(room: GameRoom) -> RoundCompleteServerEvent:
     for player_id, points in round_points.items():
         room.metadata.player_scores[player_id] = room.metadata.player_scores.get(player_id, 0) + points
 
-    room.metadata.game_phase = GamePhase.SCORING
+    room.metadata.game_phase = GamePhase.ROUND_RESULTS
     return RoundCompleteServerEvent(
         results=results,
         scores=dict(room.metadata.player_scores),
@@ -227,7 +238,7 @@ def game_complete_event(room: GameRoom) -> GameCompleteServerEvent:
         if room.metadata.player_scores
         else ""
     )
-    room.metadata.game_phase = GamePhase.COMPLETE
+    room.metadata.game_phase = GamePhase.FINAL_RESULTS
     return GameCompleteServerEvent(
         finalScores=dict(room.metadata.player_scores),
         winner=winner_id,

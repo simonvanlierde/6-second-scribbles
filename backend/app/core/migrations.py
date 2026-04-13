@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+from alembic import command
 from alembic.config import Config
 
-from alembic import command
 from app.core.config import settings
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]

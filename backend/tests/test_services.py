@@ -8,13 +8,10 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock
 
-import pytest
-from fastapi import HTTPException
-
-from app.core.types import GamePhase
 from app.categories import service as category_service
-from app.categories.models import Card, Category
-from app.categories.schemas import GuessRequest
+from app.categories.models import Category, Prompt
+from app.categories.schemas import GuessScoreRequest
+from app.core.types import GamePhase
 from app.rooms import (
     actions as websocket_action_service,
 )
@@ -39,10 +36,9 @@ from app.rooms import (
 from app.rooms import (
     ws_router as websocket_service,
 )
-from app.rooms.manager import GameRoom, PlayerInfo, RoomManager, room_manager
+from app.rooms.manager import GameRoom, RoomManager, room_manager
 from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent
-from app.rooms.schemas import CustomCategoryCreate
-from app.rooms.state import GuessSubmissionState, PlayerCardState
+from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -50,61 +46,109 @@ if TYPE_CHECKING:
 
 class TestCategoryService:
     async def test_list_categories_filters_by_difficulty_and_language(self, test_db) -> None:
-        test_db.add(Category(name="Easy EN", difficulty="easy", language="en"))
-        test_db.add(Category(name="Easy FR", difficulty="easy", language="fr"))
-        test_db.add(Category(name="Hard EN", difficulty="hard", language="en"))
+        test_db.add(
+            Category(
+                difficulty="easy",
+                source="system",
+                available_locales=["en"],
+                translations={"en": {"name": "Easy EN"}},
+            )
+        )
+        test_db.add(
+            Category(
+                difficulty="easy",
+                source="system",
+                available_locales=["fr"],
+                translations={"fr": {"name": "Facile FR"}},
+            )
+        )
+        test_db.add(
+            Category(
+                difficulty="hard",
+                source="system",
+                available_locales=["en"],
+                translations={"en": {"name": "Hard EN"}},
+            )
+        )
         await test_db.commit()
 
         response = await category_service.list_categories(test_db, difficulty="easy", language="en")
 
-        assert response.count == 1
-        assert [category.name for category in response.categories] == ["Easy EN"]
+        assert len(response) == 1
+        assert [category.name for category in response] == ["Easy EN"]
 
-    async def test_get_category_detail_returns_cards(self, test_db) -> None:
-        category = Category(name="Animals", difficulty="medium", language="en")
+    async def test_select_category_sets_returns_localized_items(self, test_db, monkeypatch) -> None:
+        category = Category(
+            difficulty="medium",
+            source="system",
+            available_locales=["en"],
+            translations={"en": {"name": "Animals"}},
+        )
         test_db.add(category)
         await test_db.flush()
-        test_db.add(Card(category_id=category.id, item="cat", alternatives=["kitty"]))
-        test_db.add(Card(category_id=category.id, item="dog", alternatives=[]))
-        await test_db.commit()
 
-        response = await category_service.get_category_detail(test_db, category_id=category.id)
-
-        assert response.category.name == "Animals"
-        assert response.items == ["cat", "dog"]
-        assert response.cards[0].alternatives == ["kitty"]
-
-    async def test_get_random_category_cards_includes_room_categories(self, test_db, monkeypatch) -> None:
-        global_category = Category(name="Global", difficulty="medium", language="en")
-        room_category = Category(name="Room", difficulty="medium", language="en", room_id="ROOM1", created_by="host")
-        test_db.add(global_category)
-        test_db.add(room_category)
+        cat_prompt = Prompt(stable_key="cat", translations={"en": {"label": "cat", "aliases": ["kitty"]}})
+        dog_prompt = Prompt(stable_key="dog", translations={"en": {"label": "dog", "aliases": []}})
+        test_db.add(cat_prompt)
+        test_db.add(dog_prompt)
         await test_db.flush()
-        test_db.add(Card(category_id=global_category.id, item="apple", alternatives=[]))
-        test_db.add(Card(category_id=room_category.id, item="pear", alternatives=["pome"]))
+
+        test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=cat_prompt.id, sort_order=1))
+        test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=dog_prompt.id, sort_order=2))
         await test_db.commit()
 
         monkeypatch.setattr(
-            category_service.random,
-            "sample",
-            lambda categories, total_needed: list(categories)[:total_needed],
+            category_service.random, "sample", lambda categories, total_needed: list(categories)[:total_needed]
         )
 
-        response = await category_service.get_random_category_cards(
+        response = await category_service.select_category_sets(
             test_db,
             difficulty="medium",
             count=1,
-            player_count=2,
-            room_id="ROOM1",
-            language="en",
+            player_count=1,
+            locale="en",
+            locales=["en"],
         )
 
-        assert response.includes_custom is True
-        assert {card_set.category for card_set in response.categories.values()} == {"Global", "Room"}
+        assert len(response.selections) == 1
+        selection = response.selections[0]
+        assert selection.category_name == "Animals"
+        assert selection.items == ["cat", "dog"]
+        assert selection.alternatives["cat"] == ["kitty"]
+
+    async def test_select_category_sets_falls_back_to_english(self, test_db, monkeypatch) -> None:
+        category = Category(
+            difficulty="medium",
+            source="system",
+            available_locales=["en"],
+            translations={"en": {"name": "Fallback"}},
+        )
+        prompt = Prompt(stable_key="tree", translations={"en": {"label": "tree", "aliases": []}})
+        test_db.add(category)
+        test_db.add(prompt)
+        await test_db.flush()
+        test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=prompt.id, sort_order=1))
+        await test_db.commit()
+
+        monkeypatch.setattr(
+            category_service.random, "sample", lambda categories, total_needed: list(categories)[:total_needed]
+        )
+
+        response = await category_service.select_category_sets(
+            test_db,
+            difficulty="medium",
+            count=1,
+            player_count=1,
+            locale="es",
+            locales=["es"],
+        )
+
+        assert len(response.selections) == 1
+        assert response.selections[0].category_name == "Fallback"
 
     def test_score_guess_request_maps_match_details(self) -> None:
         response = category_service.score_guess_request(
-            GuessRequest(
+            GuessScoreRequest(
                 guesses=["colour"],
                 correct_answers=["color"],
                 alternatives={"color": ["colour"]},
@@ -124,34 +168,6 @@ class TestRoomService:
 
         assert response.room_code == "ROOM42"
         assert response.player_count == 1
-
-    async def test_create_room_custom_category_broadcasts_summary(self, test_db, make_ws) -> None:
-        room = room_manager.get_or_create_room("ROOM99")
-        ws = make_ws()
-        room.players["host-1"] = PlayerInfo(id="host-1", name="Host", websocket=cast("WebSocket", ws))
-        room.host_id = "host-1"
-
-        response = await room_service.create_room_custom_category(
-            test_db,
-            room_id="ROOM99",
-            category_data=CustomCategoryCreate(
-                name="Creatures",
-                items=["otter", "stoat", "lynx", "ibis", "tapir"],
-                difficulty="medium",
-                created_by="host-1",
-            ),
-        )
-
-        assert response.success is True
-        assert response.category.name == "Creatures"
-        assert ws.sent_texts
-
-    async def test_delete_room_custom_category_requires_player_id(self, test_db) -> None:
-        with pytest.raises(HTTPException) as exc_info:
-            await room_service.delete_room_custom_category(test_db, room_id="ROOM1", category_id=1, player_id=None)
-
-        assert exc_info.value.status_code == 422
-        assert exc_info.value.detail == "Player ID is required"
 
 
 class TestKickVoteService:
@@ -194,25 +210,43 @@ class TestRoomLifecycleService:
 
 
 class TestRoundService:
-    async def test_score_round_updates_scores_and_returns_broadcast_event(self, make_ws) -> None:
+    async def test_score_round_updates_scores_and_returns_broadcast_event(self, make_ws, monkeypatch) -> None:
         room = GameRoom("ROOM-SCORE")
         await room.add_player("player-1", "Alice", cast("WebSocket", make_ws()))
         await room.add_player("player-2", "Bob", cast("WebSocket", make_ws()))
         room.metadata.current_round = 1
         room.metadata.max_rounds = 3
-        room.metadata.player_cards = {
-            "player-2": PlayerCardState(category="Animals", items=["cat", "dog"], alternatives={}, is_custom=False),
+        room.metadata.player_assignments = {
+            "player-2": PlayerPromptAssignmentState(
+                category_id=1,
+                category="Animals",
+                item_ids=[11, 12],
+                items=["cat", "dog"],
+                alternatives={},
+            ),
         }
         room.metadata.guess_submissions = [
             GuessSubmissionState(player_id="player-1", target_player_id="player-2", guesses=["cat", "dog"]),
         ]
 
-        event = round_service.score_round(room)
+        async def fake_targets(*_args, **_kwargs):
+            return category_service.LocalizedScoringTargets(
+                category_id=1,
+                category_name="Animals",
+                targets=[
+                    category_service.GuessTarget(item_id=11, label="cat", aliases=[]),
+                    category_service.GuessTarget(item_id=12, label="dog", aliases=[]),
+                ],
+            )
+
+        monkeypatch.setattr(category_service, "get_localized_scoring_targets", fake_targets)
+
+        event = await round_service.score_round(room, AsyncMock())
 
         assert event.type == "round_complete"
         assert event.scores == {"player-1": 20, "player-2": 20}
         assert event.results[0].correct_guesses == 2
-        assert room.metadata.game_phase == GamePhase.SCORING
+        assert room.metadata.game_phase == GamePhase.ROUND_RESULTS
         assert room.metadata.player_scores == {"player-1": 20, "player-2": 20}
 
 
@@ -247,14 +281,16 @@ class TestRoomMutationService:
 class TestWebSocketService:
     async def test_handle_room_websocket_connection_runs_and_disconnects(self, monkeypatch) -> None:
         websocket = AsyncMock()
+        websocket.cookies = {}
         room = GameRoom("ROOM_WS")
         fake_manager = SimpleNamespace(get_or_create_room=lambda _room_id: room)
         events: list[str] = []
 
         class FakeSession:
-            def __init__(self, room_arg, websocket_arg) -> None:
+            def __init__(self, room_arg, websocket_arg, *, current_user=None) -> None:
                 assert room_arg is room
                 assert websocket_arg is websocket
+                assert current_user is None
 
             async def run(self) -> None:
                 events.append("run")
@@ -262,8 +298,17 @@ class TestWebSocketService:
             async def on_disconnect(self) -> None:
                 events.append("disconnect")
 
+        class FakeDbSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb) -> None:
+                return None
+
         monkeypatch.setattr(websocket_service, "room_manager", fake_manager)
         monkeypatch.setattr(websocket_service, "RoomWebSocketSession", FakeSession)
+        monkeypatch.setattr(websocket_service, "get_session_maker", lambda: FakeDbSession)
+        monkeypatch.setattr(websocket_service, "get_user_by_session", AsyncMock(return_value=None))
 
         await websocket_service.websocket_endpoint(websocket, room_id="ROOM_WS")
 

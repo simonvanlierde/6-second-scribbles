@@ -26,6 +26,8 @@ async def add_player(
     name: str,
     websocket: WebSocket,
     *,
+    preferred_locale: str | None = None,
+    user_id: str | None = None,
     max_players: int,
     player_info_factory: type[PlayerInfo],
 ) -> tuple[PlayerInfo, bool]:
@@ -49,6 +51,11 @@ async def add_player(
         last_activity=time.time(),
     )
     room.players[player_id] = player
+    room.metadata.player_locales[player_id] = preferred_locale or room.metadata.default_locale
+    if user_id is not None:
+        room.metadata.player_user_ids[player_id] = user_id
+    else:
+        room.metadata.player_user_ids.pop(player_id, None)
 
     if is_reconnecting_host and room._pending_host_transfer:
         room._pending_host_transfer.cancel()
@@ -76,6 +83,8 @@ async def remove_player(
 ) -> None:
     """Remove a player and trigger delayed host transfer when required."""
     room.players.pop(player_id, None)
+    room.metadata.player_locales.pop(player_id, None)
+    room.metadata.player_user_ids.pop(player_id, None)
 
     if room.is_empty():
         room._emptied_at = time.time()

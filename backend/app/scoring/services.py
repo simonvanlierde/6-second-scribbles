@@ -5,9 +5,28 @@ Uses rapidfuzz for high-performance fuzzy string matching.
 
 from __future__ import annotations
 
+import unicodedata
+from dataclasses import dataclass
+
 from rapidfuzz import fuzz
 
+
+def normalize_text(text: str) -> str:
+    """Normalize text for comparison: lowercase, strip, remove accents."""
+    lowered = text.lower().strip()
+    return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
+
+
 from app.scoring.models import GuessMatchDetailResult, GuessMatchResult, ScoreGuessesResult
+
+
+@dataclass(frozen=True)
+class GuessTarget:
+    """One canonical guess target with its localized accepted answers."""
+
+    item_id: int
+    label: str
+    aliases: list[str]
 
 
 class GuessMatcher:
@@ -21,7 +40,7 @@ class GuessMatcher:
 
     def normalize(self, text: str) -> str:
         """Normalize text for comparison."""
-        return text.lower().strip()
+        return normalize_text(text)
 
     def generate_variants(self, word: str) -> set[str]:
         """Generate common variants of a word."""
@@ -131,6 +150,55 @@ class GuessMatcher:
             percentage=(len(matched_answers) / len(correct_answers) * 100) if correct_answers else 0,
             matches=match_details,
             unmatched_answers=unmatched,
+        )
+
+    def score_guesses_against_targets(
+        self,
+        guesses: list[str],
+        targets: list[GuessTarget],
+    ) -> ScoreGuessesResult:
+        """Score guesses against canonical item targets with localized labels and aliases."""
+        matched_item_ids: set[int] = set()
+        match_details: list[GuessMatchDetailResult] = []
+
+        for guess in guesses:
+            best_target: GuessTarget | None = None
+            best_result: GuessMatchResult | None = None
+
+            for target in targets:
+                if target.item_id in matched_item_ids:
+                    continue
+
+                result = self.match_guess(guess, [target.label], target.aliases)
+                if not result.matched:
+                    continue
+
+                if best_result is None or result.similarity > best_result.similarity:
+                    best_target = target
+                    best_result = result
+
+            if best_target is None or best_result is None:
+                continue
+
+            matched_item_ids.add(best_target.item_id)
+            match_details.append(
+                GuessMatchDetailResult(
+                    guess=guess,
+                    matched_item=best_target.label,
+                    similarity=best_result.similarity,
+                    method=best_result.method,
+                )
+            )
+
+        unmatched_answers = [target.label for target in targets if target.item_id not in matched_item_ids]
+        total = len(targets)
+
+        return ScoreGuessesResult(
+            score=len(matched_item_ids),
+            total=total,
+            percentage=(len(matched_item_ids) / total * 100) if total else 0,
+            matches=match_details,
+            unmatched_answers=unmatched_answers,
         )
 
 

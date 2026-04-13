@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 
 import { useGameConnection } from "@/composables/useGameConnection";
+import { formatLocaleLabel } from "@/shared/locales";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -12,41 +13,42 @@ const showKickConfirm = ref<string | null>(null);
 const activeKickVotes = computed(() => store.kickVotes);
 
 function canKickPlayer(playerId: string): boolean {
-  return playerId !== store.localPlayerId;
+	return playerId !== store.localPlayerId;
 }
 
 function initiateKick(targetPlayerId: string) {
-  showKickConfirm.value = targetPlayerId;
+	showKickConfirm.value = targetPlayerId;
 }
 
 function confirmKick(targetPlayerId: string) {
-  send({ type: "initiate_kick", targetPlayerId });
-  showKickConfirm.value = null;
+	send({ type: "initiate_kick", targetPlayerId });
+	showKickConfirm.value = null;
 }
 
 function cancelKick() {
-  showKickConfirm.value = null;
+	showKickConfirm.value = null;
 }
 
 function voteToKick(targetPlayerId: string) {
-  send({ type: "cast_kick_vote", targetPlayerId });
+	send({ type: "cast_kick_vote", targetPlayerId });
 }
 
-const targetPlayerName = computed(() => store.playersList.find((p) => p.id === showKickConfirm.value)?.name);
-const targetIsHost = computed(() => store.playersList.find((p) => p.id === showKickConfirm.value)?.id === store.hostId);
+const targetPlayerName = computed(
+	() => store.playersList.find((p) => p.id === showKickConfirm.value)?.name,
+);
+const targetIsHost = computed(
+	() =>
+		store.playersList.find((p) => p.id === showKickConfirm.value)?.id ===
+		store.hostId,
+);
 </script>
 
 <template>
   <div>
-    <!-- Language indicator for non-host players -->
+    <!-- Room language indicator for non-host players -->
     <div v-if="!store.isHost" class="language-indicator">
-      <span class="language-label">🌐 Language:</span>
-      <span class="language-value"
-        >{{ store.language === 'en' ? 'English' :
-        store.language === 'es' ? 'Español' :
-        store.language === 'fr' ? 'Français' :
-        store.language }}</span
-      >
+      <span class="language-label">🌐 Room language:</span>
+      <span class="language-value">{{ formatLocaleLabel(store.defaultLocale) }}</span>
     </div>
 
     <ul class="player-list">
@@ -145,6 +147,11 @@ const targetIsHost = computed(() => store.playersList.find((p) => p.id === showK
 .player-badge.host {
   background-color: #ffc107;
   color: #000;
+}
+
+.player-badge.locale {
+  background-color: #dbeafe;
+  color: #1d4ed8;
 }
 
 .btn-kick {

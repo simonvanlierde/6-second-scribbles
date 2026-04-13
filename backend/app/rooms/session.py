@@ -21,7 +21,9 @@ from app.rooms.protocol import (
 if TYPE_CHECKING:
     from fastapi import WebSocket
 
+    from app.core.types import LanguageCode
     from app.rooms.manager import GameRoom
+    from app.users.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +40,19 @@ type ErrorEventType = Literal[
 class RoomWebSocketSession:
     """Own a single accepted websocket connection for a room."""
 
-    def __init__(self, room: GameRoom, websocket: WebSocket) -> None:
+    def __init__(self, room: GameRoom, websocket: WebSocket, *, current_user: User | None = None) -> None:
         self.room = room
         self.websocket = websocket
         self.player_id: str | None = None
+        self.current_user = current_user
+
+    def resolve_join_locale(self, preferred_locale: LanguageCode | None) -> LanguageCode:
+        """Choose the effective locale for this websocket player."""
+        if preferred_locale:
+            return preferred_locale
+        if self.current_user is not None:
+            return self.current_user.preferred_locale
+        return self.room.metadata.default_locale
 
     async def run(self) -> None:
         """Send the initial snapshot, then process messages until disconnect."""

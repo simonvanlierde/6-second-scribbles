@@ -54,7 +54,7 @@ FROM uv-base AS db-ops-deps
 COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --group migrations --no-install-project
+    uv sync --frozen --no-dev --group db-ops --no-install-project
 
 # ── Prod ──────────────────────────────────────────────────────────────────────
 FROM uv-base AS prod-builder
@@ -88,9 +88,9 @@ COPY --from=db-ops-deps /opt/.venv /opt/.venv
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --group migrations
+    uv sync --frozen --no-dev --group db-ops
 
-FROM runtime-base AS db-ops
+FROM runtime-base AS db-ops-runtime
 
 COPY --from=db-ops-builder /opt/.venv /opt/.venv
 COPY . .
@@ -100,4 +100,10 @@ RUN useradd --create-home --home-dir /home/appuser --shell /bin/false appuser &&
 
 USER appuser
 
+FROM db-ops-runtime AS db-migrations
+
 CMD ["alembic", "upgrade", "head"]
+
+FROM db-ops-runtime AS db-seed
+
+CMD ["python", "scripts/seed_data.py"]

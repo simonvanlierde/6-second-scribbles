@@ -17,10 +17,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypedDict
 
 from fastapi import HTTPException
-from sqlalchemy import delete
 
 from app.categories import service as category_service
-from app.categories.models import Category
 from app.core.config import settings
 from app.core.database import get_session_maker
 from app.core.redis import delete_room_state
@@ -43,7 +41,7 @@ from app.rooms.protocol import (
 )
 from app.rooms.state import (
     GuessSubmissionState,
-    PlayerCardState,
+    PlayerPromptAssignmentState,
 )
 
 # spell-checker: ignore reconnections
@@ -108,9 +106,12 @@ class RoomMetadata:
     pad_visibility: bool = True
     ready_players: set[str] = field(default_factory=set)
     is_private: bool = False  # Private rooms don't appear in random join
-    language: LanguageCode = "en"  # Language code (ISO 639-1): en, es, fr, etc.
+    default_locale: LanguageCode = "en"
+    player_locales: dict[str, LanguageCode] = field(default_factory=dict)
+    player_user_ids: dict[str, str] = field(default_factory=dict)
+    custom_category_ids: list[int] | None = None
     # Server-side scoring state
-    player_cards: dict[str, PlayerCardState] = field(default_factory=dict)
+    player_assignments: dict[str, PlayerPromptAssignmentState] = field(default_factory=dict)
     guess_targets: dict[str, str] = field(default_factory=dict)
     guess_submissions: list[GuessSubmissionState] = field(default_factory=list)
     submitted_players: set[str] = field(default_factory=set)  # playerIds that have submitted at least once
@@ -161,7 +162,10 @@ class GameRoom:
     async def _score_and_broadcast_round_locked(self) -> None:
         """Inner scoring logic, must be called under self._scoring_lock."""
         await self._stop_scoring_timeout()
-        await self.broadcast(rounds.score_round(self))
+        session_maker = get_session_maker()
+        async with session_maker() as db:
+            round_complete_event = await rounds.score_round(self, db)
+        await self.broadcast(round_complete_event)
 
         logger.info(
             "[GameRoom %s] Round %s/%s scored. Scores: %s",
@@ -222,6 +226,8 @@ class GameRoom:
 
     def start_first_round_timeout(self) -> None:
         """Start the initial game-start delay before round 1 begins."""
+        if self._next_round_start_task and not self._next_round_start_task.done():
+            return
         self.start_next_round_timeout(settings.game_start_delay_seconds, round_number=1)
 
     def start_next_round_timeout(self, timeout_seconds: int, *, round_number: int | None = None) -> None:
@@ -241,12 +247,12 @@ class GameRoom:
             pass
 
     async def start_round_with_server_cards(self, *, round_number: int | None = None) -> None:
-        """Assign cards server-side, start a round, and broadcast the payload."""
+        """Assign prompts server-side, start a round, and broadcast the payload."""
         try:
-            cards = await self._build_server_round_cards()
+            assignments = await self._build_server_round_assignments()
         except HTTPException as exc:
             logger.warning(
-                "[GameRoom %s] Unable to start round %s with server cards: %s",
+                "[GameRoom %s] Unable to start round %s with server prompts: %s",
                 self.room_id,
                 round_number or (self.metadata.current_round + 1),
                 exc,
@@ -255,13 +261,14 @@ class GameRoom:
             await self.persist()
             return
         next_round = round_number or (self.metadata.current_round + 1)
-        round_start_time = self.start_round(round_number=next_round, cards=cards)
+        round_start_time = self.start_round(round_number=next_round, cards=assignments)
         await self.broadcast(
             StartRoundServerEvent(
                 type="start_round",
                 round=next_round,
                 cards={
-                    player_id: PlayerCardPayload.model_validate(card.model_dump()) for player_id, card in cards.items()
+                    player_id: PlayerCardPayload.model_validate(assignment.model_dump())
+                    for player_id, assignment in assignments.items()
                 },
                 roundStartTime=round_start_time,
             ),
@@ -269,36 +276,49 @@ class GameRoom:
         await self.persist()
         self.start_guessing_timeout(self.metadata.drawing_time_limit or 30)
 
-    async def _build_server_round_cards(self) -> dict[str, PlayerCardState]:
-        """Fetch one random category set per player from the category service."""
+    async def _build_server_round_assignments(self) -> dict[str, PlayerPromptAssignmentState]:
+        """Fetch one canonical category per player, then localize it per player."""
         if not self.players:
             return {}
 
+        player_ids = list(self.players.keys())
+        participant_locales = [self.get_player_locale(player_id) for player_id in player_ids]
+
         session_maker = get_session_maker()
         async with session_maker() as db:
-            response = await category_service.get_random_category_cards(
+            response = await category_service.select_category_sets(
                 db,
+                room_id=self.room_id,
                 difficulty=self.metadata.difficulty,
                 count=1,
-                player_count=len(self.players),
-                room_id=self.room_id,
-                language=self.metadata.language,
+                player_count=len(player_ids),
+                locale=self.metadata.default_locale,
+                locales=participant_locales,
+                owner_user_id=self.get_host_owner_user_id(),
+                enabled_custom_category_ids=self.metadata.custom_category_ids,
             )
 
-        selected_sets = list(response.categories.values())
-        player_ids = list(self.players.keys())
-        cards: dict[str, PlayerCardState] = {}
+        selected_sets = response.selections
+        assignments: dict[str, PlayerPromptAssignmentState] = {}
 
-        for index, player_id in enumerate(player_ids):
-            card_set = selected_sets[index]
-            cards[player_id] = PlayerCardState(
-                category=card_set.category,
-                items=card_set.items,
-                alternatives=card_set.alternatives,
-                is_custom=card_set.is_custom,
-            )
+        async with session_maker() as db:
+            for index, player_id in enumerate(player_ids):
+                selected_category = selected_sets[index]
+                localized_category = await category_service.get_localized_category_set(
+                    db,
+                    category_id=selected_category.category_id,
+                    preferred_locale=self.get_player_locale(player_id),
+                    fallback_locale=self.metadata.default_locale,
+                )
+                assignments[player_id] = PlayerPromptAssignmentState(
+                    category_id=localized_category.category_id,
+                    category=localized_category.category_name,
+                    item_ids=localized_category.item_ids,
+                    items=localized_category.items,
+                    alternatives=localized_category.alternatives,
+                )
 
-        return cards
+        return assignments
 
     def _cancel_game_complete_task(self) -> None:
         if self._game_complete_task and not self._game_complete_task.done():
@@ -324,6 +344,11 @@ class GameRoom:
         """Start periodic idle player check if it is not already running."""
         if self._idle_check_task and not self._idle_check_task.done():
             return
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+
         self._idle_check_task = _create_logged_task(
             self._idle_check_loop(),
             name=f"idle_check_{self.room_id}",
@@ -355,7 +380,7 @@ class GameRoom:
 
     async def _check_idle_players(self) -> None:
         """Check for and disconnect idle players during active game phases."""
-        if self.metadata.game_phase not in (GamePhase.LOBBY, GamePhase.COMPLETE):
+        if self.metadata.game_phase not in (GamePhase.LOBBY, GamePhase.FINAL_RESULTS):
             now = time.time()
             idle_players = []
 
@@ -379,7 +404,15 @@ class GameRoom:
                     with contextlib.suppress(Exception):
                         await player.websocket.close(code=1000, reason="Disconnected due to inactivity")
 
-    async def add_player(self, player_id: str, name: str, websocket: WebSocket) -> tuple[PlayerInfo, bool]:
+    async def add_player(
+        self,
+        player_id: str,
+        name: str,
+        websocket: WebSocket,
+        *,
+        preferred_locale: LanguageCode | None = None,
+        user_id: str | None = None,
+    ) -> tuple[PlayerInfo, bool]:
         """Add a player to the room.
 
         Returns tuple: (player, is_reconnecting_host)
@@ -390,6 +423,8 @@ class GameRoom:
             player_id,
             name,
             websocket,
+            preferred_locale=preferred_locale,
+            user_id=user_id,
             max_players=settings.max_players,
             player_info_factory=PlayerInfo,
         )
@@ -450,9 +485,24 @@ class GameRoom:
                 "guessTargets": self.metadata.guess_targets,
                 "padVisibility": self.metadata.pad_visibility,
                 "isPrivate": self.metadata.is_private,
-                "language": self.metadata.language,
+                "defaultLocale": self.metadata.default_locale,
+                "customCategoryIds": self.metadata.custom_category_ids,
             },
         )
+
+    def get_player_locale(self, player_id: str, *, fallback_locale: LanguageCode | None = None) -> LanguageCode:
+        """Resolve the effective locale for a connected player."""
+        return self.metadata.player_locales.get(player_id, fallback_locale or self.metadata.default_locale)
+
+    def get_player_user_id(self, player_id: str) -> str | None:
+        """Return the authenticated user id associated with a player connection, if any."""
+        return self.metadata.player_user_ids.get(player_id)
+
+    def get_host_owner_user_id(self) -> str | None:
+        """Return the current host's authenticated user id, if the host has one."""
+        if self.host_id is None:
+            return None
+        return self.get_player_user_id(self.host_id)
 
     def configure_game(
         self,
@@ -471,7 +521,7 @@ class GameRoom:
             max_rounds=max_rounds,
         )
 
-    def start_round(self, *, round_number: int | None, cards: dict[str, PlayerCardState] | None) -> int:
+    def start_round(self, *, round_number: int | None, cards: dict[str, PlayerPromptAssignmentState] | None) -> int:
         """Transition the room into a new drawing round and return the start timestamp."""
         if self._guessing_start_task and not self._guessing_start_task.done():
             self._guessing_start_task.cancel()
@@ -639,21 +689,6 @@ class GameRoom:
         """Put room into hibernation mode."""
         await room_lifecycle.hibernate(self)
 
-    async def cleanup_custom_categories(self) -> None:
-        """Delete all custom categories created for this room."""
-        try:
-            async with get_session_maker()() as session:
-                # Delete all categories with this room_id
-                stmt = delete(Category).where(Category.room_id == self.room_id)
-                result = await session.execute(stmt)
-                await session.commit()
-
-                deleted_count = int(getattr(result, "rowcount", 0) or 0)
-                if deleted_count > 0:
-                    logger.info("[GameRoom %s] Cleaned up %s custom categories", self.room_id, deleted_count)
-        except Exception:
-            logger.exception("[GameRoom %s] Error cleaning up custom categories", self.room_id)
-
 
 class RoomManager:
     """Manages all game rooms.
@@ -735,11 +770,10 @@ class RoomManager:
         return self.rooms.get(room_id)
 
     async def remove_room(self, room_id: str) -> None:
-        """Remove a room and clean up custom categories."""
+        """Remove a room and clean up its background resources."""
         if room_id in self.rooms:
             room = self.rooms[room_id]
             await room.stop_idle_check()
-            await room.cleanup_custom_categories()  # Clean up custom categories
             del self.rooms[room_id]
             await delete_room_state(room_id)
             logger.info("[RoomManager] Removed room %s (total rooms: %s)", room_id, len(self.rooms))

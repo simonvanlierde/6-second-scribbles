@@ -6,10 +6,12 @@ import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.exceptions import RedisError
 
+import app.users.models
+from app.auth.router import router as auth_router
 from app.categories.router import router as categories_router
 from app.core.config import settings
 from app.core.database import close_db
@@ -19,6 +21,7 @@ from app.rooms.manager import room_manager
 from app.rooms.router import router as rooms_router
 from app.rooms.ws_router import router as ws_router
 from app.system.router import router as system_router
+from app.users.router import router as users_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -31,7 +34,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown logic."""
     logger.info("Starting Six Second Scribbles API...")
-    logger.info("Database schema is managed by Alembic migrations")
 
     try:
         await get_redis()
@@ -66,9 +68,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(system_router)
-app.include_router(categories_router)
-app.include_router(rooms_router)
+api_router = APIRouter(prefix="/api")
+api_router.include_router(auth_router)
+api_router.include_router(users_router)
+api_router.include_router(system_router)
+api_router.include_router(categories_router)
+api_router.include_router(rooms_router)
+
+app.include_router(api_router)
 app.include_router(ws_router)
 
 

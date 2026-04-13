@@ -2,6 +2,7 @@
   "discriminator": {
     "mapping": {
       "cast_kick_vote": "#/$defs/CastKickVoteEvent",
+      "default_locale_update": "#/$defs/DefaultLocaleUpdateEvent",
       "draw_stroke": "#/$defs/DrawStrokeEvent",
       "draw_stroke_partial": "#/$defs/DrawStrokePartialEvent",
       "drawpad_clear": "#/$defs/DrawpadClearEvent",
@@ -9,12 +10,12 @@
       "heartbeat": "#/$defs/HeartbeatEvent",
       "initiate_kick": "#/$defs/InitiateKickEvent",
       "join": "#/$defs/JoinEvent",
-      "language_update": "#/$defs/LanguageUpdateEvent",
       "pad_visibility": "#/$defs/PadVisibilityEvent",
       "player_ready": "#/$defs/PlayerReadyEvent",
       "privacy_changed": "#/$defs/PrivacyChangedEvent",
       "request_game_state": "#/$defs/RequestGameStateEvent",
       "restart_game": "#/$defs/RestartGameEvent",
+      "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateEvent",
       "round_complete": "#/$defs/RoundCompleteEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
       "start_game": "#/$defs/StartGameEvent",
@@ -39,6 +40,18 @@
         "name": {
           "title": "Name",
           "type": "string"
+        },
+        "preferredLocale": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{2,5}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -137,9 +150,36 @@
         "cards": {
           "additionalProperties": {
             "properties": {
+              "categoryId": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Categoryid"
+              },
               "category": {
                 "title": "Category",
                 "type": "string"
+              },
+              "itemIds": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Itemids"
               },
               "items": {
                 "items": {
@@ -165,18 +205,6 @@
                 ],
                 "default": null,
                 "title": "Alternatives"
-              },
-              "is_custom": {
-                "anyOf": [
-                  {
-                    "type": "boolean"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Is Custom"
               }
             },
             "required": [
@@ -405,11 +433,11 @@
     {
       "properties": {
         "type": {
-          "const": "language_update",
+          "const": "default_locale_update",
           "title": "Type",
           "type": "string"
         },
-        "language": {
+        "locale": {
           "pattern": "^[a-z]{2,5}$",
           "type": "string"
         }
@@ -417,7 +445,36 @@
       "required": [
         "type"
       ],
-      "title": "LanguageUpdateEvent",
+      "title": "DefaultLocaleUpdateEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "room_custom_categories_update",
+          "title": "Type",
+          "type": "string"
+        },
+        "categoryIds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Categoryids"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "RoomCustomCategoriesUpdateEvent",
       "type": "object"
     },
     {

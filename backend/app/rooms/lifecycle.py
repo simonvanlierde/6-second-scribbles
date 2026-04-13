@@ -48,7 +48,7 @@ def from_state(state: RoomState, *, room_factory: type[GameRoom], metadata_facto
     metadata_data = state.metadata.model_dump()
     metadata_data["ready_players"] = set(metadata_data["ready_players"])
     metadata_data["submitted_players"] = set(metadata_data["submitted_players"])
-    metadata_data["player_cards"] = dict(state.metadata.player_cards)
+    metadata_data["player_assignments"] = dict(state.metadata.player_assignments)
     metadata_data["guess_submissions"] = list(state.metadata.guess_submissions)
     room.metadata = metadata_factory(**metadata_data)
     return room

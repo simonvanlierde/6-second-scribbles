@@ -1,6 +1,7 @@
 """Redis persistence for game room state."""
 
 # spell-checker: ignore setex
+import json
 import logging
 
 import redis.asyncio as redis
@@ -37,6 +38,22 @@ async def close_redis() -> None:
 def _room_key(room_id: str) -> str:
     """Generate a Redis key for storing a room's state based on its ID."""
     return f"room:{room_id}"
+
+
+def _session_key(session_id: str) -> str:
+    """Generate a Redis key for a server-side auth session."""
+    return f"session:{session_id}"
+
+
+def _rate_limit_key(bucket: str, identifier: str) -> str:
+    """Generate a Redis key for a fixed-window rate limit bucket."""
+    return f"rate_limit:{bucket}:{identifier}"
+
+
+def _category_locale_availability_key(difficulty: str | None) -> str:
+    """Generate a Redis key for cached categories locale-availability payload."""
+    suffix = (difficulty or "all").lower()
+    return f"category_locale_availability:{suffix}"
 
 
 async def save_room_state(room_id: str, state: RoomState) -> None:
@@ -80,3 +97,105 @@ async def load_all_room_states() -> list[RoomState]:
     except Exception:
         logger.exception("[Redis] Failed to load all rooms")
         return []
+
+
+async def create_session(user_id: str) -> str:
+    """Create a new auth session and return its session id."""
+    import secrets
+
+    session_id = secrets.token_urlsafe(32)
+    try:
+        r = await get_redis()
+        await r.setex(_session_key(session_id), settings.auth_session_ttl_seconds, user_id)
+    except Exception:
+        logger.exception("[Redis] Failed to create session for user %s", user_id)
+        raise
+    return session_id
+
+
+async def get_session_user_id(session_id: str) -> str | None:
+    """Return the user id for an existing auth session."""
+    try:
+        r = await get_redis()
+        return await r.get(_session_key(session_id))
+    except Exception:
+        logger.exception("[Redis] Failed to read session %s", session_id)
+        return None
+
+
+async def delete_session(session_id: str) -> None:
+    """Delete a server-side auth session if it exists."""
+    try:
+        r = await get_redis()
+        await r.delete(_session_key(session_id))
+    except Exception:
+        logger.exception("[Redis] Failed to delete session %s", session_id)
+
+
+async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: int) -> tuple[int, int]:
+    """Increment a fixed-window rate limit counter and return count plus retry-after seconds."""
+    try:
+        r = await get_redis()
+        key = _rate_limit_key(bucket, identifier)
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, window_seconds)
+        ttl = await r.ttl(key)
+        retry_after = max(int(ttl), 0)
+        return int(count), retry_after
+    except Exception:
+        logger.exception("[Redis] Failed to increment rate limit %s for %s", bucket, identifier)
+        return 0, 0
+
+
+def _cat_targets_key(category_id: int, locale: str) -> str:
+    """Generate a Redis key for localized scoring targets cache."""
+    return f"cat_targets:{category_id}:{locale}"
+
+
+async def cache_localized_scoring_targets(category_id: int, locale: str, data: dict) -> None:
+    """Cache the localized scoring targets dictionary for 24 hours."""
+    try:
+        r = await get_redis()
+        await r.setex(_cat_targets_key(category_id, locale), 86400, json.dumps(data))
+    except Exception:
+        logger.exception("[Redis] Failed to cache scoring targets for %s locale %s", category_id, locale)
+
+
+async def get_cached_localized_scoring_targets(category_id: int, locale: str) -> dict | None:
+    """Load cached localized scoring targets dictionary from Redis."""
+    try:
+        r = await get_redis()
+        data = await r.get(_cat_targets_key(category_id, locale))
+        return json.loads(data) if data else None
+    except Exception:
+        logger.exception("[Redis] Failed to load cached scoring targets for %s locale %s", category_id, locale)
+        return None
+
+
+async def cache_category_locale_availability(difficulty: str | None, items: list[dict]) -> None:
+    """Cache locale-availability endpoint payload."""
+    try:
+        r = await get_redis()
+        payload = json.dumps(items, separators=(",", ":"))
+        await r.setex(
+            _category_locale_availability_key(difficulty),
+            settings.category_locale_availability_ttl_seconds,
+            payload,
+        )
+    except Exception:
+        logger.exception("[Redis] Failed to cache locale availability for difficulty=%s", difficulty)
+
+
+async def get_cached_category_locale_availability(difficulty: str | None) -> list[dict] | None:
+    """Load cached locale-availability endpoint payload."""
+    try:
+        r = await get_redis()
+        raw = await r.get(_category_locale_availability_key(difficulty))
+        if not raw:
+            return None
+        payload = json.loads(raw)
+        return payload if isinstance(payload, list) else None
+    except Exception:
+        logger.exception("[Redis] Failed to load locale availability cache for difficulty=%s", difficulty)
+        return None

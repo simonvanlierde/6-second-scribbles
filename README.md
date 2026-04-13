@@ -1,241 +1,187 @@
 ---
 # spell-checker: words Culley, Lange
 ---
-# 6 Second Scribbles (Online Multiplayer)
+# 6 Second Scribbles
 
-A fast, real-time multiplayer web version of the **Six Second Scribbles** party game.
+Real-time multiplayer drawing and guessing, built for quick room-based play.
 
-## 🎨 What is this?
+## What It Is
 
-This is a fast-paced drawing game for 2-10 players. These are the rules:
+Each round, the game assigns a category and a short list of prompts to every player. Players draw as many prompts as they can, then another player tries to guess them. The backend now treats categories and items as canonical multilingual content, so prompts can be localized per player instead of forcing one room-wide language.
 
-1. Everyone gets a card with 10 items to draw (from a specific category).
-2. You get **60 seconds** to draw as many of them as you can.
-3. After time's up, everyone guesses what someone *else* drew.
-4. You get points for good drawings (what people guessed correctly) AND for being a good guesser!
+## Current Product Shape
 
-## 🎯 Features
+- Real-time multiplayer rooms over WebSockets
+- Same-origin HTTP API under `/api` and WebSockets under `/ws`
+- Multilingual room support with per-player locale preference
+- Canonical category/item model with localized labels and aliases
+- Guest play plus lightweight first-party accounts
+- Owner-only private categories for registered users
+- Host defaults plus room-level overrides for private categories
+- Vue 3 frontend with Pinia state and generated websocket contracts
+- FastAPI backend with PostgreSQL, Redis, and Alembic
 
-* **Real-time multiplayer** for 2-10 players.
-* **Simple drawing canvas** with touch/mouse support, colors, and brush sizes.
-* **Smart(ish) guessing:** Handles plurals and minor typos.
-* **111+ categories** across Easy, Medium, and Hard difficulties.
-* **Fully responsive:** Works on desktop, tablet, and mobile.
-* **Simple room codes:** 6-char codes to join games.
-* **Modern stack:** Built with Vue 3, TypeScript, Pinia, and FastAPI.
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-* **Node.js:** v24 or later. Download the latest LTS version from [nodejs.org](https://nodejs.org/).
-* **Python:** 3.8 or later. Download from [python.org](https://www.python.org/).
+- Node.js 24+
+- Python 3.12+
+- Docker
+- `just`
 
-### Installation
+### Install
 
 ```bash
-# Install dependencies
 just install
+```
 
-# Start everything (Docker + frontend + backend)
+### Run locally
+
+```bash
 just dev
 ```
 
-`pnpm install` at the repo root also installs the configured `lefthook` Git hooks via the root `prepare` script, so local commits run formatting, contract generation/validation, linting, type-checking, and cspell automatically.
+That runs the frontend and backend on your machine while Docker provides local Postgres and Redis.
 
-Open `http://localhost:3001` in your browser and start drawing!
-
-## 🏗️ How It's Built
-
-### The Stack
-
-| Layer | Technology | Version |
-|-------|------------|---------|
-| **Framework** | Vue 3 | 3.5.22 |
-| **State** | Pinia | 3.0.4 |
-| **Routing** | Vue Router | 5.0.4 |
-| **Language** | TypeScript | 6.0.2 |
-| **Bundler** | Vite | 8.0.3 |
-| **Backend** | FastAPI | 0.115.6 |
-| **Protocol** | WebSockets | - |
-
-## 📁 Project Structure
-
-```sh
-six-second-scribbles/
-├── frontend/
-│   ├── src/
-│   │   ├── main.ts               # Vue app entry point
-│   │   ├── App.vue               # Root component
-│   │   ├── router/
-│   │   │   └── index.ts          # Vue Router config
-│   │   ├── stores/
-│   │   │   └── game.ts           # Pinia store (all game state)
-│   │   ├── composables/
-│   │   │   ├── useGameConnection.ts # WebSocket logic
-│   │   │   └── useDrawingCanvas.ts  # Canvas drawing logic
-│   │   ├── views/
-│   │   │   ├── LobbyView.vue     # Home screen
-│   │   │   ├── WaitingRoomView.vue # Pre-game lobby
-│   │   │   ├── GameView.vue      # The main game
-│   │   │   └── ResultsView.vue   # Final scores
-│   │   ├── data/
-│   │   │   └── deck.ts           # All 111+ game cards
-│   │   ├── shared/
-│   │   │   └── types.ts          # Shared TS types
-│   │   └── assets/
-│   │       └── main.css          # Global styles
-│   └── package.json
-│
-├── backend/
-│   ├── app/
-│   └── pyproject.toml
-│
-├── justfile
-├── package.json
-└── pnpm-lock.yaml
-```
-
-## 🎮 How to Play
-
-### Creating a Room
-
-1. Go to the site.
-2. Enter your name.
-3. Click "Create Room".
-4. Share the 6-character room code with your friends.
-
-### Joining a Room
-
-1. Enter your name.
-2. Paste the room code.
-3. Click "Join Room".
-
-### Gameplay
-
-1. **Drawing** (60 seconds): You'll get a category card. Draw as many of the 10 items as you can before time runs out.
-2. **Guessing:** You'll see another player's drawing. Type your guesses (up to 10) for what they drew.
-3. **Scoring:** You get 1 point for each correct guess you make. The original drawer *also* gets 1 point for every guess you got right.
-4. **Repeat:** The game runs for the number of rounds set by the host.
-5. **Winner:** Highest score at the end wins!
-
-## 🔧 Dev Setup
-
-### Available Scripts
+### Run the full Docker dev stack
 
 ```bash
-just dev               # Start Docker + frontend + backend
-just build             # Build the frontend
-just check             # Run frontend and backend checks
-just format            # Format frontend and backend
+just up-dev
 ```
 
-### Backend Testing
+Open `http://localhost:3001`.
 
-The FastAPI backend includes a comprehensive test suite:
-
-```bash
-# Run all backend tests
-cd backend
-pytest
-
-# Run with coverage report
-pytest --cov=. --cov-report=html
-
-# Run specific test categories
-pytest -m integration     # Integration tests
-pytest -m "not slow"      # Skip slow tests
-
-# Using just (recommended)
-just test                 # Run all backend tests
-just check                # Run frontend and backend checks
-just format               # Format frontend and backend
-```
-
-See `backend/README.md` for detailed testing documentation.
-
-### Dev Tips
-
-* Vite's HMR means your frontend changes are instant.
-* The FastAPI server will auto-reload when you change its code (thanks to `--reload` flag).
-* Use the Vue DevTools browser extension to inspect the Pinia store state.
-* Check the Network tab in your browser's devtools to monitor WebSocket messages.
-* FastAPI provides automatic API documentation at `http://localhost:8000/docs`.
-* Run backend tests frequently to ensure API stability.
-
-## 🚀 Deployment
-
-Deploying involves two parts: the **backend** (FastAPI server) and the **frontend** (Vue site).
-
-### Step 1: Deploy the Backend Server
-
-The FastAPI backend can be deployed to various platforms:
-
-#### Option 1: Deploy to a VPS or Cloud Provider
-
-1. Choose a hosting provider (AWS EC2, DigitalOcean, Heroku, etc.)
-
-2. Install Python 3.8+ on your server
-
-3. Install dependencies:
-
-    ```bash
-    pip install -r backend/requirements.txt
-    ```
-
-4. Run the server:
-
-    ```bash
-    cd backend
-    uvicorn main:app --host 0.0.0.0 --port 8000
-    ```
-
-5. For production, use a process manager like systemd or supervisor to keep the server running.
-
-6. Set up a reverse proxy (nginx or Cloudflare) to handle SSL/TLS for secure WebSocket connections (wss://).
-
-#### Option 2: Deploy to Railway/Render
-
-Services like [Railway](https://railway.app/) or [Render](https://render.com/) make Python deployment simple:
-
-1. Create a new Python web service
-2. Point it to your repository
-3. Set the start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Deploy and note your backend URL
-
-### Step 2: Configure, Build, and Deploy the Frontend
-
-Now you'll prepare and deploy the website.
-
-#### 1. Configure the Backend URL
-
-* Create a `.env.production` file (or configure via your hosting provider).
-
-* Add your **FastAPI backend URL**. Remember to use `wss://` for secure websockets.
-
-    ```sh
-    # .env.production
-    VITE_BACKEND_HOST=wss://your-backend-domain.com
-    ```
-
-#### 2. Build the Frontend
-
-Run the build command to package your website into a static `dist/` folder.
+## Common Commands
 
 ```bash
+just dev
+just up-dev
+just up-prod
 just build
+just check
+just format
 ```
 
-#### 3. Deploy the Static Site
+Direct test commands:
 
-Host the `dist/` folder on any static site provider.
+```bash
+uv --project backend run pytest
+pnpm --dir frontend run test:unit
+pnpm --dir frontend exec vue-tsc --build --force
+```
 
-* Services like [Vercel](https://vercel.com/) or [Netlify](https://www.netlify.com/) are free and easy.
-* Sign up, find the "Add new site" button, and **drag and drop your `dist/` folder** to deploy.
+## Architecture
 
-Your provider will give you a public URL, and your game will be live.
+### Frontend
 
-## 📜 Attribution
+- Vue 3 + Vite
+- Pinia for shared app/game/auth/category state
+- Vue Router with:
+  - `/`
+  - `/profile`
+  - `/rooms/:roomCode`
+- Generated protocol types from the websocket contract
+
+Main frontend areas:
+
+- [frontend/src/views/HomeView.vue](/Users/simon/code/personal/6-second-scribbles/frontend/src/views/HomeView.vue)
+- [frontend/src/views/RoomView.vue](/Users/simon/code/personal/6-second-scribbles/frontend/src/views/RoomView.vue)
+- [frontend/src/views/LobbyView.vue](/Users/simon/code/personal/6-second-scribbles/frontend/src/views/LobbyView.vue)
+- [frontend/src/views/ProfileView.vue](/Users/simon/code/personal/6-second-scribbles/frontend/src/views/ProfileView.vue)
+
+### Backend
+
+- FastAPI for HTTP and websocket endpoints
+- PostgreSQL for durable data
+- Redis for room/session runtime state and rate-limit helpers
+- Alembic migrations for schema changes
+
+Main backend boundaries:
+
+- `/api/auth` for guest/register/login/logout
+- `/api/me` for profile/preferences
+- `/api/categories` for system and owner-visible category data
+- `/api/rooms` for room HTTP helpers
+- `/ws/{roomCode}` for live room traffic
+
+## Categories And Locales
+
+The backend now models categories as language-neutral concepts:
+
+- `categories`
+- `category_translations`
+- `category_items`
+- `category_item_translations`
+
+That lets the game:
+
+- localize prompts per player
+- validate guesses against the guesser’s locale first
+- fall back to room default locale, category default locale, then English when needed
+
+Private categories:
+
+- are available only to registered users
+- are owner-only for now
+- can be marked `enabled_by_default` for hosted rooms
+- can be overridden per room by the host
+- are soft-deleted instead of hard-deleted
+- are eligible for cleanup if they remain unused for a long time
+
+## Accounts
+
+The app currently uses lightweight first-party auth:
+
+- guest session bootstrap
+- register with username + password
+- login/logout with server-side sessions in Redis
+- per-user preferred locale
+
+Custom categories are intentionally limited to registered users so guests cannot fill the database with throwaway private content.
+
+## Docker And Deployment
+
+The production stack uses a dedicated frontend container:
+
+- `compose.override.yml` runs the frontend in Vite dev mode with hot reload
+- `compose.prod.yml` builds the frontend into a Caddy image
+- Caddy serves the SPA and proxies `/api` and `/ws` to the backend
+
+### Production-style local run
+
+```bash
+just up-prod
+```
+
+### Cloudflare Tunnel
+
+The intended tunnel flow is:
+
+- Cloudflare Tunnel
+- `cloudflared`
+- `frontend` container
+- internal backend service
+
+That means the public hostname points at the frontend container, and Caddy forwards backend traffic internally on the Docker network.
+
+## Seeded Demo Account
+
+Fresh local seeds now include one registered demo account plus a couple of owner-only private categories:
+
+- username: `demo_host`
+- password: `demo-password`
+
+That makes it easier to test profile flows, host defaults, and room-level custom category overrides without creating content manually every time.
+
+## Notes For Contributors
+
+- Prefer simplicity over backward compatibility when the code gets meaningfully cleaner
+- Keep API HTTP routes under `/api` and websocket traffic under `/ws`
+- Run related tests after changes
+- If you touch both frontend and backend, run both suites before finishing
+
+More backend detail lives in [backend/README.md](/Users/simon/code/personal/6-second-scribbles/backend/README.md).
 
 This project is a real-time, multiplayer web version inspired by two wonderful creations:
 
@@ -248,10 +194,10 @@ This implementation rebuilds the game from the ground up as a multiplayer experi
 
 Got ideas? Contributions are definitely welcome. Feel free to open an issue or send a PR. Some things on my mind:
 
-* More card decks
-* Smarter fuzzy-matching for guesses
-* Animations, sound effects, or a spectator mode
-* Game history and player stats
+- More card decks
+- Smarter fuzzy-matching for guesses
+- Animations, sound effects, or a spectator mode
+- Game history and player stats
 
 ## 📝 License
 

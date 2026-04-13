@@ -1,26 +1,31 @@
 """Alembic environment configuration for async SQLAlchemy."""
 
 import asyncio
+import logging
 from logging.config import fileConfig
 from typing import TYPE_CHECKING
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-
-# Import your models and Base
+import app.core.models  # noqa: F401 # model imports are needed for alembic to register models with Base.metadata
 from app.core.config import settings
 from app.core.database import Base
+from app.core.logging import configure_logging
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # Set the sqlalchemy.url from our database configuration
+logger.info("Performing migrations on database: %s", settings.database_url)
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # Interpret the config file for Python logging.
@@ -57,7 +62,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-
+    logger.info("Running migrations in offline mode on database: %s", settings.database_url)
     with context.begin_transaction():
         context.run_migrations()
 
@@ -86,6 +91,7 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    logger.info("Running migrations in online mode on database: %s", settings.database_url)
     asyncio.run(run_async_migrations())
 
 

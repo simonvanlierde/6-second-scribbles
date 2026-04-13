@@ -14,10 +14,10 @@
 		"test:e2e": "just test-e2e",
 		"test:e2e:ui": "just test-e2e-ui",
 		"build": "just build",
-		"install": "just install",
 		"lint": "pnpm --dir frontend run lint && uv run --project backend ruff check backend",
 		"type-check": "pnpm --dir frontend run type-check && uv run --project backend ty check backend",
 		"cspell": "pnpm exec cspell lint --config .cspell.yml",
+		"check:root": "pnpm run cspell && npx -y biome check \"**/*.{md,json,yml,yaml,toml}\" && npx -y markdownlint-cli2 \"**/*.md\"",
 		"contracts": "just contracts",
 		"contracts:check": "node scripts/check-contracts.mjs",
 		"contracts:validate": "pnpm run contracts:types && pnpm --dir frontend run contracts:validate",
@@ -25,6 +25,8 @@
 		"contracts:types": "pnpm --dir frontend run contracts:types"
 	},
 	"devDependencies": {
+		"biome": "^3.0.0",
+		"markdownlint-cli2": "^3.0.0",
 		"@cspell/dict-es-es": "^3.0.8",
 		"@cspell/dict-fr-fr": "^2.3.2",
 		"cspell": "^9.7.0",

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
 
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
@@ -8,7 +7,6 @@ import { GAME_TIMINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
 const { send } = useGameConnection();
 const { leaveRoom: _leaveRoom } = useLeaveRoom();
 const isReady = ref(false);
@@ -82,7 +80,6 @@ watch(
     if (newPhase === "lobby") {
       // Host started a new game, redirect to waiting room
       clearAutoRestartTimeout();
-      router.push(`/room/${store.roomCode}`);
     }
   },
 );
@@ -128,8 +125,6 @@ function playAgain() {
     // Reset game state to lobby
     store.gamePhase = "lobby";
 
-    // Navigate back to waiting room where host can start new game
-    router.push(`/room/${store.roomCode}`);
   } else {
     // Non-host indicates they're ready to play again
     isReady.value = true;
@@ -153,7 +148,7 @@ onUnmounted(() => {
 <template>
   <div class="screen">
     <div class="container">
-      <h1>🏆 Game Over!</h1>
+      <h1>{{ $t('results.gameOver') }}</h1>
 
       <div class="card winner-card">
         <div class="trophy-icon">🎉</div>
@@ -162,7 +157,7 @@ onUnmounted(() => {
       </div>
 
       <div class="card">
-        <h2>Final Scores</h2>
+        <h2>{{ $t('results.finalScores') }}</h2>
         <div class="scores-list">
           <div
             v-for="player in rankedScores"
@@ -177,41 +172,41 @@ onUnmounted(() => {
             <div class="rank">{{ player.rank }}</div>
             <div class="player-info">
               <span class="player-name">{{ player.playerName }}</span>
-              <span v-if="player.playerId === store.localPlayerId" class="player-badge">(You)</span>
-              <span v-if="player.isTied" class="player-badge tie-badge">Tied for {{ formatOrdinal(player.rank) }}</span>
+              <span v-if="player.playerId === store.localPlayerId" class="player-badge">{{ $t('results.you') }}</span>
+              <span v-if="player.isTied" class="player-badge tie-badge">{{ $t('results.tiedForRank', { rank: formatOrdinal(player.rank) }) }}</span>
             </div>
-            <div class="player-score">{{ player.score }} pts</div>
+            <div class="player-score">{{ $t('results.pts', { score: player.score }) }}</div>
           </div>
         </div>
 
         <!-- Ready status display for all players -->
         <div class="ready-status">
-          <p class="ready-count">{{ store.readyCount }} / {{ store.totalPlayers }} players ready</p>
+          <p class="ready-count">{{ $t('results.playersReady', { count: store.readyCount, total: store.totalPlayers }) }}</p>
         </div>
 
         <div class="button-group">
-          <button v-if="store.isHost" type="button" class="btn btn-primary" @click="playAgain">🔄 Play Again</button>
+          <button v-if="store.isHost" type="button" class="btn btn-primary" @click="playAgain">{{ $t('results.playAgain') }}</button>
           <button v-else-if="!isReady" type="button" class="btn btn-primary" @click="playAgain">
-            ✓ Ready for Next Game
+            {{ $t('results.readyForNext') }}
           </button>
-          <div v-else class="ready-indicator">✓ Ready! Waiting for host to start new game...</div>
-          <button type="button" class="btn btn-secondary" @click="leaveRoom">🚪 Leave Room</button>
+          <div v-else class="ready-indicator">{{ $t('results.readyWaiting') }}</div>
+          <button type="button" class="btn btn-secondary" @click="leaveRoom">{{ $t('results.leaveRoom') }}</button>
         </div>
       </div>
 
       <div class="card stats-card">
-        <h3>Game Statistics</h3>
+        <h3>{{ $t('results.gameStatistics') }}</h3>
         <div class="stats-grid">
           <div class="stat-item">
-            <div class="stat-label">Total Rounds</div>
+            <div class="stat-label">{{ $t('results.totalRounds') }}</div>
             <div class="stat-value">{{ store.maxRounds }}</div>
           </div>
           <div class="stat-item">
-            <div class="stat-label">Players</div>
+            <div class="stat-label">{{ $t('results.players') }}</div>
             <div class="stat-value">{{ store.playersList.length }}</div>
           </div>
           <div class="stat-item">
-            <div class="stat-label">Difficulty</div>
+            <div class="stat-label">{{ $t('results.difficulty') }}</div>
             <div class="stat-value">{{ store.difficulty }}</div>
           </div>
         </div>

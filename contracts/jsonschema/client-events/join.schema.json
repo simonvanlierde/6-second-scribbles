@@ -12,6 +12,18 @@
     "name": {
       "title": "Name",
       "type": "string"
+    },
+    "preferredLocale": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z]{2,5}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

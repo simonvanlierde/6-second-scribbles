@@ -1,9 +1,29 @@
 // Shared configuration for game settings
 import type { Difficulty } from "@/shared/types";
 
-export const BACKEND_HOST = import.meta.env.VITE_BACKEND_HOST || "ws://localhost:8000";
-// HTTP(S) base URL derived from the WebSocket URL (ws → http, wss → https).
-export const API_HOST = BACKEND_HOST.replace(/^ws(s?):\/\//, "http$1://");
+const configuredBackendHost = import.meta.env.VITE_BACKEND_HOST?.trim();
+
+function getWindowOrigin(defaultOrigin: string): string {
+  if (typeof window === "undefined") {
+    return defaultOrigin;
+  }
+
+  return window.location.origin;
+}
+
+function getWindowWebSocketOrigin(defaultOrigin: string): string {
+  if (typeof window === "undefined") {
+    return defaultOrigin;
+  }
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}`;
+}
+
+export const BACKEND_HOST = configuredBackendHost || getWindowWebSocketOrigin("ws://localhost:3001");
+export const API_HOST = configuredBackendHost
+  ? configuredBackendHost.replace(/^ws(s?):\/\//, "http$1://")
+  : getWindowOrigin("http://localhost:3001");
 
 export const DEFAULT_DIFFICULTY: Difficulty = "medium";
 

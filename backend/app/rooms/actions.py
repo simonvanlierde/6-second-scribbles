@@ -8,17 +8,18 @@ from typing import TYPE_CHECKING, Any
 from app.core.types import GamePhase
 from app.rooms import mutations
 from app.rooms.protocol import (
+    DefaultLocaleUpdateServerEvent,
     HostRestoredEvent,
     JoinErrorEvent,
-    LanguageUpdateServerEvent,
     PlayerJoinedEvent,
     PlayerLeftEvent,
     PlayerListItem,
+    RoomCustomCategoriesUpdateServerEvent,
     StartGuessingEvent,
     StartRoundServerEvent,
     send_ws_message,
 )
-from app.rooms.state import PlayerCardState
+from app.rooms.state import PlayerPromptAssignmentState
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -26,20 +27,20 @@ if TYPE_CHECKING:
     from app.rooms.protocol import (
         CastKickVoteEvent,
         ClientEventModel,
+        DefaultLocaleUpdateEvent,
         DrawpadClearEvent,
         DrawStrokeEvent,
         DrawStrokePartialEvent,
         InitiateKickEvent,
         JoinEvent,
-        LanguageUpdateEvent,
         PadVisibilityEvent,
         PlayerReadyEvent,
         PrivacyChangedEvent,
         RequestGameStateEvent,
         RestartGameEvent,
+        RoomCustomCategoriesUpdateEvent,
         SettingsUpdateEvent,
         StartGameEvent,
-        StartGuessingEvent,
         StartRoundEvent,
         SubmitGuessEvent,
         WebSocketMessage,
@@ -68,8 +69,24 @@ async def broadcast_and_persist(session: RoomWebSocketSession, event: WebSocketM
 
 async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
     """Handle a join event for one websocket session."""
+    if session.room.metadata.game_phase in (GamePhase.DRAWING, GamePhase.GUESSING):
+        await send_ws_message(
+            session.websocket,
+            JoinErrorEvent(
+                error="game_in_progress",
+                message="This round is already in progress. You can join for the next round.",
+            ),
+        )
+        return
+
     try:
-        _player, is_reconnecting_host = await session.room.add_player(event.player_id, event.name, session.websocket)
+        _player, is_reconnecting_host = await session.room.add_player(
+            event.player_id,
+            event.name,
+            session.websocket,
+            preferred_locale=session.resolve_join_locale(event.preferred_locale),
+            user_id=session.current_user.id if session.current_user is not None else None,
+        )
     except ValueError as exc:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
         await send_ws_message(
@@ -99,6 +116,8 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
         return
     if len(session.room.players) < 2 or session.room.metadata.game_phase != GamePhase.LOBBY:
         return
+    if session.room._next_round_start_task and not session.room._next_round_start_task.done():
+        return
     session.room.configure_game(
         drawing_time_limit=event.drawing_time_limit,
         guessing_time_limit=event.guessing_time_limit,
@@ -116,7 +135,7 @@ async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEve
     round_start_time = session.room.start_round(
         round_number=event.round,
         cards={
-            player_id: PlayerCardState.model_validate(card.model_dump(exclude_none=True))
+            player_id: PlayerPromptAssignmentState.model_validate(card.model_dump(exclude_none=True))
             for player_id, card in event.cards.items()
         },
     )
@@ -158,6 +177,7 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
 
 async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuessingEvent) -> None:
     """Handle a start-guessing event."""
+    del event
     if not await require_host(session, "start guessing"):
         return
     session.room.start_scoring_timeout(session.room.start_guessing())
@@ -209,12 +229,26 @@ async def handle_settings_update(session: RoomWebSocketSession, event: SettingsU
     await broadcast_and_persist(session, event)
 
 
-async def handle_language_update(session: RoomWebSocketSession, event: LanguageUpdateEvent) -> None:
-    """Handle a language-update event."""
-    if not await require_host(session, "update room language"):
+async def handle_default_locale_update(session: RoomWebSocketSession, event: DefaultLocaleUpdateEvent) -> None:
+    """Handle a default-locale update event."""
+    if not await require_host(session, "update the room default locale"):
         return
-    mutations.set_language(session.room, event.language)
-    await broadcast_and_persist(session, LanguageUpdateServerEvent(language=event.language))
+    mutations.set_default_locale(session.room, event.locale)
+    await broadcast_and_persist(session, DefaultLocaleUpdateServerEvent(locale=event.locale))
+
+
+async def handle_room_custom_categories_update(
+    session: RoomWebSocketSession,
+    event: RoomCustomCategoriesUpdateEvent,
+) -> None:
+    """Handle a host updating room-level private category overrides."""
+    if not await require_host(session, "update room categories"):
+        return
+    mutations.set_custom_category_ids(session.room, category_ids=event.category_ids)
+    await broadcast_and_persist(
+        session,
+        RoomCustomCategoriesUpdateServerEvent(categoryIds=session.room.metadata.custom_category_ids),
+    )
 
 
 async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClearEvent) -> None:
@@ -289,7 +323,8 @@ _HANDLERS: dict[str, _Handler] = {
     "submit_guess": handle_submit_guess,
     "restart_game": handle_restart_game,
     "settings_update": handle_settings_update,
-    "language_update": handle_language_update,
+    "default_locale_update": handle_default_locale_update,
+    "room_custom_categories_update": handle_room_custom_categories_update,
     "draw_stroke": handle_draw_stroke,
     "draw_stroke_partial": handle_draw_stroke,
     "drawpad_clear": handle_drawpad_clear,

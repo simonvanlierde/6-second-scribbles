@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from app.categories import service as category_service
 from app.core.types import GamePhase
 from app.rooms.manager import GameRoom, PlayerInfo
-from app.rooms.state import GuessSubmissionState, PlayerCardState
+from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 
 
 class TestGameRoom:
@@ -179,7 +179,7 @@ class TestGameRoom:
 
         timeout_seconds = room_with_players.start_guessing()
 
-        assert timeout_seconds == 30
+        assert timeout_seconds == 60
         assert room_with_players.metadata.game_phase == GamePhase.GUESSING
         assert room_with_players.metadata.ready_players == set()
         assert room_with_players.metadata.guessing_start_time is not None
@@ -223,7 +223,7 @@ class TestGameRoom:
 
         monkeypatch.setattr(
             category_service,
-            "get_random_category_cards",
+            "select_category_sets",
             AsyncMock(side_effect=HTTPException(status_code=404, detail="No categories found for difficulty: medium")),
         )
 
@@ -282,12 +282,13 @@ class TestGameRoom:
         game_room.metadata.current_round = 2
         game_room.metadata.ready_players.add("host-1")
         game_room.metadata.submitted_players.add("player-2")
-        game_room.metadata.player_cards = {
-            "player-1": PlayerCardState(
+        game_room.metadata.player_assignments = {
+            "player-1": PlayerPromptAssignmentState(
+                category_id=1,
                 category="Animals",
+                item_ids=[11, 12],
                 items=["cat", "dog"],
                 alternatives={"cat": ["kitty"]},
-                is_custom=False,
             ),
         }
         game_room.metadata.guess_submissions = [
@@ -301,7 +302,7 @@ class TestGameRoom:
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
         assert restored_room.metadata.submitted_players == {"player-2"}
-        assert restored_room.metadata.player_cards["player-1"].alternatives == {"cat": ["kitty"]}
+        assert restored_room.metadata.player_assignments["player-1"].alternatives == {"cat": ["kitty"]}
         assert restored_room.metadata.guess_submissions[0].player_id == "player-2"
         assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
 
@@ -366,7 +367,7 @@ class TestIdlePlayerDetection:
         assert "player-1" in game_room.players
 
         # In complete phase, no idle checks
-        game_room.metadata.game_phase = GamePhase.COMPLETE
+        game_room.metadata.game_phase = GamePhase.FINAL_RESULTS
         await game_room._check_idle_players()
         assert "player-1" in game_room.players
 

@@ -1,65 +1,37 @@
-"""Category, card, and scoring routes."""
+"""Category catalog and scoring routes."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.categories.schemas import (
-    CategoriesResponse,
-    CategoryDetailResponse,
-    GuessRequest,
-    GuessResponse,
-    RandomCardsResponse,
-)
-from app.categories.service import (
-    get_category_detail,
-    get_random_category_cards,
-    list_categories,
-    score_guess_request,
-)
+from app.categories.schemas import CategoryListItem, GuessScoreRequest, GuessScoreResponse, LocaleAvailabilityItem
+from app.categories.service import list_categories, list_locale_availability, score_guess_request
 from app.core.database import AsyncSessionDep  # noqa: TC001 - FastAPI resolves this dependency alias at runtime
 from app.core.types import Difficulty, LanguageCode  # noqa: TC001 - FastAPI uses these runtime annotations
 
-router = APIRouter()
+router = APIRouter(tags=["categories"])
 
 
-@router.get("/api/categories", response_model=CategoriesResponse)
+@router.get("/categories", response_model=list[CategoryListItem])
 async def get_categories(
     db: AsyncSessionDep,
     difficulty: Difficulty | None = None,
     language: LanguageCode | None = "en",
-) -> CategoriesResponse:
+) -> list[CategoryListItem]:
     """Get all categories, optionally filtered by difficulty and language."""
     return await list_categories(db, difficulty=difficulty, language=language)
 
 
-@router.get("/api/categories/{category_id}", response_model=CategoryDetailResponse)
-async def get_category(category_id: int, db: AsyncSessionDep) -> CategoryDetailResponse:
-    """Get a specific category with its items."""
-    return await get_category_detail(db, category_id=category_id)
-
-
-@router.get("/api/cards/random", response_model=RandomCardsResponse)
-async def get_random_cards(
+@router.get("/categories/locales", response_model=list[LocaleAvailabilityItem])
+async def get_category_locale_availability(
     db: AsyncSessionDep,
-    difficulty: Difficulty = "medium",
-    count: int = 1,
-    player_count: int = 2,
-    room_id: str | None = None,
-    language: LanguageCode = "en",
-) -> RandomCardsResponse:
-    """Get random cards for a game."""
-    return await get_random_category_cards(
-        db,
-        difficulty=difficulty,
-        count=count,
-        player_count=player_count,
-        room_id=room_id,
-        language=language,
-    )
+    difficulty: Difficulty | None = None,
+) -> list[LocaleAvailabilityItem]:
+    """Get supported locales with category coverage counts."""
+    return await list_locale_availability(db, difficulty=difficulty)
 
 
-@router.post("/api/score/guesses", response_model=GuessResponse)
-async def score_guesses(request: GuessRequest) -> GuessResponse:
+@router.post("/score/guesses", response_model=GuessScoreResponse)
+async def score_guesses(request: GuessScoreRequest) -> GuessScoreResponse:
     """Score player guesses using fuzzy matching."""
     return score_guess_request(request)

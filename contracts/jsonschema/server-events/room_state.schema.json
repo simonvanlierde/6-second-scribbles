@@ -61,8 +61,8 @@
         "lobby",
         "drawing",
         "guessing",
-        "scoring",
-        "complete"
+        "round_results",
+        "final_results"
       ],
       "title": "GamePhase",
       "type": "string"
@@ -142,16 +142,31 @@
       "title": "Isprivate",
       "type": "boolean"
     },
-    "language": {
+    "defaultLocale": {
       "pattern": "^[a-z]{2,5}$",
       "type": "string"
+    },
+    "customCategoryIds": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Customcategoryids"
     }
   },
   "required": [
+    "defaultLocale",
     "difficulty",
     "gamePhase",
     "isPrivate",
-    "language",
     "maxRounds",
     "padVisibility",
     "players",

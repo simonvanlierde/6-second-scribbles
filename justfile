@@ -15,33 +15,23 @@ dev: up
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
-# Start infra only (PostgreSQL + Redis) — used by `just dev` for local backend development.
+# Start full dev stack in Docker (infra + backend + frontend hot reload).
 [group('docker')]
 up:
     docker compose up -d
 
-# Stop infra services.
+# Stop full dev stack.
 [group('docker')]
 down:
     docker compose down
 
-# Stop infra services and remove volumes.
+# Stop full dev stack and remove volumes.
 [confirm("This will delete all local database data. Continue? (y/n)")]
 [group('docker')]
 down-clean:
     docker compose down -v
 
-# Start full dev stack in Docker (infra + backend with hot reload).
-[group('docker')]
-up-dev:
-    docker compose -f compose.yml -f compose.dev.yml up -d --build
-
-# Stop full dev stack.
-[group('docker')]
-down-dev:
-    docker compose -f compose.yml -f compose.dev.yml down
-
-# Start full prod stack in Docker (infra + backend, optimized build).
+# Start full prod stack in Docker (infra + backend + built frontend).
 [group('docker')]
 up-prod:
     docker compose -f compose.yml -f compose.prod.yml up -d --build
@@ -72,11 +62,6 @@ test-e2e:
 test-e2e-ui:
     just frontend/test-e2e-ui
 
-# Backwards-compatible alias for users who prefer the pluralized recipe name.
-[group('test')]
-tests-e2e-ui:
-    just test-e2e-ui
-
 # Run backend tests.
 [group('test')]
 test-backend:
@@ -97,6 +82,11 @@ check-frontend:
 [group('check')]
 check-backend:
     just backend/check
+
+# Scan the repository for secrets.
+[group('check')]
+check-security:
+    if command -v gitleaks >/dev/null 2>&1; then gitleaks detect --redact --no-banner --exit-code 1; else echo "gitleaks is not installed. Install it from https://github.com/gitleaks/gitleaks#installing" >&2; exit 1; fi
 
 # Format everything.
 [group('format')]

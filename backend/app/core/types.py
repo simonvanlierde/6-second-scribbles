@@ -16,8 +16,8 @@ class GamePhase(StrEnum):
     LOBBY = "lobby"
     DRAWING = "drawing"
     GUESSING = "guessing"
-    SCORING = "scoring"
-    COMPLETE = "complete"
+    ROUND_RESULTS = "round_results"
+    FINAL_RESULTS = "final_results"
 
 
 type LanguageCode = Annotated[str, StringConstraints(pattern=r"^[a-z]{2,5}$", to_lower=True)]

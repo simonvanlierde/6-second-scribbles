@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, cast
-from unittest.mock import AsyncMock
 
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from app.core.types import GamePhase
-from app.rooms.manager import PlayerInfo, RoomManager, room_manager
-from app.rooms.state import GuessSubmissionState, PlayerCardState
+from app.rooms.manager import RoomManager, room_manager
+from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
-    from httpx import AsyncClient
     from starlette.testclient import WebSocketTestSession
 
 
@@ -185,11 +183,11 @@ def test_host_can_kick_non_host_player(test_client) -> None:
 def test_reconnecting_player_can_rejoin_same_room(test_client) -> None:
     room_id = "RECONNECT01"
 
-    with test_client.websocket_connect(f"/party/{room_id}") as websocket:
+    with test_client.websocket_connect(f"/ws/{room_id}") as websocket:
         receive_json(websocket)
         join_player(websocket, "p1", "Alice")
 
-    with test_client.websocket_connect(f"/party/{room_id}") as websocket:
+    with test_client.websocket_connect(f"/ws/{room_id}") as websocket:
         assert receive_json(websocket)["type"] == "room_state"
         assert join_player(websocket, "p1", "Alice")["type"] == "player_joined"
 
@@ -222,47 +220,19 @@ def test_multiple_rooms_can_progress_independently(test_client) -> None:
 
 
 @pytest.mark.integration
-async def test_custom_categories_use_real_postgres(async_client: AsyncClient) -> None:
-    room_id = "PG_REAL_01"
-    room = room_manager.get_or_create_room(room_id)
-    room.players["host-1"] = PlayerInfo(id="host-1", name="Host", websocket=AsyncMock())
-    room.host_id = "host-1"
-
-    create_response = await async_client.post(
-        f"/api/rooms/{room_id}/categories",
-        json={
-            "name": "Container Creatures",
-            "items": ["otter", "stoat", "lynx", "ibis", "tapir"],
-            "difficulty": "medium",
-            "created_by": "host-1",
-        },
-    )
-
-    assert create_response.status_code == 200
-    category = create_response.json()["category"]
-
-    fetch_response = await async_client.get(f"/api/rooms/{room_id}/categories")
-    assert fetch_response.status_code == 200
-
-    payload = fetch_response.json()
-    assert payload["count"] == 1
-    assert payload["categories"][0]["id"] == category["id"]
-    assert payload["categories"][0]["items"] == ["otter", "stoat", "lynx", "ibis", "tapir"]
-
-
-@pytest.mark.integration
 async def test_room_manager_restores_room_state_from_real_redis() -> None:
     room = room_manager.get_or_create_room("REDIS01")
     room.host_id = "host-1"
     room.metadata.game_phase = GamePhase.DRAWING
     room.metadata.current_round = 2
     room.metadata.ready_players.add("host-1")
-    room.metadata.player_cards = {
-        "host-1": PlayerCardState(
+    room.metadata.player_assignments = {
+        "host-1": PlayerPromptAssignmentState(
+            category_id=1,
             category="Animals",
+            item_ids=[11, 12],
             items=["cat", "dog"],
             alternatives={"cat": ["kitty"]},
-            is_custom=False,
         ),
     }
     room.metadata.guess_submissions = [
@@ -280,7 +250,7 @@ async def test_room_manager_restores_room_state_from_real_redis() -> None:
         assert restored_room.metadata.game_phase == GamePhase.DRAWING
         assert restored_room.metadata.current_round == 2
         assert restored_room.metadata.ready_players == {"host-1"}
-        assert restored_room.metadata.player_cards["host-1"].category == "Animals"
+        assert restored_room.metadata.player_assignments["host-1"].category == "Animals"
         assert restored_room.metadata.guess_submissions[0].player_id == "host-1"
         assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
     finally:

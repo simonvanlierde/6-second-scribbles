@@ -1,4 +1,5 @@
 # compose.yml - Base Docker Compose configuration for all environments
+
 services:
 
   backend:
@@ -9,26 +10,17 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
-      backend-migrations:
+      database-migrations:
         condition: service_completed_successfully
     environment:
       POSTGRES_HOST: database
       REDIS_HOST: cache
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  backend-migrations:
-    build:
-      context: ./backend
-    depends_on:
-      database:
-        condition: service_healthy
-    environment:
-      POSTGRES_HOST: database
 
   cache:
     image: redis:8-alpine
@@ -42,13 +34,31 @@ services:
   database:
     image: postgres:18-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/18/docker
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER" ]
       interval: 30s
       timeout: 30s
       retries: 5
       start_period: 30s
+
+  database-migrations:
+    build:
+      context: ./backend
+      target: db-migrations
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: database
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:

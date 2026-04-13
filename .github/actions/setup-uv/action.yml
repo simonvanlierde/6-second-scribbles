@@ -1,0 +1,7 @@
+name: 'Setup uv'
+description: 'Installs and exposes `uv` runtime on the runner.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7

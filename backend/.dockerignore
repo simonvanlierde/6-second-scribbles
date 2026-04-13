@@ -22,6 +22,7 @@ htmlcov/
 
 # Secrets — use environment variables or secrets at runtime
 .env
+.env.*
 
 # IDE / OS
 .vscode/
@@ -34,6 +35,7 @@ htmlcov/
 .gitattributes
 
 # CI / tooling config not needed at runtime
-.github/
-.pre-commit-config.yaml
 README.md
+
+# Translation cache 
+**/.translation-cache.json

@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
+from app.core.types import GamePhase
 from app.rooms.manager import GameRoom, PlayerInfo, room_manager
 from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
 
@@ -73,6 +74,10 @@ class TestRandomRoomJoin:
         ) as (ws1, ws2):
             send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "drawingTimeLimit": 60})
             assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
+
+            room = room_manager.get_room(room_id)
+            assert room is not None
+            room.metadata.game_phase = GamePhase.DRAWING
 
             response = test_client.get("/api/rooms/random")
             assert response.status_code == 404

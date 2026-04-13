@@ -15,7 +15,7 @@ const gamePhase = computed(() => store.gamePhase);
   <GuessingPhase v-else-if="gamePhase === 'guessing'" />
   <div v-else class="waiting-screen">
     <div class="container">
-      <h2>Waiting for round to start...</h2>
+      <h2>{{ $t('game.waitingForRound') }}</h2>
     </div>
   </div>
 </template>

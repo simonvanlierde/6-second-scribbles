@@ -1,8 +1,7 @@
 {
   "discriminator": {
     "mapping": {
-      "custom_category_added": "#/$defs/CustomCategoryAddedEvent",
-      "custom_category_removed": "#/$defs/CustomCategoryRemovedEvent",
+      "default_locale_update": "#/$defs/DefaultLocaleUpdateServerEvent",
       "draw_stroke": "#/$defs/DrawStrokeEvent",
       "draw_stroke_partial": "#/$defs/DrawStrokePartialEvent",
       "drawpad_clear": "#/$defs/DrawpadClearEvent",
@@ -14,7 +13,6 @@
       "kick_vote_expired": "#/$defs/KickVoteExpiredEvent",
       "kick_vote_started": "#/$defs/KickVoteStartedEvent",
       "kick_vote_updated": "#/$defs/KickVoteUpdatedEvent",
-      "language_update": "#/$defs/LanguageUpdateServerEvent",
       "pad_visibility": "#/$defs/PadVisibilityEvent",
       "permission_error": "#/$defs/PermissionErrorEvent",
       "player_joined": "#/$defs/PlayerJoinedEvent",
@@ -24,6 +22,7 @@
       "protocol_error": "#/$defs/ProtocolErrorEvent",
       "ready_status": "#/$defs/ReadyStatusEvent",
       "restart_game": "#/$defs/RestartGameEvent",
+      "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateServerEvent",
       "room_state": "#/$defs/RoomStateEvent",
       "round_complete": "#/$defs/RoundCompleteServerEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
@@ -98,8 +97,8 @@
             "lobby",
             "drawing",
             "guessing",
-            "scoring",
-            "complete"
+            "round_results",
+            "final_results"
           ],
           "title": "GamePhase",
           "type": "string"
@@ -179,16 +178,31 @@
           "title": "Isprivate",
           "type": "boolean"
         },
-        "language": {
+        "defaultLocale": {
           "pattern": "^[a-z]{2,5}$",
           "type": "string"
+        },
+        "customCategoryIds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Customcategoryids"
         }
       },
       "required": [
+        "defaultLocale",
         "difficulty",
         "gamePhase",
         "isPrivate",
-        "language",
         "maxRounds",
         "padVisibility",
         "players",
@@ -486,9 +500,36 @@
         "cards": {
           "additionalProperties": {
             "properties": {
+              "categoryId": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Categoryid"
+              },
               "category": {
                 "title": "Category",
                 "type": "string"
+              },
+              "itemIds": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Itemids"
               },
               "items": {
                 "items": {
@@ -514,18 +555,6 @@
                 ],
                 "default": null,
                 "title": "Alternatives"
-              },
-              "is_custom": {
-                "anyOf": [
-                  {
-                    "type": "boolean"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Is Custom"
               }
             },
             "required": [
@@ -600,21 +629,51 @@
       "additionalProperties": false,
       "properties": {
         "type": {
-          "const": "language_update",
+          "const": "default_locale_update",
           "title": "Type",
           "type": "string"
         },
-        "language": {
-          "title": "Language",
+        "locale": {
+          "pattern": "^[a-z]{2,5}$",
           "type": "string"
         }
       },
       "required": [
-        "language",
+        "locale",
         "type"
       ],
-      "title": "LanguageUpdateServerEvent",
+      "title": "DefaultLocaleUpdateServerEvent",
       "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "room_custom_categories_update",
+          "title": "Type",
+          "type": "string"
+        },
+        "categoryIds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Categoryids"
+        }
+      },
+      "title": "RoomCustomCategoriesUpdateServerEvent",
+      "type": "object",
+      "required": [
+        "type"
+      ]
     },
     {
       "additionalProperties": false,
@@ -849,60 +908,6 @@
         "winner"
       ],
       "title": "GameCompleteServerEvent",
-      "type": "object"
-    },
-    {
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "const": "custom_category_added",
-          "title": "Type",
-          "type": "string"
-        },
-        "category": {
-          "additionalProperties": true,
-          "title": "Category",
-          "type": "object"
-        },
-        "items": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Items",
-          "type": "array"
-        }
-      },
-      "required": [
-        "category",
-        "items",
-        "type"
-      ],
-      "title": "CustomCategoryAddedEvent",
-      "type": "object"
-    },
-    {
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "const": "custom_category_removed",
-          "title": "Type",
-          "type": "string"
-        },
-        "categoryId": {
-          "title": "Categoryid",
-          "type": "integer"
-        },
-        "categoryName": {
-          "title": "Categoryname",
-          "type": "string"
-        }
-      },
-      "required": [
-        "categoryId",
-        "categoryName",
-        "type"
-      ],
-      "title": "CustomCategoryRemovedEvent",
       "type": "object"
     },
     {

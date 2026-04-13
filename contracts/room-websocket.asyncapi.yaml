@@ -16,11 +16,11 @@ servers:
   local:
     host: localhost:8000
     protocol: ws
-    pathname: /party/{roomId}
+    pathname: /ws/{roomId}
     description: "Local FastAPI websocket endpoint for one room."
 channels:
   roomConnection:
-    address: /party/{roomId}
+    address: /ws/{roomId}
     title: "Room WebSocket"
     summary: "Bidirectional websocket carrying all room gameplay events."
     parameters:
@@ -51,7 +51,8 @@ operations:
       - $ref: "#/components/messages/client_start_guessing"
       - $ref: "#/components/messages/client_start_round"
       - $ref: "#/components/messages/client_submit_guess"
-      - $ref: "#/components/messages/client_language_update"
+      - $ref: "#/components/messages/client_default_locale_update"
+      - $ref: "#/components/messages/client_room_custom_categories_update"
       - $ref: "#/components/messages/client_privacy_changed"
       - $ref: "#/components/messages/client_draw_stroke"
       - $ref: "#/components/messages/client_draw_stroke_partial"
@@ -79,7 +80,8 @@ operations:
       - $ref: "#/components/messages/server_start_game"
       - $ref: "#/components/messages/server_start_guessing"
       - $ref: "#/components/messages/server_start_round"
-      - $ref: "#/components/messages/server_language_update"
+      - $ref: "#/components/messages/server_default_locale_update"
+      - $ref: "#/components/messages/server_room_custom_categories_update"
       - $ref: "#/components/messages/server_draw_stroke"
       - $ref: "#/components/messages/server_draw_stroke_partial"
       - $ref: "#/components/messages/server_drawpad_clear"
@@ -93,8 +95,6 @@ operations:
       - $ref: "#/components/messages/server_player_ready_error"
       - $ref: "#/components/messages/server_protocol_error"
       - $ref: "#/components/messages/server_submit_guess_error"
-      - $ref: "#/components/messages/server_custom_category_added"
-      - $ref: "#/components/messages/server_custom_category_removed"
       - $ref: "#/components/messages/server_host_changed"
 components:
   messages:
@@ -218,13 +218,22 @@ components:
         $ref: jsonschema/client-events/submit_guess.schema.json
       examples:
         []
-    client_language_update:
-      name: language_update
-      title: language_update
-      summary: "Change the room language."
+    client_default_locale_update:
+      name: default_locale_update
+      title: default_locale_update
+      summary: "Change the room default locale."
       contentType: application/json
       payload:
-        $ref: jsonschema/client-events/language_update.schema.json
+        $ref: jsonschema/client-events/default_locale_update.schema.json
+      examples:
+        []
+    client_room_custom_categories_update:
+      name: room_custom_categories_update
+      title: room_custom_categories_update
+      summary: "Override the host's private category selection for this room."
+      contentType: application/json
+      payload:
+        $ref: jsonschema/client-events/room_custom_categories_update.schema.json
       examples:
         []
     client_privacy_changed:
@@ -373,7 +382,7 @@ components:
             drawingTimeLimit: 60
             padVisibility: true
             isPrivate: false
-            language: en
+            defaultLocale: en
     server_game_complete:
       name: game_complete
       title: game_complete
@@ -446,13 +455,22 @@ components:
         $ref: jsonschema/server-events/start_round.schema.json
       examples:
         []
-    server_language_update:
-      name: language_update
-      title: language_update
-      summary: "Room language updated."
+    server_default_locale_update:
+      name: default_locale_update
+      title: default_locale_update
+      summary: "Room default locale updated."
       contentType: application/json
       payload:
-        $ref: jsonschema/server-events/language_update.schema.json
+        $ref: jsonschema/server-events/default_locale_update.schema.json
+      examples:
+        []
+    server_room_custom_categories_update:
+      name: room_custom_categories_update
+      title: room_custom_categories_update
+      summary: "Room-level private category selection changed."
+      contentType: application/json
+      payload:
+        $ref: jsonschema/server-events/room_custom_categories_update.schema.json
       examples:
         []
     server_draw_stroke:
@@ -572,24 +590,6 @@ components:
         $ref: jsonschema/server-events/submit_guess_error.schema.json
       examples:
         []
-    server_custom_category_added:
-      name: custom_category_added
-      title: custom_category_added
-      summary: "A custom category was added to the room."
-      contentType: application/json
-      payload:
-        $ref: jsonschema/server-events/custom_category_added.schema.json
-      examples:
-        []
-    server_custom_category_removed:
-      name: custom_category_removed
-      title: custom_category_removed
-      summary: "A custom category was removed from the room."
-      contentType: application/json
-      payload:
-        $ref: jsonschema/server-events/custom_category_removed.schema.json
-      examples:
-        []
     server_host_changed:
       name: host_changed
       title: host_changed
@@ -602,7 +602,7 @@ components:
     clientEvent:
       name: clientEvent
       title: "Client Event"
-      summary: "Any validated client-to-server room event. Event types: heartbeat, join, request_game_state, game_complete, player_ready, restart_game, round_complete, settings_update, start_game, start_guessing, start_round, submit_guess, language_update, privacy_changed, draw_stroke, draw_stroke_partial, drawpad_clear, pad_visibility, cast_kick_vote, initiate_kick."
+      summary: "Any validated client-to-server room event. Event types: heartbeat, join, request_game_state, game_complete, player_ready, restart_game, round_complete, settings_update, start_game, start_guessing, start_round, submit_guess, default_locale_update, room_custom_categories_update, privacy_changed, draw_stroke, draw_stroke_partial, drawpad_clear, pad_visibility, cast_kick_vote, initiate_kick."
       contentType: application/json
       payload:
         $ref: jsonschema/client-event.schema.json
@@ -625,7 +625,7 @@ components:
     serverEvent:
       name: serverEvent
       title: "Server Event"
-      summary: "Any validated server-to-client room event. Event types: host_restored, join_error, player_joined, player_left, room_state, game_complete, ready_status, restart_game, round_complete, settings_update, start_game, start_guessing, start_round, language_update, draw_stroke, draw_stroke_partial, drawpad_clear, pad_visibility, kick_error, kick_vote_expired, kick_vote_started, kick_vote_updated, player_kicked, permission_error, player_ready_error, protocol_error, submit_guess_error, custom_category_added, custom_category_removed, host_changed."
+      summary: "Any validated server-to-client room event. Event types: host_restored, join_error, player_joined, player_left, room_state, game_complete, ready_status, restart_game, round_complete, settings_update, start_game, start_guessing, start_round, default_locale_update, room_custom_categories_update, draw_stroke, draw_stroke_partial, drawpad_clear, pad_visibility, kick_error, kick_vote_expired, kick_vote_started, kick_vote_updated, player_kicked, permission_error, player_ready_error, protocol_error, submit_guess_error, host_changed."
       contentType: application/json
       payload:
         $ref: jsonschema/server-event.schema.json
@@ -645,7 +645,7 @@ components:
             drawingTimeLimit: 60
             padVisibility: true
             isPrivate: false
-            language: en
+            defaultLocale: en
         - name: player_joined
           summary: "Server broadcasts that a player joined."
           payload:

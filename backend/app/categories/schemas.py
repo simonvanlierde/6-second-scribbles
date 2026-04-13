@@ -1,19 +1,14 @@
-"""HTTP schemas for the category and scoring domain."""
+"""HTTP schemas for the category and scoring domain (M2M Refactor)."""
 
 from __future__ import annotations
-
-from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, Field
 
 from app.core.types import Difficulty, LanguageCode  # noqa: TC001 - used by Pydantic at runtime
 from app.scoring.models import GuessMatchDetailResult  # noqa: TC001 - used by Pydantic at runtime
 
-if TYPE_CHECKING:
-    from app.categories.models import Card, Category
 
-
-class GuessRequest(BaseModel):
+class GuessScoreRequest(BaseModel):
     """Request body for scoring player guesses."""
 
     guesses: list[str]
@@ -21,7 +16,7 @@ class GuessRequest(BaseModel):
     alternatives: dict[str, list[str]] = Field(default_factory=dict)
 
 
-class GuessResponse(BaseModel):
+class GuessScoreResponse(BaseModel):
     """Response body for scoring player guesses."""
 
     score: int
@@ -31,79 +26,55 @@ class GuessResponse(BaseModel):
     unmatched_answers: list[str]
 
 
-class CategorySummary(BaseModel):
-    """Compact category representation used by list endpoints."""
+class CategoryListItem(BaseModel):
+    """Compact localized category representation used by list endpoints."""
 
     id: int
     name: str
     difficulty: Difficulty
-    description: str | None
-    language: LanguageCode | None
-    room_id: str | None
-    created_by: str | None
-    is_custom: bool
-
-    @classmethod
-    def from_model(cls, category: Category) -> CategorySummary:
-        """Build a category summary from a Category ORM instance."""
-        return cls(
-            id=category.id,
-            name=category.name,
-            difficulty=cast("Difficulty", category.difficulty),
-            description=category.description,
-            language=category.language,
-            room_id=category.room_id,
-            created_by=category.created_by,
-            is_custom=category.room_id is not None,
-        )
+    locale: LanguageCode | None
 
 
-class CardResponse(BaseModel):
-    """Card representation returned from category detail endpoints."""
+class CategoryResponse(BaseModel):
+    """Localized category detail payload."""
 
     id: int
-    category_id: int
-    item: str
-    alternatives: list[str]
-
-    @classmethod
-    def from_model(cls, card: Card) -> CardResponse:
-        """Build a card response from a Card ORM instance."""
-        return cls(
-            id=card.id,
-            category_id=card.category_id,
-            item=card.item,
-            alternatives=card.alternatives or [],
-        )
-
-
-class CategoriesResponse(BaseModel):
-    """Response for listing categories."""
-
-    categories: list[CategorySummary]
-    count: int
-
-
-class CategoryDetailResponse(BaseModel):
-    """Response for a single category and its cards."""
-
-    category: CategorySummary
+    name: str
+    difficulty: Difficulty
+    locale: LanguageCode | None
     items: list[str]
-    cards: list[CardResponse]
 
 
-class RandomCategoryCardSet(BaseModel):
-    """Cards selected for a single player/category pairing."""
+class SelectedCategorySet(BaseModel):
+    """One selected localized category set for game setup."""
 
-    category: str
+    category_id: int
+    category_name: str
+    item_ids: list[int]
     items: list[str]
     alternatives: dict[str, list[str]]
-    is_custom: bool
 
 
-class RandomCardsResponse(BaseModel):
-    """Response for the random card selection endpoint."""
+class CategorySelectionRequest(BaseModel):
+    """Parameters for selecting category sets for a room/game."""
 
     difficulty: Difficulty
-    categories: dict[int, RandomCategoryCardSet]
-    includes_custom: bool
+    count: int = Field(default=1, ge=1)
+    player_count: int = Field(default=2, ge=1)
+    locale: LanguageCode = "en"
+    locales: list[LanguageCode] = Field(default_factory=list)
+
+
+class CategorySelectionResponse(BaseModel):
+    """Response for room-scoped category selection."""
+
+    difficulty: Difficulty
+    selections: list[SelectedCategorySet]
+
+
+class LocaleAvailabilityItem(BaseModel):
+    """Aggregated locale support across selectable system categories."""
+
+    locale: LanguageCode
+    category_count: int
+    difficulty_counts: dict[str, int] = Field(default_factory=dict)

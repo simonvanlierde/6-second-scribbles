@@ -1,0 +1,95 @@
+---
+version: "0.2"
+language: en
+dictionaries:
+  - cpp-compound-words
+  - docker
+  - filetypes
+  - npm
+  - python
+  - software-tools
+  - softwareTerms
+
+# Include hidden files
+enableGlobDot: true
+
+# Exclude files in .gitignore
+useGitignore: true
+ignorePaths:
+  - ".git"
+  - "*-lock.*"
+  - ".vscode/**"
+  - "backend/alembic/versions/**"
+  - "contracts/jsonschema/**"
+  - "frontend/src/generated/**"
+
+ignoreWords:
+  # Software terms
+  - vueuse
+
+words:
+  # Names
+  - Lierde
+
+  # Software terms
+  - argostranslate
+  - Caddyfile
+  - cloudflared
+  - dorny
+  - justfile
+  - zstd
+
+  # Language names
+  - Español
+  - Français
+
+  # Category names and aliases
+  - agujereadora
+  - aeroplane
+  - básquet
+  - bistró
+  - brócoli
+  - brécol
+  - bróquil
+  - caesar
+  - catarina
+  - chamallow
+  - champiñón
+  - chupachús
+  - cleopatra
+  - columbus
+  - desarmador
+  - duendecillo
+  - edison
+  - einstein
+  - florecita
+  - gatito
+  - gelato
+  - gandhi
+  - gominola
+  - gominolas
+  - gomitas
+  - jitomate
+  - lufa
+  - mariposita
+  - mozart
+  - osito
+  - papalote
+  - picasso
+  - piruleta
+  - philips
+  - resbaladilla
+  - rubik
+  - shakespeare
+  - tofe
+  - vaquita
+  - yoyo
+
+import:
+  - "@cspell/dict-es-es/cspell-ext.json"
+  - "@cspell/dict-fr-fr/cspell-ext.json"
+
+# Multilingual category data
+overrides:
+  - filename: "{backend/scripts/seed_data.{py,yaml},backend/tests/test_{auto_translate_seed_data,seed_data,services}.py}"
+    language: "en,es,fr"

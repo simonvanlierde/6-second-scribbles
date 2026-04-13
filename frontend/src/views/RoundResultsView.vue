@@ -21,7 +21,6 @@ const currentScores = computed(() =>
     .sort((a, b) => b.score - a.score),
 );
 
-// Group results by player who made the guesses
 const resultsByPlayer = computed(() => {
   const grouped: Record<
     string,
@@ -73,229 +72,321 @@ onUnmounted(() => {
 
 <template>
   <div class="results-screen">
+    <!-- Header -->
+    <header class="results-header">
+      <h1 class="round-title">Round {{ store.currentRound }} Results</h1>
+
+      <div class="header-right">
+        <div class="countdown-pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+          </svg>
+          {{ isLastRound ? "Final results" : "Next round" }} in {{ countdown }}s
+        </div>
+
+        <button type="button" class="btn-leave" @click="leaveRoom">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Leave
+        </button>
+      </div>
+    </header>
+
     <div class="container">
-      <div class="leave-row">
-        <button type="button" class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
-      </div>
-      <h1>Round {{ store.currentRound }} Results</h1>
-
-      <div class="countdown-banner">
-        <span v-if="!isLastRound">Next round starts in {{ countdown }}s...</span>
-        <span v-else>Final results in {{ countdown }}s...</span>
-      </div>
-
-      <div class="results-section">
-        <h2>Round Performance</h2>
+      <!-- Round performance -->
+      <section class="section">
+        <h2 class="section-title">Round Performance</h2>
         <div class="results-grid">
-          <div v-for="player in store.playersList" :key="player.id" class="player-results-card">
-            <h3>{{ player.name }}</h3>
+          <div v-for="player in store.playersList" :key="player.id" class="player-card">
+            <h3 class="player-card-name">{{ player.name }}</h3>
 
-            <div v-if="resultsByPlayer[player.id]" class="player-guesses">
-              <div v-for="(result, index) in resultsByPlayer[player.id]" :key="index" class="guess-result">
-                <div class="guess-target">Guessing {{ result.targetName }}'s drawing:</div>
+            <div v-if="resultsByPlayer[player.id]" class="guess-list">
+              <div v-for="(result, index) in resultsByPlayer[player.id]" :key="index" class="guess-row">
+                <span class="guess-target">Guessed {{ result.targetName }}'s drawing</span>
                 <div class="guess-score">
-                  <span class="correct">{{ result.correctGuesses }}</span>
-                  /
-                  {{ result.totalItems }}
-                  correct
-                  <span class="points">+{{ result.pointsEarned }} pts</span>
+                  <span class="correct-count">{{ result.correctGuesses }}/{{ result.totalItems }}</span>
+                  <span class="points-earned">+{{ result.pointsEarned }} pts</span>
                 </div>
               </div>
             </div>
-            <div v-else class="no-guesses">No guesses submitted</div>
+            <p v-else class="no-guesses">No guesses submitted</p>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="scores-section">
-        <h2>Current Standings</h2>
-        <div class="scoreboard">
-          <div v-for="(player, index) in currentScores" :key="player.id" class="score-entry">
-            <span class="rank">{{ index + 1 }}.</span>
-            <span class="name">{{ player.name }}</span>
+      <!-- Standings -->
+      <section class="section">
+        <h2 class="section-title">Current Standings</h2>
+        <div class="scoreboard card">
+          <div
+            v-for="(player, index) in currentScores"
+            :key="player.id"
+            class="score-row"
+            :class="{ 'score-row--first': index === 0, 'score-row--me': player.id === store.localPlayerId }"
+          >
+            <span class="rank">{{ index + 1 }}</span>
+            <span class="player-name">{{ player.name }}</span>
+            <span v-if="player.id === store.localPlayerId" class="you-badge">You</span>
             <span class="score">{{ player.score }} pts</span>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-.leave-row {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .results-screen {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-h1 {
-  text-align: center;
-  color: white;
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.countdown-banner {
-  text-align: center;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  color: white;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-  font-size: 1.25rem;
-  font-weight: 500;
-}
-
-.results-section {
-  margin-bottom: 2rem;
-}
-
-.results-section h2 {
-  color: white;
-  font-size: 1.75rem;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.player-results-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.player-results-card h3 {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
-  font-size: 1.5rem;
-  border-bottom: 2px solid #667eea;
-  padding-bottom: 0.5rem;
-}
-
-.player-guesses {
+  background: var(--color-bg-gradient);
   display: flex;
   flex-direction: column;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.round-title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: white;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
   gap: 0.75rem;
 }
 
-.guess-result {
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
+.countdown-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.875rem;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.btn-leave {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-leave:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+/* ── Container ─────────────────────────────────────────── */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── Sections ──────────────────────────────────────────── */
+.section-title {
+  margin: 0 0 0.875rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Player performance grid ───────────────────────────── */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.player-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-md);
+}
+
+.player-card-name {
+  margin: 0 0 0.875rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 0.5rem;
+}
+
+.guess-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.guess-row {
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-primary);
 }
 
 .guess-target {
-  font-weight: 500;
-  color: #495057;
-  margin-bottom: 0.5rem;
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
 }
 
 .guess-score {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  justify-content: space-between;
 }
 
-.guess-score .correct {
-  color: #28a745;
-  font-weight: bold;
-  font-size: 1.25rem;
-}
-
-.guess-score .points {
-  margin-left: auto;
-  color: #667eea;
-  font-weight: 600;
+.correct-count {
   font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.points-earned {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 .no-guesses {
-  color: #6c757d;
+  color: var(--color-text-muted);
   font-style: italic;
-  text-align: center;
-  padding: 1rem;
+  font-size: 0.875rem;
+  margin: 0;
+  padding: 0.5rem 0;
 }
 
-.scores-section {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.scores-section h2 {
-  color: #2c3e50;
-  margin-bottom: 1.5rem;
-}
-
+/* ── Scoreboard ────────────────────────────────────────── */
 .scoreboard {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.375rem;
+  padding: 1.25rem;
 }
 
-.score-entry {
+.score-row {
   display: flex;
   align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  font-size: 1.125rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  transition: transform 0.15s;
 }
 
-.score-entry:first-child {
+.score-row--first {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  font-weight: 600;
-  font-size: 1.25rem;
+  font-weight: 700;
 }
 
-.score-entry .rank {
-  font-weight: bold;
-  color: #667eea;
-  min-width: 2rem;
+.score-row--me {
+  border: 2px solid var(--color-primary);
+  background: #ebf0ff;
 }
 
-.score-entry:first-child .rank {
+.score-row--first.score-row--me {
+  border-color: #b8860b;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+}
+
+.rank {
+  font-weight: 800;
+  color: var(--color-primary);
+  min-width: 1.5rem;
+  font-size: 1.0625rem;
+}
+
+.score-row--first .rank {
   color: #b8860b;
 }
 
-.score-entry .name {
+.player-name {
   flex: 1;
-  margin-left: 0.5rem;
+  font-weight: 500;
 }
 
-.score-entry .score {
-  font-weight: 600;
-  color: #667eea;
+.you-badge {
+  padding: 0.15rem 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
-.score-entry:first-child .score {
+.score-row--first .you-badge {
+  background: #b8860b;
+}
+
+.score {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.score-row--first .score {
   color: #b8860b;
 }
 
+/* ── Mobile ────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  h1 {
-    font-size: 2rem;
+  .results-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .round-title {
+    font-size: 1.125rem;
+  }
+
+  .container {
+    padding: 1rem;
   }
 
   .results-grid {

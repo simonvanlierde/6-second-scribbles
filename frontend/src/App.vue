@@ -1,16 +1,40 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import ToastContainer from "@/components/ToastContainer.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { i18n } from "@/i18n";
+import { useAuthStore } from "@/stores/auth";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
+const authStore = useAuthStore();
 const { connect, isConnected } = useGameConnection();
+const route = useRoute();
+
+watch(
+  () => store.localPlayerLocale,
+  (newLocale) => {
+    if (newLocale) {
+      i18n.global.locale.value = newLocale as any;
+    }
+  },
+  { immediate: true }
+);
 
 // Reconnect to room on page reload if we have saved state
-onMounted(() => {
-  if (store.roomCode && store.localPlayerId && !isConnected.value) {
+onMounted(async () => {
+  await authStore.bootstrap(store.localPlayerLocale, store.localPlayerName || null);
+  if (authStore.currentUser?.preferredLocale) {
+    store.setLocalPlayerLocale(authStore.currentUser.preferredLocale);
+  }
+  if (authStore.currentUser?.displayName && !store.localPlayerName) {
+    store.localPlayerName = authStore.currentUser.displayName;
+  }
+
+  const routeRoomCode = typeof route.params.roomCode === "string" ? route.params.roomCode : "";
+  if (store.roomCode && store.localPlayerId && !isConnected.value && routeRoomCode === store.roomCode) {
     console.log("Reconnecting to room:", store.roomCode);
     connect(store.roomCode);
   }

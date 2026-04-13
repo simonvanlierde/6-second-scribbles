@@ -1,0 +1,18 @@
+{
+  "properties": {
+    "type": {
+      "const": "default_locale_update",
+      "title": "Type",
+      "type": "string"
+    },
+    "locale": {
+      "pattern": "^[a-z]{2,5}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "DefaultLocaleUpdateEvent",
+  "type": "object"
+}

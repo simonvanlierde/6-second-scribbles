@@ -1,4 +1,5 @@
 # compose.prod.yml - Docker Compose overrides for production environment
+name: 6ss-prod
 
 services:
 
@@ -8,14 +9,40 @@ services:
     restart: unless-stopped
     env_file:
       - backend/.env.prod
-    
-
-  backend-migrations:
-    build:
-      target: db-ops
-    env_file:
-      - backend/.env.prod
 
   database:
+    restart: unless-stopped
     env_file:
       - backend/.env.prod
+
+  database-migrations:
+    build:
+      target: db-migrations
+    restart: "no"
+    env_file:
+      - backend/.env.prod
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.2.0
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_started
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    command: [ "tunnel", "--no-autoupdate", "run" ]
+    profiles:
+      - tunnel
+    pull_policy: always

@@ -55,7 +55,7 @@ function createStoreMock(finalScores: FinalScore[]): StoreMock {
   return {
     localPlayerId: "p1",
     isHost: true,
-    gamePhase: "complete",
+    gamePhase: "final_results",
     roomCode: "ROOM1",
     readyCount: 0,
     totalPlayers: 0,

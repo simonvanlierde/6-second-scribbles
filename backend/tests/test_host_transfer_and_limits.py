@@ -120,7 +120,7 @@ class TestWebSocketRoomFull:
         room.host_id = "player_0"
         room_manager.rooms[room_id] = room
 
-        with test_client.websocket_connect(f"/party/{room_id}") as ws:
+        with test_client.websocket_connect(f"/ws/{room_id}") as ws:
             ws.receive_text()  # room_state
 
             ws.send_text(json.dumps({"type": "join", "playerId": "player_11", "name": "Player 11"}))

@@ -48,6 +48,7 @@ class ClientTargetPlayerEventModel(ClientEventModel):
 class JoinEvent(ClientPlayerEventModel):
     type: Literal["join"]
     name: str
+    preferred_locale: LanguageCode | None = Field(default=None, alias="preferredLocale")
 
 
 class GameSettingsEventModel(ClientEventModel):
@@ -66,10 +67,11 @@ class StartGameEvent(GameSettingsEventModel):
 class PlayerCardPayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    category_id: int | None = Field(default=None, alias="categoryId")
     category: str
+    item_ids: list[int] | None = Field(default=None, alias="itemIds")
     items: list[str]
     alternatives: dict[str, list[str]] | None = None
-    is_custom: bool | None = Field(default=None, alias="is_custom")
 
 
 class StartRoundEvent(ClientEventModel):
@@ -113,9 +115,14 @@ class SettingsUpdateEvent(GameSettingsEventModel):
     type: Literal["settings_update"]
 
 
-class LanguageUpdateEvent(ClientEventModel):
-    type: Literal["language_update"]
-    language: LanguageCode = "en"
+class DefaultLocaleUpdateEvent(ClientEventModel):
+    type: Literal["default_locale_update"]
+    locale: LanguageCode = "en"
+
+
+class RoomCustomCategoriesUpdateEvent(ClientEventModel):
+    type: Literal["room_custom_categories_update"]
+    category_ids: list[int] | None = Field(default=None, alias="categoryIds")
 
 
 class DrawEventModel(ClientEventModel):
@@ -171,7 +178,8 @@ ClientEvent = Annotated[
     | RestartGameEvent
     | HeartbeatEvent
     | SettingsUpdateEvent
-    | LanguageUpdateEvent
+    | DefaultLocaleUpdateEvent
+    | RoomCustomCategoriesUpdateEvent
     | DrawStrokeEvent
     | DrawStrokePartialEvent
     | DrawpadClearEvent
@@ -246,7 +254,8 @@ class RoomStateEvent(ServerEventModel):
     guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
     pad_visibility: bool = Field(alias="padVisibility")
     is_private: bool = Field(alias="isPrivate")
-    language: LanguageCode
+    default_locale: LanguageCode = Field(alias="defaultLocale")
+    custom_category_ids: list[int] | None = Field(default=None, alias="customCategoryIds")
 
 
 class PlayerJoinedEvent(ServerPlayerEventModel):
@@ -310,9 +319,14 @@ class HostChangedEvent(ServerEventModel):
     new_host_id: str = Field(alias="newHostId")
 
 
-class LanguageUpdateServerEvent(ServerEventModel):
-    type: Literal["language_update"] = "language_update"
-    language: str
+class DefaultLocaleUpdateServerEvent(ServerEventModel):
+    type: Literal["default_locale_update"] = "default_locale_update"
+    locale: LanguageCode
+
+
+class RoomCustomCategoriesUpdateServerEvent(ServerEventModel):
+    type: Literal["room_custom_categories_update"] = "room_custom_categories_update"
+    category_ids: list[int] | None = Field(default=None, alias="categoryIds")
 
 
 class PlayerLeftEvent(ServerPlayerEventModel):
@@ -366,18 +380,6 @@ class GameCompleteServerEvent(ServerEventModel):
     winner: str
 
 
-class CustomCategoryAddedEvent(ServerEventModel):
-    type: Literal["custom_category_added"] = "custom_category_added"
-    category: dict[str, object]
-    items: list[str]
-
-
-class CustomCategoryRemovedEvent(ServerEventModel):
-    type: Literal["custom_category_removed"] = "custom_category_removed"
-    category_id: int = Field(alias="categoryId")
-    category_name: str = Field(alias="categoryName")
-
-
 RelayedClientEvent = Annotated[
     StartGameEvent
     | StartGuessingEvent
@@ -408,7 +410,8 @@ ServerEvent = Annotated[
     | StartRoundServerEvent
     | ReadyStatusEvent
     | HostChangedEvent
-    | LanguageUpdateServerEvent
+    | DefaultLocaleUpdateServerEvent
+    | RoomCustomCategoriesUpdateServerEvent
     | PlayerLeftEvent
     | KickVoteStartedEvent
     | KickVoteUpdatedEvent
@@ -416,8 +419,6 @@ ServerEvent = Annotated[
     | PlayerKickedEvent
     | RoundCompleteServerEvent
     | GameCompleteServerEvent
-    | CustomCategoryAddedEvent
-    | CustomCategoryRemovedEvent
     | RelayedClientEvent,
     Field(discriminator="type"),
 ]

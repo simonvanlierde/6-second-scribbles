@@ -15,6 +15,7 @@ const canvasElement = ref<HTMLCanvasElement | null>(null);
 const timeLeft = ref(store.drawingTimeLimit);
 const timerInterval = ref<number | null>(null);
 const hasSubmittedDrawing = ref(false);
+const leaveDialogRef = ref<HTMLDialogElement | null>(null);
 
 const category = computed(() => store.localPlayerCard?.category || "Loading...");
 const items = computed(() => store.localPlayerCard?.items || []);
@@ -24,8 +25,6 @@ onMounted(() => {
   if (canvasElement.value) {
     canvas.initCanvas(canvasElement.value);
 
-    // Restore in-progress drawing from localStorage on page reload.
-    // Storing strokes keeps recovery resilient across resize/reflow.
     if (!store.localPlayerCard) {
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.DRAWING_STATE);
@@ -47,9 +46,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  // Persist drawing so a page reload can restore it.
-  // Use STORAGE_KEYS.DRAWING_STATE — a dedicated key that does not collide with the
-  // store's "gameState" watcher.
   try {
     localStorage.setItem(
       STORAGE_KEYS.DRAWING_STATE,
@@ -65,8 +61,6 @@ onUnmounted(() => {
   canvas.cleanup();
 });
 
-// Recalculate timeLeft if drawingTimeLimit is updated (e.g. late settings sync).
-// Must account for already-elapsed time, not just swap in the new length.
 watch(
   () => store.drawingTimeLimit,
   (newRoundLength) => {
@@ -88,7 +82,8 @@ function startDrawingTimer() {
 
   if (roundStartTime && !Number.isNaN(roundStartTime)) {
     const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
-    timeLeft.value = elapsed < 0 || elapsed > drawingTimeLimit ? drawingTimeLimit : Math.max(0, drawingTimeLimit - elapsed);
+    timeLeft.value =
+      elapsed < 0 || elapsed > drawingTimeLimit ? drawingTimeLimit : Math.max(0, drawingTimeLimit - elapsed);
   } else {
     timeLeft.value = drawingTimeLimit;
   }
@@ -129,8 +124,17 @@ function endDrawingPhase() {
   localStorage.removeItem(STORAGE_KEYS.DRAWING_STATE);
 }
 
-function leaveRoom() {
-  stopTimer(); // stop timer immediately; onUnmounted also cleans up
+function showLeaveDialog() {
+  leaveDialogRef.value?.showModal();
+}
+
+function cancelLeave() {
+  leaveDialogRef.value?.close();
+}
+
+function confirmLeave() {
+  leaveDialogRef.value?.close();
+  stopTimer();
   _leaveRoom();
 }
 
@@ -145,100 +149,158 @@ function handleBrushSizeChange(event: Event) {
 
 <template>
   <div class="game-screen">
-    <div class="game-header">
-      <div class="round-info">Round {{ store.currentRound }} of {{ store.maxRounds }}</div>
-      <div class="timer" :class="{ warning: timeLeft <= 10 }">{{ timeLeft }}</div>
-      <div class="score">Score: {{ currentScore }}</div>
-      <button
-        type="button"
-        class="btn btn-primary"
-        :disabled="hasSubmittedDrawing"
-        @click="endDrawingPhase"
-      >
-        {{ hasSubmittedDrawing ? "Waiting..." : "Finish Drawing" }}
-      </button>
-      <button type="button" class="btn btn-secondary btn-leave" @click="leaveRoom">🚪 Leave</button>
-    </div>
-
-    <div v-if="store.readyCount > 0" class="ready-status-header">
-      <p class="ready-count-small">{{ store.readyCount }} / {{ store.totalPlayers }} players finished drawing</p>
-    </div>
-
-    <div class="drawing-container">
-      <div class="category-card">
-        <h3>{{ category }}</h3>
-        <ul class="items-list">
-          <li v-for="(item, index) in items" :key="index">{{ item }}</li>
-        </ul>
+    <!-- Header -->
+    <header class="game-header">
+      <div class="header-left">
+        <button type="button" class="btn-leave" @click="showLeaveDialog">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Leave
+        </button>
       </div>
 
-      <div class="canvas-container">
+      <div class="timer" :class="{ warning: timeLeft <= 10 }">{{ timeLeft }}</div>
+
+      <div class="header-info">
+        <span class="info-round">
+          Round {{ store.currentRound }} / {{ store.maxRounds
+          }}<span v-if="store.readyCount > 0" class="info-ready"> · {{ store.readyCount }}/{{ store.totalPlayers }} ✓</span>
+        </span>
+        <span class="info-score">{{ currentScore }} pts</span>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <div class="drawing-layout">
+      <!-- Category card -->
+      <aside class="category-card">
+        <h3 class="category-title">{{ category }}</h3>
+        <ul class="items-list">
+          <li v-for="(item, index) in items" :key="index" class="item">{{ item }}</li>
+        </ul>
+        <div class="category-actions">
+          <button type="button" class="btn-submit" :disabled="hasSubmittedDrawing" @click="endDrawingPhase">
+            {{ hasSubmittedDrawing ? "⏳ Waiting…" : "✓ Finish" }}
+          </button>
+        </div>
+      </aside>
+
+      <!-- Canvas panel -->
+      <div class="canvas-panel">
         <div class="canvas-tools">
           <div class="tool-group">
-            <label>Color:</label>
-            <input type="color" :value="canvas.currentColor.value" @input="handleColorChange">
+            <label class="tool-label">Color</label>
+            <input type="color" :value="canvas.currentColor.value" class="color-swatch" @input="handleColorChange">
           </div>
           <div class="tool-group">
-            <label>Size:</label>
-            <input type="range" min="1" max="10" :value="canvas.currentWidth.value" @input="handleBrushSizeChange">
+            <label class="tool-label">Size</label>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              :value="canvas.currentWidth.value"
+              class="size-slider"
+              @input="handleBrushSizeChange"
+            >
           </div>
-          <button type="button" class="btn btn-small" @click="canvas.clear()">Clear</button>
+          <button type="button" class="btn-clear" @click="canvas.clear()">🧹 Clear</button>
         </div>
         <canvas ref="canvasElement" class="drawing-canvas" />
+        <div class="canvas-actions">
+          <button type="button" class="btn-submit" :disabled="hasSubmittedDrawing" @click="endDrawingPhase">
+            {{ hasSubmittedDrawing ? "⏳ Waiting…" : "✓ Finish" }}
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- Leave confirmation dialog -->
+    <dialog ref="leaveDialogRef" class="leave-dialog" @click.self="cancelLeave">
+      <h2>Leave Game?</h2>
+      <p>Your drawing progress will be lost.</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn-dialog-cancel" @click="cancelLeave">Stay</button>
+        <button type="button" class="btn-dialog-danger" @click="confirmLeave">Leave</button>
+      </div>
+    </dialog>
   </div>
 </template>
 
 <style scoped>
+/* ── Screen ────────────────────────────────────────────── */
 .game-screen {
   width: 100%;
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg-gradient);
 }
 
+/* ── Header ────────────────────────────────────────────── */
 .game-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #2c3e50;
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 1.25rem;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 1rem;
 }
 
-.ready-status-header {
-  padding: 0.5rem 2rem;
-  background-color: #e7f3ff;
-  text-align: center;
+.header-left {
+  display: flex;
+  align-items: center;
 }
 
-.ready-count-small {
+.header-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  justify-self: end;
+}
+
+.info-round {
+  color: rgba(255, 255, 255, 0.95);
   font-size: 0.875rem;
   font-weight: 600;
-  color: #495057;
-  margin: 0;
+  white-space: nowrap;
 }
 
-.round-info,
-.score {
-  font-size: 1.125rem;
+.info-score {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8125rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .timer {
   font-size: 2rem;
-  font-weight: bold;
-  padding: 0.5rem 1.5rem;
-  background-color: #3498db;
+  font-weight: 800;
+  color: white;
+  background: rgba(52, 152, 219, 0.85);
   border-radius: var(--radius-md);
-  min-width: 100px;
+  min-width: 4.5rem;
   text-align: center;
+  padding: 0.375rem 1rem;
+  line-height: 1.2;
 }
 
 .timer.warning {
-  background-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.9);
   animation: pulse 1s infinite;
 }
 
@@ -248,63 +310,138 @@ function handleBrushSizeChange(event: Event) {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.06);
   }
 }
 
-.drawing-container {
+.btn-leave {
   display: flex;
-  gap: 2rem;
-  padding: 2rem;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
+.btn-leave:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: white;
+}
+
+.info-ready {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+/* ── Drawing layout ────────────────────────────────────── */
+.drawing-layout {
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Category card ─────────────────────────────────────── */
 .category-card {
-  flex: 0 0 300px;
+  flex: 0 0 240px;
   background: white;
-  padding: 1.5rem;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
   height: fit-content;
 }
 
-.category-card h3 {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
-  font-size: 1.5rem;
+.category-actions {
+  display: flex;
+  margin-top: 1rem;
+}
+
+.category-title {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-dark);
+  font-size: 1.125rem;
+  font-weight: 700;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 0.5rem;
 }
 
 .items-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
 }
 
-.items-list li {
-  padding: 0.5rem;
-  margin: 0.25rem 0;
-  background-color: var(--color-surface);
+.item {
+  padding: 0.4rem 0.6rem;
+  background: var(--color-surface);
   border-radius: 4px;
   font-size: 0.875rem;
+  color: #495057;
 }
 
-.canvas-container {
+/* ── Canvas panel ──────────────────────────────────────── */
+.canvas-panel {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  background: white;
+  overflow: hidden;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: white;
+  border: none;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-submit:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.canvas-actions {
+  display: none;
 }
 
 .canvas-tools {
   display: flex;
   gap: 1rem;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .tool-group {
@@ -313,108 +450,186 @@ function handleBrushSizeChange(event: Event) {
   align-items: center;
 }
 
-.tool-group label {
-  font-weight: 500;
-  font-size: 0.875rem;
+.tool-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.color-swatch {
+  width: 2rem;
+  height: 1.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.size-slider {
+  width: 80px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.btn-clear {
+  margin-left: auto;
+  padding: 0.375rem 0.75rem;
+  background: var(--color-surface);
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--color-text-dark);
+}
+
+.btn-clear:hover {
+  background: #e9ecef;
 }
 
 .drawing-canvas {
   flex: 1;
-  border: 2px solid var(--color-border);
-  border-radius: 4px;
+  min-height: 0;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-md);
   cursor: crosshair;
   background: white;
   width: 100%;
-  min-height: 400px;
   touch-action: none;
 }
 
+/* ── Leave dialog ──────────────────────────────────────── */
+.leave-dialog {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-width: 360px;
+  width: calc(100% - 2rem);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  margin: 0;
+}
+
+.leave-dialog[open] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.leave-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.leave-dialog h2 {
+  margin: 0 0 0.625rem;
+  font-size: 1.25rem;
+  color: var(--color-text-dark);
+}
+
+.leave-dialog p {
+  margin: 0 0 1.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.btn-dialog-cancel {
+  background: none;
+  border: 1.5px solid #cbd5e0;
+  color: var(--color-text-dark);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-dialog-cancel:hover {
+  background: #f7fafc;
+  border-color: #a0aec0;
+}
+
+.btn-dialog-danger {
+  background: var(--color-danger);
+  border: none;
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-dialog-danger:hover {
+  background: #c82333;
+}
+
+/* ── Mobile ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .game-header {
-    padding: 0.75rem 1rem;
-    flex-wrap: wrap;
+    grid-template-columns: 1fr auto 1fr;
+    padding: 0.4rem 0.875rem;
     gap: 0.5rem;
-  }
-
-  .round-info,
-  .score {
-    font-size: 0.875rem;
   }
 
   .timer {
     font-size: 1.5rem;
-    padding: 0.375rem 1rem;
-    min-width: 80px;
+    padding: 0.25rem 0.75rem;
+    min-width: 3rem;
   }
 
-  .btn-leave {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-  }
-
-  .drawing-container {
+  .drawing-layout {
     flex-direction: column;
-    padding: 1rem;
-    gap: 1rem;
+    padding: 0.75rem;
+    gap: 0.75rem;
   }
 
   .category-card {
     flex: 0 0 auto;
-    padding: 1rem;
+    padding: 0.875rem;
   }
 
-  .category-card h3 {
-    font-size: 1.25rem;
+  .category-title {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
   }
 
-  .canvas-container {
-    padding: 0.75rem;
+  .items-list {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .canvas-tools {
-    flex-wrap: wrap;
-    gap: 0.5rem;
+  .item {
+    font-size: 0.8125rem;
+    padding: 0.3rem 0.5rem;
   }
 
-  .tool-group {
-    font-size: 0.875rem;
-  }
-
+  /* On mobile the layout stacks vertically, so give the canvas a sensible floor */
   .drawing-canvas {
-    min-height: 300px;
+    min-height: 260px;
+  }
+
+  .category-actions {
+    display: none;
+  }
+
+  .canvas-actions {
+    display: flex;
+    margin-top: 1rem;
+  }
+
+  .btn-submit {
+    width: 100%;
+    min-width: 0;
   }
 }
 
-@media (max-width: 480px) {
-  .game-header {
-    font-size: 0.875rem;
-  }
-
-  .timer {
-    font-size: 1.25rem;
-    padding: 0.25rem 0.75rem;
-    min-width: 60px;
-  }
-
-  .drawing-container {
-    padding: 0.5rem;
-  }
-
-  .category-card {
-    padding: 0.75rem;
-  }
-
-  .items-list li {
-    font-size: 0.75rem;
-    padding: 0.375rem;
-  }
-
-  .drawing-canvas {
-    min-height: 250px;
-  }
-
-  .canvas-tools {
-    font-size: 0.75rem;
-  }
-}
 </style>

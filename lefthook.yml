@@ -11,5 +11,7 @@ pre-commit:
       run: pnpm run lint
     type-check:
       run: pnpm run type-check
+    check-root:
+      run: pnpm run check:root
     cspell:
       run: pnpm run cspell

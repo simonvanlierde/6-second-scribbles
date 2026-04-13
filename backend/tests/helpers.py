@@ -44,7 +44,7 @@ def joined_players(
         sockets: list[WebSocketTestSession] = []
 
         for player in players:
-            websocket = stack.enter_context(test_client.websocket_connect(f"/party/{room_id}"))
+            websocket = stack.enter_context(test_client.websocket_connect(f"/ws/{room_id}"))
             receive_json(websocket)  # initial room_state
 
             send_json(websocket, {"type": "join", "playerId": player.player_id, "name": player.name})

@@ -9,15 +9,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.types import Difficulty, GamePhase, LanguageCode
 
 
-class PlayerCardState(BaseModel):
-    """Serializable card assignment for one player."""
+class PlayerPromptAssignmentState(BaseModel):
+    """Serializable prompt assignment for one player."""
 
     model_config = ConfigDict(extra="forbid")
 
+    category_id: int | None = None
     category: str
+    item_ids: list[int] = Field(default_factory=list)
     items: list[str]
     alternatives: dict[str, list[str]] = Field(default_factory=dict)
-    is_custom: bool = False
 
 
 class GuessSubmissionState(BaseModel):
@@ -47,8 +48,11 @@ class RoomMetadataState(BaseModel):
     pad_visibility: bool = True
     ready_players: set[str] = Field(default_factory=set)
     is_private: bool = False
-    language: LanguageCode = "en"
-    player_cards: dict[str, PlayerCardState] = Field(default_factory=dict)
+    default_locale: LanguageCode = "en"
+    player_locales: dict[str, LanguageCode] = Field(default_factory=dict)
+    player_user_ids: dict[str, str] = Field(default_factory=dict)
+    custom_category_ids: list[int] | None = None
+    player_assignments: dict[str, PlayerPromptAssignmentState] = Field(default_factory=dict)
     guess_targets: dict[str, str] = Field(default_factory=dict)
     guess_submissions: list[GuessSubmissionState] = Field(default_factory=list)
     submitted_players: set[str] = Field(default_factory=set)

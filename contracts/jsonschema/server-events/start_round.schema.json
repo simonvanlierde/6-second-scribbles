@@ -21,9 +21,36 @@
     "cards": {
       "additionalProperties": {
         "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Categoryid"
+          },
           "category": {
             "title": "Category",
             "type": "string"
+          },
+          "itemIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemids"
           },
           "items": {
             "items": {
@@ -49,18 +76,6 @@
             ],
             "default": null,
             "title": "Alternatives"
-          },
-          "is_custom": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Is Custom"
           }
         },
         "required": [

@@ -10,7 +10,7 @@ from tests.helpers import JoinedPlayer, join_player, joined_players, receive_jso
 
 
 def test_root_endpoint(test_client) -> None:
-    response = test_client.get("/")
+    response = test_client.get("/api/health")
 
     assert response.status_code == 200
     payload = response.json()
@@ -20,7 +20,7 @@ def test_root_endpoint(test_client) -> None:
 
 
 async def test_room_status_for_existing_and_missing_room(async_client) -> None:
-    missing_response = await async_client.get("/rooms/NONEXISTENT/status")
+    missing_response = await async_client.get("/api/rooms/NONEXISTENT/status")
     assert missing_response.status_code == 200
     assert missing_response.json() == {"exists": False}
 
@@ -28,7 +28,7 @@ async def test_room_status_for_existing_and_missing_room(async_client) -> None:
     await room.add_player("player-1", "Alice", AsyncMock())
     room.metadata.game_phase = GamePhase.DRAWING
 
-    existing_response = await async_client.get("/rooms/TEST01/status")
+    existing_response = await async_client.get("/api/rooms/TEST01/status")
     assert existing_response.status_code == 200
     assert existing_response.json() == {"exists": True, "players": 1, "game_phase": GamePhase.DRAWING.value}
 
@@ -57,7 +57,7 @@ def test_player_disconnect_broadcasts_player_left(test_client) -> None:
 
 
 def test_request_game_state_returns_current_room_state(test_client) -> None:
-    with test_client.websocket_connect("/party/STATE01") as websocket:
+    with test_client.websocket_connect("/ws/STATE01") as websocket:
         initial_state = receive_json(websocket)
         assert initial_state["type"] == "room_state"
 
@@ -74,7 +74,7 @@ def test_request_game_state_returns_current_room_state(test_client) -> None:
 
 
 def test_ready_and_restart_messages_are_broadcast(test_client) -> None:
-    with test_client.websocket_connect("/party/CONTROL01") as websocket:
+    with test_client.websocket_connect("/ws/CONTROL01") as websocket:
         receive_json(websocket)
         join_player(websocket, "player-1", "Alice")
 
@@ -102,7 +102,7 @@ def test_non_host_cannot_restart_game(test_client) -> None:
 
 
 def test_invalid_json_does_not_close_connection(test_client, sample_messages) -> None:
-    with test_client.websocket_connect("/party/ERROR01") as websocket:
+    with test_client.websocket_connect("/ws/ERROR01") as websocket:
         receive_json(websocket)
         join_player(websocket, "player-123", "Test Player")
 
