@@ -20,7 +20,7 @@ Thumbs.db
 .ruff_cache
 .uv-cache
 .pytest_cache/
-
+.cspellcache
 
 # Coverage reports
 .coverage

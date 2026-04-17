@@ -8,22 +8,6 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Cache pnpm store
-      uses: actions/cache@v4
-      with:
-        path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
-
-    - name: Cache frontend node_modules
-      uses: actions/cache@v4
-      with:
-        path: frontend/node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-modules-
-
     - name: Install frontend deps
       run: pnpm --dir frontend install --frozen-lockfile
 
