@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -16,10 +18,11 @@ jobs:
     name: Detect changed areas
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
-      root: ${{ steps.filter.outputs.root }}
+      contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,13 +36,18 @@ jobs:
               - 'frontend/**'
             backend:
               - 'backend/**'
-            root:
-              - '.github/**'
+            contracts:
+              - 'contracts/**'
+              - 'backend/app/rooms/protocol.py'
+              - 'backend/app/*/schemas.py'
+              - 'backend/scripts/generate_protocol_contracts.py'
+              - 'backend/scripts/export_openapi.py'
+              - 'frontend/scripts/generate-types.mjs'
+              - 'frontend/scripts/generate-api-types.mjs'
+              - 'scripts/check-contracts.mjs'
               - 'package.json'
-              - 'pyproject.toml'
+              - 'pnpm-lock.yaml'
               - 'justfile'
-              - 'README.md'
-              - 'scripts/**'
 
   root-checks:
     name: Root checks (gitleaks, cspell, biome)
@@ -61,6 +69,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
         with:
@@ -70,7 +81,7 @@ jobs:
         run: pnpm run cspell
 
       - name: Root formatting check (biome)
-        run: npx -y biome check "**/*.{md,json,yml,yaml,toml}"
+        run: pnpm exec biome check "**/*.{md,json,yml,yaml,toml}"
 
   frontend:
     name: Frontend checks
@@ -84,11 +95,9 @@ jobs:
 
       - name: Frontend checks (composite)
         uses: ./.github/actions/frontend-check
-        with:
-          run-tests: 'false'
 
   backend:
-    name: Backend checks
+    name: Backend checks + unit tests
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.backend == 'true'
@@ -97,22 +106,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Backend checks (composite)
-        uses: ./.github/actions/backend-check
-        with:
-          run-tests-mode: 'none'
-
-  backend-unit-tests:
-    name: Backend unit tests (fast)
-    runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.backend == 'true'
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Backend unit tests (composite)
+      - name: Backend checks + unit tests (composite)
         uses: ./.github/actions/backend-check
         with:
           run-tests-mode: 'unit'
+
+  contracts:
+    name: Contract generation checks
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.contracts == 'true'
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install root/frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend deps
+        run: uv sync --all-groups
+
+      - name: Check generated contracts
+        run: pnpm run contracts:check
+
+      - name: Type-check frontend against generated contracts
+        run: pnpm --dir frontend run type-check

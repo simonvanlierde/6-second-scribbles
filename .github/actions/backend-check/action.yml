@@ -4,7 +4,7 @@ runs:
   using: "composite"
   steps:
     - name: Setup uv
-      uses: ./.github/actions/setup-uv
+      uses: astral-sh/setup-uv@v7
 
     - name: Cache pip
       uses: actions/cache@v4

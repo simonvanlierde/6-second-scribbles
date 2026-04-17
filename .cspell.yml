@@ -20,7 +20,12 @@ ignorePaths:
   - "*-lock.*"
   - ".vscode/**"
   - "backend/alembic/versions/**"
+  - "backend/scripts/seed_data.yaml"
+  - "backend/translation/.translation_cache.json"
+  - "contracts/openapi.json"
+  - "contracts/room-events.json"
   - "contracts/jsonschema/**"
+  - "frontend/src/locales/**"
   - "frontend/src/generated/**"
 
 ignoreWords:
@@ -29,15 +34,27 @@ ignoreWords:
 
 words:
   # Names
+  - Culley
+  - Lange
   - Lierde
 
   # Software terms
   - argostranslate
+  - argosmodel
   - Caddyfile
   - cloudflared
+  - dedup
   - dorny
+  - geolocation
+  - healthz
+  - htmlcov
+  - Isguest
   - justfile
+  - nosniff
+  - persistedstate
   - zstd
+  - usefixtures
+  - whereclause
 
   # Language names
   - Español
@@ -91,5 +108,5 @@ import:
 
 # Multilingual category data
 overrides:
-  - filename: "{backend/scripts/seed_data.{py,yaml},backend/tests/test_{auto_translate_seed_data,seed_data,services}.py}"
+  - filename: "{backend/scripts/seed_data*.{py,yaml},backend/tests/test_{auto_translate_seed_data,seed_data,services}.py}"
     language: "en,es,fr"

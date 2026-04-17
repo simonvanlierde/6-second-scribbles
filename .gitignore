@@ -16,6 +16,15 @@ Thumbs.db
 ### Temp / cache
 .tmp/
 .cache/
+.Python
+.ruff_cache
+.uv-cache
+.pytest_cache/
+
+
+# Coverage reports
+.coverage
+htmlcov/
 
 ### Node
 node_modules/
