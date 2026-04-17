@@ -21,6 +21,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+HOST_CANNOT_BE_VOTE_KICKED_ERROR = "The host cannot be vote-kicked. Leave the room instead."
+VOTE_KICK_PUBLIC_ONLY_ERROR = "Vote-kick is only available in public rooms."
+INITIATOR_NOT_IN_ROOM_ERROR = "Initiator not in room"
+TARGET_NOT_IN_ROOM_ERROR = "Target player not in room"
+SELF_KICK_ERROR = "Cannot kick yourself"
+VOTE_ALREADY_IN_PROGRESS_ERROR = "Vote already in progress"
+VOTER_NOT_IN_ROOM_ERROR = "Voter not in room"
+NO_ACTIVE_VOTE_ERROR = "No active vote for this player"
+VOTE_EXPIRED_ERROR = "Vote has expired"
+SELF_VOTE_KICK_ERROR = "Cannot vote to kick yourself"
+
 
 @dataclass
 class KickVote:
@@ -36,20 +47,9 @@ class KickVote:
 
 async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id: str) -> KickVoteResult:
     """Initiate a vote to kick a player or kick immediately when the host can do so."""
-    if initiator_id not in room.players:
-        return KickVoteResult(success=False, error="Initiator not in room")
-
-    if target_player_id not in room.players:
-        return KickVoteResult(success=False, error="Target player not in room")
-
-    if initiator_id == target_player_id:
-        return KickVoteResult(success=False, error="Cannot kick yourself")
-
-    if target_player_id in room.active_kick_votes:
-        vote = room.active_kick_votes[target_player_id]
-        if time.time() < vote.expires_at:
-            return KickVoteResult(success=False, error="Vote already in progress")
-        del room.active_kick_votes[target_player_id]
+    rejection = _validate_initiate_kick_vote(room, initiator_id, target_player_id)
+    if rejection is not None:
+        return rejection
 
     is_host_kicking = initiator_id == room.host_id
     target_is_host = target_player_id == room.host_id
@@ -57,6 +57,12 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
     if is_host_kicking and not target_is_host:
         await kick_player(room, target_player_id, "Kicked by host")
         return KickVoteResult(success=True, immediate=True, reason="Host kicked player")
+
+    if target_is_host:
+        return KickVoteResult(success=False, error=HOST_CANNOT_BE_VOTE_KICKED_ERROR)
+
+    if room.metadata.is_private:
+        return KickVoteResult(success=False, error=VOTE_KICK_PUBLIC_ONLY_ERROR)
 
     target_player = room.players[target_player_id]
     vote = KickVote(
@@ -92,20 +98,20 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
 async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -> KickVoteResult:
     """Cast a vote to kick a player."""
     if voter_id not in room.players:
-        return KickVoteResult(success=False, error="Voter not in room")
+        return KickVoteResult(success=False, error=VOTER_NOT_IN_ROOM_ERROR)
 
     if target_player_id not in room.active_kick_votes:
-        return KickVoteResult(success=False, error="No active vote for this player")
+        return KickVoteResult(success=False, error=NO_ACTIVE_VOTE_ERROR)
 
     vote = room.active_kick_votes[target_player_id]
 
     if time.time() > vote.expires_at:
         del room.active_kick_votes[target_player_id]
         await room.broadcast(KickVoteExpiredEvent(targetPlayerId=target_player_id))
-        return KickVoteResult(success=False, error="Vote has expired")
+        return KickVoteResult(success=False, error=VOTE_EXPIRED_ERROR)
 
     if voter_id == target_player_id:
-        return KickVoteResult(success=False, error="Cannot vote to kick yourself")
+        return KickVoteResult(success=False, error=SELF_VOTE_KICK_ERROR)
 
     vote.voters.add(voter_id)
 
@@ -131,7 +137,6 @@ async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -
 
     if current_votes >= required_votes:
         await kick_player(room, target_player_id, "Kicked by vote")
-        del room.active_kick_votes[target_player_id]
         return KickVoteResult(success=True, vote_passed=True)
 
     return KickVoteResult(
@@ -151,6 +156,29 @@ def get_required_votes(room: GameRoom, *, target_is_host: bool) -> int:
 
     eligible_voters = total_players - 1
     return max(2, int((eligible_voters * 2) / 3) + 1)
+
+
+def _validate_initiate_kick_vote(
+    room: GameRoom,
+    initiator_id: str,
+    target_player_id: str,
+) -> KickVoteResult | None:
+    if initiator_id not in room.players:
+        return KickVoteResult(success=False, error=INITIATOR_NOT_IN_ROOM_ERROR)
+
+    if target_player_id not in room.players:
+        return KickVoteResult(success=False, error=TARGET_NOT_IN_ROOM_ERROR)
+
+    if initiator_id == target_player_id:
+        return KickVoteResult(success=False, error=SELF_KICK_ERROR)
+
+    if target_player_id in room.active_kick_votes:
+        vote = room.active_kick_votes[target_player_id]
+        if time.time() < vote.expires_at:
+            return KickVoteResult(success=False, error=VOTE_ALREADY_IN_PROGRESS_ERROR)
+        del room.active_kick_votes[target_player_id]
+
+    return None
 
 
 async def kick_player(room: GameRoom, player_id: str, reason: str = "Kicked") -> None:
