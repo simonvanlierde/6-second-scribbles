@@ -1,45 +1,43 @@
-"""Integration tests for end-to-end websocket game flows."""
+"""Fast websocket flow tests that do not require real Postgres or Redis."""
+# spell-checker: ignore VKICK, NOHOSTK
 
 from __future__ import annotations
 
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, cast
 
-import pytest
-from starlette.websockets import WebSocketDisconnect
-
 from app.core.types import GamePhase
-from app.rooms.manager import RoomManager, room_manager
-from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
+from tests.constants import (
+    ALICE,
+    BOB,
+    CHARLIE,
+    GAME_IN_PROGRESS,
+    HOST_CANNOT_BE_VOTE_KICKED_ERROR,
+    JOIN_ERROR,
+    KICK_ERROR,
+    KICK_VOTE_STARTED,
+    KICK_VOTE_UPDATED,
+    MEDIUM,
+    PLAYER_1,
+    PLAYER_2,
+    PLAYER_3,
+    PLAYER_JOINED,
+    PLAYER_KICKED,
+    READY_STATUS,
+    ROOM_STATE,
+    ROUND_COMPLETE,
+    START_GAME,
+    START_GUESSING,
+    START_ROUND,
+    VOTE_KICK_PUBLIC_ONLY_ERROR,
+)
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
     from starlette.testclient import WebSocketTestSession
 
-START_GAME = "start_game"
-START_ROUND = "start_round"
-START_GUESSING = "start_guessing"
-ROUND_COMPLETE = "round_complete"
-ROOM_STATE = "room_state"
-PLAYER_JOINED = "player_joined"
-JOIN_ERROR = "join_error"
-GAME_IN_PROGRESS = "game_in_progress"
-PLAYER_KICKED = "player_kicked"
-PLAYER_LEFT = "player_left"
-READY_STATUS = "ready_status"
-PLAYER_1 = "p1"
-PLAYER_2 = "p2"
-PLAYER_3 = "p3"
-ALICE = "Alice"
-BOB = "Bob"
-CHARLIE = "Charlie"
-MEDIUM = "medium"
-HOST_ONE = "host-1"
-ANIMALS = "Animals"
 
-
-@pytest.mark.integration
 def test_full_game_flow(test_client: TestClient) -> None:
     """End-to-end game flow covers start, draw, ready, guessing, and scoring."""
     with joined_players(
@@ -113,9 +111,12 @@ def test_full_game_flow(test_client: TestClient) -> None:
         assert round_complete[0]["results"] == round_complete[1]["results"]
 
 
-@pytest.mark.integration
-def test_server_starts_guessing_after_round_timer(test_client: TestClient) -> None:
+def test_server_starts_guessing_after_round_timer(
+    test_client: TestClient,
+    immediate_guessing_transition: None,
+) -> None:
     """Timer expiry transitions the room into guessing automatically."""
+    _ = immediate_guessing_transition
     with joined_players(
         test_client,
         "AUTO_GUESS_01",
@@ -139,7 +140,6 @@ def test_server_starts_guessing_after_round_timer(test_client: TestClient) -> No
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GUESSING, START_GUESSING]
 
 
-@pytest.mark.integration
 def test_waiting_room_drawpad_controls_are_shared(test_client: TestClient) -> None:
     """Drawpad events fan out to every connected player."""
     with joined_players(
@@ -165,7 +165,6 @@ def test_waiting_room_drawpad_controls_are_shared(test_client: TestClient) -> No
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["drawpad_clear", "drawpad_clear"]
 
 
-@pytest.mark.integration
 def test_non_host_cannot_start_round(test_client: TestClient) -> None:
     """Only the host can start a round."""
     with joined_players(
@@ -187,26 +186,63 @@ def test_non_host_cannot_start_round(test_client: TestClient) -> None:
         assert room_state["gamePhase"] == GamePhase.LOBBY.value
 
 
-@pytest.mark.integration
-def test_host_can_kick_non_host_player(test_client: TestClient) -> None:
-    """The host can kick another player and the room broadcasts the change."""
+def test_public_room_player_can_vote_kick_non_host_player(test_client: TestClient) -> None:
+    """Non-host players can vote-kick other non-hosts in public rooms."""
     with joined_players(
         test_client,
-        "KICK01",
+        "VKICK1",
+        [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB), JoinedPlayer(PLAYER_3, CHARLIE)],
+    ) as (ws1, ws2, ws3):
+        send_json(ws2, {"type": "initiate_kick", "playerId": PLAYER_2, "targetPlayerId": PLAYER_3})
+
+        for ws in (ws1, ws2, ws3):
+            started = receive_json(ws)
+            assert started["type"] == KICK_VOTE_STARTED
+            assert started["targetPlayerId"] == PLAYER_3
+
+        send_json(ws1, {"type": "cast_kick_vote", "playerId": PLAYER_1, "targetPlayerId": PLAYER_3})
+
+        ws1_messages = [receive_json(ws1), receive_json(ws1)]
+        assert [message["type"] for message in ws1_messages] == [KICK_VOTE_UPDATED, PLAYER_KICKED]
+        assert ws1_messages[1]["playerId"] == PLAYER_3
+
+        ws2_messages = [receive_json(ws2), receive_json(ws2)]
+        assert [message["type"] for message in ws2_messages] == [KICK_VOTE_UPDATED, PLAYER_KICKED]
+
+
+def test_public_room_players_cannot_vote_kick_the_host(test_client: TestClient) -> None:
+    """Host removal is not part of the public-room vote flow."""
+    with joined_players(
+        test_client,
+        "NOHOSTK",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
-    ) as (ws1, ws2):
-        send_json(ws1, {"type": "initiate_kick", "playerId": PLAYER_1, "targetPlayerId": PLAYER_2})
+    ) as (_ws1, ws2):
+        send_json(ws2, {"type": "initiate_kick", "playerId": PLAYER_2, "targetPlayerId": PLAYER_1})
 
-        host_messages = [receive_json(ws1), receive_json(ws1)]
-        host_types = [message["type"] for message in host_messages]
-        assert host_types == [PLAYER_KICKED, PLAYER_LEFT]
-        assert host_messages[0]["playerId"] == PLAYER_2
-
-        with pytest.raises(WebSocketDisconnect):
-            receive_json(ws2)
+        assert receive_json(ws2) == {
+            "type": KICK_ERROR,
+            "error": HOST_CANNOT_BE_VOTE_KICKED_ERROR,
+            "message": "",
+        }
 
 
-@pytest.mark.integration
+def test_private_room_players_cannot_start_vote_kick(test_client: TestClient) -> None:
+    """Vote-kick is hidden and rejected for private rooms."""
+    with joined_players(
+        test_client,
+        "PRIVATE",
+        [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB), JoinedPlayer(PLAYER_3, CHARLIE)],
+    ) as (ws1, ws2, _ws3):
+        send_json(ws1, {"type": "privacy_changed", "isPrivate": True})
+        send_json(ws2, {"type": "initiate_kick", "playerId": PLAYER_2, "targetPlayerId": PLAYER_3})
+
+        assert receive_json(ws2) == {
+            "type": KICK_ERROR,
+            "error": VOTE_KICK_PUBLIC_ONLY_ERROR,
+            "message": "",
+        }
+
+
 def test_reconnecting_player_can_rejoin_same_room(test_client: TestClient) -> None:
     """A reconnecting player can rejoin the same room."""
     room_id = "RECONNECT01"
@@ -220,7 +256,6 @@ def test_reconnecting_player_can_rejoin_same_room(test_client: TestClient) -> No
         assert join_player(websocket, PLAYER_1, ALICE)["type"] == PLAYER_JOINED
 
 
-@pytest.mark.integration
 def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> None:
     """Separate rooms can progress independently."""
     with ExitStack() as stack:
@@ -244,11 +279,10 @@ def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> N
             room_sockets.append(joined)
 
         for ws1, ws2 in room_sockets:
-            send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "drawingTimeLimit": 60})
-            assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
+            send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 3, "drawingTimeLimit": 60})
+            assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GAME, START_GAME]
 
 
-@pytest.mark.integration
 def test_three_player_full_round(test_client: TestClient) -> None:
     """Three players complete a full drawing and guessing round together."""
     drawn_items: dict[str, list[str]] = {
@@ -264,12 +298,10 @@ def test_three_player_full_round(test_client: TestClient) -> None:
     ) as (ws1, ws2, ws3):
         sockets = {PLAYER_1: ws1, PLAYER_2: ws2, PLAYER_3: ws3}
 
-        # Start game
         send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
         for ws in (ws1, ws2, ws3):
             assert receive_json(ws)["type"] == START_GAME
 
-        # Host starts round with cards for all 3 players
         send_json(
             ws1,
             {
@@ -281,7 +313,6 @@ def test_three_player_full_round(test_client: TestClient) -> None:
         for ws in (ws1, ws2, ws3):
             assert receive_json(ws)["type"] == START_ROUND
 
-        # All 3 players mark ready - each socket receives 3x ready_status + 1x start_guessing
         for pid, ws in sockets.items():
             send_json(ws, {"type": "player_ready", "playerId": pid})
 
@@ -297,7 +328,6 @@ def test_three_player_full_round(test_client: TestClient) -> None:
 
         assert len(guess_targets) == 3
 
-        # Each player submits correct guesses for their assigned target
         for guesser_id, target_id in guess_targets.items():
             send_json(
                 sockets[guesser_id],
@@ -309,31 +339,24 @@ def test_three_player_full_round(test_client: TestClient) -> None:
                 },
             )
 
-        # All 3 players receive round_complete
         for ws in (ws1, ws2, ws3):
             msg = receive_json(ws)
             assert msg["type"] == ROUND_COMPLETE
             assert len(cast("dict[str, object]", msg["scores"])) == 3
 
 
-@pytest.mark.integration
 def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> None:
     """Joining while a drawing round is active is rejected."""
-    """Joining (or reconnecting) is rejected while a drawing round is active.
-
-    This confirms the intentional game mechanic: players cannot enter mid-round.
-    They are expected to wait for the lobby or the next round.
-    """
     room_id = "RECONNECT_MID_GAME"
 
     with joined_players(
         test_client,
         room_id,
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
-    ) as (ws1, _ws2):
+    ) as (ws1, ws2):
         send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 60})
         assert receive_json(ws1)["type"] == START_GAME
-        assert receive_json(_ws2)["type"] == START_GAME
+        assert receive_json(ws2)["type"] == START_GAME
 
         send_json(
             ws1,
@@ -347,9 +370,8 @@ def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> No
             },
         )
         assert receive_json(ws1)["type"] == START_ROUND
-        assert receive_json(_ws2)["type"] == START_ROUND
+        assert receive_json(ws2)["type"] == START_ROUND
 
-    # A new connection attempts to join while game is in DRAWING phase
     with test_client.websocket_connect(f"/ws/{room_id}") as ws_late:
         initial_state = receive_json(ws_late)
         assert initial_state["type"] == ROOM_STATE
@@ -358,42 +380,3 @@ def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> No
         join_response = join_player(ws_late, "p3", "Charlie")
         assert join_response["type"] == JOIN_ERROR
         assert join_response["error"] == GAME_IN_PROGRESS
-
-
-@pytest.mark.integration
-async def test_room_manager_restores_room_state_from_real_redis() -> None:
-    """Room state can be restored from Redis."""
-    room = room_manager.get_or_create_room("REDIS01")
-    room.host_id = HOST_ONE
-    room.metadata.game_phase = GamePhase.DRAWING
-    room.metadata.current_round = 2
-    room.metadata.ready_players.add(HOST_ONE)
-    room.metadata.player_assignments = {
-        "host-1": PlayerPromptAssignmentState(
-            category_id=1,
-            category="Animals",
-            item_ids=[11, 12],
-            items=["cat", "dog"],
-            alternatives={"cat": ["kitty"]},
-        ),
-    }
-    room.metadata.guess_submissions = [
-        GuessSubmissionState(player_id="host-1", target_player_id="host-1", guesses=["cat"]),
-    ]
-
-    await room.persist()
-
-    restored_manager = RoomManager()
-    await restored_manager.start()
-    try:
-        restored_room = restored_manager.get_room("REDIS01")
-        assert restored_room is not None
-        assert restored_room.host_id == HOST_ONE
-        assert restored_room.metadata.game_phase == GamePhase.DRAWING
-        assert restored_room.metadata.current_round == 2
-        assert restored_room.metadata.ready_players == {HOST_ONE}
-        assert restored_room.metadata.player_assignments[HOST_ONE].category == ANIMALS
-        assert restored_room.metadata.guess_submissions[0].player_id == HOST_ONE
-        assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
-    finally:
-        await restored_manager.stop()

@@ -7,159 +7,35 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
-import pytest
-
 from app.categories import service as category_service
-from app.categories.models import Category, Prompt
 from app.categories.schemas import GuessScoreRequest
 from app.core.config import settings
 from app.core.types import GamePhase
-from app.rooms import (
-    actions as websocket_action_service,
-)
-from app.rooms import (
-    kick_vote as kick_vote_service,
-)
-from app.rooms import (
-    lifecycle as room_lifecycle_service,
-)
-from app.rooms import (
-    player_lifecycle as player_lifecycle_service,
-)
-from app.rooms import (
-    rounds as round_service,
-)
-from app.rooms import (
-    router as room_service,
-)
-from app.rooms import (
-    ws_router as websocket_service,
-)
+from app.rooms import actions as websocket_action_service
+from app.rooms import kick_vote as kick_vote_service
+from app.rooms import lifecycle as room_lifecycle_service
+from app.rooms import player_lifecycle as player_lifecycle_service
+from app.rooms import rounds as round_service
+from app.rooms import router as room_service
+from app.rooms import ws_router as websocket_service
 from app.rooms.manager import GameRoom, RoomManager, room_manager
 from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateEvent
 from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
+from tests.constants import ALTERNATIVE, ROOM_42, ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import pytest
     from fastapi import WebSocket
     from pytest_mock import MockerFixture
 
-    from tests.conftest import TestWebSocket
-
-ANIMALS = "Animals"
-FALLBACK = "Fallback"
-ALTERNATIVE = "alternative"
-ROOM_42 = "ROOM42"
-ROOM_HIBERNATE = "ROOM-HIBERNATE"
-ROUND_COMPLETE = "round_complete"
-ROOM_STATE = "room_state"
+    from tests.support import TestWebSocket
 
 
 class TestCategoryService:
     """Focused tests for CategoryService methods."""
-
-    @pytest.mark.integration
-    async def test_list_categories_filters_by_difficulty_and_language(self, test_db: AsyncMock) -> None:
-        """Filter categories by difficulty and language."""
-        test_db.add(
-            Category(
-                difficulty="easy",
-                source="system",
-                available_locales=["en"],
-                translations={"en": {"name": "Easy EN"}},
-            )
-        )
-        test_db.add(
-            Category(
-                difficulty="easy",
-                source="system",
-                available_locales=["fr"],
-                translations={"fr": {"name": "Facile FR"}},
-            )
-        )
-        test_db.add(
-            Category(
-                difficulty="hard",
-                source="system",
-                available_locales=["en"],
-                translations={"en": {"name": "Hard EN"}},
-            )
-        )
-        await test_db.commit()
-
-        response = await category_service.list_categories(test_db, difficulty="easy", language="en")
-
-        assert len(response) == 1
-        assert [category.name for category in response] == ["Easy EN"]
-
-    @pytest.mark.integration
-    @pytest.mark.usefixtures("_deterministic_sample")
-    async def test_select_category_sets_returns_localized_items(self, test_db: AsyncMock) -> None:
-        """Return localized category sets with alternatives."""
-        category = Category(
-            difficulty="medium",
-            source="system",
-            available_locales=["en"],
-            translations={"en": {"name": "Animals"}},
-        )
-        test_db.add(category)
-        await test_db.flush()
-
-        cat_prompt = Prompt(stable_key="cat", translations={"en": {"label": "cat", "aliases": ["kitty"]}})
-        dog_prompt = Prompt(stable_key="dog", translations={"en": {"label": "dog", "aliases": []}})
-        test_db.add(cat_prompt)
-        test_db.add(dog_prompt)
-        await test_db.flush()
-
-        test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=cat_prompt.id, sort_order=1))
-        test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=dog_prompt.id, sort_order=2))
-        await test_db.commit()
-
-        response = await category_service.select_category_sets(
-            test_db,
-            difficulty="medium",
-            count=1,
-            player_count=1,
-            locale="en",
-            locales=["en"],
-        )
-
-        assert len(response.selections) == 1
-        selection = response.selections[0]
-        assert selection.category_name == ANIMALS
-        assert selection.items == ["cat", "dog"]
-        assert selection.alternatives["cat"] == ["kitty"]
-
-    @pytest.mark.integration
-    @pytest.mark.usefixtures("_deterministic_sample")
-    async def test_select_category_sets_falls_back_to_english(self, test_db: AsyncMock) -> None:
-        """Test that select_category_sets falls back to English when the requested locale is not available."""
-        category = Category(
-            difficulty="medium",
-            source="system",
-            available_locales=["en"],
-            translations={"en": {"name": "Fallback"}},
-        )
-        prompt = Prompt(stable_key="tree", translations={"en": {"label": "tree", "aliases": []}})
-        test_db.add(category)
-        test_db.add(prompt)
-        await test_db.flush()
-        test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=prompt.id, sort_order=1))
-        await test_db.commit()
-
-        response = await category_service.select_category_sets(
-            test_db,
-            difficulty="medium",
-            count=1,
-            player_count=1,
-            locale="es",
-            locales=["es"],
-        )
-
-        assert len(response.selections) == 1
-        assert response.selections[0].category_name == FALLBACK
 
     def test_score_guess_request_maps_match_details(self) -> None:
         """Score guesses using the expected match method."""

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import pytest
 from sqlalchemy import select
 
 from app.categories.models import Category, Prompt
@@ -12,8 +13,9 @@ from app.users.models import User
 from scripts import seed_data
 
 if TYPE_CHECKING:
-    import pytest
     from sqlalchemy.ext.asyncio import AsyncSession
+
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="session")]
 
 STARTING_SEED_LOG = "Starting database seed"
 SEEDED_DATABASE_LOG = "Seeded database with"
@@ -28,10 +30,12 @@ class TestSeedDataScript:
 
     async def test_seed_database_logs_when_it_populates_empty_database(
         self,
-        test_db: AsyncSession,
+        db_session: AsyncSession,
+        seed_data_session_maker: None,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Seeding an empty database should populate content and log progress."""
+        _ = seed_data_session_maker
         caplog.set_level(logging.INFO, logger="scripts.seed_data")
 
         await seed_data.seed_database()
@@ -39,15 +43,15 @@ class TestSeedDataScript:
         assert STARTING_SEED_LOG in caplog.text
         assert SEEDED_DATABASE_LOG in caplog.text
 
-        categories_result = await test_db.execute(select(Category))
+        categories_result = await db_session.execute(select(Category))
         categories = categories_result.scalars().all()
         assert len(categories) > 0
 
-        prompts_result = await test_db.execute(select(Prompt))
+        prompts_result = await db_session.execute(select(Prompt))
         prompts = prompts_result.scalars().all()
         assert len(prompts) > 0
 
-        users = await test_db.execute(select(User))
+        users = await db_session.execute(select(User))
         seeded_users = users.scalars().all()
         assert seeded_users == []
 
@@ -57,29 +61,33 @@ class TestSeedDataScript:
 
     async def test_seed_database_logs_and_skips_when_already_seeded(
         self,
-        test_db: AsyncSession,
+        db_session: AsyncSession,
+        seed_data_session_maker: None,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Seeding an already-populated database should keep existing content."""
-        test_db.add(Category(difficulty="easy", default_locale="en", source="system", available_locales=["en"]))
-        await test_db.commit()
+        _ = seed_data_session_maker
+        db_session.add(Category(difficulty="easy", default_locale="en", source="system", available_locales=["en"]))
+        await db_session.commit()
         caplog.set_level(logging.INFO, logger="scripts.seed_data")
 
         await seed_data.seed_database()
 
         assert STARTING_SEED_LOG in caplog.text
         assert POPULATED_PROMPT_LIBRARY_LOG in caplog.text
-        categories_result = await test_db.execute(select(Category))
+        categories_result = await db_session.execute(select(Category))
         assert len(categories_result.scalars().all()) > 1
 
     async def test_clear_database_logs_when_it_deletes_categories(
         self,
-        test_db: AsyncSession,
+        db_session: AsyncSession,
+        seed_data_session_maker: None,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Clearing the database removes categories and users and logs the reset."""
-        test_db.add(Category(difficulty="easy", default_locale="en", source="system", available_locales=["en"]))
-        test_db.add(
+        _ = seed_data_session_maker
+        db_session.add(Category(difficulty="easy", default_locale="en", source="system", available_locales=["en"]))
+        db_session.add(
             User(
                 id="seed-clear-user",
                 username="seed_clear_user",
@@ -87,14 +95,14 @@ class TestSeedDataScript:
                 password_hash="hash",  # noqa: S106
             )
         )
-        await test_db.commit()
+        await db_session.commit()
         caplog.set_level(logging.INFO, logger="scripts.seed_data")
 
         await seed_data.clear_database()
 
         assert CLEARING_DATABASE_LOG in caplog.text
         assert DATABASE_CLEARED_LOG in caplog.text
-        categories = await test_db.execute(select(Category))
-        users = await test_db.execute(select(User))
+        categories = await db_session.execute(select(Category))
+        users = await db_session.execute(select(User))
         assert categories.scalars().all() == []
         assert users.scalars().all() == []

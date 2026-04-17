@@ -1,10 +1,13 @@
 """Tests for random room join functionality."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 from app.core.types import GamePhase
 from app.rooms.manager import GameRoom, PlayerInfo, room_manager
+from tests.constants import MEDIUM, START_GAME
 from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
@@ -39,7 +42,7 @@ class TestRandomRoomJoin:
             assert data["max_players"] == 10
 
     def test_private_room_not_returned(self, test_client: TestClient) -> None:
-        """Test that private rooms excluded by random join, even if they have space and are waiting for players."""
+        """Test that private rooms are excluded by random join."""
         room_id = "PRIVATE_ROOM"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]):
@@ -51,10 +54,8 @@ class TestRandomRoomJoin:
             assert response.status_code == 404
 
     def test_full_room_not_returned(self, test_client: TestClient) -> None:
-        """Test that full rooms (10 players) are not returned by random join."""
+        """Test that full rooms are not returned by random join."""
         room_id = "FULL_ROOM"
-        # Build the room without get_or_create_room (which needs an event loop
-        # to create_task the idle check).
         room = GameRoom(room_id)
         for i in range(10):
             ws = AsyncMock()
@@ -78,8 +79,8 @@ class TestRandomRoomJoin:
             room_id,
             [JoinedPlayer("player1", "Player 1"), JoinedPlayer("player2", "Player 2")],
         ) as (ws1, ws2):
-            send_json(ws1, {"type": "start_game", "difficulty": "medium", "rounds": 3, "drawingTimeLimit": 60})
-            assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["start_game", "start_game"]
+            send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 3, "drawingTimeLimit": 60})
+            assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GAME, START_GAME]
 
             room = room_manager.get_room(room_id)
             assert room is not None

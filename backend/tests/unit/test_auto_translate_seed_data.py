@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from scripts.auto_translate_seed_data import apply_auto_translations
+from scripts.seed_data import _build_category_translations, _build_prompt_translations
 from translation import TranslationService
 
 LOCALE_EN = "en"
@@ -166,3 +167,35 @@ class TestAutoTranslateSeedData:
         # Aliases should be present
         es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == LOCALE_ES)
         assert es_translation.get("aliases") is not None
+
+
+class TestSeedDataTransforms:
+    """Pure seed-data transforms stay unit-testable without a database."""
+
+    def test_build_prompt_translations_normalizes_locale_and_aliases(self) -> None:
+        """Prompt translations normalize locale keys and default alias lists."""
+        payload = _build_prompt_translations(
+            [
+                {"locale": "EN", "label": "Cat", "aliases": ["Kitty", "Feline"]},
+                {"locale": "nl", "label": "Kat"},
+            ]
+        )
+
+        assert payload == {
+            "en": {"label": "Cat", "aliases": ["Kitty", "Feline"]},
+            "nl": {"label": "Kat", "aliases": []},
+        }
+
+    def test_build_category_translations_normalizes_locale_keys(self) -> None:
+        """Category translations normalize locale keys for seed payloads."""
+        payload = _build_category_translations(
+            [
+                {"locale": "EN", "name": "Animals"},
+                {"locale": "fr", "name": "Animaux"},
+            ]
+        )
+
+        assert payload == {
+            "en": {"name": "Animals"},
+            "fr": {"name": "Animaux"},
+        }

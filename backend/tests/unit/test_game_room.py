@@ -10,35 +10,38 @@ from fastapi import HTTPException
 from app.categories import service as category_service
 from app.core.config import settings
 from app.core.types import GamePhase
+from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.protocol import WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from tests.conftest import as_websocket
+from tests.constants import (
+    HOST_ONE,
+    KICK_VOTE_STARTED,
+    MEDIUM,
+    PLAYER_FOUR_ID,
+    PLAYER_FOUR_NAME,
+    PLAYER_ONE_ID,
+    PLAYER_ONE_NAME,
+    PLAYER_THREE_ID,
+    PLAYER_THREE_NAME,
+    PLAYER_TWO_ID,
+    PLAYER_TWO_NAME,
+    READY_STATUS,
+    ROOM_NO_CATEGORIES,
+    ROOM_STATE,
+    TEST_ROOM_ID,
+)
+from tests.support import as_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     import pytest
 
-    from tests.conftest import TestWebSocket
+    from tests.support import TestWebSocket
 
-PLAYER_ONE_ID = "player-1"
-PLAYER_TWO_ID = "player-2"
-PLAYER_THREE_ID = "player-3"
-PLAYER_FOUR_ID = "player-4"
-PLAYER_ONE_NAME = "Alice"
-PLAYER_TWO_NAME = "Bob"
-PLAYER_THREE_NAME = "Charlie"
-PLAYER_FOUR_NAME = "Dana"
-HOST_CHANGED = "host_changed"
-KICK_VOTE_STARTED = "kick_vote_started"
-ROOM_STATE = "room_state"
-READY_STATUS = "ready_status"
 EXPIRES_AT = "expiresAt"
-MEDIUM = "medium"
-TEST_ROOM_ID = "TEST01"
-ROOM_NO_CATEGORIES = "ROOM-NO-CATEGORIES"
-HOST_ONE = "host-1"
+HOST_CHANGED = "host_changed"
 
 
 def _scheduler_tasks(scheduler: object) -> dict[str, object | None]:
@@ -308,14 +311,14 @@ class TestGameRoom:
         await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
         await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
 
-        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_ONE_ID)
+        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
 
         assert result.success
-        assert result.vote_id == PLAYER_ONE_ID
+        assert result.vote_id == PLAYER_THREE_ID
         messages = [json.loads(message) for message in ws1.sent_texts]
         assert messages[-1]["type"] == KICK_VOTE_STARTED
-        assert messages[-1]["targetPlayerId"] == PLAYER_ONE_ID
-        assert messages[-1]["targetPlayerName"] == PLAYER_ONE_NAME
+        assert messages[-1]["targetPlayerId"] == PLAYER_THREE_ID
+        assert messages[-1]["targetPlayerName"] == PLAYER_THREE_NAME
         assert messages[-1]["initiatorId"] == PLAYER_TWO_ID
         assert messages[-1]["currentVotes"] == 1
         assert messages[-1]["requiredVotes"] == 2
@@ -334,15 +337,49 @@ class TestGameRoom:
         await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
         await game_room.add_player(PLAYER_FOUR_ID, PLAYER_FOUR_NAME, as_websocket(ws4))
 
-        start_result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_ONE_ID)
+        start_result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_FOUR_ID)
         assert start_result.success
 
-        vote_result = await game_room.cast_kick_vote(PLAYER_THREE_ID, PLAYER_ONE_ID)
+        vote_result = await game_room.cast_kick_vote(PLAYER_THREE_ID, PLAYER_FOUR_ID)
 
         assert vote_result.success
         assert not vote_result.vote_passed
         assert vote_result.current_votes == 2
         assert vote_result.required_votes == 3
+
+    async def test_players_cannot_vote_kick_the_host(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+    ) -> None:
+        """Non-host players must leave rather than vote-kicking the host."""
+        ws1, ws2 = make_ws(), make_ws()
+
+        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+
+        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_ONE_ID)
+
+        assert not result.success
+        assert result.error == HOST_CANNOT_BE_VOTE_KICKED_ERROR
+
+    async def test_players_cannot_vote_kick_in_private_rooms(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+    ) -> None:
+        """Vote-kick stays reserved for public stranger rooms."""
+        ws1, ws2, ws3 = make_ws(), make_ws(), make_ws()
+
+        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
+        game_room.metadata.is_private = True
+
+        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
+
+        assert not result.success
+        assert result.error == VOTE_KICK_PUBLIC_ONLY_ERROR
 
     async def test_room_state_round_trips_through_persistence_model(self, game_room: GameRoom) -> None:
         """Test persisted room state preserves structured metadata."""

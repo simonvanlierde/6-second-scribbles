@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
@@ -10,6 +10,17 @@ from fastapi.testclient import TestClient
 import app.main as main_module
 from app.core.types import GamePhase
 from app.rooms.manager import room_manager
+from tests.constants import (
+    MEDIUM,
+    PLAYER_LEFT,
+    PLAYER_ONE_ID,
+    PLAYER_ONE_NAME,
+    PLAYER_TWO_ID,
+    PLAYER_TWO_NAME,
+    READY_STATUS,
+    ROOM_STATE,
+    TEST_ROOM_ID,
+)
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
@@ -26,8 +37,6 @@ LOCALE_AVAILABILITY_SCHEMA = "LocaleAvailabilityItem"
 VERSION_KEY = "version"
 DATABASE_KEY = "database"
 CACHE_KEY = "cache"
-ROOM_STATE = "room_state"
-MEDIUM = "medium"
 
 
 def test_root_endpoint(test_client: TestClient) -> None:
@@ -36,7 +45,7 @@ def test_root_endpoint(test_client: TestClient) -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] in OK_STATUSES  # fakes may not support SELECT 1
+    assert payload["status"] in OK_STATUSES
     assert payload["service"] == SERVICE_NAME
     assert VERSION_KEY in payload
     assert DATABASE_KEY in payload
@@ -60,11 +69,11 @@ async def test_room_status_for_existing_and_missing_room(async_client: AsyncClie
     assert missing_response.status_code == 200
     assert missing_response.json() == {"exists": False}
 
-    room = room_manager.get_or_create_room("TEST01")
-    await room.add_player("player-1", "Alice", AsyncMock())
+    room = room_manager.get_or_create_room(TEST_ROOM_ID)
+    await room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, AsyncMock())
     room.metadata.game_phase = GamePhase.DRAWING
 
-    existing_response = await async_client.get("/api/rooms/TEST01/status")
+    existing_response = await async_client.get(f"/api/rooms/{TEST_ROOM_ID}/status")
     assert existing_response.status_code == 200
     assert existing_response.json() == {"exists": True, "players": 1, "game_phase": GamePhase.DRAWING.value}
 
@@ -74,10 +83,10 @@ def test_join_broadcast_lists_all_players(test_client: TestClient) -> None:
     with joined_players(
         test_client,
         "JOIN01",
-        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": "request_game_state", "playerId": "player-1"})
-        send_json(ws2, {"type": "request_game_state", "playerId": "player-2"})
+        send_json(ws1, {"type": "request_game_state", "playerId": PLAYER_ONE_ID})
+        send_json(ws2, {"type": "request_game_state", "playerId": PLAYER_TWO_ID})
 
         assert receive_json(ws1)["players"] == receive_json(ws2)["players"]
 
@@ -87,11 +96,11 @@ def test_player_disconnect_broadcasts_player_left(test_client: TestClient) -> No
     with joined_players(
         test_client,
         "DISC01",
-        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (ws1, ws2):
         ws1.close()
 
-        assert receive_json(ws2) == {"type": "player_left", "playerId": "player-1"}
+        assert receive_json(ws2) == {"type": PLAYER_LEFT, "playerId": PLAYER_ONE_ID}
 
 
 def test_request_game_state_returns_current_room_state(test_client: TestClient) -> None:
@@ -100,12 +109,12 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
         initial_state = receive_json(websocket)
         assert initial_state["type"] == ROOM_STATE
 
-        join_player(websocket, "player-1", "Alice")
-        send_json(websocket, {"type": "request_game_state", "playerId": "player-1"})
+        join_player(websocket, PLAYER_ONE_ID, PLAYER_ONE_NAME)
+        send_json(websocket, {"type": "request_game_state", "playerId": PLAYER_ONE_ID})
 
         room_state = receive_json(websocket)
         assert room_state["type"] == ROOM_STATE
-        assert room_state["players"] == [{"id": "player-1", "name": "Alice", "categories": []}]
+        assert room_state["players"] == [{"id": PLAYER_ONE_ID, "name": PLAYER_ONE_NAME, "categories": []}]
         assert room_state["difficulty"] == MEDIUM
         assert room_state["maxRounds"] == 5
         assert room_state["padVisibility"]
@@ -116,11 +125,11 @@ def test_ready_and_restart_messages_are_broadcast(test_client: TestClient) -> No
     """Readiness and restart events are echoed back through the room."""
     with test_client.websocket_connect("/ws/CONTROL01") as websocket:
         receive_json(websocket)
-        join_player(websocket, "player-1", "Alice")
+        join_player(websocket, PLAYER_ONE_ID, PLAYER_ONE_NAME)
 
-        send_json(websocket, {"type": "player_ready", "playerId": "player-1"})
+        send_json(websocket, {"type": "player_ready", "playerId": PLAYER_ONE_ID})
         ready_status = receive_json(websocket)
-        assert ready_status == {"type": "ready_status", "readyCount": 1, "totalPlayers": 1}
+        assert ready_status == {"type": READY_STATUS, "readyCount": 1, "totalPlayers": 1}
 
         send_json(websocket, {"type": "restart_game"})
         assert receive_json(websocket) == {"type": "restart_game"}
@@ -131,9 +140,9 @@ def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
     with joined_players(
         test_client,
         "CONTROL02",
-        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
-        send_json(ws2, {"type": "restart_game", "playerId": "player-2"})
+        send_json(ws2, {"type": "restart_game", "playerId": PLAYER_TWO_ID})
 
         assert receive_json(ws2) == {
             "type": "permission_error",
@@ -142,7 +151,7 @@ def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
         }
 
 
-def test_invalid_json_does_not_close_connection(test_client: TestClient, sample_messages: dict) -> None:
+def test_invalid_json_does_not_close_connection(test_client: TestClient, sample_messages: dict[str, object]) -> None:
     """Malformed payloads produce a protocol error without closing the socket."""
     with test_client.websocket_connect("/ws/ERROR01") as websocket:
         receive_json(websocket)
@@ -154,7 +163,7 @@ def test_invalid_json_does_not_close_connection(test_client: TestClient, sample_
             "error": "invalid_payload",
             "message": "Invalid websocket payload.",
         }
-        send_json(websocket, sample_messages["heartbeat"])
+        send_json(websocket, cast("dict[str, object]", sample_messages["heartbeat"]))
         send_json(websocket, {"type": "request_game_state", "playerId": "player-123"})
 
         assert receive_json(websocket)["type"] == ROOM_STATE
@@ -165,9 +174,9 @@ def test_invalid_typed_payload_returns_protocol_error(test_client: TestClient) -
     with joined_players(
         test_client,
         "PROTO01",
-        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
-        send_json(ws2, {"type": "submit_guess", "playerId": "player-2"})
+        send_json(ws2, {"type": "submit_guess", "playerId": PLAYER_TWO_ID})
 
         assert receive_json(ws2) == {
             "type": "protocol_error",
@@ -181,7 +190,7 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client: TestC
     with joined_players(
         test_client,
         "PROTO02",
-        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "drawingTimeLimit": 30})
 
@@ -197,9 +206,9 @@ def test_player_ready_requires_matching_connection_identity(test_client: TestCli
     with joined_players(
         test_client,
         "READY01",
-        [JoinedPlayer("player-1", "Alice"), JoinedPlayer("player-2", "Bob")],
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
-        send_json(ws2, {"type": "player_ready", "playerId": "player-1"})
+        send_json(ws2, {"type": "player_ready", "playerId": PLAYER_ONE_ID})
 
         assert receive_json(ws2) == {
             "type": "player_ready_error",

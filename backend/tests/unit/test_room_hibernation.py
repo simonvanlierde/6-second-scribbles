@@ -7,14 +7,14 @@ import pytest
 
 from app.core.config import settings
 from app.rooms.manager import GameRoom, RoomManager, room_manager
-from tests.conftest import as_websocket
+from tests.support import as_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from httpx import AsyncClient
 
-    from tests.conftest import TestWebSocket
+    from tests.support import TestWebSocket
 
 EMPTY_TEST_ROOM = "EMPTY_TEST"
 HIBERNATE_TEST_ROOM = "HIBERNATE_TEST"
