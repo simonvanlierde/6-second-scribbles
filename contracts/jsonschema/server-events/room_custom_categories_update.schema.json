@@ -24,7 +24,5 @@
   },
   "title": "RoomCustomCategoriesUpdateServerEvent",
   "type": "object",
-  "required": [
-    "type"
-  ]
+  "required": ["type"]
 }

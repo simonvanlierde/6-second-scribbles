@@ -26,10 +26,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "title": "PlayerSnapshot",
         "type": "object"
       },
@@ -57,22 +54,12 @@
     },
     "gamePhase": {
       "description": "Valid room lifecycle phases for game flow state.",
-      "enum": [
-        "lobby",
-        "drawing",
-        "guessing",
-        "round_results",
-        "final_results"
-      ],
+      "enum": ["lobby", "drawing", "guessing", "round_results", "final_results"],
       "title": "GamePhase",
       "type": "string"
     },
     "difficulty": {
-      "enum": [
-        "easy",
-        "medium",
-        "hard"
-      ],
+      "enum": ["easy", "medium", "hard"],
       "type": "string"
     },
     "maxRounds": {

@@ -11,10 +11,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "message",
-    "type"
-  ],
+  "required": ["message", "type"],
   "title": "HostRestoredEvent",
   "type": "object"
 }

@@ -11,10 +11,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "playerId",
-    "type"
-  ],
+  "required": ["playerId", "type"],
   "title": "PlayerLeftEvent",
   "type": "object"
 }

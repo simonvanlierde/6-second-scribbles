@@ -18,11 +18,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "finalScores",
-    "type",
-    "winner"
-  ],
+  "required": ["finalScores", "type", "winner"],
   "title": "GameCompleteServerEvent",
   "type": "object"
 }

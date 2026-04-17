@@ -78,10 +78,7 @@
             "title": "Alternatives"
           }
         },
-        "required": [
-          "category",
-          "items"
-        ],
+        "required": ["category", "items"],
         "title": "PlayerCardPayload",
         "type": "object"
       },
@@ -93,11 +90,7 @@
       "type": "integer"
     }
   },
-  "required": [
-    "cards",
-    "roundStartTime",
-    "type"
-  ],
+  "required": ["cards", "roundStartTime", "type"],
   "title": "StartRoundServerEvent",
   "type": "object"
 }

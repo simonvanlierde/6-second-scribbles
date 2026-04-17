@@ -19,12 +19,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "playerId",
-    "playerName",
-    "reason",
-    "type"
-  ],
+  "required": ["playerId", "playerName", "reason", "type"],
   "title": "PlayerKickedEvent",
   "type": "object"
 }

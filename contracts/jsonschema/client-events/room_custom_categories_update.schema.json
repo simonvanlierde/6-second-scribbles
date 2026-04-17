@@ -21,9 +21,7 @@
       "title": "Categoryids"
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "RoomCustomCategoriesUpdateEvent",
   "type": "object"
 }

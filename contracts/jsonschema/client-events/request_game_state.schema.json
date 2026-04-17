@@ -18,9 +18,7 @@
       "title": "Playerid"
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "RequestGameStateEvent",
   "type": "object"
 }

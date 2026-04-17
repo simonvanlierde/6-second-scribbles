@@ -8,11 +8,7 @@
     "difficulty": {
       "anyOf": [
         {
-          "enum": [
-            "easy",
-            "medium",
-            "hard"
-          ],
+          "enum": ["easy", "medium", "hard"],
           "type": "string"
         },
         {
@@ -58,9 +54,7 @@
       "default": null
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "StartGameEvent",
   "type": "object"
 }

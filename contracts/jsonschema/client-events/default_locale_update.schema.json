@@ -10,9 +10,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "DefaultLocaleUpdateEvent",
   "type": "object"
 }

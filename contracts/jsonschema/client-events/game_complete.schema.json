@@ -6,9 +6,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "GameCompleteEvent",
   "type": "object"
 }

@@ -1,4 +1,4 @@
-"""Generate shared websocket contract artifacts from backend protocol models.
+"""Generate backend-owned contract artifacts.
 
 Writes JSON Schema files under contracts/jsonschema/:
   - server-event.schema.json  (server -> client messages we parse)
@@ -8,14 +8,11 @@ Writes JSON Schema files under contracts/jsonschema/:
   - server-events/index.json
   - client-events/index.json
 
-The schemas are post-processed to:
-  1. Add const-valued fields (like `type`) to required[] - Pydantic omits them
-     when they have a default value, but they are always present on the wire.
-  2. Inline all $ref/$defs so that json-schema-to-zod can process the schema
-     without needing a custom $ref resolver.
+Also writes the canonical OpenAPI document to contracts/openapi.json and the
+shared websocket event catalog to contracts/room-events.json.
 
-Run from the repo root:
-    uv run --project backend python backend/scripts/generate_protocol_contracts.py
+Run from the backend directory:
+    uv run python -m scripts.generate_contracts
 """
 
 from __future__ import annotations
@@ -23,19 +20,23 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import sys
+import os
 from pathlib import Path
 from shutil import rmtree
-from typing import Any, Protocol, cast
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from app.core.logging import configure_logging
-from app.rooms.protocol import CLIENT_EVENT_ADAPTER, SERVER_EVENT_ADAPTER
+from app.main import application
+from app.rooms.protocol import CLIENT_EVENT_ADAPTER, CONTRACT_EVENT_CATALOG, SERVER_EVENT_ADAPTER
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CONTRACTS_ROOT = Path(os.environ.get("CONTRACTS_ROOT", REPO_ROOT / "contracts"))
 CONST_KEY = "const"
 REF_KEY = "$ref"
 ONE_OF_KEY = "oneOf"
@@ -184,20 +185,43 @@ def write_index(index: dict[str, str], path: Path) -> None:
     logger.info("wrote %s", path)
 
 
+def write_event_catalog(path: Path) -> None:
+    """Write the generated websocket event catalog for frontend metadata."""
+    path.write_text(f"{json.dumps(CONTRACT_EVENT_CATALOG, indent=2)}\n")
+    logger.info("wrote %s", path)
+
+
+def write_openapi(path: Path) -> None:
+    """Write the canonical OpenAPI document."""
+    path.write_text(f"{json.dumps(application.openapi(), indent=2, sort_keys=True)}\n")
+    logger.info("wrote %s", path)
+
+
+def assert_catalog_matches_index(index: dict[str, str], catalog: Mapping[str, object], direction: str) -> None:
+    """Ensure backend-owned metadata covers exactly the known event types."""
+    if sorted(index) != sorted(catalog):
+        msg = f"{direction} event catalog does not match schema types."
+        raise ValueError(msg)
+
+
 def main() -> None:
-    """Export shared client/server websocket schemas for contract consumers."""
-    out_dir = Path(__file__).parent.parent.parent / "contracts" / "jsonschema"
+    """Export shared client/server websocket schemas and OpenAPI docs."""
+    out_dir = CONTRACTS_ROOT / "jsonschema"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     server_schema = generate_schema(cast("SchemaAdapter", SERVER_EVENT_ADAPTER), mode="serialization")
     client_schema = generate_schema(cast("SchemaAdapter", CLIENT_EVENT_ADAPTER), mode="validation")
     server_event_schemas, server_index = split_union_schema(server_schema)
     client_event_schemas, client_index = split_union_schema(client_schema)
+    assert_catalog_matches_index(client_index, CONTRACT_EVENT_CATALOG["client"], "client")
+    assert_catalog_matches_index(server_index, CONTRACT_EVENT_CATALOG["server"], "server")
 
     write_schema(server_schema, out_dir / "server-event.schema.json")
     write_schema(client_schema, out_dir / "client-event.schema.json")
     write_event_schemas(server_event_schemas, server_index, out_dir / "server-events")
     write_event_schemas(client_event_schemas, client_index, out_dir / "client-events")
+    write_event_catalog(CONTRACTS_ROOT / "room-events.json")
+    write_openapi(CONTRACTS_ROOT / "openapi.json")
 
 
 if __name__ == "__main__":

@@ -62,10 +62,7 @@
                 "type": "array"
               }
             },
-            "required": [
-              "id",
-              "name"
-            ],
+            "required": ["id", "name"],
             "title": "PlayerSnapshot",
             "type": "object"
           },
@@ -93,22 +90,12 @@
         },
         "gamePhase": {
           "description": "Valid room lifecycle phases for game flow state.",
-          "enum": [
-            "lobby",
-            "drawing",
-            "guessing",
-            "round_results",
-            "final_results"
-          ],
+          "enum": ["lobby", "drawing", "guessing", "round_results", "final_results"],
           "title": "GamePhase",
           "type": "string"
         },
         "difficulty": {
-          "enum": [
-            "easy",
-            "medium",
-            "hard"
-          ],
+          "enum": ["easy", "medium", "hard"],
           "type": "string"
         },
         "maxRounds": {
@@ -240,10 +227,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "name"
-            ],
+            "required": ["id", "name"],
             "title": "PlayerListItem",
             "type": "object"
           },
@@ -255,13 +239,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "isHost",
-        "name",
-        "playerId",
-        "players",
-        "type"
-      ],
+      "required": ["isHost", "name", "playerId", "players", "type"],
       "title": "PlayerJoinedEvent",
       "type": "object"
     },
@@ -278,10 +256,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "message",
-        "type"
-      ],
+      "required": ["message", "type"],
       "title": "HostRestoredEvent",
       "type": "object"
     },
@@ -310,10 +285,7 @@
           "title": "Message"
         }
       },
-      "required": [
-        "error",
-        "type"
-      ],
+      "required": ["error", "type"],
       "title": "ProtocolErrorEvent",
       "type": "object"
     },
@@ -342,10 +314,7 @@
           "title": "Message"
         }
       },
-      "required": [
-        "error",
-        "type"
-      ],
+      "required": ["error", "type"],
       "title": "PermissionErrorEvent",
       "type": "object"
     },
@@ -374,10 +343,7 @@
           "title": "Message"
         }
       },
-      "required": [
-        "error",
-        "type"
-      ],
+      "required": ["error", "type"],
       "title": "PlayerReadyErrorEvent",
       "type": "object"
     },
@@ -406,10 +372,7 @@
           "title": "Message"
         }
       },
-      "required": [
-        "error",
-        "type"
-      ],
+      "required": ["error", "type"],
       "title": "SubmitGuessErrorEvent",
       "type": "object"
     },
@@ -438,10 +401,7 @@
           "title": "Message"
         }
       },
-      "required": [
-        "error",
-        "type"
-      ],
+      "required": ["error", "type"],
       "title": "JoinErrorEvent",
       "type": "object"
     },
@@ -470,10 +430,7 @@
           "title": "Message"
         }
       },
-      "required": [
-        "error",
-        "type"
-      ],
+      "required": ["error", "type"],
       "title": "KickErrorEvent",
       "type": "object"
     },
@@ -557,10 +514,7 @@
                 "title": "Alternatives"
               }
             },
-            "required": [
-              "category",
-              "items"
-            ],
+            "required": ["category", "items"],
             "title": "PlayerCardPayload",
             "type": "object"
           },
@@ -572,11 +526,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "cards",
-        "roundStartTime",
-        "type"
-      ],
+      "required": ["cards", "roundStartTime", "type"],
       "title": "StartRoundServerEvent",
       "type": "object"
     },
@@ -597,11 +547,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "readyCount",
-        "totalPlayers",
-        "type"
-      ],
+      "required": ["readyCount", "totalPlayers", "type"],
       "title": "ReadyStatusEvent",
       "type": "object"
     },
@@ -618,10 +564,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "newHostId",
-        "type"
-      ],
+      "required": ["newHostId", "type"],
       "title": "HostChangedEvent",
       "type": "object"
     },
@@ -638,10 +581,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "locale",
-        "type"
-      ],
+      "required": ["locale", "type"],
       "title": "DefaultLocaleUpdateServerEvent",
       "type": "object"
     },
@@ -671,9 +611,7 @@
       },
       "title": "RoomCustomCategoriesUpdateServerEvent",
       "type": "object",
-      "required": [
-        "type"
-      ]
+      "required": ["type"]
     },
     {
       "additionalProperties": false,
@@ -688,10 +626,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "playerId",
-        "type"
-      ],
+      "required": ["playerId", "type"],
       "title": "PlayerLeftEvent",
       "type": "object"
     },
@@ -761,12 +696,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "currentVotes",
-        "requiredVotes",
-        "targetPlayerId",
-        "type"
-      ],
+      "required": ["currentVotes", "requiredVotes", "targetPlayerId", "type"],
       "title": "KickVoteUpdatedEvent",
       "type": "object"
     },
@@ -783,10 +713,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "targetPlayerId",
-        "type"
-      ],
+      "required": ["targetPlayerId", "type"],
       "title": "KickVoteExpiredEvent",
       "type": "object"
     },
@@ -811,12 +738,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "playerId",
-        "playerName",
-        "reason",
-        "type"
-      ],
+      "required": ["playerId", "playerName", "reason", "type"],
       "title": "PlayerKickedEvent",
       "type": "object"
     },
@@ -853,13 +775,7 @@
                 "type": "integer"
               }
             },
-            "required": [
-              "correctGuesses",
-              "playerId",
-              "pointsEarned",
-              "targetPlayerId",
-              "totalItems"
-            ],
+            "required": ["correctGuesses", "playerId", "pointsEarned", "targetPlayerId", "totalItems"],
             "title": "RoundResultItem",
             "type": "object"
           },
@@ -874,11 +790,7 @@
           "type": "object"
         }
       },
-      "required": [
-        "results",
-        "scores",
-        "type"
-      ],
+      "required": ["results", "scores", "type"],
       "title": "RoundCompleteServerEvent",
       "type": "object"
     },
@@ -902,11 +814,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "finalScores",
-        "type",
-        "winner"
-      ],
+      "required": ["finalScores", "type", "winner"],
       "title": "GameCompleteServerEvent",
       "type": "object"
     },
@@ -920,11 +828,7 @@
         "difficulty": {
           "anyOf": [
             {
-              "enum": [
-                "easy",
-                "medium",
-                "hard"
-              ],
+              "enum": ["easy", "medium", "hard"],
               "type": "string"
             },
             {
@@ -970,9 +874,7 @@
           "default": null
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "StartGameEvent",
       "type": "object"
     },
@@ -1003,9 +905,7 @@
           "type": "object"
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "StartGuessingEvent",
       "type": "object"
     },
@@ -1017,9 +917,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "RestartGameEvent",
       "type": "object"
     },
@@ -1033,11 +931,7 @@
         "difficulty": {
           "anyOf": [
             {
-              "enum": [
-                "easy",
-                "medium",
-                "hard"
-              ],
+              "enum": ["easy", "medium", "hard"],
               "type": "string"
             },
             {
@@ -1083,9 +977,7 @@
           "default": null
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "SettingsUpdateEvent",
       "type": "object"
     },
@@ -1110,9 +1002,7 @@
           "title": "Playerid"
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "DrawStrokeEvent",
       "type": "object"
     },
@@ -1137,9 +1027,7 @@
           "title": "Playerid"
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "DrawStrokePartialEvent",
       "type": "object"
     },
@@ -1151,9 +1039,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "DrawpadClearEvent",
       "type": "object"
     },
@@ -1170,9 +1056,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "title": "PadVisibilityEvent",
       "type": "object"
     }

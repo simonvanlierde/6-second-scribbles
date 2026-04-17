@@ -19,9 +19,7 @@
       "title": "Playerid"
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "DrawStrokeEvent",
   "type": "object"
 }

@@ -1,22 +1,26 @@
 #!/usr/bin/env node
-// Converts the pre-processed JSON Schemas into a Zod TypeScript file.
-// Run via: npm run contracts:types  (contract export runs first)
-//
-// Note: Zod 4's `z.fromJSONSchema()` is useful for runtime validation, but its
-// current type signature returns a generic `ZodType`, so it does not preserve
-// the discriminated-union TypeScript inference we want here.
+// Generate shared frontend contract artifacts.
 
-import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { jsonSchemaToZod } from "json-schema-to-zod";
 
 const dir = dirname(fileURLToPath(import.meta.url));
-const generated = join(dir, "../src/generated");
-const contracts = join(dir, "../../contracts/jsonschema");
-const eventCatalogPath = join(dir, "../../contracts/room-events.json");
+const contractsRoot = resolve(dir, process.env.CONTRACTS_DIR ?? "../../contracts");
+const generated = resolve(dir, process.env.FRONTEND_GENERATED_DIR ?? "../src/generated");
+const contracts = join(contractsRoot, "jsonschema");
+const eventCatalogPath = join(contractsRoot, "room-events.json");
+const openApiPath = join(contractsRoot, "openapi.json");
 const read = (filename) => JSON.parse(readFileSync(join(contracts, filename), "utf-8"));
 const eventCatalog = JSON.parse(readFileSync(eventCatalogPath, "utf-8"));
+const openApi = JSON.parse(readFileSync(openApiPath, "utf-8"));
+const componentSchemas = openApi?.components?.schemas;
+
+if (!componentSchemas || typeof componentSchemas !== "object") {
+  throw new Error("OpenAPI document is missing components.schemas");
+}
+
 const getDiscriminatorValues = (schema) => {
   const mapping = schema?.discriminator?.mapping;
   if (!mapping || typeof mapping !== "object") return [];
@@ -37,13 +41,35 @@ const summaryEntries = (entries) =>
       .map(([eventType, config]) => [eventType, config.summary])
       .sort(([left], [right]) => left.localeCompare(right)),
   );
+const refPrefix = "#/components/schemas/";
+
+function inlineRefs(node) {
+  if (Array.isArray(node)) {
+    return node.map((item) => inlineRefs(item));
+  }
+
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+
+  if (typeof node.$ref === "string") {
+    const schemaName = node.$ref.replace(refPrefix, "");
+    const target = componentSchemas[schemaName];
+    if (!target) {
+      throw new Error(`Unknown schema ref: ${node.$ref}`);
+    }
+    return inlineRefs(structuredClone(target));
+  }
+
+  return Object.fromEntries(Object.entries(node).map(([key, value]) => [key, inlineRefs(value)]));
+}
 
 const header = `\
 // ⚠️  AUTO-GENERATED — do not edit.
-// Contract:        contracts/room-websocket.asyncapi.yaml
+// Contract:        backend/app/rooms/protocol.py
 // Generated from:  backend/app/rooms/protocol.py
 // Source schemas:  contracts/jsonschema/
-// Regenerate:      npm run contracts:types
+// Regenerate:      just generate-contracts
 `;
 
 const schemaSpecs = [
@@ -88,6 +114,30 @@ const output = [
   `export type ClientEventGroup<TGroup extends ClientEventGroupName> = ClientEventOf<(typeof clientEventGroups)[TGroup][number]>;`,
 ].join("\n");
 
-writeFileSync(join(generated, "protocol.ts"), output);
+mkdirSync(generated, { recursive: true });
+const protocolPath = join(generated, "protocol.ts");
+writeFileSync(protocolPath, output);
 
-console.log("✓ Generated frontend/src/generated/protocol.ts");
+const schemaNames = Object.keys(componentSchemas).sort();
+const apiBlocks = schemaNames.map((schemaName) => {
+  const expression = jsonSchemaToZod(inlineRefs(structuredClone(componentSchemas[schemaName])), { module: "none" });
+  return `export const ${schemaName}Schema = ${expression};\nexport type ${schemaName} = z.infer<typeof ${schemaName}Schema>;`;
+});
+const apiOutput = [
+  `// ⚠️  AUTO-GENERATED — do not edit.`,
+  `// Contract:        contracts/openapi.json`,
+  `// Generated from:  backend/app/main.py`,
+  `// Source schemas:  contracts/openapi.json#/components/schemas`,
+  `// Regenerate:      just generate-contracts`,
+  "",
+  'import { z } from "zod";',
+  "",
+  ...apiBlocks,
+  "",
+  `export const apiSchemaNames = ${JSON.stringify(schemaNames)} as const;`,
+].join("\n\n");
+const apiPath = join(generated, "api.ts");
+writeFileSync(apiPath, apiOutput);
+
+console.log(`✓ Generated ${protocolPath}`);
+console.log(`✓ Generated ${apiPath}`);

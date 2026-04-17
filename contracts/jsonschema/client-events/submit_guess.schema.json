@@ -21,11 +21,7 @@
       "type": "array"
     }
   },
-  "required": [
-    "playerId",
-    "targetPlayerId",
-    "type"
-  ],
+  "required": ["playerId", "targetPlayerId", "type"],
   "title": "SubmitGuessEvent",
   "type": "object"
 }

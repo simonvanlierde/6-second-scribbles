@@ -10,10 +10,7 @@
       "type": "boolean"
     }
   },
-  "required": [
-    "isPrivate",
-    "type"
-  ],
+  "required": ["isPrivate", "type"],
   "title": "PrivacyChangedEvent",
   "type": "object"
 }

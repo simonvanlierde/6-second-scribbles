@@ -25,9 +25,7 @@
       "type": "object"
     }
   },
-  "required": [
-    "type"
-  ],
+  "required": ["type"],
   "title": "StartGuessingEvent",
   "type": "object"
 }

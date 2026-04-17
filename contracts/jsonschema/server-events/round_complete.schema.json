@@ -31,13 +31,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "correctGuesses",
-          "playerId",
-          "pointsEarned",
-          "targetPlayerId",
-          "totalItems"
-        ],
+        "required": ["correctGuesses", "playerId", "pointsEarned", "targetPlayerId", "totalItems"],
         "title": "RoundResultItem",
         "type": "object"
       },
@@ -52,11 +46,7 @@
       "type": "object"
     }
   },
-  "required": [
-    "results",
-    "scores",
-    "type"
-  ],
+  "required": ["results", "scores", "type"],
   "title": "RoundCompleteServerEvent",
   "type": "object"
 }

@@ -15,11 +15,7 @@
       "type": "integer"
     }
   },
-  "required": [
-    "readyCount",
-    "totalPlayers",
-    "type"
-  ],
+  "required": ["readyCount", "totalPlayers", "type"],
   "title": "ReadyStatusEvent",
   "type": "object"
 }

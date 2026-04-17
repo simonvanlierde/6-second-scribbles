@@ -19,12 +19,7 @@
       "type": "integer"
     }
   },
-  "required": [
-    "currentVotes",
-    "requiredVotes",
-    "targetPlayerId",
-    "type"
-  ],
+  "required": ["currentVotes", "requiredVotes", "targetPlayerId", "type"],
   "title": "KickVoteUpdatedEvent",
   "type": "object"
 }

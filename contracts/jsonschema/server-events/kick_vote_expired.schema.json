@@ -11,10 +11,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "targetPlayerId",
-    "type"
-  ],
+  "required": ["targetPlayerId", "type"],
   "title": "KickVoteExpiredEvent",
   "type": "object"
 }

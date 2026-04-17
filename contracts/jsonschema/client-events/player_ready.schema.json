@@ -10,10 +10,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "playerId",
-    "type"
-  ],
+  "required": ["playerId", "type"],
   "title": "PlayerReadyEvent",
   "type": "object"
 }

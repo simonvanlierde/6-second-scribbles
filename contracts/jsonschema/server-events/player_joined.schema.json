@@ -27,10 +27,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "title": "PlayerListItem",
         "type": "object"
       },
@@ -42,13 +39,7 @@
       "type": "boolean"
     }
   },
-  "required": [
-    "isHost",
-    "name",
-    "playerId",
-    "players",
-    "type"
-  ],
+  "required": ["isHost", "name", "playerId", "players", "type"],
   "title": "PlayerJoinedEvent",
   "type": "object"
 }

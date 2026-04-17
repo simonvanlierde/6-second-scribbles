@@ -11,10 +11,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "newHostId",
-    "type"
-  ],
+  "required": ["newHostId", "type"],
   "title": "HostChangedEvent",
   "type": "object"
 }

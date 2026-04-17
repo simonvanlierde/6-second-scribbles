@@ -11,10 +11,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "locale",
-    "type"
-  ],
+  "required": ["locale", "type"],
   "title": "DefaultLocaleUpdateServerEvent",
   "type": "object"
 }

@@ -1,38 +1,40 @@
 # Contracts
 
-This folder holds the published realtime wire contract.
+This folder contains committed generated contract artifacts.
 
-What matters:
+## Source Of Truth
 
-- `backend/app/rooms/protocol.py`
-  Source of truth for websocket payload shapes.
-- `jsonschema/`
-  Generated machine-readable contract artifacts. This is the important output.
-- `room-events.json`
-  Small human-authored event metadata for grouping and summaries.
-- `client-events.examples.json` and `server-events.examples.json`
-  Representative payload fixtures used for docs and validation.
-- `room-websocket.metadata.json`
-  Small metadata file used to generate the AsyncAPI document.
-- `room-websocket.asyncapi.yaml`
-  Generated websocket API document for humans and tooling.
+- `backend/app/rooms/protocol.py` for the websocket protocol
+- `backend/app/**/schemas.py` for HTTP request and response models exported through OpenAPI
 
-Pipeline:
+## Pipeline
 
-1. Backend models generate JSON Schema into `contracts/jsonschema/`.
-2. Frontend types and Zod validators are generated from those schemas.
-3. AsyncAPI is generated from the schemas, event metadata, and examples.
-4. Validation checks that the generated schemas, examples, and AsyncAPI stay in sync.
+1. Backend exports websocket JSON Schema into `contracts/jsonschema/`
+2. Backend exports HTTP OpenAPI into `contracts/openapi.json`
+3. Frontend generates TypeScript and Zod types into `frontend/src/generated/`
+4. Validation regenerates into a temporary directory and byte-compares the result against tracked files
 
-Use these commands:
+## Ownership
 
-- `npm run contracts:generate`
-  Regenerate JSON Schema and AsyncAPI.
-- `npm run contracts:types`
-  Regenerate JSON Schema, AsyncAPI, and frontend protocol types.
-- `npm run contracts:validate`
-  Regenerate everything needed, then validate schemas, examples, and AsyncAPI refs.
-- `npm run contracts:check`
-  Assert that generated contract files are already up to date.
-- `just contracts`
-  Shortcut for `npm run contracts:types`.
+- Root `just` commands are the canonical orchestration surface
+- `backend/scripts/generate_contracts.py` owns export into `contracts/`
+- `frontend/scripts/generate-contracts.mjs` owns frontend codegen from `contracts/`
+- Generated artifacts stay committed so local development, reviews, and CI all share the same contract snapshot
+
+## Commands
+
+```bash
+just generate-contracts
+just check-contracts
+```
+
+Compatibility aliases:
+
+```bash
+pnpm run contracts:generate
+pnpm run contracts:check
+```
+
+`pnpm run contracts:check` runs the same verifier used by `just check-contracts`.
+
+Generated files in this folder should not be edited by hand.
