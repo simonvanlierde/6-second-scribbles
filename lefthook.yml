@@ -8,7 +8,6 @@ pre-commit:
   commands:
     biome:
       glob:
-        - "*.{js,cjs,mjs,ts,tsx,vue,json,jsonc,md,yml,yaml,toml}"
         - "**/*.{js,cjs,mjs,ts,tsx,vue,json,jsonc,md,yml,yaml,toml}"
       run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
