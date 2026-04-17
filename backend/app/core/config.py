@@ -98,8 +98,10 @@ class Settings(BaseSettings):
     def _prod_safety_checks(self) -> Self:
         # Apply environment-specific cookie security defaults.
         if CURRENT_ENV == ENV.DEV:
-            # Cross-site development: SameSite=none to allow fetch credentials across origins.
-            self.session_cookie_same_site = "none"
+            # Local development often runs over plain HTTP, so avoid browser
+            # warnings by keeping the cookie first-party unless explicitly
+            # overridden in the environment.
+            self.session_cookie_same_site = "lax"
             self.session_cookie_secure = False
             if not self.allowed_origins:
                 self.allowed_origins = ["*"]
