@@ -74,7 +74,7 @@ COPY scripts/seed_data.yaml ./scripts/seed_data.yaml
 COPY translation ./translation
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
-FROM runtime-base AS dev
+FROM uv-base AS dev
 
 COPY --from=dev-deps /opt/.venv /opt/.venv
 COPY . .

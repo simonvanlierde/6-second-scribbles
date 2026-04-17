@@ -41,14 +41,12 @@
 
 [tool.pytest.ini_options]
   addopts = [
-    "--cov-branch",
-    "--cov-report=html",
-    "--cov-report=term-missing",
-    "--cov=.",
     "--strict-markers",
     "--tb=short",
     "-v",
   ]
+  asyncio_default_fixture_loop_scope = "session"
+  asyncio_default_test_loop_scope = "session"
   asyncio_mode = "auto"
   markers = [
     "asyncio: mark a test as requiring asyncio.",
@@ -56,6 +54,15 @@
     "slow: mark a test as slow.",
     "unit: mark a test as a unit test.",
   ]
+
+[tool.coverage.run]
+  branch = true
+  source = ["app", "scripts", "translation"]
+  omit = ["alembic/*"]
+
+[tool.coverage.report]
+  fail_under = 80
+  omit = ["alembic/*"]
 
 [tool.ruff]
   line-length    = 120
