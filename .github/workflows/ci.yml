@@ -40,14 +40,15 @@ jobs:
               - 'contracts/**'
               - 'backend/app/rooms/protocol.py'
               - 'backend/app/*/schemas.py'
-              - 'backend/scripts/generate_protocol_contracts.py'
-              - 'backend/scripts/export_openapi.py'
-              - 'frontend/scripts/generate-types.mjs'
-              - 'frontend/scripts/generate-api-types.mjs'
+              - 'backend/scripts/generate_contracts.py'
+              - 'frontend/scripts/generate-contracts.mjs'
               - 'scripts/check-contracts.mjs'
               - 'package.json'
+              - 'frontend/package.json'
               - 'pnpm-lock.yaml'
               - 'justfile'
+              - 'backend/justfile'
+              - 'frontend/justfile'
 
   root-checks:
     name: Root checks (gitleaks, cspell, biome)
