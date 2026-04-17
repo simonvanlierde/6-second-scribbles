@@ -1,65 +1,80 @@
 # Frontend
 
-Vue 3 frontend for Six Second Scribbles, built with Vite, Pinia, Vue Router, and vue-i18n.
+The frontend is a Vue 3 single-page app for creating rooms, joining games, drawing, guessing, and viewing round results in real time.
 
-## What Lives Here
+## Responsibilities
 
-- Home and room gameplay views
-- Shared drawing, guessing, lobby, and results UI
-- App state in Pinia stores
-- Websocket and API client code generated from tracked contracts
-- Unit tests with Vitest and end-to-end tests with Playwright
+- Lobby and gameplay UI
+- Drawing pad and guessing interactions
+- Real-time room updates over WebSockets
+- Auth and session state in Pinia
+- Client code generated from tracked backend contracts
+- Unit and end-to-end browser tests
 
 ## Main Areas
 
-- `src/views/` for the route-level screens
-- `src/components/` for reusable UI pieces
-- `src/composables/` for connection, drawing, timing, and notification logic
-- `src/stores/` for auth, game, and drawing state
-- `src/shared/` for room-code and game-phase utilities
-- `src/generated/` for contract-derived TypeScript and Zod types
+- `src/views/`: route-level screens
+- `src/components/`: reusable UI building blocks
+- `src/composables/`: connection, canvas, timer, and room lifecycle logic
+- `src/stores/`: auth, game, and drawing state
+- `src/shared/`: shared types and small domain helpers
+- `src/generated/`: generated API and protocol types
 
 ## Routes
 
-- `/` for the home and room entry flow
-- `/rooms/:roomCode` for the active room experience
+- `/`: home and room entry flow
+- `/rooms/:roomCode`: live room experience
 
-The room view swaps between lobby, drawing, guessing, round results, final results, and spectator states based on live game state.
+The room route renders different states for lobby, drawing, guessing, round results, final results, and spectators based on the current server state.
 
-## Local Development
+## Local Setup
 
-From the frontend directory:
+From the `frontend/` directory:
+
+1. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. Optional: create a local env file if you want to point the app at a custom backend:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+3. Start the dev server:
+
+   ```bash
+   pnpm run dev
+   ```
+
+By default the app runs on `http://localhost:3001` in the Docker-backed dev setup used by the repo.
+
+## Common Commands
 
 ```bash
-pnpm install
 pnpm run dev
-pnpm run test:unit
-pnpm run test:e2e
+pnpm run build
 pnpm run lint
 pnpm run type-check
-pnpm run build
+pnpm run test:unit
+pnpm run test:e2e
 pnpm run contracts:generate
 ```
 
-If you prefer the local `justfile`, the matching wrappers are available there too.
+There is also a local `justfile` if you prefer `just` wrappers.
 
 ## Generated Code
 
-The frontend keeps two generated files under `src/generated/`:
+The frontend consumes committed contract artifacts from the repo and generates:
 
-- `protocol.ts` from `contracts/jsonschema/` and `contracts/room-events.json`
-- `api.ts` from `contracts/openapi.json`
+- `src/generated/api.ts` from `contracts/openapi.json`
+- `src/generated/protocol.ts` from the WebSocket schemas in `contracts/`
 
-Regenerate them with `pnpm run contracts:generate` after contract changes.
+Regenerate them after contract changes with `pnpm run contracts:generate`.
 
 ## Testing
 
-- Vitest covers unit tests under `src/**/__tests__/`
-- Playwright covers browser flows under `e2e/`
-- `pnpm run type-check` runs Vue and TypeScript checks for the app
-
-## Notes
-
-- Keep UI state simple and predictable
-- Prefer generated contract types over hand-written API shapes
-- Match the backend contract before adding new client behavior
+- Vitest covers component, store, composable, and utility tests
+- Playwright covers browser-level flows such as navigation, lobby behavior, and waiting-room interactions

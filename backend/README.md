@@ -1,105 +1,85 @@
 # Backend
 
-FastAPI backend for Six Second Scribbles.
+The backend is a FastAPI application that handles authentication, category data, room lifecycle, scoring, and the real-time game protocol.
 
-## What Lives Here
+## Responsibilities
 
 - HTTP API under `/api`
-- WebSocket room transport under `/ws`
-- PostgreSQL-backed user, room, and category data
-- Redis-backed sessions, room runtime, and rate-limit helpers
-- Alembic migrations
-- Pytest coverage for HTTP, websocket, and room lifecycle behavior
+- WebSocket game transport under `/ws/{room_id}`
+- PostgreSQL-backed persistence for users and category content
+- Redis-backed runtime state, sessions, and room coordination
+- Database migrations and seed tooling
+- Contract export for the frontend
 
-## Main Areas
+## Main Modules
 
-- `app/auth/` for guest, register, login, and logout flows
-- `app/users/` for profile and preference endpoints
-- `app/categories/` for category data, locale availability, and guess scoring
-- `app/rooms/` for room creation, room state, and websocket orchestration
-- `app/system/` for health and stats endpoints
-- `app/core/` for config, logging, database, and Redis wiring
+- `app/auth/`: guest and account auth flows
+- `app/users/`: current-user profile and preferences
+- `app/categories/`: category lookup, locale handling, and guess scoring support
+- `app/rooms/`: room lifecycle, gameplay state, and WebSocket orchestration
+- `app/system/`: health and service metadata endpoints
+- `app/core/`: configuration, logging, database, Redis, and shared infrastructure
 
-## Local Development
+## Local Setup
 
-From the backend directory:
+From the `backend/` directory:
+
+1. Install dependencies:
+
+   ```bash
+   just install
+   ```
+
+2. Create a local env file:
+
+   ```bash
+   cp .env.example .env.dev
+   ```
+
+3. Run the development server:
+
+   ```bash
+   just dev
+   ```
+
+The server runs on `http://localhost:8000`.
+
+## Common Commands
 
 ```bash
-just install
 just dev
 just test
 just check
 just format
-just generate-contracts
-```
-
-Database and seed helpers:
-
-```bash
 just migrate
-just migrate-new "your migration message"
+just migrate-new "describe-change"
 just seed
 just translate-seed
 just seed-auto
+just generate-contracts
 ```
 
-If you prefer direct `uv` commands:
+## Data Model Notes
 
-```bash
-uv run alembic upgrade head
-uv run python -m scripts.seed_data
-uv run pytest
-```
+Categories are stored as canonical content plus locale-specific translations. That lets the game validate guesses and display prompts in different languages without duplicating gameplay logic per locale.
 
-## API Surface
-
-Common routes:
-
-```text
-POST /api/auth/guest
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/logout
-GET  /api/me
-PATCH /api/me/preferences
-GET  /api/categories
-GET  /api/categories/locales
-POST /api/score/guesses
-GET  /api/rooms/random
-POST /api/rooms/
-GET  /api/rooms/{room_id}/status
-POST /api/rooms/{room_id}/category-selection
-GET  /api/health
-GET  /api/stats
-WS   /ws/{room_id}
-```
-
-## Data Model
-
-Categories are modeled as canonical multilingual content:
+The main content tables are:
 
 - `categories`
 - `category_translations`
 - `category_items`
 - `category_item_translations`
 
-That lets the backend:
+## Seed Data
 
-- localize prompts per player
-- validate guesses against the guesser’s locale first
-- fall back through room default locale, category default locale, then English
-- score by canonical item IDs instead of localized strings
-
-## Seeded Demo Data
-
-Fresh local seeds include a demo account and owner-only private categories:
+Local seed data includes a demo account:
 
 - username: `demo_host`
 - password: `demo-password`
 
-## Notes
+## Testing
 
-- Keep HTTP routes under `/api` and WebSockets under `/ws`
-- Prefer canonical IDs over localized strings in runtime room state
-- Keep Redis for ephemeral runtime concerns, not canonical content storage
-- Prefer simplifying refactors over preserving early-dev legacy behavior
+- `just test` runs the backend pytest suite
+- `just check` runs formatting, linting, and static type checks
+
+Tests cover HTTP routes, room lifecycle behavior, scoring, and WebSocket flows.

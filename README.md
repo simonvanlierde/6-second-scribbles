@@ -1,50 +1,92 @@
 # 6 Second Scribbles
 
-Real-time multiplayer drawing and guessing built for quick room-based play.
+6 Second Scribbles is a real-time multiplayer drawing and guessing game for short, room-based rounds. One player draws through a rapid list of prompts, everyone else tries to identify what was drawn, and the room cycles through lobby, round, and results states over WebSockets.
 
-This repo contains a Vue 3 frontend, a FastAPI backend, and tracked contract artifacts that keep the two sides in sync.
+This repository contains the full stack application:
 
-## Quick Start
+- `frontend/`: Vue 3 app built with Vite, Pinia, and Vue Router
+- `backend/`: FastAPI application with PostgreSQL and Redis
+- `contracts/`: committed API and WebSocket contract artifacts shared between both sides
 
-Prerequisites:
+## What The Project Includes
+
+- Public room flow with real-time multiplayer state
+- Guest and registered-user auth flows
+- Category and prompt data with locale-aware translations
+- Generated client/server contracts to keep frontend and backend aligned
+- Unit, integration, and end-to-end test coverage
+
+## Tech Stack
+
+- Frontend: Vue 3, TypeScript, Pinia, Vite, vue-i18n
+- Backend: FastAPI, SQLAlchemy, PostgreSQL, Redis
+- Tooling: pnpm, uv, just, Docker Compose, Playwright, Vitest, pytest
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js 24+
 - Python 3.14+
-- Docker
+- `pnpm`
+- `uv`
 - `just`
+- Docker and Docker Compose
 
-Common repo-level commands:
+### Local Development
+
+1. Install dependencies:
+
+   ```bash
+   just install
+   ```
+
+2. Create local environment files:
+
+   ```bash
+   cp backend/.env.example backend/.env.dev
+   cp frontend/.env.example frontend/.env.local
+   ```
+
+3. Start the full development stack:
+
+   ```bash
+   just dev
+   ```
+
+This starts Docker services plus the frontend and backend dev servers. If you only want the containerized stack, use `just up`.
+
+### Useful Commands
 
 ```bash
-just install
 just dev
 just up
-just up-prod
+just down
 just test
 just check
+just format
 just generate-contracts
 ```
 
-## Docs
+## Project Docs
 
 - [Frontend](frontend/README.md)
 - [Backend](backend/README.md)
 - [Contracts](contracts/README.md)
 
-## About
+## Notes On Scope
 
-The game assigns a category and a short list of prompts each round. Players draw as many prompts as they can, then the room moves through guessing, round results, and final results.
-
-The implementation is intentionally simple and early-stage, so code and behavior may change when that makes the system easier to understand and maintain.
+This is still an early-stage project. The codebase favors simple, understandable implementations over preserving every old behavior or optimization.
 
 ## Attribution
 
 This multiplayer implementation is inspired by:
 
-1. The original physical game, *Six Second Scribbles*, created by Hazel Reynolds and published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles).
-2. The original solo web version by Oliver Culley de Lange, available on [GitHub](https://github.com/OliverCulleyDeLange/6ss).
+1. *Six Second Scribbles*, created by Hazel Reynolds and published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles)
+2. The solo web version by Oliver Culley de Lange on [GitHub](https://github.com/OliverCulleyDeLange/6ss)
 
 ## License
 
-The code for this multiplayer implementation is released under the MIT License.
-The *Six Second Scribbles* game concept, brand, and original card content remain the property of their respective owners.
+The code in this repository is released under the MIT License.
+
+The original *Six Second Scribbles* game concept, brand, and card content remain the property of their respective owners.
