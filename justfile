@@ -140,6 +140,7 @@ generate-contracts:
 [group('check')]
 check-contracts:
     pnpm run contracts:check
+    pnpm --dir frontend run type-check
 
 # ── Database ──────────────────────────────────────────────────────────────────
 

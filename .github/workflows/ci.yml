@@ -78,11 +78,8 @@ jobs:
         with:
           args: detect --source . --no-banner --redact --exit-code 1
 
-      - name: Run cspell
-        run: pnpm run cspell
-
-      - name: Root formatting check (biome)
-        run: pnpm exec biome check "**/*.{md,json,yml,yaml,toml}"
+      - name: Run root checks
+        run: pnpm run check
 
   frontend:
     name: Frontend checks
@@ -135,7 +132,4 @@ jobs:
         run: uv sync --all-groups
 
       - name: Check generated contracts
-        run: pnpm run contracts:check
-
-      - name: Type-check frontend against generated contracts
-        run: pnpm --dir frontend run type-check
+        run: pnpm run contracts:check && pnpm --dir frontend run type-check

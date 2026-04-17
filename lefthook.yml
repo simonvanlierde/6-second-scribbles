@@ -4,16 +4,49 @@ commit-msg:
       run: pnpm exec commitlint --edit {1}
 
 pre-commit:
-  parallel: false
+  parallel: true
   commands:
-    format:
-      run: just format
+    biome:
+      glob:
+        - "*.{js,cjs,mjs,ts,tsx,vue,json,jsonc,md,yml,yaml,toml}"
+        - "**/*.{js,cjs,mjs,ts,tsx,vue,json,jsonc,md,yml,yaml,toml}"
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
-    check-contracts:
-      run: just check-contracts
-    check-frontend:
-      run: just check-frontend
-    check-backend:
-      run: just check-backend
+    ruff-format:
+      glob: "backend/**/*.py"
+      run: uv run --project backend ruff format {staged_files}
+      stage_fixed: true
+    ruff-check:
+      glob: "backend/**/*.py"
+      run: uv run --project backend ruff check --fix {staged_files}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  files: git diff --name-only --diff-filter=ACMR HEAD @{push}
+  commands:
     check-root:
       run: just check-root
+    check-frontend:
+      glob:
+        - "frontend/**"
+      run: just check-frontend
+    check-backend:
+      glob:
+        - "backend/**"
+      run: just check-backend
+    check-contracts:
+      glob:
+        - "contracts/**"
+        - "backend/app/rooms/protocol.py"
+        - "backend/app/*/schemas.py"
+        - "backend/scripts/generate_contracts.py"
+        - "frontend/scripts/generate-contracts.mjs"
+        - "scripts/check-contracts.mjs"
+        - "package.json"
+        - "frontend/package.json"
+        - "pnpm-lock.yaml"
+        - "justfile"
+        - "backend/justfile"
+        - "frontend/justfile"
+      run: just check-contracts
