@@ -25,6 +25,7 @@ from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
 import app.main as main_module
+from app.categories import service as category_service
 from app.categories.models import Category, CategoryPrompt, Prompt
 from app.core import database
 from app.core import redis as redis_module
@@ -36,9 +37,12 @@ from app.users.models import User
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator, Iterable
+    from types import TracebackType
 
     from fastapi import WebSocket
     from sqlalchemy.ext.asyncio import AsyncSession
+
+fastapi_app = main_module.application
 
 
 def _is_integration_test(request: pytest.FixtureRequest) -> bool:
@@ -58,6 +62,14 @@ def _redis_host_port(container: RedisContainer) -> tuple[str, int]:
 
 
 _POSTGRES_PASSWORD = uuid4().hex
+_SELECT_NAME = "Select"
+_DELETE_NAME = "Delete"
+_EQ_NAME = "eq"
+_IS_NAME = "is_"
+_IN_OP_NAME = "in_op"
+_CONTAINS_NAMES = {"contains_op", "contains"}
+_AT_CONTAINS = "@>"
+_NULL_NAME = "Null"
 
 
 async def _reset_real_infra() -> None:
@@ -68,8 +80,9 @@ async def _reset_real_infra() -> None:
 
     table_names = ", ".join(table.name for table in reversed(database.Base.metadata.sorted_tables))
     if table_names:
-        async with database._get_engine().begin() as conn:
-            await conn.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
+        async with database.get_session_maker()() as session:
+            await session.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
+            await session.commit()
 
     redis_client = await redis_module.get_redis()
     await redis_client.flushdb()
@@ -93,18 +106,21 @@ class TestWebSocket:
     """Lean websocket test double for GameRoom unit tests."""
 
     sent_texts: list[str] = field(default_factory=list)
-    close_calls: list[dict[str, Any]] = field(default_factory=list)
+    close_calls: list[dict[str, object | None]] = field(default_factory=list)
     send_error: Exception | None = None
 
     async def send_text(self, message: str) -> None:
+        """Record a websocket text payload."""
         if self.send_error is not None:
             raise self.send_error
         self.sent_texts.append(message)
 
     async def send_json(self, data: object) -> None:
+        """Serialize and record a websocket JSON payload."""
         await self.send_text(json.dumps(data))
 
     async def close(self, code: int | None = None, reason: str | None = None) -> None:
+        """Record a websocket close call."""
         self.close_calls.append({"code": code, "reason": reason})
 
 
@@ -114,20 +130,20 @@ def as_websocket(test_websocket: TestWebSocket) -> WebSocket:
 
 
 class _FakeScalarResult:
-    def __init__(self, items: list[Any]):
+    def __init__(self, items: list[object]):
         self._items = items
 
-    def all(self) -> list[Any]:
+    def all(self) -> list[object]:
         return list(self._items)
 
 
 class _FakeResult:
     def __init__(
         self,
-        items: list[Any] | None = None,
+        items: list[object] | None = None,
         *,
         rowcount: int | None = None,
-        rows: list[tuple[Any, ...]] | None = None,
+        rows: list[tuple[object, ...]] | None = None,
     ):
         self._items = items or []
         self.rowcount = rowcount
@@ -136,7 +152,7 @@ class _FakeResult:
     def scalars(self) -> _FakeScalarResult:
         return _FakeScalarResult(self._items)
 
-    def scalar_one_or_none(self) -> Any | None:
+    def scalar_one_or_none(self) -> object | None:
         if self._rows:
             first = self._rows[0] if self._rows else None
             if first is None:
@@ -146,21 +162,29 @@ class _FakeResult:
             return None
         return self._items[0]
 
-    def all(self) -> list[tuple[Any, ...]]:
+    def all(self) -> list[tuple[object, ...]]:
         return list(self._rows)
 
 
 class FakeAsyncSession:
+    """Small async session double backed by in-memory dictionaries."""
+
     def __init__(self, store: _FakeDatabaseStore):
         self._store = store
 
     async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         return None
 
-    def add(self, obj: Any) -> None:
+    def add(self, obj: object) -> None:
+        """Store a new fake ORM object."""
         if isinstance(obj, Category):
             if obj.id is None:
                 obj.id = self._store.next_category_id
@@ -179,8 +203,9 @@ class FakeAsyncSession:
             if obj.id is None:
                 obj.id = self._store.next_category_prompt_id
                 self._store.next_category_prompt_id += 1
-            obj.category = self._store.categories.get(obj.category_id)
-            obj.prompt = self._store.prompts.get(obj.prompt_id)
+            category_prompt = cast(Any, obj)  # noqa: TC006
+            category_prompt.category = self._store.categories.get(obj.category_id)
+            category_prompt.prompt = self._store.prompts.get(obj.prompt_id)
             self._store.category_prompts[obj.id] = obj
             return
 
@@ -192,15 +217,16 @@ class FakeAsyncSession:
         raise TypeError(msg)
 
     async def flush(self) -> None:
-        return None
+        """No-op flush for the fake session."""
 
     async def commit(self) -> None:
-        return None
+        """No-op commit for the fake session."""
 
     async def rollback(self) -> None:
-        return None
+        """No-op rollback for the fake session."""
 
-    async def delete(self, obj: Any) -> None:
+    async def delete(self, obj: object) -> None:
+        """Remove a fake ORM object."""
         if isinstance(obj, Category):
             self._store.categories.pop(obj.id, None)
             for category_prompt_id, category_prompt in list(self._store.category_prompts.items()):
@@ -227,61 +253,46 @@ class FakeAsyncSession:
         raise TypeError(msg)
 
     def expire_all(self) -> None:
-        return None
+        """No-op expiration hook."""
 
-    async def get(self, model: type[Any], primary_key: int) -> Any | None:
+    async def get(self, model: type[object], primary_key: object) -> object | None:
+        """Retrieve a fake ORM object by primary key."""
         if model is Category:
+            if not isinstance(primary_key, int):
+                msg = "Category primary keys must be integers"
+                raise TypeError(msg)
             return self._store.categories.get(primary_key)
         if model is Prompt:
+            if not isinstance(primary_key, int):
+                msg = "Prompt primary keys must be integers"
+                raise TypeError(msg)
             return self._store.prompts.get(primary_key)
         if model is CategoryPrompt:
+            if not isinstance(primary_key, int):
+                msg = "CategoryPrompt primary keys must be integers"
+                raise TypeError(msg)
             return self._store.category_prompts.get(primary_key)
         if model is User:
+            if not isinstance(primary_key, str):
+                msg = "User primary keys must be strings"
+                raise TypeError(msg)
             return self._store.users.get(primary_key)
         msg = f"Unsupported model type: {model!r}"
         raise TypeError(msg)
 
-    async def execute(self, statement) -> _FakeResult:
-        if statement.__class__.__name__ == "Select":
-            first_description = statement.column_descriptions[0]
-            model = first_description["entity"]
-            if model is None or first_description.get("expr") is not model:
-                rows = self._rows_for_columns(statement)
-                return _FakeResult(rows=rows)
-            items = list(self._items_for_model(model))
-            for criterion in statement._where_criteria:
-                items = [item for item in items if _matches(item, criterion)]
-            return _FakeResult(items)
+    async def execute(self, statement: object) -> _FakeResult:
+        """Execute a very small subset of SQLAlchemy statements."""
+        stmt = cast(Any, statement)  # noqa: TC006
+        statement_name = stmt.__class__.__name__
+        if statement_name == _SELECT_NAME:
+            return await self._execute_select(stmt)
+        if statement_name == _DELETE_NAME:
+            return await self._execute_delete(stmt)
 
-        if statement.__class__.__name__ == "Delete":
-            table_name = statement.table.name
-            target_map: dict[Any, Any]
-            if table_name == Category.__tablename__:
-                target_map = self._store.categories
-            elif table_name == Prompt.__tablename__:
-                target_map = self._store.prompts
-            elif table_name == CategoryPrompt.__tablename__:
-                target_map = self._store.category_prompts
-            elif table_name == User.__tablename__:
-                target_map = self._store.users
-            else:
-                msg = f"Unsupported delete table: {table_name}"
-                raise TypeError(msg)
-
-            instances = list(target_map.values())
-            for criterion in statement._where_criteria:
-                instances = [instance for instance in instances if _matches(instance, criterion)]
-
-            deleted = 0
-            for instance in instances:
-                await self.delete(instance)
-                deleted += 1
-            return _FakeResult(rowcount=deleted)
-
-        msg = f"Unsupported statement type: {statement.__class__.__name__}"
+        msg = f"Unsupported statement type: {statement_name}"
         raise TypeError(msg)
 
-    def _items_for_model(self, model: type[Any]) -> Iterable[Any]:
+    def _items_for_model(self, model: type[object]) -> Iterable[object]:
         if model is Category:
             return self._store.categories.values()
         if model is Prompt:
@@ -293,8 +304,9 @@ class FakeAsyncSession:
         msg = f"Unsupported model type: {model!r}"
         raise TypeError(msg)
 
-    def _rows_for_columns(self, statement) -> list[tuple[Any, ...]]:
-        columns = list(statement.selected_columns)
+    def _rows_for_columns(self, statement: object) -> list[tuple[object, ...]]:
+        stmt = cast(Any, statement)  # noqa: TC006
+        columns = list(stmt.selected_columns)
         if not columns:
             return []
 
@@ -311,13 +323,45 @@ class FakeAsyncSession:
         else:
             return []
 
-        for criterion in statement._where_criteria:
-            items = [item for item in items if _matches(item, criterion)]
+        items = self._apply_whereclause(items, stmt.whereclause)
 
-        rows: list[tuple[Any, ...]] = []
-        for item in items:
-            rows.append(tuple(getattr(item, column.key) for column in columns))
-        return rows
+        return [tuple(getattr(item, column.key) for column in columns) for item in items]
+
+    async def _execute_select(self, stmt: object) -> _FakeResult:
+        stmt_any = cast(Any, stmt)  # noqa: TC006
+        first_description = stmt_any.column_descriptions[0]
+        model = first_description["entity"]
+        if model is None or first_description.get("expr") is not model:
+            return _FakeResult(rows=self._rows_for_columns(stmt_any))
+        items = list(self._items_for_model(model))
+        return _FakeResult(self._apply_whereclause(items, stmt_any.whereclause))
+
+    async def _execute_delete(self, stmt: object) -> _FakeResult:
+        stmt_any = cast(Any, stmt)  # noqa: TC006
+        table_name = stmt_any.table.name
+        if table_name == Category.__tablename__:
+            instances: list[object] = list(self._store.categories.values())
+        elif table_name == Prompt.__tablename__:
+            instances = list(self._store.prompts.values())
+        elif table_name == CategoryPrompt.__tablename__:
+            instances = list(self._store.category_prompts.values())
+        elif table_name == User.__tablename__:
+            instances = list(self._store.users.values())
+        else:
+            msg = f"Unsupported delete table: {table_name}"
+            raise TypeError(msg)
+
+        deleted = 0
+        for instance in self._apply_whereclause(instances, stmt_any.whereclause):
+            await self.delete(instance)
+            deleted += 1
+        return _FakeResult(rowcount=deleted)
+
+    def _apply_whereclause(self, items: Iterable[object], whereclause: object) -> list[object]:
+        items = list(items)
+        if whereclause is None:
+            return items
+        return [item for item in items if _matches(item, whereclause)]
 
 
 class _FakeSessionMaker:
@@ -328,70 +372,101 @@ class _FakeSessionMaker:
         return FakeAsyncSession(self._store)
 
 
-def _matches(instance: Any, criterion: Any) -> bool:
-    if isinstance(criterion, BooleanClauseList):
-        return all(_matches(instance, clause) for clause in criterion.clauses)
+def _matches(instance: object, criterion: object) -> bool:
+    """Match a small subset of SQLAlchemy filter expressions against fake objects."""
+    criterion_any = cast(Any, criterion)  # noqa: TC006
+    if isinstance(criterion_any, BooleanClauseList):
+        return all(_matches(instance, clause) for clause in criterion_any.clauses)
 
-    if isinstance(criterion, BinaryExpression):
-        left = criterion.left
-        column_name = getattr(left, "key", None)
-        if column_name is None:
-            column_name = getattr(left, "name", None)
-        if column_name is None and hasattr(left, "clause"):
-            column_name = getattr(left.clause, "key", None)
-        if column_name is None:
-            msg = f"Unsupported criterion column: {criterion.left!r}"
-            raise TypeError(msg)
+    if not isinstance(criterion_any, BinaryExpression):
+        msg = f"Unsupported criterion: {criterion!r}"
+        raise TypeError(msg)
 
-        actual = getattr(instance, column_name)
-        expected = _extract_value(criterion.right)
-        operator_name = getattr(criterion.operator, "__name__", "")
+    column_name = _column_name(criterion_any.left)
+    if column_name is None:
+        msg = f"Unsupported criterion column: {criterion_any.left!r}"
+        raise TypeError(msg)
 
-        if criterion.operator is eq or operator_name == "eq":
-            return actual == expected
-        if criterion.operator is is_ or operator_name == "is_":
-            return actual is expected
-        if criterion.operator is in_op or operator_name == "in_op":
-            return actual in expected
-        if operator_name in {"contains_op", "contains"}:
-            if isinstance(actual, list):
-                if isinstance(expected, list):
-                    return all(item in actual for item in expected)
-                return expected in actual
-            return expected in actual
-        if getattr(criterion.operator, "opstring", None) == "@>":
-            if isinstance(actual, list):
-                if isinstance(expected, list):
-                    return all(item in actual for item in expected)
-                return expected in actual
-            return False
-
-    msg = f"Unsupported criterion: {criterion!r}"
-    raise TypeError(msg)
+    actual = getattr(instance, column_name)
+    expected = _extract_value(criterion_any.right)
+    if _is_equality_operator(criterion_any.operator):
+        return actual == expected
+    if _is_identity_operator(criterion_any.operator):
+        return actual is expected
+    if _is_in_operator(criterion_any.operator):
+        return actual in cast(Any, expected)  # noqa: TC006
+    if _is_contains_operator(criterion_any.operator):
+        return _contains_value(actual, expected)
+    return False
 
 
-def _extract_value(value: Any) -> Any:
-    if value.__class__.__name__ == "Null":
+def _column_name(left: object) -> str | None:
+    column_name = getattr(left, "key", None)
+    if column_name is not None:
+        return column_name
+
+    column_name = getattr(left, "name", None)
+    if column_name is not None:
+        return column_name
+
+    clause = getattr(left, "clause", None)
+    if clause is not None:
+        return getattr(clause, "key", None)
+    return None
+
+
+def _is_equality_operator(operator: object) -> bool:
+    return operator is eq or getattr(operator, "__name__", "") == _EQ_NAME
+
+
+def _is_identity_operator(operator: object) -> bool:
+    return operator is is_ or getattr(operator, "__name__", "") == _IS_NAME
+
+
+def _is_in_operator(operator: object) -> bool:
+    return operator is in_op or getattr(operator, "__name__", "") == _IN_OP_NAME
+
+
+def _is_contains_operator(operator: object) -> bool:
+    return getattr(operator, "__name__", "") in _CONTAINS_NAMES or getattr(operator, "opstring", None) == _AT_CONTAINS
+
+
+def _contains_value(actual: object, expected: object) -> bool:
+    if isinstance(actual, list):
+        if isinstance(expected, list):
+            return all(item in actual for item in expected)
+        return expected in actual
+    if isinstance(actual, str) and isinstance(expected, str):
+        return expected in actual
+    return False
+
+
+def _extract_value(value: object) -> object:
+    value_any = cast(Any, value)  # noqa: TC006
+    if value_any.__class__.__name__ == _NULL_NAME:
         return None
-    if hasattr(value, "value"):
-        return value.value
-    if hasattr(value, "effective_value"):
-        return value.effective_value
+    if hasattr(value_any, "value"):
+        return value_any.value
+    if hasattr(value_any, "effective_value"):
+        return value_any.effective_value
     return value
 
 
 @pytest.fixture
 def fake_db_store() -> _FakeDatabaseStore:
+    """In-memory store for fake ORM sessions."""
     return _FakeDatabaseStore()
 
 
 @pytest.fixture
 def fake_redis() -> FakeRedis:
+    """Fake Redis client for unit tests."""
     return FakeRedis(decode_responses=True)
 
 
 @pytest.fixture(scope="session")
 def postgres_container() -> Generator[PostgresContainer]:
+    """Session-scoped Postgres container for integration tests."""
     with PostgresContainer(
         image="postgres:16-alpine",
         username="postgres",
@@ -403,6 +478,7 @@ def postgres_container() -> Generator[PostgresContainer]:
 
 @pytest.fixture(scope="session")
 def redis_container() -> Generator[RedisContainer]:
+    """Session-scoped Redis container for integration tests."""
     with RedisContainer(image="redis:7-alpine") as container:
         yield container
 
@@ -410,10 +486,11 @@ def redis_container() -> Generator[RedisContainer]:
 @pytest.fixture(autouse=True)
 async def configure_test_services(
     request: pytest.FixtureRequest,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     fake_db_store: _FakeDatabaseStore,
     fake_redis: FakeRedis,
-):
+) -> AsyncGenerator[None]:
+    """Wire the application up to fakes for unit tests or containers for integration tests."""
     if _is_integration_test(request):
         postgres = request.getfixturevalue("postgres_container")
         redis_container = request.getfixturevalue("redis_container")
@@ -428,14 +505,11 @@ async def configure_test_services(
         monkeypatch.setattr(settings, "redis_host", redis_host)
         monkeypatch.setattr(settings, "redis_port", redis_port)
 
-        redis_module._state.client = None
-
-        main_module.app.dependency_overrides.clear()
+        fastapi_app.dependency_overrides.clear()
 
         await _reset_real_infra()
         yield
-        main_module.app.dependency_overrides.clear()
-        redis_module._state.client = None
+        fastapi_app.dependency_overrides.clear()
         await database.close_db()
         await redis_module.close_redis()
         return
@@ -448,21 +522,28 @@ async def configure_test_services(
     async def fake_close_db() -> None:
         return None
 
+    async def fake_get_redis() -> FakeRedis:
+        return fake_redis
+
+    async def fake_close_redis() -> None:
+        await fake_redis.aclose()
+
     monkeypatch.setattr(database, "get_session_maker", lambda: session_maker)
-    monkeypatch.setattr(database, "_get_session_maker", lambda: session_maker)
     monkeypatch.setattr(database, "close_db", fake_close_db)
 
-    monkeypatch.setattr(redis_module._state, "client", fake_redis)
+    monkeypatch.setattr(redis_module, "get_redis", fake_get_redis)
+    monkeypatch.setattr(redis_module, "close_redis", fake_close_redis)
     monkeypatch.setattr(main_module, "close_db", fake_close_db)
 
-    main_module.app.dependency_overrides[database.get_async_session] = override_get_db
+    fastapi_app.dependency_overrides[database.get_async_session] = override_get_db
     yield
-    main_module.app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.clear()
     await fake_redis.aclose()
 
 
 @pytest.fixture(autouse=True)
-async def reset_room_manager(configure_test_services) -> AsyncGenerator[None]:
+async def reset_room_manager(configure_test_services: None) -> AsyncGenerator[None]:
+    """Keep the global room manager isolated between tests."""
     _ = configure_test_services
     await global_room_manager.stop()
     global_room_manager.rooms.clear()
@@ -474,14 +555,14 @@ async def reset_room_manager(configure_test_services) -> AsyncGenerator[None]:
 @pytest.fixture
 def test_client() -> Generator[TestClient]:
     """Synchronous test client for FastAPI app using in-memory fakes."""
-    with TestClient(main_module.app) as client:
+    with TestClient(fastapi_app) as client:
         yield client
 
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator[AsyncClient]:
     """Async test client for FastAPI app using in-memory fakes."""
-    async with AsyncClient(transport=ASGITransport(app=main_module.app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
         yield client
 
 
@@ -507,9 +588,9 @@ def mock_websocket() -> TestWebSocket:
 async def game_room(room_id: str) -> AsyncGenerator[GameRoom]:
     """Create a fresh game room for testing."""
     room = GameRoom(room_id)
-    room.start_idle_check()
+    room.scheduler.start_idle_check()
     yield room
-    await room.stop_idle_check()
+    await room.scheduler.shutdown()
 
 
 @pytest.fixture
@@ -532,6 +613,12 @@ def make_ws() -> Callable[..., TestWebSocket]:
         return TestWebSocket(send_error=send_error)
 
     return _factory
+
+
+@pytest.fixture
+def _deterministic_sample(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Makes random.sample deterministic: returns the first N items in order."""
+    monkeypatch.setattr(category_service.random, "sample", lambda items, n: list(items)[:n])
 
 
 @pytest.fixture

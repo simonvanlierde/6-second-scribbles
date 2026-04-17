@@ -21,7 +21,7 @@ def _serialize_user(user: User) -> UserResponse:
     return UserResponse(
         id=user.id,
         username=user.username,
-        display_name=user.display_name,
+        displayName=user.display_name,
         preferredLocale=user.preferred_locale,
         isGuest=user.password_hash is None,
     )

@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from app.categories.schemas import CategorySelectionRequest, CategorySelectionResponse
 from app.categories.service import select_category_sets
 from app.core.config import settings
-from app.core.database import AsyncSessionDep  # noqa: TC001 - FastAPI resolves this dependency alias at runtime
+from app.core.database import AsyncSessionDep
 from app.core.redis import get_redis
 from app.rooms.manager import room_manager
 from app.rooms.schemas import (
@@ -50,18 +50,15 @@ async def select_room_categories(
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    requested_locales = request.locales or [room.get_player_locale(player_id) for player_id in room.players.keys()]
+    requested_locales = request.locales or [room.get_player_locale(player_id) for player_id in room.players]
 
     return await select_category_sets(
         db,
-        room_id=room_id,
         difficulty=request.difficulty,
         count=request.count,
         player_count=request.player_count,
         locale=request.locale,
         locales=requested_locales,
-        owner_user_id=room.get_host_owner_user_id(),
-        enabled_custom_category_ids=room.metadata.custom_category_ids,
     )
 
 

@@ -1,5 +1,4 @@
 """Player join/leave and host-transfer helpers for game rooms."""
-# ruff: noqa: SLF001
 
 from __future__ import annotations
 
@@ -40,10 +39,10 @@ async def add_player(
         logger.info("[GameRoom %s] Waking from hibernation", room.room_id)
         room.is_hibernated = False
 
-    room._last_activity = time.time()
-    room._emptied_at = None
+    room.last_activity = time.time()
+    room.emptied_at = None
 
-    is_reconnecting_host = player_id == room._last_host_id and player_id not in room.players
+    is_reconnecting_host = player_id == room.last_host_id and player_id not in room.players
     player = player_info_factory(
         id=player_id,
         name=name,
@@ -57,9 +56,9 @@ async def add_player(
     else:
         room.metadata.player_user_ids.pop(player_id, None)
 
-    if is_reconnecting_host and room._pending_host_transfer:
-        room._pending_host_transfer.cancel()
-        room._pending_host_transfer = None
+    if is_reconnecting_host and room.pending_host_transfer:
+        room.pending_host_transfer.cancel()
+        room.pending_host_transfer = None
         room.host_id = player_id
         logger.info(
             "[GameRoom %s] Host %s (%s) reconnected, host transfer cancelled",
@@ -69,7 +68,7 @@ async def add_player(
         )
     elif len(room.players) == 1:
         room.host_id = player_id
-        room._last_host_id = player_id
+        room.last_host_id = player_id
 
     return player, is_reconnecting_host
 
@@ -87,7 +86,7 @@ async def remove_player(
     room.metadata.player_user_ids.pop(player_id, None)
 
     if room.is_empty():
-        room._emptied_at = time.time()
+        room.emptied_at = time.time()
         logger.info("[GameRoom %s] Room is now empty, marked for hibernation/cleanup", room.room_id)
 
     if player_id != room.host_id:
@@ -99,13 +98,13 @@ async def remove_player(
             room.room_id,
             host_transfer_delay_ms,
         )
-        if room._pending_host_transfer:
-            room._pending_host_transfer.cancel()
-        room._pending_host_transfer = schedule_host_transfer(player_id)
+        if room.pending_host_transfer:
+            room.pending_host_transfer.cancel()
+        room.pending_host_transfer = schedule_host_transfer(player_id)
         return
 
     room.host_id = None
-    room._last_host_id = None
+    room.last_host_id = None
 
 
 async def delayed_host_transfer(room: GameRoom, old_host_id: str, *, host_transfer_delay_ms: int) -> None:
@@ -121,17 +120,17 @@ async def delayed_host_transfer(room: GameRoom, old_host_id: str, *, host_transf
         if room.players:
             new_host = next(iter(room.players.values()))
             room.host_id = new_host.id
-            room._last_host_id = new_host.id
+            room.last_host_id = new_host.id
             await room.broadcast(HostChangedEvent(newHostId=new_host.id))
             logger.info("[GameRoom %s] Host transferred to %s (%s)", room.room_id, new_host.name, new_host.id)
             return
 
         room.host_id = None
-        room._last_host_id = None
+        room.last_host_id = None
     except asyncio.CancelledError:
         logger.info("[GameRoom %s] Host transfer cancelled (host reconnected)", room.room_id)
     finally:
-        room._pending_host_transfer = None
+        room.pending_host_transfer = None
 
 
 def update_player_activity(room: GameRoom, player_id: str) -> None:

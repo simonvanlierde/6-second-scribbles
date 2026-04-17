@@ -34,7 +34,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
         await session.run()
     except WebSocketDisconnect:
         logger.info("[WebSocket] Client disconnected from room %s", room_id)
-    except Exception:
-        logger.exception("[WebSocket] Error in room %s", room_id)
+    except RuntimeError, ValueError, TypeError, OSError:
+        # Network/runtime errors — log and clean up via `finally`. Assertion
+        # and cancellation errors still propagate for test/shutdown integrity.
+        logger.exception("[WebSocket] Unexpected error in room %s", room_id)
     finally:
         await session.on_disconnect()

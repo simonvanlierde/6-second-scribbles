@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Cookie, Request, Response, status
 
 from app.auth.dependencies import OptionalCurrentUserDep
@@ -112,7 +114,7 @@ async def login(
 
 @router.post("/logout", status_code=204)
 async def logout(
-    session_id: str | None = Cookie(default=None, alias=settings.session_cookie_name),
+    session_id: Annotated[str | None, Cookie(alias=settings.session_cookie_name)] = None,
 ) -> Response:
     """Logout the current session."""
     await logout_session(session_id)

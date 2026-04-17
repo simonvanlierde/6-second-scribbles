@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
+
+import pytest
 
 from app.categories import service as category_service
 from app.categories.models import Category, Prompt
 from app.categories.schemas import GuessScoreRequest
+from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms import (
     actions as websocket_action_service,
@@ -20,9 +22,6 @@ from app.rooms import (
 )
 from app.rooms import (
     lifecycle as room_lifecycle_service,
-)
-from app.rooms import (
-    mutations as room_mutation_service,
 )
 from app.rooms import (
     player_lifecycle as player_lifecycle_service,
@@ -37,15 +36,33 @@ from app.rooms import (
     ws_router as websocket_service,
 )
 from app.rooms.manager import GameRoom, RoomManager, room_manager
-from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent
+from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateEvent
+from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import WebSocket
+    from pytest_mock import MockerFixture
+
+    from tests.conftest import TestWebSocket
+
+ANIMALS = "Animals"
+FALLBACK = "Fallback"
+ALTERNATIVE = "alternative"
+ROOM_42 = "ROOM42"
+ROOM_HIBERNATE = "ROOM-HIBERNATE"
+ROUND_COMPLETE = "round_complete"
+ROOM_STATE = "room_state"
 
 
 class TestCategoryService:
-    async def test_list_categories_filters_by_difficulty_and_language(self, test_db) -> None:
+    """Focused tests for CategoryService methods."""
+
+    @pytest.mark.integration
+    async def test_list_categories_filters_by_difficulty_and_language(self, test_db: AsyncMock) -> None:
+        """Filter categories by difficulty and language."""
         test_db.add(
             Category(
                 difficulty="easy",
@@ -77,7 +94,10 @@ class TestCategoryService:
         assert len(response) == 1
         assert [category.name for category in response] == ["Easy EN"]
 
-    async def test_select_category_sets_returns_localized_items(self, test_db, monkeypatch) -> None:
+    @pytest.mark.integration
+    @pytest.mark.usefixtures("_deterministic_sample")
+    async def test_select_category_sets_returns_localized_items(self, test_db: AsyncMock) -> None:
+        """Return localized category sets with alternatives."""
         category = Category(
             difficulty="medium",
             source="system",
@@ -97,10 +117,6 @@ class TestCategoryService:
         test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=dog_prompt.id, sort_order=2))
         await test_db.commit()
 
-        monkeypatch.setattr(
-            category_service.random, "sample", lambda categories, total_needed: list(categories)[:total_needed]
-        )
-
         response = await category_service.select_category_sets(
             test_db,
             difficulty="medium",
@@ -112,11 +128,14 @@ class TestCategoryService:
 
         assert len(response.selections) == 1
         selection = response.selections[0]
-        assert selection.category_name == "Animals"
+        assert selection.category_name == ANIMALS
         assert selection.items == ["cat", "dog"]
         assert selection.alternatives["cat"] == ["kitty"]
 
-    async def test_select_category_sets_falls_back_to_english(self, test_db, monkeypatch) -> None:
+    @pytest.mark.integration
+    @pytest.mark.usefixtures("_deterministic_sample")
+    async def test_select_category_sets_falls_back_to_english(self, test_db: AsyncMock) -> None:
+        """Test that select_category_sets falls back to English when the requested locale is not available."""
         category = Category(
             difficulty="medium",
             source="system",
@@ -130,10 +149,6 @@ class TestCategoryService:
         test_db.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=prompt.id, sort_order=1))
         await test_db.commit()
 
-        monkeypatch.setattr(
-            category_service.random, "sample", lambda categories, total_needed: list(categories)[:total_needed]
-        )
-
         response = await category_service.select_category_sets(
             test_db,
             difficulty="medium",
@@ -144,9 +159,10 @@ class TestCategoryService:
         )
 
         assert len(response.selections) == 1
-        assert response.selections[0].category_name == "Fallback"
+        assert response.selections[0].category_name == FALLBACK
 
     def test_score_guess_request_maps_match_details(self) -> None:
+        """Score guesses using the expected match method."""
         response = category_service.score_guess_request(
             GuessScoreRequest(
                 guesses=["colour"],
@@ -156,22 +172,28 @@ class TestCategoryService:
         )
 
         assert response.score == 1
-        assert response.matches[0].method == "alternative"
+        assert response.matches[0].method == ALTERNATIVE
 
 
 class TestRoomService:
-    async def test_get_random_joinable_room_returns_counts(self, make_ws) -> None:
-        room = room_manager.get_or_create_room("ROOM42")
+    """Focused tests for RoomService methods that don't require WebSocket context."""
+
+    async def test_get_random_joinable_room_returns_counts(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """Test that get_random_joinable_room returns the correct player count for a room with players."""
+        room = room_manager.get_or_create_room(ROOM_42)
         await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
 
         response = await room_service.get_random_joinable_room()
 
-        assert response.room_code == "ROOM42"
+        assert response.room_code == ROOM_42
         assert response.player_count == 1
 
 
 class TestKickVoteService:
+    """Focused tests for KickVoteService methods."""
+
     async def test_cleanup_expired_votes_removes_only_elapsed_votes(self) -> None:
+        """Test that cleanup_expired_votes removes only the votes that have expired and leaves active votes intact."""
         room = GameRoom("ROOM-KICK")
         room.active_kick_votes = {
             "expired-player": kick_vote_service.KickVote(
@@ -195,22 +217,34 @@ class TestKickVoteService:
 
 
 class TestRoomLifecycleService:
-    async def test_run_cleanup_hibernates_empty_room_after_threshold(self, make_ws) -> None:
+    """Focused tests for RoomLifecycleService methods that don't require WebSocket context."""
+
+    async def test_run_cleanup_hibernates_empty_room_after_threshold(
+        self, make_ws: Callable[..., TestWebSocket]
+    ) -> None:
+        """Hibernate a room once it stays empty long enough."""
         manager = RoomManager()
-        room = manager.get_or_create_room("ROOM-HIBERNATE")
+        room = manager.get_or_create_room(ROOM_HIBERNATE)
         await room.add_player("player-1", "Player 1", cast("WebSocket", make_ws()))
         await room.remove_player("player-1")
-        room._emptied_at = time.time() - 65
+        room.emptied_at = time.time() - (settings.room_hibernation_delay_seconds + 5)
 
         hibernated_count, removed_count = await room_lifecycle_service.run_cleanup(manager)
 
         assert hibernated_count == 1
         assert removed_count == 0
-        assert room.is_hibernated is True
+        assert room.is_hibernated
 
 
 class TestRoundService:
-    async def test_score_round_updates_scores_and_returns_broadcast_event(self, make_ws, monkeypatch) -> None:
+    """Focused tests for RoundService methods."""
+
+    async def test_score_round_updates_scores_and_returns_broadcast_event(
+        self,
+        make_ws: Callable[..., TestWebSocket],
+        mocker: MockerFixture,
+    ) -> None:
+        """Score a round and return the broadcast event."""
         room = GameRoom("ROOM-SCORE")
         await room.add_player("player-1", "Alice", cast("WebSocket", make_ws()))
         await room.add_player("player-2", "Bob", cast("WebSocket", make_ws()))
@@ -229,21 +263,24 @@ class TestRoundService:
             GuessSubmissionState(player_id="player-1", target_player_id="player-2", guesses=["cat", "dog"]),
         ]
 
-        async def fake_targets(*_args, **_kwargs):
-            return category_service.LocalizedScoringTargets(
-                category_id=1,
-                category_name="Animals",
-                targets=[
-                    category_service.GuessTarget(item_id=11, label="cat", aliases=[]),
-                    category_service.GuessTarget(item_id=12, label="dog", aliases=[]),
-                ],
-            )
-
-        monkeypatch.setattr(category_service, "get_localized_scoring_targets", fake_targets)
+        mocker.patch.object(
+            category_service,
+            "get_localized_scoring_targets",
+            new=AsyncMock(
+                return_value=category_service.LocalizedScoringTargets(
+                    category_id=1,
+                    category_name="Animals",
+                    targets=[
+                        category_service.GuessTarget(item_id=11, label="cat", aliases=[]),
+                        category_service.GuessTarget(item_id=12, label="dog", aliases=[]),
+                    ],
+                )
+            ),
+        )
 
         event = await round_service.score_round(room, AsyncMock())
 
-        assert event.type == "round_complete"
+        assert event.type == ROUND_COMPLETE
         assert event.scores == {"player-1": 20, "player-2": 20}
         assert event.results[0].correct_guesses == 2
         assert room.metadata.game_phase == GamePhase.ROUND_RESULTS
@@ -251,69 +288,45 @@ class TestRoundService:
 
 
 class TestPlayerLifecycleService:
-    async def test_is_host_reflects_current_host_assignment(self, make_ws) -> None:
+    """Focused tests for PlayerLifecycleService methods that don't require WebSocket context."""
+
+    async def test_is_host_reflects_current_host_assignment(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """Test that is_host correctly identifies the host player based on the current room state."""
         room = GameRoom("ROOM-HOST")
         await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
 
-        assert player_lifecycle_service.is_host(room, "host-1") is True
-        assert player_lifecycle_service.is_host(room, "other-player") is False
-
-
-class TestRoomMutationService:
-    def test_apply_settings_update_updates_only_provided_fields(self) -> None:
-        room = GameRoom("ROOM-MUTATE")
-        room.metadata.difficulty = "medium"
-        room.metadata.max_rounds = 5
-        room.metadata.drawing_time_limit = 30
-
-        room_mutation_service.apply_settings_update(
-            room,
-            difficulty="hard",
-            rounds=None,
-            drawing_time_limit=45,
-        )
-
-        assert room.metadata.difficulty == "hard"
-        assert room.metadata.max_rounds == 5
-        assert room.metadata.drawing_time_limit == 45
+        assert player_lifecycle_service.is_host(room, "host-1")
+        assert not player_lifecycle_service.is_host(room, "other-player")
 
 
 class TestWebSocketService:
-    async def test_handle_room_websocket_connection_runs_and_disconnects(self, monkeypatch) -> None:
+    """Focused tests for WebSocketService methods."""
+
+    async def test_handle_room_websocket_connection_runs_and_disconnects(self, mocker: MockerFixture) -> None:
+        """Initialize a websocket session, run it, and handle disconnects."""
         websocket = AsyncMock()
         websocket.cookies = {}
         room = GameRoom("ROOM_WS")
-        fake_manager = SimpleNamespace(get_or_create_room=lambda _room_id: room)
-        events: list[str] = []
 
-        class FakeSession:
-            def __init__(self, room_arg, websocket_arg, *, current_user=None) -> None:
-                assert room_arg is room
-                assert websocket_arg is websocket
-                assert current_user is None
+        mock_session_cls = mocker.patch.object(websocket_service, "RoomWebSocketSession")
+        mock_session = AsyncMock()
+        mock_session_cls.return_value = mock_session
 
-            async def run(self) -> None:
-                events.append("run")
+        mock_manager = mocker.MagicMock()
+        mock_manager.get_or_create_room.return_value = room
+        mocker.patch.object(websocket_service, "room_manager", mock_manager)
 
-            async def on_disconnect(self) -> None:
-                events.append("disconnect")
-
-        class FakeDbSession:
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, exc_type, exc, tb) -> None:
-                return None
-
-        monkeypatch.setattr(websocket_service, "room_manager", fake_manager)
-        monkeypatch.setattr(websocket_service, "RoomWebSocketSession", FakeSession)
-        monkeypatch.setattr(websocket_service, "get_session_maker", lambda: FakeDbSession)
-        monkeypatch.setattr(websocket_service, "get_user_by_session", AsyncMock(return_value=None))
+        fake_db = AsyncMock()
+        fake_db.__aenter__.return_value = fake_db
+        mocker.patch.object(websocket_service, "get_session_maker", return_value=lambda: fake_db)
+        mocker.patch.object(websocket_service, "get_user_by_session", new=AsyncMock(return_value=None))
 
         await websocket_service.websocket_endpoint(websocket, room_id="ROOM_WS")
 
         websocket.accept.assert_awaited_once()
-        assert events == ["run", "disconnect"]
+        mock_session_cls.assert_called_once_with(room, websocket, current_user=None)
+        mock_session.run.assert_awaited_once()
+        mock_session.on_disconnect.assert_awaited_once()
 
 
 @dataclass
@@ -331,43 +344,46 @@ class _FakeSession:
 
 
 class TestWebSocketActionService:
-    async def test_require_host_uses_protocol_context(self, make_ws) -> None:
+    """Focused tests for WebSocket action handlers that use the protocol context."""
+
+    async def test_require_host_uses_protocol_context(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """Test that require_host correctly checks the session's host status and sends an error if not the host."""
         room = GameRoom("ROOM-ACT")
         await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
         session = _FakeSession(room=room, websocket=AsyncMock(), player_id="not-host")
 
-        allowed = await websocket_action_service.require_host(session, "start the game")  # ty: ignore[invalid-argument-type]
+        allowed = await websocket_action_service.require_host(cast("RoomWebSocketSession", session), "start the game")
 
-        assert allowed is False
+        assert not allowed
         assert session.error_calls == [("permission_error", "host_only", "Only the host can start the game.")]
 
-    async def test_handle_request_game_state_uses_protocol_context(self, monkeypatch) -> None:
+    async def test_handle_request_game_state_uses_protocol_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that handle_request_game_state sends the current room state to the requesting session's websocket."""
         room = GameRoom("ROOM-STATE")
         websocket = AsyncMock()
         session = _FakeSession(room=room, websocket=websocket)
-        sent_messages: list[Any] = []
+        sent_messages: list[RoomStateEvent] = []
 
-        async def fake_send_ws_message(websocket_arg, message) -> None:
+        async def fake_send_ws_message(websocket_arg: object, message: RoomStateEvent) -> None:
             assert websocket_arg is websocket
             sent_messages.append(message)
 
         monkeypatch.setattr(websocket_action_service, "send_ws_message", fake_send_ws_message)
 
         await websocket_action_service.handle_request_game_state(
-            session,  # ty: ignore[invalid-argument-type]
-            RequestGameStateEvent(type="request_game_state"),
+            cast("RoomWebSocketSession", session), RequestGameStateEvent(type="request_game_state")
         )
 
         assert len(sent_messages) == 1
-        assert sent_messages[0].type == "room_state"
+        assert sent_messages[0].type == ROOM_STATE
 
     async def test_dispatch_event_ignores_heartbeat(self) -> None:
+        """Test that dispatch_event ignores HeartbeatEvent without error."""
         room = GameRoom("ROOM-HEARTBEAT")
         session = _FakeSession(room=room, websocket=AsyncMock())
 
         await websocket_action_service.dispatch_event(
-            session,  # ty: ignore[invalid-argument-type]
-            HeartbeatEvent(type="heartbeat"),
+            cast("RoomWebSocketSession", session), HeartbeatEvent(type="heartbeat")
         )
 
         assert session.error_calls == []

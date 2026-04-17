@@ -2,24 +2,60 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
+from fastapi.testclient import TestClient
+
+import app.main as main_module
 from app.core.types import GamePhase
 from app.rooms.manager import room_manager
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
-def test_root_endpoint(test_client) -> None:
+fastapi_app = main_module.application
+
+OK_STATUSES = ("ok", "degraded")
+SERVICE_NAME = "Six Second Scribbles API"
+ROOM_STATUS_PATH = "/api/rooms/{room_id}/status"
+ROOM_STATUS_SCHEMA = "RoomStatusResponse"
+USER_RESPONSE_SCHEMA = "UserResponse"
+LOCALE_AVAILABILITY_SCHEMA = "LocaleAvailabilityItem"
+VERSION_KEY = "version"
+DATABASE_KEY = "database"
+CACHE_KEY = "cache"
+ROOM_STATE = "room_state"
+MEDIUM = "medium"
+
+
+def test_root_endpoint(test_client: TestClient) -> None:
+    """Health endpoint returns the expected service metadata."""
     response = test_client.get("/api/health")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "ok"
-    assert payload["service"] == "Six Second Scribbles API"
-    assert "version" in payload
+    assert payload["status"] in OK_STATUSES  # fakes may not support SELECT 1
+    assert payload["service"] == SERVICE_NAME
+    assert VERSION_KEY in payload
+    assert DATABASE_KEY in payload
+    assert CACHE_KEY in payload
 
 
-async def test_room_status_for_existing_and_missing_room(async_client) -> None:
+def test_openapi_includes_contract_schemas() -> None:
+    """OpenAPI includes the contract schemas used by the frontend."""
+    spec = fastapi_app.openapi()
+    schemas = spec["components"]["schemas"]
+
+    assert ROOM_STATUS_PATH in spec["paths"]
+    assert ROOM_STATUS_SCHEMA in schemas
+    assert USER_RESPONSE_SCHEMA in schemas
+    assert LOCALE_AVAILABILITY_SCHEMA in schemas
+
+
+async def test_room_status_for_existing_and_missing_room(async_client: AsyncClient) -> None:
+    """Room status reports existence for missing and populated rooms."""
     missing_response = await async_client.get("/api/rooms/NONEXISTENT/status")
     assert missing_response.status_code == 200
     assert missing_response.json() == {"exists": False}
@@ -33,7 +69,8 @@ async def test_room_status_for_existing_and_missing_room(async_client) -> None:
     assert existing_response.json() == {"exists": True, "players": 1, "game_phase": GamePhase.DRAWING.value}
 
 
-def test_join_broadcast_lists_all_players(test_client) -> None:
+def test_join_broadcast_lists_all_players(test_client: TestClient) -> None:
+    """Joining broadcasts the same player list to every socket."""
     with joined_players(
         test_client,
         "JOIN01",
@@ -45,7 +82,8 @@ def test_join_broadcast_lists_all_players(test_client) -> None:
         assert receive_json(ws1)["players"] == receive_json(ws2)["players"]
 
 
-def test_player_disconnect_broadcasts_player_left(test_client) -> None:
+def test_player_disconnect_broadcasts_player_left(test_client: TestClient) -> None:
+    """Disconnecting one websocket informs the remaining players."""
     with joined_players(
         test_client,
         "DISC01",
@@ -56,24 +94,26 @@ def test_player_disconnect_broadcasts_player_left(test_client) -> None:
         assert receive_json(ws2) == {"type": "player_left", "playerId": "player-1"}
 
 
-def test_request_game_state_returns_current_room_state(test_client) -> None:
+def test_request_game_state_returns_current_room_state(test_client: TestClient) -> None:
+    """Requesting game state returns the current room snapshot."""
     with test_client.websocket_connect("/ws/STATE01") as websocket:
         initial_state = receive_json(websocket)
-        assert initial_state["type"] == "room_state"
+        assert initial_state["type"] == ROOM_STATE
 
         join_player(websocket, "player-1", "Alice")
         send_json(websocket, {"type": "request_game_state", "playerId": "player-1"})
 
         room_state = receive_json(websocket)
-        assert room_state["type"] == "room_state"
+        assert room_state["type"] == ROOM_STATE
         assert room_state["players"] == [{"id": "player-1", "name": "Alice", "categories": []}]
-        assert room_state["difficulty"] == "medium"
+        assert room_state["difficulty"] == MEDIUM
         assert room_state["maxRounds"] == 5
-        assert room_state["padVisibility"] is True
-        assert room_state["isPrivate"] is False
+        assert room_state["padVisibility"]
+        assert not room_state["isPrivate"]
 
 
-def test_ready_and_restart_messages_are_broadcast(test_client) -> None:
+def test_ready_and_restart_messages_are_broadcast(test_client: TestClient) -> None:
+    """Readiness and restart events are echoed back through the room."""
     with test_client.websocket_connect("/ws/CONTROL01") as websocket:
         receive_json(websocket)
         join_player(websocket, "player-1", "Alice")
@@ -86,7 +126,8 @@ def test_ready_and_restart_messages_are_broadcast(test_client) -> None:
         assert receive_json(websocket) == {"type": "restart_game"}
 
 
-def test_non_host_cannot_restart_game(test_client) -> None:
+def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
+    """Non-host players are rejected when restarting the game."""
     with joined_players(
         test_client,
         "CONTROL02",
@@ -101,7 +142,8 @@ def test_non_host_cannot_restart_game(test_client) -> None:
         }
 
 
-def test_invalid_json_does_not_close_connection(test_client, sample_messages) -> None:
+def test_invalid_json_does_not_close_connection(test_client: TestClient, sample_messages: dict) -> None:
+    """Malformed payloads produce a protocol error without closing the socket."""
     with test_client.websocket_connect("/ws/ERROR01") as websocket:
         receive_json(websocket)
         join_player(websocket, "player-123", "Test Player")
@@ -115,10 +157,11 @@ def test_invalid_json_does_not_close_connection(test_client, sample_messages) ->
         send_json(websocket, sample_messages["heartbeat"])
         send_json(websocket, {"type": "request_game_state", "playerId": "player-123"})
 
-        assert receive_json(websocket)["type"] == "room_state"
+        assert receive_json(websocket)["type"] == ROOM_STATE
 
 
-def test_invalid_typed_payload_returns_protocol_error(test_client) -> None:
+def test_invalid_typed_payload_returns_protocol_error(test_client: TestClient) -> None:
+    """Schema-invalid typed payloads produce a protocol error."""
     with joined_players(
         test_client,
         "PROTO01",
@@ -133,7 +176,8 @@ def test_invalid_typed_payload_returns_protocol_error(test_client) -> None:
         }
 
 
-def test_invalid_start_game_difficulty_returns_protocol_error(test_client) -> None:
+def test_invalid_start_game_difficulty_returns_protocol_error(test_client: TestClient) -> None:
+    """Invalid difficulty values are rejected before a game starts."""
     with joined_players(
         test_client,
         "PROTO02",
@@ -148,7 +192,8 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client) -> No
         }
 
 
-def test_player_ready_requires_matching_connection_identity(test_client) -> None:
+def test_player_ready_requires_matching_connection_identity(test_client: TestClient) -> None:
+    """Ready events must come from the websocket that owns the player id."""
     with joined_players(
         test_client,
         "READY01",

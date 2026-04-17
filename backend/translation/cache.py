@@ -9,7 +9,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CACHE_PATH = Path(__file__).parent / ".translation_cache.json"
+DEFAULT_CACHE_PATH = Path(__file__).resolve().parents[2] / ".translation_cache.json"
 
 
 @dataclass

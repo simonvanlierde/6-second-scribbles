@@ -1,13 +1,17 @@
 """Redis persistence for game room state."""
 
 # spell-checker: ignore setex
+import asyncio
 import json
 import logging
+import secrets
 
 import redis.asyncio as redis
 
 from app.core.config import settings
 from app.rooms.state import RoomState
+
+_PERSISTENCE_ERRORS = (redis.RedisError, asyncio.TimeoutError, ValueError, TypeError)
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +65,7 @@ async def save_room_state(room_id: str, state: RoomState) -> None:
     try:
         r = await get_redis()
         await r.setex(_room_key(room_id), settings.room_ttl_seconds, state.model_dump_json())
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to save room %s", room_id)
 
 
@@ -71,7 +75,7 @@ async def load_room_state(room_id: str) -> RoomState | None:
         r = await get_redis()
         data = await r.get(_room_key(room_id))
         return RoomState.model_validate_json(data) if data else None
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load room %s", room_id)
         return None
 
@@ -81,7 +85,7 @@ async def delete_room_state(room_id: str) -> None:
     try:
         r = await get_redis()
         await r.delete(_room_key(room_id))
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to delete room %s", room_id)
 
 
@@ -94,20 +98,18 @@ async def load_all_room_states() -> list[RoomState]:
             return []
         results = await r.mget(keys)
         return [RoomState.model_validate_json(value) for value in results if value]
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load all rooms")
         return []
 
 
 async def create_session(user_id: str) -> str:
     """Create a new auth session and return its session id."""
-    import secrets
-
     session_id = secrets.token_urlsafe(32)
     try:
         r = await get_redis()
         await r.setex(_session_key(session_id), settings.auth_session_ttl_seconds, user_id)
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to create session for user %s", user_id)
         raise
     return session_id
@@ -118,7 +120,7 @@ async def get_session_user_id(session_id: str) -> str | None:
     try:
         r = await get_redis()
         return await r.get(_session_key(session_id))
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to read session %s", session_id)
         return None
 
@@ -128,7 +130,7 @@ async def delete_session(session_id: str) -> None:
     try:
         r = await get_redis()
         await r.delete(_session_key(session_id))
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to delete session %s", session_id)
 
 
@@ -143,7 +145,7 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
         ttl = await r.ttl(key)
         retry_after = max(int(ttl), 0)
         return int(count), retry_after
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to increment rate limit %s for %s", bucket, identifier)
         return 0, 0
 
@@ -157,8 +159,12 @@ async def cache_localized_scoring_targets(category_id: int, locale: str, data: d
     """Cache the localized scoring targets dictionary for 24 hours."""
     try:
         r = await get_redis()
-        await r.setex(_cat_targets_key(category_id, locale), 86400, json.dumps(data))
-    except Exception:
+        await r.setex(
+            _cat_targets_key(category_id, locale),
+            settings.category_cache_ttl_seconds,
+            json.dumps(data),
+        )
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to cache scoring targets for %s locale %s", category_id, locale)
 
 
@@ -168,7 +174,7 @@ async def get_cached_localized_scoring_targets(category_id: int, locale: str) ->
         r = await get_redis()
         data = await r.get(_cat_targets_key(category_id, locale))
         return json.loads(data) if data else None
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load cached scoring targets for %s locale %s", category_id, locale)
         return None
 
@@ -183,7 +189,7 @@ async def cache_category_locale_availability(difficulty: str | None, items: list
             settings.category_locale_availability_ttl_seconds,
             payload,
         )
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to cache locale availability for difficulty=%s", difficulty)
 
 
@@ -196,6 +202,6 @@ async def get_cached_category_locale_availability(difficulty: str | None) -> lis
             return None
         payload = json.loads(raw)
         return payload if isinstance(payload, list) else None
-    except Exception:
+    except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load locale availability cache for difficulty=%s", difficulty)
         return None

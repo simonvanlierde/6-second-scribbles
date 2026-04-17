@@ -10,14 +10,15 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import logging
 import time
+import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
 
-from app.scoring.services import normalize_text
 from translation import TranslationService
 
 if TYPE_CHECKING:
@@ -33,7 +34,21 @@ PROMPTS_KEY = "prompts"
 SYSTEM_CATEGORIES_KEY = "system_categories"
 
 
-def _is_blank(value: Any) -> bool:
+def configure_logging() -> None:
+    """Configure simple CLI logging for translation runs."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+
+def normalize_text(text: str) -> str:
+    """Normalize text for comparison: lowercase, strip, remove accents."""
+    lowered = text.lower().strip()
+    return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
+
+
+configure_logging()
+
+
+def _is_blank(value: object) -> bool:
     return value is None or (isinstance(value, str) and value.strip() == "")
 
 
@@ -67,6 +82,116 @@ def _ensure_translation_entry(translations: list[dict[str, Any]], locale: str) -
     return created
 
 
+def _count_prompt_strings(prompt: dict[str, Any], *, normalized_source: str, normalized_targets: list[str]) -> int:
+    translations = list(prompt.get("translations", []))
+    indexed = _translations_by_locale(translations)
+    source_translation = indexed.get(normalized_source)
+    if source_translation is None or _is_blank(source_translation.get("label")):
+        return 0
+
+    source_aliases = [str(alias) for alias in (source_translation.get("aliases") or []) if not _is_blank(alias)]
+    return (1 + len(source_aliases)) * len(normalized_targets)
+
+
+def _count_category_strings(category: dict[str, Any], *, normalized_source: str, normalized_targets: list[str]) -> int:
+    translations = list(category.get("translations", []))
+    indexed = _translations_by_locale(translations)
+    source_translation = indexed.get(normalized_source)
+    if source_translation is None or _is_blank(source_translation.get("name")):
+        return 0
+
+    source_description = source_translation.get("description")
+    return (1 + (1 if not _is_blank(source_description) else 0)) * len(normalized_targets)
+
+
+def _dedupe_translated_aliases(aliases: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for alias in aliases:
+        key = normalize_text(alias)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(alias.strip().lower())
+    return deduped
+
+
+def _translate_prompt(
+    prompt: dict[str, Any],
+    *,
+    normalized_source: str,
+    normalized_targets: list[str],
+    service: TranslationService,
+    overwrite_existing: bool,
+    stats: dict[str, int],
+) -> None:
+    translations = list(prompt.get("translations", []))
+    indexed = _translations_by_locale(translations)
+    source_translation = indexed.get(normalized_source)
+    if source_translation is None or _is_blank(source_translation.get("label")):
+        stats["skipped_missing_source"] += 1
+        return
+
+    source_label = str(source_translation["label"])
+    source_aliases = list(
+        dict.fromkeys(str(alias) for alias in (source_translation.get("aliases") or []) if not _is_blank(alias))
+    )
+
+    for target_locale in normalized_targets:
+        target_translation = _ensure_translation_entry(translations, target_locale)
+
+        has_label = not _is_blank(target_translation.get("label"))
+        if overwrite_existing or not has_label:
+            target_translation["label"] = service.translate(normalized_source, target_locale, source_label)
+            stats["prompts_translated"] += 1
+
+        target_aliases = target_translation.get("aliases")
+        has_aliases = isinstance(target_aliases, list) and len(target_aliases) > 0
+        if source_aliases and (overwrite_existing or not has_aliases):
+            translated = [service.translate(normalized_source, target_locale, alias) for alias in source_aliases]
+            target_translation["aliases"] = _dedupe_translated_aliases(translated)
+            stats["aliases_translated"] += len(source_aliases)
+
+    prompt["translations"] = translations
+
+
+def _translate_category(
+    category: dict[str, Any],
+    *,
+    normalized_source: str,
+    normalized_targets: list[str],
+    service: TranslationService,
+    overwrite_existing: bool,
+    stats: dict[str, int],
+) -> None:
+    translations = list(category.get("translations", []))
+    indexed = _translations_by_locale(translations)
+    source_translation = indexed.get(normalized_source)
+    if source_translation is None or _is_blank(source_translation.get("name")):
+        stats["skipped_missing_source"] += 1
+        return
+
+    source_name = str(source_translation["name"])
+    source_description = source_translation.get("description")
+
+    for target_locale in normalized_targets:
+        target_translation = _ensure_translation_entry(translations, target_locale)
+
+        has_name = not _is_blank(target_translation.get("name"))
+        if overwrite_existing or not has_name:
+            target_translation["name"] = service.translate(normalized_source, target_locale, source_name)
+            stats["categories_translated"] += 1
+
+        if not _is_blank(source_description):
+            has_description = not _is_blank(target_translation.get("description"))
+            if overwrite_existing or not has_description:
+                target_translation["description"] = service.translate(
+                    normalized_source, target_locale, str(source_description)
+                )
+                stats["categories_translated"] += 1
+
+    category["translations"] = translations
+
+
 def apply_auto_translations(
     seed_data: dict[str, Any],
     *,
@@ -90,124 +215,61 @@ def apply_auto_translations(
     # Pre-fetch all language pairs if provided
     logger.info("Pre-fetching all language pairs...")
     service.prefetch_pairs(normalized_source, normalized_targets)
-
-    def translate_with_service(from_locale: str, to_locale: str, text: str) -> str:
-        """Translate using service (handles cache internally)."""
-        stats["total_operations"] += 1
-        if stats["total_operations"] % 100 == 0:
-            logger.info(f"Progress: {stats['total_operations']} translations completed")
-        return service.translate(from_locale, to_locale, text)
-
-    total_strings_to_estimate = 0
-
-    # Count total strings for progress tracking
     prompts = list(seed_data.get(PROMPTS_KEY, []))
-    for prompt in prompts:
-        translations = list(prompt.get("translations", []))
-        indexed = _translations_by_locale(translations)
-        source_translation = indexed.get(normalized_source)
-        if source_translation and not _is_blank(source_translation.get("label")):
-            source_label = str(source_translation["label"])
-            source_aliases = [str(alias) for alias in (source_translation.get("aliases") or []) if not _is_blank(alias)]
-            total_strings_to_estimate += (1 + len(source_aliases)) * len(normalized_targets)
-
     categories = list(seed_data.get(SYSTEM_CATEGORIES_KEY, []))
-    for category in categories:
-        translations = list(category.get("translations", []))
-        indexed = _translations_by_locale(translations)
-        source_translation = indexed.get(normalized_source)
-        if source_translation and not _is_blank(source_translation.get("name")):
-            source_description = source_translation.get("description")
-            has_description = not _is_blank(source_description)
-            total_strings_to_estimate += (1 + (1 if has_description else 0)) * len(normalized_targets)
+    total_strings_to_estimate = sum(
+        _count_prompt_strings(prompt, normalized_source=normalized_source, normalized_targets=normalized_targets)
+        for prompt in prompts
+    ) + sum(
+        _count_category_strings(category, normalized_source=normalized_source, normalized_targets=normalized_targets)
+        for category in categories
+    )
 
-    logger.info(f"Starting translation of ~{total_strings_to_estimate} strings...")
+    logger.info("Starting translation of ~%d strings...", total_strings_to_estimate)
 
     # Translate prompts
     for prompt in prompts:
-        translations = list(prompt.get("translations", []))
-        indexed = _translations_by_locale(translations)
-        source_translation = indexed.get(normalized_source)
-        if source_translation is None or _is_blank(source_translation.get("label")):
-            stats["skipped_missing_source"] += 1
-            continue
-
-        source_label = str(source_translation["label"])
-        # Deduplicate aliases while preserving order
-        source_aliases = list(
-            dict.fromkeys(str(alias) for alias in (source_translation.get("aliases") or []) if not _is_blank(alias))
+        _translate_prompt(
+            prompt,
+            normalized_source=normalized_source,
+            normalized_targets=normalized_targets,
+            service=service,
+            overwrite_existing=overwrite_existing,
+            stats=stats,
         )
-
-        for target_locale in normalized_targets:
-            target_translation = _ensure_translation_entry(translations, target_locale)
-
-            has_label = not _is_blank(target_translation.get("label"))
-            if overwrite_existing or not has_label:
-                target_translation["label"] = translate_with_service(normalized_source, target_locale, source_label)
-                stats["prompts_translated"] += 1
-
-            target_aliases = target_translation.get("aliases")
-            has_aliases = isinstance(target_aliases, list) and len(target_aliases) > 0
-            if source_aliases and (overwrite_existing or not has_aliases):
-                translated = [
-                    translate_with_service(normalized_source, target_locale, alias) for alias in source_aliases
-                ]
-                # Deduplicate using same normalization as scoring (accent-insensitive, lowercase)
-                seen: set[str] = set()
-                deduped = []
-                for t in translated:
-                    key = normalize_text(t)
-                    if key not in seen:
-                        seen.add(key)
-                        deduped.append(t.strip().lower())
-                target_translation["aliases"] = deduped
-                stats["aliases_translated"] += len(source_aliases)
-
-        prompt["translations"] = translations
+        stats["total_operations"] += 1
+        if stats["total_operations"] % 100 == 0:
+            logger.info("Progress: %d translations completed", stats["total_operations"])
 
     # Translate categories
     for category in categories:
-        translations = list(category.get("translations", []))
-        indexed = _translations_by_locale(translations)
-        source_translation = indexed.get(normalized_source)
-        if source_translation is None or _is_blank(source_translation.get("name")):
-            stats["skipped_missing_source"] += 1
-            continue
-
-        source_name = str(source_translation["name"])
-        source_description = source_translation.get("description")
-
-        for target_locale in normalized_targets:
-            target_translation = _ensure_translation_entry(translations, target_locale)
-
-            has_name = not _is_blank(target_translation.get("name"))
-            if overwrite_existing or not has_name:
-                target_translation["name"] = translate_with_service(normalized_source, target_locale, source_name)
-                stats["categories_translated"] += 1
-
-            if not _is_blank(source_description):
-                has_description = not _is_blank(target_translation.get("description"))
-                if overwrite_existing or not has_description:
-                    target_translation["description"] = translate_with_service(
-                        normalized_source, target_locale, str(source_description)
-                    )
-                    stats["categories_translated"] += 1
-
-        category["translations"] = translations
+        _translate_category(
+            category,
+            normalized_source=normalized_source,
+            normalized_targets=normalized_targets,
+            service=service,
+            overwrite_existing=overwrite_existing,
+            stats=stats,
+        )
+        stats["total_operations"] += 1
+        if stats["total_operations"] % 100 == 0:
+            logger.info("Progress: %d translations completed", stats["total_operations"])
 
     elapsed = time.time() - start_time
-    total_updates = stats["prompts_translated"] + stats["categories_translated"] + stats["aliases_translated"]
     logger.info(
-        f"Translation updates: prompts={stats['prompts_translated']} "
-        f"categories={stats['categories_translated']} aliases={stats['aliases_translated']} | "
-        f"elapsed={elapsed:.1f}s"
+        "Translation updates: prompts=%d categories=%d aliases=%d | elapsed=%.1fs",
+        stats["prompts_translated"],
+        stats["categories_translated"],
+        stats["aliases_translated"],
+        elapsed,
     )
-    logger.info(f"Service cache stats: {service.cache_stats()}")
+    logger.info("Service cache stats: %s", service.cache_stats())
 
     return stats
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the auto-translation script."""
     parser = argparse.ArgumentParser(description="Auto-translate missing entries in seed_data.yaml")
     parser.add_argument("--seed-file", type=Path, default=DEFAULT_SEED_PATH)
     parser.add_argument("--source-locale", default=DEFAULT_SOURCE_LOCALE)
@@ -227,7 +289,7 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
 
     # Handle comma-separated locales for convenience
-    if args.target_locales and len(args.target_locales) == 1 and "," in args.target_locales[0]:
+    if args.target_locales and len(args.target_locales) == 1 and "," in args.target_locales[0]:  # noqa: PLR2004
         args.target_locales = args.target_locales[0].split(",")
 
     return args
@@ -252,51 +314,57 @@ def _write_hash(file_hash: str) -> None:
     SEED_HASH_FILE.write_text(file_hash)
 
 
+def _handle_cache_commands(args: argparse.Namespace, service: TranslationService) -> bool:
+    if args.reset_cache:
+        logger.info("Clearing translation cache...")
+        service.cache.reset()
+        logger.info("Cache cleared.")
+        return True
+
+    if args.show_cache_stats:
+        logger.info("Cache stats: %s", service.cache_stats())
+        return True
+
+    if args.inspect_cache:
+        logger.info("Dumping translation cache...")
+        logger.info(json.dumps(service.cache.cache, indent=2, ensure_ascii=False))
+        return True
+
+    return False
+
+
 def main() -> None:
+    """Main entry point for auto-translation script."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     args = parse_args()
 
     seed_file: Path = args.seed_file
     if not seed_file.exists():
-        raise FileNotFoundError(f"Seed file not found: {seed_file}")
+        msg = f"Seed file not found: {seed_file}"
+        raise FileNotFoundError(msg)
 
-    # Handle cache commands
     service = TranslationService()
-    if args.reset_cache:
-        logger.info("Clearing translation cache...")
-        service.cache.reset()
-        logger.info("Cache cleared.")
-        return
+    handled = _handle_cache_commands(args, service)
+    if not handled:
+        current_hash = _compute_file_hash(seed_file)
+        last_hash = _read_last_hash()
+        if current_hash == last_hash and not args.force and not args.overwrite_existing:
+            logger.info("Seed file unchanged since last translation (hash: %s...). Skipping.", current_hash[:8])
+            logger.info("Use --force to re-translate anyway.")
+            handled = True
 
-    if args.show_cache_stats:
-        logger.info(f"Cache stats: {service.cache_stats()}")
-        return
+    seed_data: dict[str, Any] | None = None
+    if not handled:
+        seed_data = yaml.safe_load(seed_file.read_text(encoding="utf-8"))
+        if not isinstance(seed_data, dict):
+            msg = "Expected seed YAML root to be a mapping."
+            raise TypeError(msg)
 
-    if args.inspect_cache:
-        import json
-
-        logger.info("Dumping translation cache...")
-        logger.info(json.dumps(service.cache.cache, indent=2, ensure_ascii=False))
-        return
-
-    # Hash-based skip check (unless --force or --overwrite-existing)
-    current_hash = _compute_file_hash(seed_file)
-    last_hash = _read_last_hash()
-    if current_hash == last_hash and not args.force and not args.overwrite_existing:
-        logger.info(f"Seed file unchanged since last translation (hash: {current_hash[:8]}...). Skipping.")
-        logger.info("Use --force to re-translate anyway.")
-        return
-
-    seed_data = yaml.safe_load(seed_file.read_text(encoding="utf-8"))
-    if not isinstance(seed_data, dict):
-        raise ValueError("Expected seed YAML root to be a mapping.")
-
-    # Benchmark mode: sample 50 prompts and extrapolate
-    if args.benchmark:
+    if not handled and args.benchmark and seed_data is not None:
         logger.info("Running benchmark on sample of 50 prompts...")
         sample_data: dict[str, Any] = {"prompts": list(seed_data.get(PROMPTS_KEY, []))[:50]}
         start_bench = time.time()
-        bench_stats = apply_auto_translations(
+        apply_auto_translations(
             sample_data,
             source_locale=str(args.source_locale),
             target_locales=list(args.target_locales),
@@ -306,35 +374,36 @@ def main() -> None:
         elapsed_bench = time.time() - start_bench
         total_prompts = len(list(seed_data.get(PROMPTS_KEY, [])))
         estimated_total = elapsed_bench * (total_prompts / 50)
-        logger.info(f"Benchmark: 50 prompts took {elapsed_bench:.1f}s")
+        logger.info("Benchmark: 50 prompts took %.1f}s", elapsed_bench)
         logger.info(
-            f"Estimated total time for {total_prompts} prompts: {estimated_total:.1f}s ({estimated_total / 60:.1f}m)"
+            "Estimated total time for %d prompts: %.1f}s (%.1fm)",
+            total_prompts,
+            estimated_total,
+            estimated_total / 60,
         )
-        return
+        handled = True
 
-    stats = apply_auto_translations(
-        seed_data,
-        source_locale=str(args.source_locale),
-        target_locales=list(args.target_locales),
-        service=service,
-        overwrite_existing=bool(args.overwrite_existing),
-    )
+    if not handled and seed_data is not None:
+        stats = apply_auto_translations(
+            seed_data,
+            source_locale=str(args.source_locale),
+            target_locales=list(args.target_locales),
+            service=service,
+            overwrite_existing=bool(args.overwrite_existing),
+        )
 
-    total_updates = stats["prompts_translated"] + stats["categories_translated"] + stats["aliases_translated"]
-    if total_updates == 0:
-        logger.info("No missing translations found. Nothing to update.")
-        return
+        total_updates = stats["prompts_translated"] + stats["categories_translated"] + stats["aliases_translated"]
+        if total_updates == 0:
+            logger.info("No missing translations found. Nothing to update.")
+        elif args.dry_run:
+            logger.info("Dry run enabled: seed file was not modified.")
+        else:
+            seed_file.write_text(yaml.safe_dump(seed_data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+            logger.info("Updated seed translations in %s", seed_file)
 
-    if args.dry_run:
-        logger.info("Dry run enabled: seed file was not modified.")
-        return
-
-    seed_file.write_text(yaml.safe_dump(seed_data, allow_unicode=True, sort_keys=False), encoding="utf-8")
-    logger.info("Updated seed translations in %s", seed_file)
-
-    # Update hash marker for next run
-    _write_hash(current_hash)
-    logger.info("Hash marker updated. Next run will skip if unchanged.")
+            current_hash = _compute_file_hash(seed_file)
+            _write_hash(current_hash)
+            logger.info("Hash marker updated. Next run will skip if unchanged.")
 
 
 if __name__ == "__main__":

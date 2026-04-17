@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -16,19 +16,24 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class JoinedPlayer:
+    """A player that will join a websocket room during test setup."""
+
     player_id: str
     name: str
 
 
-def receive_json(websocket: WebSocketTestSession) -> dict[str, Any]:
+def receive_json(websocket: WebSocketTestSession) -> dict[str, object]:
+    """Receive one JSON payload from a websocket session."""
     return json.loads(websocket.receive_text())
 
 
-def send_json(websocket: WebSocketTestSession, payload: dict[str, Any]) -> None:
+def send_json(websocket: WebSocketTestSession, payload: dict[str, object]) -> None:
+    """Send one JSON payload to a websocket session."""
     websocket.send_text(json.dumps(payload))
 
 
-def join_player(websocket: WebSocketTestSession, player_id: str, name: str) -> dict[str, Any]:
+def join_player(websocket: WebSocketTestSession, player_id: str, name: str) -> dict[str, object]:
+    """Join a player to a websocket room and return the immediate response."""
     send_json(websocket, {"type": "join", "playerId": player_id, "name": name})
     return receive_json(websocket)
 

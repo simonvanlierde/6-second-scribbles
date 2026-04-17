@@ -5,19 +5,59 @@ Uses rapidfuzz for high-performance fuzzy string matching.
 
 from __future__ import annotations
 
+__all__ = [
+    "GuessMatchDetailResult",
+    "GuessMatchResult",
+    "GuessMatcher",
+    "GuessTarget",
+    "ScoreGuessesResult",
+    "guess_matcher",
+    "normalize_text",
+]
+
+import functools
 import unicodedata
 from dataclasses import dataclass
+from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field
 from rapidfuzz import fuzz
 
-
-def normalize_text(text: str) -> str:
-    """Normalize text for comparison: lowercase, strip, remove accents."""
-    lowered = text.lower().strip()
-    return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
+type MatchMethod = Literal["exact", "fuzzy", "alternative", "none"]
 
 
-from app.scoring.models import GuessMatchDetailResult, GuessMatchResult, ScoreGuessesResult
+class GuessMatchResult(BaseModel):
+    """Result of matching one guess against the accepted answers."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matched: bool
+    matched_item: str | None
+    similarity: float
+    method: MatchMethod
+
+
+class GuessMatchDetailResult(BaseModel):
+    """Detailed scoring information for a matched guess."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    guess: str
+    matched_item: str
+    similarity: float
+    method: MatchMethod
+
+
+class ScoreGuessesResult(BaseModel):
+    """Aggregate scoring result for a set of guesses."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    score: int
+    total: int
+    percentage: float
+    matches: list[GuessMatchDetailResult] = Field(default_factory=list)
+    unmatched_answers: list[str] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -29,40 +69,44 @@ class GuessTarget:
     aliases: list[str]
 
 
+def normalize_text(text: str) -> str:
+    """Normalize text for comparison: lowercase, strip, remove accents."""
+    lowered = text.lower().strip()
+    return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
+
+
+@functools.lru_cache(maxsize=1024)
+def _generate_variants(normalized: str) -> frozenset[str]:
+    """Generate common plural/verb variants of a normalized word."""
+    variants = {normalized}
+
+    if normalized.endswith("s"):
+        variants.add(normalized[:-1])
+        if normalized.endswith("es"):
+            variants.add(normalized[:-2])
+    else:
+        variants.add(f"{normalized}s")
+        variants.add(f"{normalized}es")
+
+    if normalized.endswith("ing"):
+        variants.add(normalized[:-3])
+
+    return frozenset(variants)
+
+
 class GuessMatcher:
     """Handles fuzzy matching of player guesses against correct answers."""
 
     EXACT_MATCH_THRESHOLD = 100
     FUZZY_MATCH_THRESHOLD = 85
 
-    def __init__(self) -> None:
-        self.cache: dict[str, set[str]] = {}
-
     def normalize(self, text: str) -> str:
         """Normalize text for comparison."""
         return normalize_text(text)
 
-    def generate_variants(self, word: str) -> set[str]:
-        """Generate common variants of a word."""
-        normalized = self.normalize(word)
-        if normalized in self.cache:
-            return self.cache[normalized]
-
-        variants = {normalized}
-
-        if normalized.endswith("s"):
-            variants.add(normalized[:-1])
-            if normalized.endswith("es"):
-                variants.add(normalized[:-2])
-        else:
-            variants.add(f"{normalized}s")
-            variants.add(f"{normalized}es")
-
-        if normalized.endswith("ing"):
-            variants.add(normalized[:-3])
-
-        self.cache[normalized] = variants
-        return variants
+    def generate_variants(self, word: str) -> frozenset[str]:
+        """Generate common variants of a word (cached at module level)."""
+        return _generate_variants(self.normalize(word))
 
     def exact_match(self, guess: str, target: str) -> bool:
         """Check if guess exactly matches target."""

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.core.types import Difficulty, LanguageCode  # noqa: TC001 - used by Pydantic at runtime
-from app.scoring.models import GuessMatchDetailResult  # noqa: TC001 - used by Pydantic at runtime
+from app.core.types import Difficulty, LanguageCode
+from app.scoring import GuessMatchDetailResult
 
 
 class GuessScoreRequest(BaseModel):

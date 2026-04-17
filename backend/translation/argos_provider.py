@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
-
-from argostranslate import package as argos_package
-from argostranslate import translate as argos_translate
 
 from app.core.logging import configure_logging
 
@@ -19,10 +17,10 @@ class ArgosTranslationProvider:
     def __init__(self) -> None:
         """Initialize the provider and update package index."""
         try:
-            self.argos_package = argos_package
-            self.argos_translate = argos_translate
+            self.argos_package = importlib.import_module("argostranslate.package")
+            self.argos_translate = importlib.import_module("argostranslate.translate")
         except ImportError as exc:
-            msg = "Argos Translate is not installed. Run: uv sync --all-groups"
+            msg = "Argos Translate is not installed. Run: uv sync --group db-translate or uv sync --all-groups"
             raise RuntimeError(msg) from exc
 
         logger.info("Updating Argos package index...")
@@ -35,11 +33,12 @@ class ArgosTranslationProvider:
         if (from_locale, to_locale) in self.installed_pairs:
             return
         try:
-            self.argos_translate.get_translation_from_codes(from_locale, to_locale)
+            translation = self.argos_translate.get_translation_from_codes(from_locale, to_locale)
+        except AttributeError:
+            translation = None
+
+        if translation is not None:
             self.installed_pairs.add((from_locale, to_locale))
-        except Exception:
-            pass
-        else:
             return
 
         matching = [pkg for pkg in self.available_packages if pkg.from_code == from_locale and pkg.to_code == to_locale]

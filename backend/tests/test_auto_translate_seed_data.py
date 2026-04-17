@@ -1,9 +1,22 @@
+"""Tests for automatic translation of seed data."""
+
 from __future__ import annotations
 
 from scripts.auto_translate_seed_data import apply_auto_translations
+from translation import TranslationService
+
+LOCALE_EN = "en"
+LOCALE_ES = "es"
+LOCALE_FR = "fr"
+CAT_ES = "cat<en->es>"
+ANIMALS_FR = "Animals<en->fr>"
+GATO = "gato"
+GATITO = "gatito"
+CAT_ES_OVERWRITE = "cat<en->es>"
+KITTY_ES_OVERWRITE = "kitty<en->es>"
 
 
-class MockTranslationService:
+class MockTranslationService(TranslationService):
     """Mock service for testing that tracks translation calls."""
 
     def __init__(self) -> None:
@@ -25,13 +38,16 @@ class MockTranslationService:
 
 
 class TestAutoTranslateSeedData:
+    """Coverage for automatic translation of prompt and category seed data."""
+
     def test_apply_auto_translations_adds_missing_prompt_and_category_translations(self) -> None:
+        """Fill in missing prompt and category translations for target locales."""
         seed_data = {
             "prompts": [
                 {
                     "id": "cat",
                     "translations": [
-                        {"locale": "en", "label": "cat", "aliases": ["kitty"]},
+                        {"locale": LOCALE_EN, "label": "cat", "aliases": ["kitty"]},
                     ],
                 }
             ],
@@ -39,7 +55,7 @@ class TestAutoTranslateSeedData:
                 {
                     "id": "animals",
                     "difficulty": "easy",
-                    "translations": [{"locale": "en", "name": "Animals"}],
+                    "translations": [{"locale": LOCALE_EN, "name": "Animals"}],
                     "items": ["cat"],
                 }
             ],
@@ -48,8 +64,8 @@ class TestAutoTranslateSeedData:
         service = MockTranslationService()
         stats = apply_auto_translations(
             seed_data,
-            source_locale="en",
-            target_locales=["es", "fr"],
+            source_locale=LOCALE_EN,
+            target_locales=[LOCALE_ES, LOCALE_FR],
             service=service,
             overwrite_existing=False,
         )
@@ -57,22 +73,23 @@ class TestAutoTranslateSeedData:
         prompt_translations = seed_data["prompts"][0]["translations"]
         category_translations = seed_data["system_categories"][0]["translations"]
 
-        assert {t["locale"] for t in prompt_translations} == {"en", "es", "fr"}
-        assert {t["locale"] for t in category_translations} == {"en", "es", "fr"}
-        assert next(t for t in prompt_translations if t["locale"] == "es")["label"] == "cat<en->es>"
-        assert next(t for t in category_translations if t["locale"] == "fr")["name"] == "Animals<en->fr>"
+        assert {t["locale"] for t in prompt_translations} == {LOCALE_EN, LOCALE_ES, LOCALE_FR}
+        assert {t["locale"] for t in category_translations} == {LOCALE_EN, LOCALE_ES, LOCALE_FR}
+        assert next(t for t in prompt_translations if t["locale"] == LOCALE_ES)["label"] == CAT_ES
+        assert next(t for t in category_translations if t["locale"] == LOCALE_FR)["name"] == ANIMALS_FR
         assert stats["prompts_translated"] == 2
         assert stats["categories_translated"] == 2
         assert stats["aliases_translated"] == 2
 
     def test_apply_auto_translations_preserves_existing_translations_by_default(self) -> None:
+        """Keep existing translations unless overwrite is explicitly enabled."""
         seed_data = {
             "prompts": [
                 {
                     "id": "cat",
                     "translations": [
-                        {"locale": "en", "label": "cat", "aliases": ["kitty"]},
-                        {"locale": "es", "label": "gato", "aliases": ["gatito"]},
+                        {"locale": LOCALE_EN, "label": "cat", "aliases": ["kitty"]},
+                        {"locale": LOCALE_ES, "label": GATO, "aliases": [GATITO]},
                     ],
                 }
             ]
@@ -81,26 +98,27 @@ class TestAutoTranslateSeedData:
         service = MockTranslationService()
         stats = apply_auto_translations(
             seed_data,
-            source_locale="en",
-            target_locales=["es"],
+            source_locale=LOCALE_EN,
+            target_locales=[LOCALE_ES],
             service=service,
             overwrite_existing=False,
         )
 
-        es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == "es")
-        assert es_translation["label"] == "gato"
-        assert es_translation["aliases"] == ["gatito"]
+        es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == LOCALE_ES)
+        assert es_translation["label"] == GATO
+        assert es_translation["aliases"] == [GATITO]
         total_updates = stats["prompts_translated"] + stats["categories_translated"] + stats["aliases_translated"]
         assert total_updates == 0
 
     def test_apply_auto_translations_overwrites_when_requested(self) -> None:
+        """Overwrite existing translations when requested."""
         seed_data = {
             "prompts": [
                 {
                     "id": "cat",
                     "translations": [
-                        {"locale": "en", "label": "cat", "aliases": ["kitty"]},
-                        {"locale": "es", "label": "gato", "aliases": ["gatito"]},
+                        {"locale": LOCALE_EN, "label": "cat", "aliases": ["kitty"]},
+                        {"locale": LOCALE_ES, "label": GATO, "aliases": [GATITO]},
                     ],
                 }
             ]
@@ -109,36 +127,36 @@ class TestAutoTranslateSeedData:
         service = MockTranslationService()
         stats = apply_auto_translations(
             seed_data,
-            source_locale="en",
-            target_locales=["es"],
+            source_locale=LOCALE_EN,
+            target_locales=[LOCALE_ES],
             service=service,
             overwrite_existing=True,
         )
 
-        es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == "es")
-        assert es_translation["label"] == "cat<en->es>"
-        assert es_translation["aliases"] == ["kitty<en->es>"]
+        es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == LOCALE_ES)
+        assert es_translation["label"] == CAT_ES_OVERWRITE
+        assert es_translation["aliases"] == [KITTY_ES_OVERWRITE]
         assert stats["prompts_translated"] == 1
         assert stats["aliases_translated"] == 1
 
     def test_service_handles_deduplication_internally(self) -> None:
-        """Test that service deduplication works correctly."""
+        """Let the translation service deduplicate repeated aliases."""
         seed_data = {
             "prompts": [
                 {
                     "id": "test",
                     "translations": [
-                        {"locale": "en", "label": "cat", "aliases": ["cat", "cat"]},  # duplicates
+                        {"locale": LOCALE_EN, "label": "cat", "aliases": ["cat", "cat"]},  # duplicates
                     ],
                 }
             ]
         }
 
         service = MockTranslationService()
-        stats = apply_auto_translations(
+        apply_auto_translations(
             seed_data,
-            source_locale="en",
-            target_locales=["es"],
+            source_locale=LOCALE_EN,
+            target_locales=[LOCALE_ES],
             service=service,
             overwrite_existing=False,
         )
@@ -146,5 +164,5 @@ class TestAutoTranslateSeedData:
         # Should have called service.translate for label + 2 aliases (service handles dedup internally)
         assert service.translate_call_count >= 1  # At least the label was translated
         # Aliases should be present
-        es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == "es")
+        es_translation = next(t for t in seed_data["prompts"][0]["translations"] if t["locale"] == LOCALE_ES)
         assert es_translation.get("aliases") is not None

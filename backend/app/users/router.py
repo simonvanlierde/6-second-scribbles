@@ -17,7 +17,7 @@ async def get_me(current_user: CurrentUserDep) -> UserResponse:
     return UserResponse(
         id=current_user.id,
         username=current_user.username,
-        display_name=current_user.display_name,
+        displayName=current_user.display_name,
         preferredLocale=current_user.preferred_locale,
         isGuest=current_user.password_hash is None,
     )
@@ -40,7 +40,7 @@ async def update_preferences(
     return UserResponse(
         id=current_user.id,
         username=current_user.username,
-        display_name=current_user.display_name,
+        displayName=current_user.display_name,
         preferredLocale=current_user.preferred_locale,
         isGuest=current_user.password_hash is None,
     )

@@ -5,11 +5,11 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from app.core.types import (  # noqa: TC001 - used by Pydantic at runtime
+from app.core.types import (
     Difficulty,
     GamePhase,
     LanguageCode,
@@ -23,6 +23,11 @@ if TYPE_CHECKING:
 type Payload = dict[str, object]
 type WebSocketMessage = BaseModel | Payload
 JOIN_EVENT_TYPE = "join"
+
+
+class EventCatalogEntry(TypedDict):
+    group: str
+    summary: str
 
 
 class ClientEventModel(BaseModel):
@@ -441,6 +446,73 @@ ERROR_EVENT_MODELS: dict[ErrorEventType, type[ServerErrorEvent]] = {
     "submit_guess_error": SubmitGuessErrorEvent,
     "join_error": JoinErrorEvent,
     "kick_error": KickErrorEvent,
+}
+
+CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
+    "heartbeat": {"group": "connection", "summary": "Keep the websocket session alive."},
+    "join": {"group": "connection", "summary": "Join a room with the local player identity."},
+    "request_game_state": {"group": "connection", "summary": "Request the latest room snapshot."},
+    "game_complete": {"group": "gameFlow", "summary": "Signal that the game is complete."},
+    "player_ready": {"group": "gameFlow", "summary": "Mark the current player as ready."},
+    "restart_game": {"group": "gameFlow", "summary": "Restart the game from the lobby state."},
+    "round_complete": {"group": "gameFlow", "summary": "Signal that the current round is complete."},
+    "settings_update": {"group": "gameFlow", "summary": "Update shared game settings."},
+    "start_game": {"group": "gameFlow", "summary": "Host starts a game with room settings."},
+    "start_guessing": {"group": "gameFlow", "summary": "Host transitions the room into guessing."},
+    "start_round": {"group": "gameFlow", "summary": "Host starts a drawing round with assigned cards."},
+    "submit_guess": {"group": "gameFlow", "summary": "Submit guesses for another player's drawing."},
+    "default_locale_update": {"group": "roomSettings", "summary": "Change the room default locale."},
+    "room_custom_categories_update": {
+        "group": "roomSettings",
+        "summary": "Override the host's private category selection for this room.",
+    },
+    "privacy_changed": {"group": "roomSettings", "summary": "Change the room privacy setting."},
+    "draw_stroke": {"group": "drawing", "summary": "Broadcast a completed draw stroke."},
+    "draw_stroke_partial": {"group": "drawing", "summary": "Broadcast an in-progress draw stroke."},
+    "drawpad_clear": {"group": "drawing", "summary": "Clear the shared drawpad."},
+    "pad_visibility": {"group": "drawing", "summary": "Show or hide the shared drawpad."},
+    "cast_kick_vote": {"group": "moderation", "summary": "Cast a vote in an active kick vote."},
+    "initiate_kick": {"group": "moderation", "summary": "Start a kick vote for a target player."},
+}
+
+SERVER_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
+    "host_restored": {"group": "connection", "summary": "A reconnecting host regained host status."},
+    "join_error": {"group": "connection", "summary": "Join failed but the connection remained valid."},
+    "player_joined": {"group": "connection", "summary": "A player joined the room."},
+    "player_left": {"group": "connection", "summary": "A player left the room."},
+    "room_state": {"group": "connection", "summary": "Current room snapshot."},
+    "game_complete": {"group": "gameFlow", "summary": "Game completion results broadcast."},
+    "ready_status": {"group": "gameFlow", "summary": "Current ready-player counts."},
+    "restart_game": {"group": "gameFlow", "summary": "Game restart broadcast."},
+    "round_complete": {"group": "gameFlow", "summary": "Round completion results broadcast."},
+    "settings_update": {"group": "gameFlow", "summary": "Game settings updated."},
+    "start_game": {"group": "gameFlow", "summary": "Game start broadcast."},
+    "start_guessing": {"group": "gameFlow", "summary": "Guessing phase started."},
+    "start_round": {"group": "gameFlow", "summary": "Round start broadcast with assigned cards."},
+    "default_locale_update": {"group": "roomSettings", "summary": "Room default locale updated."},
+    "room_custom_categories_update": {
+        "group": "roomSettings",
+        "summary": "Room-level private category selection changed.",
+    },
+    "draw_stroke": {"group": "drawing", "summary": "A completed draw stroke relay."},
+    "draw_stroke_partial": {"group": "drawing", "summary": "An in-progress draw stroke relay."},
+    "drawpad_clear": {"group": "drawing", "summary": "Drawpad cleared."},
+    "pad_visibility": {"group": "drawing", "summary": "Shared drawpad visibility changed."},
+    "kick_error": {"group": "moderation", "summary": "Kick workflow error."},
+    "kick_vote_expired": {"group": "moderation", "summary": "Kick vote expired."},
+    "kick_vote_started": {"group": "moderation", "summary": "Kick vote started."},
+    "kick_vote_updated": {"group": "moderation", "summary": "Kick vote tally updated."},
+    "player_kicked": {"group": "moderation", "summary": "A player was kicked from the room."},
+    "permission_error": {"group": "errors", "summary": "Unauthorized action attempt."},
+    "player_ready_error": {"group": "errors", "summary": "Player-ready validation failed."},
+    "protocol_error": {"group": "errors", "summary": "Malformed or invalid websocket payload."},
+    "submit_guess_error": {"group": "errors", "summary": "Guess submission validation failed."},
+    "host_changed": {"group": "gameFlow", "summary": "Host ownership changed."},
+}
+
+CONTRACT_EVENT_CATALOG = {
+    "client": CLIENT_EVENT_CATALOG,
+    "server": SERVER_EVENT_CATALOG,
 }
 
 

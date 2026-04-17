@@ -6,8 +6,8 @@ from fastapi import APIRouter
 
 from app.categories.schemas import CategoryListItem, GuessScoreRequest, GuessScoreResponse, LocaleAvailabilityItem
 from app.categories.service import list_categories, list_locale_availability, score_guess_request
-from app.core.database import AsyncSessionDep  # noqa: TC001 - FastAPI resolves this dependency alias at runtime
-from app.core.types import Difficulty, LanguageCode  # noqa: TC001 - FastAPI uses these runtime annotations
+from app.core.database import AsyncSessionDep
+from app.core.types import Difficulty, LanguageCode
 
 router = APIRouter(tags=["categories"])
 

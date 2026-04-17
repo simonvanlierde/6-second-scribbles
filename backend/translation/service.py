@@ -29,22 +29,18 @@ class TranslationService:
 
     def translate(self, from_locale: str, to_locale: str, text: str) -> str:
         """Translate text with multi-level caching (session → persistent → provider)."""
-        # Same locale, no-op
         if from_locale == to_locale:
             return text
 
-        # Session cache hit
         key = (from_locale, to_locale, text)
         if key in self.session_cache:
             return self.session_cache[key]
 
-        # Persistent cache hit
         cached = self.cache.get(from_locale, to_locale, text)
         if cached:
             self.session_cache[key] = cached
             return cached
 
-        # Provider
         result = self.provider.translate(from_locale, to_locale, text)
         self.cache.put(from_locale, to_locale, text, result)
         self.session_cache[key] = result

@@ -1,4 +1,4 @@
-"""Translation service for seed data and user-generated content."""
+"""Translation services and providers."""
 
 from __future__ import annotations
 

@@ -10,6 +10,9 @@ from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
+DETAIL = "detail"
+NO_AVAILABLE = "no available"
+
 
 class TestRandomRoomJoin:
     """Test suite for random room join feature."""
@@ -20,10 +23,11 @@ class TestRandomRoomJoin:
 
         assert response.status_code == 404
         data = response.json()
-        assert "detail" in data
-        assert "no available" in data["detail"].lower()
+        assert DETAIL in data
+        assert NO_AVAILABLE in data[DETAIL].lower()
 
     def test_find_public_room(self, test_client: TestClient) -> None:
+        """Test that a public room waiting for players is returned by random join."""
         room_id = "PUBLIC_ROOM_01"
         with joined_players(test_client, room_id, [JoinedPlayer("player1", "Test Player")]):
             response = test_client.get("/api/rooms/random")
@@ -35,6 +39,7 @@ class TestRandomRoomJoin:
             assert data["max_players"] == 10
 
     def test_private_room_not_returned(self, test_client: TestClient) -> None:
+        """Test that private rooms excluded by random join, even if they have space and are waiting for players."""
         room_id = "PRIVATE_ROOM"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]):
@@ -65,6 +70,7 @@ class TestRandomRoomJoin:
         assert response.status_code == 404
 
     def test_mid_game_room_not_returned(self, test_client: TestClient) -> None:
+        """Test that rooms in the middle of a game are not returned by random join."""
         room_id = "GAMING_ROOM"
 
         with joined_players(
@@ -87,6 +93,7 @@ class TestPrivacyToggle:
     """Test suite for room privacy toggle."""
 
     def test_host_can_set_privacy(self, test_client: TestClient) -> None:
+        """Test that the host can toggle room privacy and it affects random join."""
         room_id = "PRIVACY_TEST"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]) as (ws,):
@@ -100,6 +107,7 @@ class TestPrivacyToggle:
             assert response.status_code == 404
 
     def test_non_host_cannot_set_privacy(self, test_client: TestClient) -> None:
+        """Test that a non-host player cannot toggle room privacy."""
         room_id = "NON_HOST_PRIVACY"
 
         with joined_players(
@@ -111,4 +119,4 @@ class TestPrivacyToggle:
 
             room = room_manager.get_room(room_id)
             assert room is not None
-            assert room.metadata.is_private is False
+            assert not room.metadata.is_private

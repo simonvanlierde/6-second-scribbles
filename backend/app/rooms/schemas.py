@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from app.core.types import GamePhase  # noqa: TC001 - used by Pydantic at runtime
+from app.core.types import GamePhase
 
 
 class RandomRoomResponse(BaseModel):

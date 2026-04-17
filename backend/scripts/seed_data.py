@@ -1,7 +1,7 @@
 """Seed script to load category data into the database (M2M + Library-First YAML).
 
-Run this after setting up the database:
-    python scripts/seed_data.py
+Run this from the backend directory after setting up the database:
+    uv run python -m scripts.seed_data
 """
 
 from __future__ import annotations
@@ -9,19 +9,19 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from sqlalchemy import delete, select
 
-from app.categories.models import (
-    Category,
-    CategoryPrompt,
-    Prompt,
-)
+from app.categories.models import DEFAULT_CATEGORY_SOURCE, Category, CategoryPrompt, Prompt, compute_available_locales
 from app.core.database import get_session_maker
 from app.core.logging import configure_logging
 from app.users.models import User
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def _iter_system_categories(seed_data: dict[str, Any]) -> list[dict[str, Any]]:
     return seed_data.get(SYSTEM_CATEGORIES_KEY, [])
 
 
-async def _seed_prompt_library(session, prompts_data: list[dict[str, Any]]):
+async def _seed_prompt_library(session: AsyncSession, prompts_data: list[dict[str, Any]]) -> None:
     """Populate the global prompt library."""
     for p_data in prompts_data:
         stable_key = str(p_data["id"])
@@ -66,7 +66,7 @@ async def _seed_prompt_library(session, prompts_data: list[dict[str, Any]]):
 
 
 async def _create_category(
-    session,
+    session: AsyncSession,
     *,
     id_name: str,
     difficulty: str,
@@ -78,26 +78,38 @@ async def _create_category(
     for t_data in translations:
         translations_dict[str(t_data["locale"]).lower()] = {"name": str(t_data["name"])}
 
+    # Resolve linked prompts up front so we can compute available_locales
+    # explicitly at insert time (the old SQLAlchemy after_flush listener is gone).
+    resolved_prompts: list[tuple[int, Prompt]] = []
+    for index, stable_key in enumerate(items, start=1):
+        result = await session.execute(select(Prompt).where(Prompt.stable_key == stable_key))
+        prompt = result.scalar_one_or_none()
+        if not prompt:
+            logger.warning(
+                "Prompt '%s' referenced in category '%s' not found in library; skipping.", stable_key, id_name
+            )
+            continue
+        resolved_prompts.append((index, prompt))
+
+    available_locales = compute_available_locales(
+        translations_dict,
+        [p.translations for _, p in resolved_prompts],
+    )
+    if not available_locales:
+        logger.warning("Category '%s' has no fully playable locales; it will be skipped by selection queries.", id_name)
+
     category = Category(
         slug=id_name,
         difficulty=difficulty.lower(),
         default_locale=default_locale,
         source="system",
         translations=translations_dict,
+        available_locales=available_locales,
     )
     session.add(category)
     await session.flush()
 
-    links_created = 0
-    for index, stable_key in enumerate(items, start=1):
-        # Lookup Prompt
-        result = await session.execute(select(Prompt).where(Prompt.stable_key == stable_key))
-        prompt = result.scalar_one_or_none()
-
-        if not prompt:
-            logger.warning(f"Prompt '{stable_key}' referenced in category '{id_name}' not found in library; skipping.")
-            continue
-
+    for index, prompt in resolved_prompts:
         session.add(
             CategoryPrompt(
                 category_id=category.id,
@@ -105,10 +117,9 @@ async def _create_category(
                 sort_order=index,
             )
         )
-        links_created += 1
 
     await session.flush()
-    return category, links_created
+    return category, len(resolved_prompts)
 
 
 async def seed_database() -> None:
@@ -117,13 +128,13 @@ async def seed_database() -> None:
         try:
             logger.info("Starting database seed")
             # Clear existing system data for a clean re-seed
-            await session.execute(delete(Category).where(Category.source == "system"))
+            await session.execute(delete(Category).where(Category.source == DEFAULT_CATEGORY_SOURCE))
             await session.execute(delete(Prompt))
 
             # 1. Seed Prompt Library
             prompts = _iter_prompts(SEED_DATA)
             await _seed_prompt_library(session, prompts)
-            logger.info(f"Populated Prompt Library with {len(prompts)} entries.")
+            logger.info("Populated Prompt Library with %d entries.", len(prompts))
 
             # 2. Seed Categories
             total_categories = 0
@@ -142,7 +153,7 @@ async def seed_database() -> None:
 
             await session.commit()
             logger.info(
-                "Seeded database with %s categories and %s prompt links (Many-to-Many).",
+                "Seeded database with %d categories and %d prompt links (Many-to-Many).",
                 total_categories,
                 total_links,
             )
@@ -153,6 +164,7 @@ async def seed_database() -> None:
 
 
 async def clear_database() -> None:
+    """Clear all data from the database. Use with caution!"""
     async with get_session_maker()() as session:
         try:
             logger.info("Clearing database")
@@ -169,6 +181,7 @@ async def clear_database() -> None:
 if __name__ == "__main__":
     import sys
 
+    configure_logging()
     if len(sys.argv) > 1 and sys.argv[1] == CLEAR_FLAG:
         asyncio.run(clear_database())
     else:

@@ -16,6 +16,8 @@ class AppInfoResponse(ApiStatusResponse):
 
     service: str
     version: str
+    database: str = "ok"
+    cache: str = "ok"
 
 
 class StatsResponse(ApiStatusResponse):

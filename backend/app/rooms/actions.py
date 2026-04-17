@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
-from app.rooms import mutations
+from app.rooms import rounds
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
     HostRestoredEvent,
@@ -116,16 +116,17 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
         return
     if len(session.room.players) < 2 or session.room.metadata.game_phase != GamePhase.LOBBY:
         return
-    if session.room._next_round_start_task and not session.room._next_round_start_task.done():
+    if session.room.scheduler.is_next_round_pending():
         return
-    session.room.configure_game(
+    rounds.configure_game(
+        session.room,
         drawing_time_limit=event.drawing_time_limit,
         guessing_time_limit=event.guessing_time_limit,
         difficulty=event.difficulty,
         max_rounds=event.rounds,
     )
     await broadcast_and_persist(session, event)
-    session.room.start_first_round_timeout()
+    session.room.scheduler.schedule_first_round()
 
 
 async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEvent) -> None:
@@ -135,7 +136,13 @@ async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEve
     round_start_time = session.room.start_round(
         round_number=event.round,
         cards={
-            player_id: PlayerPromptAssignmentState.model_validate(card.model_dump(exclude_none=True))
+            player_id: PlayerPromptAssignmentState(
+                category_id=card.category_id,
+                category=card.category,
+                item_ids=card.item_ids or [],
+                items=card.items,
+                alternatives=card.alternatives or {},
+            )
             for player_id, card in event.cards.items()
         },
     )
@@ -148,7 +155,7 @@ async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEve
             roundStartTime=round_start_time,
         ),
     )
-    session.room.start_guessing_timeout(session.room.metadata.drawing_time_limit or 30)
+    session.room.scheduler.schedule_guessing_start(session.room.metadata.drawing_time_limit or 30)
 
 
 async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyEvent) -> None:
@@ -164,12 +171,12 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
         and len(session.room.metadata.ready_players) >= len(session.room.players)
         and len(session.room.players) > 0
     ):
-        session.room.start_scoring_timeout(session.room.start_guessing())
+        session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
         await broadcast_and_persist(
             session,
             StartGuessingEvent(
                 type="start_guessing",
-                guessingStartTime=session.room.metadata.guessing_start_time,
+                guessing_start_time=session.room.metadata.guessing_start_time,
                 guessTargets=dict(session.room.metadata.guess_targets),
             ),
         )
@@ -180,12 +187,12 @@ async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuess
     del event
     if not await require_host(session, "start guessing"):
         return
-    session.room.start_scoring_timeout(session.room.start_guessing())
+    session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
     await broadcast_and_persist(
         session,
         StartGuessingEvent(
             type="start_guessing",
-            guessingStartTime=session.room.metadata.guessing_start_time,
+            guessing_start_time=session.room.metadata.guessing_start_time,
             guessTargets=dict(session.room.metadata.guess_targets),
         ),
     )
@@ -219,13 +226,11 @@ async def handle_settings_update(session: RoomWebSocketSession, event: SettingsU
     """Handle a settings-update event."""
     if not await require_host(session, "update room settings"):
         return
-    mutations.apply_settings_update(
-        session.room,
-        difficulty=event.difficulty,
-        rounds=event.rounds,
-        drawing_time_limit=event.drawing_time_limit,
-        guessing_time_limit=event.guessing_time_limit,
-    )
+    room = session.room
+    room.metadata.difficulty = event.difficulty or room.metadata.difficulty
+    room.metadata.max_rounds = event.rounds or room.metadata.max_rounds
+    room.metadata.drawing_time_limit = event.drawing_time_limit or room.metadata.drawing_time_limit
+    room.metadata.guessing_time_limit = event.guessing_time_limit or room.metadata.guessing_time_limit
     await broadcast_and_persist(session, event)
 
 
@@ -233,7 +238,7 @@ async def handle_default_locale_update(session: RoomWebSocketSession, event: Def
     """Handle a default-locale update event."""
     if not await require_host(session, "update the room default locale"):
         return
-    mutations.set_default_locale(session.room, event.locale)
+    session.room.metadata.default_locale = event.locale
     await broadcast_and_persist(session, DefaultLocaleUpdateServerEvent(locale=event.locale))
 
 
@@ -244,10 +249,11 @@ async def handle_room_custom_categories_update(
     """Handle a host updating room-level private category overrides."""
     if not await require_host(session, "update room categories"):
         return
-    mutations.set_custom_category_ids(session.room, category_ids=event.category_ids)
+    category_ids = event.category_ids
+    session.room.metadata.custom_category_ids = sorted(set(category_ids)) if category_ids is not None else None
     await broadcast_and_persist(
         session,
-        RoomCustomCategoriesUpdateServerEvent(categoryIds=session.room.metadata.custom_category_ids),
+        RoomCustomCategoriesUpdateServerEvent(category_ids=session.room.metadata.custom_category_ids),
     )
 
 
@@ -262,7 +268,7 @@ async def handle_pad_visibility(session: RoomWebSocketSession, event: PadVisibil
     """Handle a pad-visibility event."""
     if not await require_host(session, "change pad visibility"):
         return
-    mutations.set_pad_visibility(session.room, visible=event.visible)
+    session.room.metadata.pad_visibility = event.visible
     await broadcast_and_persist(session, event)
 
 
@@ -270,7 +276,7 @@ async def handle_privacy_changed(session: RoomWebSocketSession, event: PrivacyCh
     """Handle a privacy-changed event."""
     if not await require_host(session, "change room privacy"):
         return
-    mutations.set_privacy(session.room, is_private=event.is_private)
+    session.room.metadata.is_private = event.is_private
     await session.room.persist()
 
 

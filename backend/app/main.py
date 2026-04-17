@@ -10,7 +10,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.exceptions import RedisError
 
-import app.users.models
+import app.users.models as _user_models  # noqa: F401
 from app.auth.router import router as auth_router
 from app.categories.router import router as categories_router
 from app.core.config import settings
@@ -53,16 +53,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logger.info("Redis connection closed")
 
 
-app = FastAPI(
+application = FastAPI(
     title="Six Second Scribbles API",
     description="Real-time multiplayer drawing game backend",
     version="2.0.0",
     lifespan=lifespan,
 )
 
-app.add_middleware(
+app = application
+
+application.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=settings.allowed_origins or [],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,11 +77,11 @@ api_router.include_router(system_router)
 api_router.include_router(categories_router)
 api_router.include_router(rooms_router)
 
-app.include_router(api_router)
-app.include_router(ws_router)
+application.include_router(api_router)
+application.include_router(ws_router)
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import importlib
 
-    uvicorn.run(app, host=settings.server_host, port=settings.server_port)
+    importlib.import_module("uvicorn").run(application, host=settings.server_host, port=settings.server_port)

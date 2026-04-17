@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from app.core.config import settings
 from app.rooms.protocol import (
     KickVoteExpiredEvent,
     KickVoteStartedEvent,
@@ -63,7 +64,7 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
         target_player_name=target_player.name,
         initiated_by=initiator_id,
         voters={initiator_id},
-        expires_at=time.time() + room.KICK_VOTE_TIMEOUT_SECONDS,
+        expires_at=time.time() + settings.kick_vote_timeout_seconds,
     )
     room.active_kick_votes[target_player_id] = vote
 

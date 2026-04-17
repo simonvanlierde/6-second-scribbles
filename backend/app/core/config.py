@@ -1,18 +1,26 @@
 """Application configuration via pydantic-settings."""
 
 import os
-from enum import Enum
-from typing import Literal, Self
+from enum import StrEnum
+from typing import TYPE_CHECKING, Literal  # Needed for runtime  validation of Pydantic Settings
 
 from pydantic import SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if TYPE_CHECKING:
+    from typing import Self
 
 # ENV=dev loads .env.dev, ENV=prod loads .env.prod, etc.
 # If the resolved file does not exist, pydantic-settings ignores it silently.
 _ENV_STR = os.getenv("ENV", "dev").lower()
 
 
-class ENV(str, Enum):
+class ENV(StrEnum):
+    """Environment enum for selecting configuration profiles.
+
+    The value corresponds to the suffix of the .env file to load.
+    """
+
     DEV = "dev"
     PROD = "prod"
 
@@ -60,6 +68,7 @@ class Settings(BaseSettings):
     category_mutation_rate_limit: int = 30
     category_mutation_rate_window_seconds: int = 60
     category_locale_availability_ttl_seconds: int = 120
+    category_cache_ttl_seconds: int = 60 * 60 * 24
 
     @computed_field
     @property
@@ -70,7 +79,7 @@ class Settings(BaseSettings):
     # Network configuration
     server_host: str = "127.0.0.1"
     server_port: int = 8000
-    # Allowed origins are validated below in _prod_safety_checks to ensure it's set and does not contain wildcards in production.
+    # Allowed origins are validated below in _prod_safety_checks
     allowed_origins: list[str] | None = None
 
     # Game configuration
@@ -83,6 +92,7 @@ class Settings(BaseSettings):
     drawing_to_guessing_buffer_seconds: int = 2
     round_results_countdown_seconds: int = 5
     game_complete_delay_seconds: int = 5
+    kick_vote_timeout_seconds: int = 60
 
     @model_validator(mode="after")
     def _prod_safety_checks(self) -> Self:

@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+POINTS_PER_CORRECT_GUESS = 10
+
 
 def _build_round_result_item(
     *,
@@ -108,7 +110,7 @@ def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
     start_guessing(room)
     return StartGuessingEvent(
         type="start_guessing",
-        guessingStartTime=room.metadata.guessing_start_time,
+        guessing_start_time=room.metadata.guessing_start_time,
         guessTargets=dict(room.metadata.guess_targets),
     )
 
@@ -164,19 +166,17 @@ def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id:
 
 
 def assign_guess_targets(player_ids: list[str]) -> dict[str, str]:
-    """Assign each player exactly one other player's drawing to guess."""
+    """Assign each player exactly one other player's drawing to guess.
+
+    Uses circular rotation on a shuffled list: player[i] guesses player[(i+1) % n].
+    With 2+ players this guarantees no self-assignments.
+    """
     if len(player_ids) < 2:
         return {}
 
     shuffled = player_ids[:]
     random.shuffle(shuffled)
-
-    for index, player_id in enumerate(shuffled):
-        next_player_id = shuffled[(index + 1) % len(shuffled)]
-        if player_id == next_player_id:
-            return assign_guess_targets(player_ids)
-
-    return {player_id: shuffled[(index + 1) % len(shuffled)] for index, player_id in enumerate(shuffled)}
+    return {player_id: shuffled[(i + 1) % len(shuffled)] for i, player_id in enumerate(shuffled)}
 
 
 async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEvent:
@@ -204,7 +204,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
         )
         scoring_result = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
         correct_count = scoring_result.score
-        points_earned = correct_count * 10
+        points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
         if player_id in round_points:
             round_points[player_id] += points_earned
