@@ -1,35 +1,35 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
-	"files": {
-		"includes": [
-			"**",
-			"!.astro",
-			"!dist",
-			"!node_modules",
-			"!coverage",
-			"!playwright-report",
-			"!test-results",
-			"!src/generated"
-		]
-	},
-	"vcs": {
-		"useIgnoreFile": true
-	},
-	"formatter": {
-		"indentStyle": "space",
-		"lineWidth": 120
-	},
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"recommended": true,
-			"a11y": "on"
-		}
-	},
-	"html": {
-		"experimentalFullSupportEnabled": true,
-		"formatter": {
-			"enabled": true
-		}
-	}
+  "root": false,
+  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+  "files": {
+    "includes": ["**", "!!dist", "!!playwright-report"]
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "lineWidth": 120
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": "on"
+    }
+  },
+  "html": {
+    "experimentalFullSupportEnabled": true,
+    "formatter": {
+      "enabled": true
+    }
+  }
 }

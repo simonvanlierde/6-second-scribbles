@@ -1,4 +1,4 @@
-set shell := ["bash", "-euo", "pipefail", "-c"]
+set shell := ["bash", "-euo", "pipefail", "-O", "nullglob", "-c"]
 set dotenv-load := true
 
 # List available recipes.
@@ -12,6 +12,14 @@ default:
 dev: up
     just frontend/dev &
     just backend/dev
+
+# Start the local dev stack for Playwright e2e against the real backend.
+[group('docker')]
+e2e-backend-up:
+    docker compose up --build -d database cache database-migrations backend
+
+e2e-backend-down:
+    docker compose down
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +79,7 @@ test-backend:
 
 # Check everything.
 [group('check')]
-check: check-contracts check-frontend check-backend
+check: check-contracts check-frontend check-backend check-root check-security
 
 # Check the frontend.
 [group('check')]
@@ -83,14 +91,24 @@ check-frontend:
 check-backend:
     just backend/check
 
+# Check root-level docs and config files.
+[group('check')]
+check-root:
+    pnpm run check
+
 # Scan the repository for secrets.
 [group('check')]
 check-security:
-    if command -v gitleaks >/dev/null 2>&1; then gitleaks detect --redact --no-banner --exit-code 1; else echo "gitleaks is not installed. Install it from https://github.com/gitleaks/gitleaks#installing" >&2; exit 1; fi
+    gitleaks detect --redact --no-banner
 
 # Format everything.
 [group('format')]
-format: format-frontend format-backend
+format: format-root format-frontend format-backend
+
+# Format root-level docs and config files.
+[group('format')]
+format-root:
+    pnpm run format
 
 # Format the frontend.
 [group('format')]
@@ -111,20 +129,17 @@ build:
 
 # ── Contracts ─────────────────────────────────────────────────────────────────
 
-# Generate shared websocket contract artifacts.
+# Generate all contract artifacts.
 [group('contracts')]
-contracts:
-    npm run contracts:types
+generate-contracts:
+    just backend/generate-contracts
+    pnpm exec biome format --write --config-path . contracts/openapi.json contracts/room-events.json contracts/jsonschema
+    just frontend/generate-contracts
 
-# Generate and validate shared websocket contract artifacts.
-[group('contracts')]
-validate-contracts:
-    npm run contracts:validate
-
-# Validate that contract-related generated files are up to date.
+# Validate that all tracked contract artifacts are reproducible.
 [group('check')]
 check-contracts:
-    npm run contracts:check
+    pnpm run contracts:check
 
 # ── Database ──────────────────────────────────────────────────────────────────
 

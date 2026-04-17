@@ -1,35 +1,35 @@
 {
-	"name": "6-second-scribbles",
-	"private": true,
-	"packageManager": "pnpm@10.33.0",
-	"engines": {
-		"node": ">=24.0.0"
-	},
-	"scripts": {
-		"prepare": "lefthook install",
-		"dev": "just dev",
-		"format": "just format",
-		"check": "just check",
-		"test": "just test",
-		"test:e2e": "just test-e2e",
-		"test:e2e:ui": "just test-e2e-ui",
-		"build": "just build",
-		"lint": "pnpm --dir frontend run lint && uv run --project backend ruff check backend",
-		"type-check": "pnpm --dir frontend run type-check && uv run --project backend ty check backend",
-		"cspell": "pnpm exec cspell lint --config .cspell.yml",
-		"check:root": "pnpm run cspell && npx -y biome check \"**/*.{md,json,yml,yaml,toml}\" && npx -y markdownlint-cli2 \"**/*.md\"",
-		"contracts": "just contracts",
-		"contracts:check": "node scripts/check-contracts.mjs",
-		"contracts:validate": "pnpm run contracts:types && pnpm --dir frontend run contracts:validate",
-		"contracts:generate": "uv run --project backend python backend/scripts/generate_protocol_contracts.py && pnpm --dir frontend run contracts:asyncapi",
-		"contracts:types": "pnpm --dir frontend run contracts:types"
-	},
-	"devDependencies": {
-		"biome": "^3.0.0",
-		"markdownlint-cli2": "^3.0.0",
-		"@cspell/dict-es-es": "^3.0.8",
-		"@cspell/dict-fr-fr": "^2.3.2",
-		"cspell": "^9.7.0",
-		"lefthook": "^2.1.4"
-	}
+  "name": "6-second-scribbles",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "prepare": "lefthook install",
+    "check": "pnpm run check:biome && pnpm run check:spelling && pnpm run check:markdown",
+    "check:biome": "biome check .",
+    "check:spelling": "pnpm exec cspell lint . --config .cspell.yml --no-progress --gitignore",
+    "check:markdown": "pnpm exec markdownlint-cli2 **/README.md",
+    "contracts:generate": "just generate-contracts",
+    "contracts:check": "node scripts/check-contracts.mjs",
+    "format": "biome check . --write"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@cspell/dict-es-es": "^3.0.8",
+    "@cspell/dict-fr-fr": "^2.3.2",
+    "cspell": "^9.8.0",
+    "lefthook": "^2.1.6",
+    "markdownlint-cli2": "^0.17.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lefthook"
+    ]
+  }
 }

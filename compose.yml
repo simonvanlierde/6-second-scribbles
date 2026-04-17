@@ -10,8 +10,6 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
-      database-migrations:
-        condition: service_completed_successfully
     environment:
       POSTGRES_HOST: database
       REDIS_HOST: cache
@@ -34,7 +32,7 @@ services:
   database:
     image: postgres:18-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/18/docker
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER" ]
       interval: 30s
@@ -59,6 +57,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost/healthz" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:

@@ -1,20 +1,29 @@
+# Git / editor
 .git
 .github
 .idea
 .vscode
 .DS_Store
+
+# Local caches / test artifacts
+.coverage
 .pytest_cache
+htmlcov
+tmp
 **/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.venv
+
+# Frontend build artifacts
+frontend/.vite
 **/node_modules
 **/dist
 **/coverage
 **/playwright-report
 **/test-results
-**/.ruff_cache
-**/.mypy_cache
-**/.venv
-tmp
-frontend/.vite
+
+# Not needed in the frontend Docker build context
 backend
 contracts
 scripts

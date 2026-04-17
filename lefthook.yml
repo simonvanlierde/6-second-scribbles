@@ -1,17 +1,19 @@
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+
 pre-commit:
   parallel: false
   commands:
     format:
-      run: pnpm run format
+      run: just format
       stage_fixed: true
-    "contracts:validate":
-      run: pnpm run contracts:validate
-      stage_fixed: true
-    lint:
-      run: pnpm run lint
-    type-check:
-      run: pnpm run type-check
+    check-contracts:
+      run: just check-contracts
+    check-frontend:
+      run: just check-frontend
+    check-backend:
+      run: just check-backend
     check-root:
-      run: pnpm run check:root
-    cspell:
-      run: pnpm run cspell
+      run: just check-root

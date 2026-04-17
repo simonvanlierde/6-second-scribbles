@@ -2,11 +2,13 @@
   dependencies = [
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.31.0",
-    "fastapi[standard]>=0.122.0",
+    "fastapi>=0.122.0",
     "pydantic-settings>=2.12.0",
     "rapidfuzz>=3.14.3",
     "redis>=5.0",
     "sqlalchemy>=2.0",
+    "structlog>=25.5.0",
+    "uvicorn>=0.44.0",
   ]
   description = "Backend for 6-second-scribbles"
   name = "backend"
@@ -15,9 +17,17 @@
   version = "0.1.0"
 
 [dependency-groups]
-  dev = [{ include-group = "db-ops" }, { include-group = "testing" }, "ruff>=0.14.6", "ty>=0.0.27"]
+  dev = [
+    { include-group = "db-migrations" },
+    { include-group = "db-seed" },
+    { include-group = "testing" },
+    "ruff>=0.14.6",
+    "ty>=0.0.27",
+  ]
 
-  db-ops = ["alembic>=1.17.2", "argostranslate>=1.9.6", "pyyaml>=6.0.1"]
+  db-migrations = ["alembic>=1.17.2"]
+  db-seed = ["pyyaml>=6.0.1"]
+  db-translate = ["argostranslate>=1.9.6", "pyyaml>=6.0.1"]
   testing = [
     "fakeredis>=2.34.1",
     "greenlet>=3.3.2",
@@ -74,7 +84,7 @@
     flake8-bugbear.extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
     # Allow runtime imports for FastAPI dependency injection and Pydantic validation
-    flake8-type-checking.exempt-modules = ["fastapi", "typing.Annotated"]
+    flake8-type-checking.exempt-modules = ["fastapi", "typing.Annotated", "app"]
 
     pydocstyle.convention = "google"
 
@@ -86,12 +96,11 @@
         "PLR2004", # Literal values keep migration scripts readable
       ]
       "tests/**/*.py" = [
-        "PLR2004", # Literal values keep assertions readable in tests
-        "S101",    # Allow assert in test files
+        "S101", # Allow assert in test files
       ]
 
     [tool.ruff.lint.isort]
-      # Explicitly add known first-party modules to allow invocation from the project root
+      # Keep backend package boundaries explicit for import sorting.
       known-first-party = ["app", "scripts", "tests"]
 
       # Prevent the alembic directory from shadowing the alembic PyPI package

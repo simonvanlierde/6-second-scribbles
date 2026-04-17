@@ -29,7 +29,12 @@ format:
 # Run backend checks.
 [group('check')]
 check:
-    uv run ruff check . && uv run ruff format --check . && uv run ty check .
+    uv run ruff format --check && uv run ruff check . && uv run ty check .
+
+# Export backend-owned contract artifacts.
+[group('contracts')]
+generate-contracts:
+    uv run python -m scripts.generate_contracts
 
 # ── Database ──────────────────────────────────────────────────────────────────
 
@@ -64,4 +69,4 @@ seed-auto:
 # Install backend dependencies.
 [group('install')]
 install:
-    uv sync --all-groups
+    uv sync --group dev

@@ -8,11 +8,14 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.uv-cache/
+.python-version
 
 # Test / coverage
 tests/
 .pytest_cache/
 .coverage
+.coverage.*
 .coveragerc
 htmlcov/
 
@@ -36,6 +39,11 @@ htmlcov/
 
 # CI / tooling config not needed at runtime
 README.md
+justfile
+
+# Local generated / scratch files
+scripts/.seed_translation_hash
+scripts/seed_data _bk copy.yaml
 
 # Translation cache 
-**/.translation-cache.json
+**/.translation_cache.json

@@ -6,6 +6,7 @@ __pycache__/
 .Python
 .venv
 .ruff_cache
+.uv-cache
 
 ### Testing
 .pytest_cache/
@@ -13,4 +14,4 @@ __pycache__/
 htmlcov/
 
 # Translation cache 
-.translation-cache.json
+.translation_cache.json

@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 FROM node:24-bookworm-slim AS base
 
 ENV PNPM_HOME=/pnpm \
@@ -15,7 +13,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/package.json
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
+    pnpm fetch --frozen-lockfile --filter ./frontend... && \
+    pnpm install --frozen-lockfile --offline --ignore-scripts --filter ./frontend...
 
 FROM deps AS dev
 
@@ -31,7 +30,9 @@ FROM deps AS build
 
 COPY frontend frontend
 
-RUN pnpm --filter ./frontend build
+WORKDIR /app/frontend
+
+RUN pnpm run build
 
 FROM caddy:2.10-alpine AS prod
 

@@ -9,6 +9,9 @@ services:
     restart: unless-stopped
     env_file:
       - backend/.env.prod
+    # Require database migrations in production
+    database-migrations:
+      condition: service_completed_successfully
 
   database:
     restart: unless-stopped
@@ -28,14 +31,14 @@ services:
       dockerfile: frontend/Dockerfile
       target: prod
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
+    ports:
+      - "80:80"
 
   cloudflared:
-    image: cloudflare/cloudflared:2026.2.0
+    image: cloudflare/cloudflared:latest
     restart: unless-stopped
     depends_on:
       frontend:

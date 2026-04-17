@@ -46,14 +46,14 @@ services:
         condition: service_healthy
       database-migrations:
         condition: service_completed_successfully
-    environment:
-      POSTGRES_HOST: database
-    env_file:
-      - backend/.env.dev
     volumes:
       # Keep seed/translation file edits on host and reuse downloaded Argos models.
       - ./backend:/app
       - ${ARGOS_MODELS_DIR:-./backend/.argos-models}:/home/appuser/.local/share/argos-translate
+    environment:
+      POSTGRES_HOST: database
+    env_file:
+      - backend/.env.dev
     profiles:
       - database-seed
 

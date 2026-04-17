@@ -17,6 +17,10 @@
 		reverse_proxy backend:8000
 	}
 
+	handle /healthz {
+		respond "ok" 200
+	}
+
 	handle {
 		root * /usr/share/caddy
 		try_files {path} /index.html
