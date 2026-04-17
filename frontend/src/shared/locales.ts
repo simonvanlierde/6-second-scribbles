@@ -1,10 +1,8 @@
+import type { LocaleAvailabilityItem } from "@/generated/api";
+
 export const SUPPORTED_LOCALES = ["en", "es", "fr"] as const;
 
-export type LocaleAvailability = {
-  locale: string;
-  category_count: number;
-  difficulty_counts: Record<string, number>;
-};
+export type LocaleAvailability = LocaleAvailabilityItem;
 
 export type LocaleOption = {
   code: string;

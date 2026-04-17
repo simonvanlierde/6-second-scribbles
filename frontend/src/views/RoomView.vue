@@ -4,7 +4,6 @@ import { useRoute } from "vue-router";
 
 import { normalizeGamePhase } from "@/shared/gamePhase";
 import { normalizeRoomCode } from "@/shared/roomCode";
-
 import { useGameStore } from "@/stores/game";
 import GameView from "@/views/GameView.vue";
 import LobbyView from "@/views/LobbyView.vue";
@@ -15,18 +14,12 @@ import SpectatorRoomView from "@/views/SpectatorRoomView.vue";
 
 const store = useGameStore();
 const route = useRoute();
-const routeRoomCode = computed(() =>
-	normalizeRoomCode(String(route.params.roomCode || "")),
-);
-const inActiveRoom = computed(
-	() => Boolean(store.localPlayerId) && store.roomCode === routeRoomCode.value,
-);
+const routeRoomCode = computed(() => normalizeRoomCode(String(route.params.roomCode || "")));
+const inActiveRoom = computed(() => Boolean(store.localPlayerId) && store.roomCode === routeRoomCode.value);
 const gamePhase = computed(() => normalizeGamePhase(store.gamePhase));
 const isSpectating = computed(
-	() =>
-		store.isSpectatorMode ||
-		(!inActiveRoom.value &&
-			(gamePhase.value === "drawing" || gamePhase.value === "guessing")),
+  () =>
+    store.isSpectatorMode || (!inActiveRoom.value && (gamePhase.value === "drawing" || gamePhase.value === "guessing")),
 );
 </script>
 

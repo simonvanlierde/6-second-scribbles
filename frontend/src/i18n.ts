@@ -1,34 +1,35 @@
-import { createI18n } from 'vue-i18n'
+import { createI18n } from "vue-i18n";
+import en from "./locales/en.json";
+import { SUPPORTED_LOCALES } from "./shared/locales";
 
-import en from './locales/en.json'
-import es from './locales/es.json'
-import fr from './locales/fr.json'
-import de from './locales/de.json'
-import it from './locales/it.json'
-import nl from './locales/nl.json'
-import pt from './locales/pt.json'
-import pl from './locales/pl.json'
-import zhCN from './locales/zh-CN.json'
-import zhTW from './locales/zh-TW.json'
-import ja from './locales/ja.json'
-import ko from './locales/ko.json'
+export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const i18n = createI18n({
-  legacy: false, // Set to false to use Composition API
-  locale: 'en', // Set default locale
-  fallbackLocale: 'en',
-  messages: {
-    en,
-    es,
-    fr,
-    de,
-    it,
-    nl,
-    pt,
-    pl,
-    'zh-CN': zhCN,
-    'zh-TW': zhTW,
-    ja,
-    ko
-  }
-})
+  legacy: false,
+  locale: "en" satisfies AppLocale,
+  fallbackLocale: "en" satisfies AppLocale,
+  messages: { en } as Record<AppLocale, typeof en>,
+});
+
+const loaded = new Set<AppLocale>(["en"]);
+
+export function isSupportedLocale(code: string): code is AppLocale {
+  return (SUPPORTED_LOCALES as readonly string[]).includes(code);
+}
+
+const localeLoaders = import.meta.glob<{ default: typeof en }>(["./locales/*.json", "!./locales/en.json"]);
+
+export async function loadLocale(code: AppLocale): Promise<void> {
+  if (loaded.has(code)) return;
+  const loader = localeLoaders[`./locales/${code}.json`];
+  if (!loader) return;
+  const mod = await loader();
+  i18n.global.setLocaleMessage(code, mod.default);
+  loaded.add(code);
+}
+
+export async function setLocale(code: string): Promise<void> {
+  if (!isSupportedLocale(code)) return;
+  await loadLocale(code);
+  i18n.global.locale.value = code;
+}

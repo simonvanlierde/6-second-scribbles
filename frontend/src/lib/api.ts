@@ -1,11 +1,13 @@
+import type { ZodType } from "zod";
 import { API_HOST } from "@/config/gameConfig";
 
-type ApiRequestOptions = {
+type ApiRequestOptions<T> = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  schema?: ZodType<T>;
 };
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> = {}): Promise<T> {
   const response = await fetch(`${API_HOST}${path}`, {
     method: options.method ?? "GET",
     credentials: "include",
@@ -13,7 +15,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  if (!response.ok) {
+  if (response.ok === false) {
     let detail = `Request failed with status ${response.status}`;
 
     try {
@@ -32,5 +34,6 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const payload = await response.json();
+  return options.schema ? options.schema.parse(payload) : (payload as T);
 }

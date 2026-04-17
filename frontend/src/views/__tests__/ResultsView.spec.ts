@@ -89,8 +89,8 @@ describe("ResultsView", () => {
     expect(wrapper.text()).toContain("Winners: Alice and Bob");
     expect(wrapper.text()).toContain("Tied at 42 points");
     expect(wrapper.text()).toContain("Tied for 1st");
-    expect(wrapper.findAll(".score-item.winner")).toHaveLength(2);
-    expect(wrapper.findAll(".score-item.tied")).toHaveLength(2);
+    expect(wrapper.findAll(".winner")).toHaveLength(2);
+    expect(wrapper.findAll(".tied")).toHaveLength(2);
     expect(wrapper.findAll(".rank").map((rank) => rank.text())).toEqual(["1", "1", "3"]);
   });
 

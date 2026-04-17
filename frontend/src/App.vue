@@ -4,7 +4,7 @@ import { useRoute } from "vue-router";
 
 import ToastContainer from "@/components/ToastContainer.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { i18n } from "@/i18n";
+import { setLocale } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useGameStore } from "@/stores/game";
 
@@ -17,13 +17,12 @@ watch(
   () => store.localPlayerLocale,
   (newLocale) => {
     if (newLocale) {
-      i18n.global.locale.value = newLocale as any;
+      void setLocale(newLocale);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
-// Reconnect to room on page reload if we have saved state
 onMounted(async () => {
   await authStore.bootstrap(store.localPlayerLocale, store.localPlayerName || null);
   if (authStore.currentUser?.preferredLocale) {
@@ -35,7 +34,6 @@ onMounted(async () => {
 
   const routeRoomCode = typeof route.params.roomCode === "string" ? route.params.roomCode : "";
   if (store.roomCode && store.localPlayerId && !isConnected.value && routeRoomCode === store.roomCode) {
-    console.log("Reconnecting to room:", store.roomCode);
     connect(store.roomCode);
   }
 });

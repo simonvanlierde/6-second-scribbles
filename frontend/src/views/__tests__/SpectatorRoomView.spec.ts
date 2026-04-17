@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SpectatorRoomView from "@/views/SpectatorRoomView.vue";
 
-const leaveRoomMock = vi.fn();
+const disconnectMock = vi.fn();
+const resetMock = vi.fn();
+const routerPushMock = vi.fn();
 
-vi.mock("@/composables/useLeaveRoom", () => ({
-  useLeaveRoom: () => ({
-    leaveRoom: leaveRoomMock,
+vi.mock("@/composables/useGameConnection", () => ({
+  useGameConnection: () => ({
+    disconnect: disconnectMock,
   }),
+}));
+
+vi.mock("vue-router", () => ({
+  useRouter: () => ({ push: routerPushMock }),
 }));
 
 vi.mock("@/stores/game", () => ({
@@ -19,11 +25,14 @@ vi.mock("@/stores/game", () => ({
       { id: "p1", name: "Alice", score: 12, drawing: "data:image/png;base64,abc" },
       { id: "p2", name: "Bob", score: 9 },
     ],
+    reset: resetMock,
   }),
 }));
 
 beforeEach(() => {
-  leaveRoomMock.mockClear();
+  disconnectMock.mockClear();
+  resetMock.mockClear();
+  routerPushMock.mockClear();
 });
 
 describe("SpectatorRoomView", () => {
@@ -34,6 +43,8 @@ describe("SpectatorRoomView", () => {
 
     await wrapper.get("button.leave-btn").trigger("click");
 
-    expect(leaveRoomMock).toHaveBeenCalledTimes(1);
+    expect(disconnectMock).toHaveBeenCalledTimes(1);
+    expect(resetMock).toHaveBeenCalledTimes(1);
+    expect(routerPushMock).toHaveBeenCalledWith({ name: "home" });
   });
 });

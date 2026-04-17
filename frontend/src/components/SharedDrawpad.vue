@@ -1,18 +1,31 @@
 <template>
-  <div class="shared-drawpad">
-    <div class="canvas-tools">
-      <div class="tool-group">
-        <label>Color:</label>
+  <div>
+    <div class="mb-2 flex flex-wrap items-center gap-2 max-[768px]:text-sm max-[480px]:gap-1.5">
+      <div class="flex items-center gap-1">
+        <label class="text-sm font-medium max-[768px]:text-xs">Color:</label>
         <input v-model="color" type="color">
       </div>
-      <div class="tool-group">
-        <label>Size:</label>
+      <div class="flex items-center gap-1">
+        <label class="text-sm font-medium max-[768px]:text-xs">Size:</label>
         <input v-model.number="width" type="range" min="1" max="20">
       </div>
-      <div class="tool-group"><button type="button" class="btn btn-small" @click="clearLocal">Clear</button></div>
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-semibold transition-all max-[480px]:px-2.5 max-[480px]:py-1.5 max-[480px]:text-xs"
+          @click="clearLocal"
+        >
+          Clear
+        </button>
+      </div>
     </div>
-    <canvas ref="canvasEl" class="mini-canvas"></canvas>
-    <p class="drawpad-hint">Draw together with other players while waiting!</p>
+    <canvas
+      ref="canvasEl"
+      class="mini-canvas h-[200px] w-full cursor-crosshair touch-none rounded border border-gray-300 bg-white max-[768px]:h-[180px] max-[480px]:h-[150px]"
+    />
+    <p class="mt-2 text-center text-sm text-gray-500 max-[768px]:text-xs">
+      Draw together with other players while waiting!
+    </p>
   </div>
 </template>
 
@@ -87,74 +100,3 @@ onUnmounted(() => {
   if (rafId) cancelAnimationFrame(rafId);
 });
 </script>
-
-<style scoped>
-.shared-drawpad {
-  display: block;
-}
-.canvas-tools {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.tool-group {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
-}
-.tool-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-.mini-canvas {
-  width: 100%;
-  height: 200px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  touch-action: none; /* Prevent scrolling while drawing */
-  cursor: crosshair;
-}
-.drawpad-hint {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: #6c757d;
-  text-align: center;
-}
-
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  .mini-canvas {
-    height: 180px;
-  }
-
-  .canvas-tools {
-    font-size: 0.875rem;
-  }
-
-  .tool-group label {
-    font-size: 0.75rem;
-  }
-
-  .drawpad-hint {
-    font-size: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .mini-canvas {
-    height: 150px;
-  }
-
-  .canvas-tools {
-    gap: 0.375rem;
-  }
-
-  .btn-small {
-    padding: 0.375rem 0.625rem;
-    font-size: 0.75rem;
-  }
-}
-</style>

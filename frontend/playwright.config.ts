@@ -38,8 +38,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: process.env.CI ? "pnpm run preview" : "pnpm run dev",
+    command: "just e2e-dev",
     url: process.env.CI ? "http://127.0.0.1:4173" : "http://127.0.0.1:3001",
     reuseExistingServer: !process.env.CI,
+    timeout: 180 * 1000,
   },
 });

@@ -1,11 +1,9 @@
 import { computed, ref } from "vue";
+import { z } from "zod";
 
+import { LocaleAvailabilityItemSchema } from "@/generated/api";
 import { apiRequest } from "@/lib/api";
-import {
-    SUPPORTED_LOCALES,
-    type LocaleAvailability,
-    type LocaleOption,
-} from "@/shared/locales";
+import { type LocaleAvailability, type LocaleOption, SUPPORTED_LOCALES } from "@/shared/locales";
 
 const availability = ref<Record<string, LocaleAvailability>>({});
 const isLoading = ref(false);
@@ -22,7 +20,7 @@ function getDisabledReason(item: LocaleAvailability | undefined): string {
     return "No playable categories yet";
   }
 
-  const hasDifficultyCoverage = Object.values(item.difficulty_counts).some((count) => count > 0);
+  const hasDifficultyCoverage = Object.values(item.difficulty_counts ?? {}).some((count) => count > 0);
   if (!hasDifficultyCoverage) {
     return "Missing prompt coverage across difficulties";
   }
@@ -39,7 +37,9 @@ async function fetchLocaleAvailability(force = false): Promise<void> {
   loadError.value = null;
 
   try {
-    const response = await apiRequest<LocaleAvailability[]>("/api/categories/locales");
+    const response = await apiRequest("/api/categories/locales", {
+      schema: z.array(LocaleAvailabilityItemSchema),
+    });
     const normalized: Record<string, LocaleAvailability> = {};
     for (const item of response) {
       normalized[normalizeLocale(item.locale)] = item;

@@ -1,163 +1,94 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useRouter } from "vue-router";
 
-import { useLeaveRoom } from "@/composables/useLeaveRoom";
+import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const { leaveRoom } = useLeaveRoom();
+const router = useRouter();
+const { disconnect } = useGameConnection();
+
+function leaveRoom() {
+  disconnect();
+  store.reset();
+  router.push({ name: "home" });
+}
 
 const drawings = computed(() => store.playersList.filter((player) => player.drawing));
 const phaseLabel = computed(() => (store.gamePhase === "drawing" ? "Drawing round" : "Guessing round"));
 </script>
 
 <template>
-  <div class="spectator-screen">
-    <header class="spectator-header">
+  <div
+    class="grid min-h-screen gap-4 p-6 text-white"
+    style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)"
+  >
+    <header
+      class="mx-auto flex w-full max-w-[1100px] items-start justify-between gap-4 rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
+    >
       <div>
-        <p class="eyebrow">Room {{ store.roomCode }}</p>
-        <h1>{{ phaseLabel }}</h1>
-        <p class="subcopy">Watching live updates. You can join when the room returns to the lobby.</p>
+        <p class="m-0 mb-2 text-xs tracking-widest text-white/70 uppercase">Room {{ store.roomCode }}</p>
+        <h1 class="m-0">{{ phaseLabel }}</h1>
+        <p class="m-0 mt-2 text-white/80">Watching live updates. You can join when the room returns to the lobby.</p>
       </div>
-      <button type="button" class="leave-btn" @click="leaveRoom">Leave room</button>
+      <button
+        type="button"
+        class="leave-btn cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
+        @click="leaveRoom"
+      >
+        Leave room
+      </button>
     </header>
 
-    <section class="panel">
-      <h2>Players</h2>
-      <div class="player-list">
-        <div v-for="player in store.playersList" :key="player.id" class="player-chip">
+    <section
+      class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
+    >
+      <h2 class="m-0">Players</h2>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <div
+          v-for="player in store.playersList"
+          :key="player.id"
+          class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2"
+        >
           {{ player.name }}
-          <span class="score">{{ player.score }} pts</span>
+          <span class="text-sm text-white/70">{{ player.score }} pts</span>
         </div>
       </div>
     </section>
 
-    <section v-if="store.gamePhase === 'drawing'" class="panel">
-      <h2>Drawings</h2>
-      <div v-if="drawings.length" class="drawing-grid">
-        <article v-for="player in drawings" :key="player.id" class="drawing-card">
-          <img :src="player.drawing" :alt="`${player.name}'s drawing`" class="drawing-image">
-          <p>{{ player.name }}</p>
+    <section
+      v-if="store.gamePhase === 'drawing'"
+      class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
+    >
+      <h2 class="m-0">Drawings</h2>
+      <div
+        v-if="drawings.length"
+        class="mt-3 grid gap-3"
+        style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))"
+      >
+        <article
+          v-for="player in drawings"
+          :key="player.id"
+          class="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+        >
+          <img
+            :src="player.drawing"
+            :alt="`${player.name}'s drawing`"
+            class="block h-[180px] w-full bg-black/15 object-contain"
+          >
+          <p class="p-3 text-white/85">{{ player.name }}</p>
         </article>
       </div>
-      <p v-else class="empty-state">No drawings have been published yet.</p>
+      <p v-else class="p-3 text-white/85">No drawings have been published yet.</p>
     </section>
 
-    <section v-else class="panel">
-      <h2>Round status</h2>
-      <p class="empty-state">Guessing is in progress. We’ll move on once the round is complete.</p>
+    <section
+      v-else
+      class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
+    >
+      <h2 class="m-0">Round status</h2>
+      <p class="p-3 text-white/85">Guessing is in progress. We'll move on once the round is complete.</p>
     </section>
   </div>
 </template>
-
-<style scoped>
-.spectator-screen {
-  min-height: 100vh;
-  padding: 1.5rem;
-  display: grid;
-  gap: 1rem;
-  background: var(--color-bg-gradient);
-  color: white;
-}
-
-.spectator-header,
-.panel {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-  border-radius: 24px;
-  background: rgba(10, 12, 28, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(14px);
-}
-
-.spectator-header {
-  padding: 1.5rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.panel {
-  padding: 1.25rem 1.5rem 1.5rem;
-}
-
-.eyebrow {
-  margin: 0 0 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-h1,
-h2,
-p {
-  margin: 0;
-}
-
-.subcopy {
-  margin-top: 0.5rem;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.leave-btn {
-  border: 0;
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.player-list {
-  margin-top: 0.75rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.player-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.score {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.875rem;
-}
-
-.drawing-grid {
-  margin-top: 0.75rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.75rem;
-}
-
-.drawing-card {
-  border-radius: 18px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.drawing-image {
-  display: block;
-  width: 100%;
-  height: 180px;
-  object-fit: contain;
-  background: rgba(0, 0, 0, 0.16);
-}
-
-.drawing-card p,
-.empty-state {
-  padding: 0.75rem;
-  color: rgba(255, 255, 255, 0.86);
-}
-</style>
