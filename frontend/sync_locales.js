@@ -22,11 +22,18 @@ const targets = [
 
 function deepMerge(target, source) {
   for (const key of Object.keys(source)) {
-    if (source[key] instanceof Object && key in target) {
+    if (!(key in target)) continue;
+    if (
+      source[key] instanceof Object &&
+      target[key] instanceof Object &&
+      !Array.isArray(source[key]) &&
+      !Array.isArray(target[key])
+    ) {
       Object.assign(source[key], deepMerge(target[key], source[key]));
+      continue;
     }
+    target[key] = source[key];
   }
-  Object.assign(target || {}, source);
   return target;
 }
 

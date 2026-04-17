@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
 import { useGameStore } from "@/stores/game";
 
@@ -24,15 +25,17 @@ const targetPlayer = computed(() => store.playersList.find((player) => player.id
 const isHostKick = computed(() =>
   Boolean(store.isHost && targetPlayer.value && targetPlayer.value.id !== store.hostId),
 );
-const confirmTitle = computed(() => (isHostKick.value ? "Kick player?" : "Start vote-kick?"));
+const confirmTitle = computed(() =>
+  i18n.global.t(isHostKick.value ? "moderation.kickPlayerTitle" : "moderation.startVoteKickTitle"),
+);
 const confirmMessage = computed(() => {
   if (!targetPlayer.value) return "";
   if (isHostKick.value) {
-    return `${targetPlayer.value.name} will be removed from the room immediately.`;
+    return i18n.global.t("moderation.kickPlayerNow", { name: targetPlayer.value.name });
   }
-  return `${targetPlayer.value.name} will stay in the room unless enough players vote to remove them.`;
+  return i18n.global.t("moderation.voteKickNeedsVotes", { name: targetPlayer.value.name });
 });
-const confirmLabel = computed(() => (isHostKick.value ? "Kick player" : "Start vote"));
+const confirmLabel = computed(() => i18n.global.t(isHostKick.value ? "moderation.kickPlayer" : "moderation.startVote"));
 
 function canHostKick(playerId: string): boolean {
   return store.isHost && playerId !== store.localPlayerId;
@@ -67,7 +70,7 @@ function voteToKick(targetPlayerId: string) {
       v-if="!store.isHost"
       class="my-4 flex items-center gap-2 rounded border border-gray-300 bg-gray-50 p-3 text-[0.95rem]"
     >
-      <span class="font-semibold text-gray-600">🌐 Room language:</span>
+      <span class="font-semibold text-gray-600">🌐 {{ $t("settings.roomLanguage") }}:</span>
       <span class="font-medium text-gray-800">{{ formatLocaleLabel(store.defaultLocale) }}</span>
     </div>
 
@@ -80,16 +83,16 @@ function voteToKick(targetPlayerId: string) {
         <div class="flex flex-1 items-center gap-2">
           <span class="font-medium">{{ player.name }}</span>
           <span v-if="player.id === store.localPlayerId" class="rounded bg-gray-200 px-2 py-1 text-sm text-gray-600">
-            (You)
+            ({{ $t("common.you") }})
           </span>
           <span v-if="store.hostId === player.id" class="rounded bg-yellow-400 px-2 py-1 text-sm text-black">
-            Host
+            {{ $t("common.host") }}
           </span>
           <span
             v-if="activeKickVotes.has(player.id)"
             class="rounded-full border border-yellow-300 bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-900"
           >
-            Vote:
+            {{ $t("moderation.voteLabel") }}
             {{ activeKickVotes.get(player.id)?.currentVotes }}/{{ activeKickVotes.get(player.id)?.requiredVotes }}
           </span>
         </div>
@@ -101,7 +104,7 @@ function voteToKick(targetPlayerId: string) {
             class="cursor-pointer rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100"
             @click="voteToKick(player.id)"
           >
-            Vote kick
+            {{ $t("moderation.voteKick") }}
           </button>
 
           <button
@@ -110,7 +113,7 @@ function voteToKick(targetPlayerId: string) {
             class="cursor-pointer rounded bg-danger px-3 py-1.5 text-sm font-semibold text-white hover:bg-danger-dark"
             @click="openKickConfirm(player.id)"
           >
-            Kick
+            {{ $t("moderation.kickPlayer") }}
           </button>
 
           <button
@@ -119,7 +122,7 @@ function voteToKick(targetPlayerId: string) {
             class="cursor-pointer rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-100"
             @click="openKickConfirm(player.id)"
           >
-            Vote kick
+            {{ $t("moderation.voteKick") }}
           </button>
         </div>
       </li>
@@ -130,7 +133,7 @@ function voteToKick(targetPlayerId: string) {
       :title="confirmTitle"
       :message="confirmMessage"
       :confirm-label="confirmLabel"
-      cancel-label="Cancel"
+      :cancel-label="$t('common.cancel')"
       variant="danger"
       @confirm="confirmKick"
       @cancel="cancelKick"

@@ -11,6 +11,7 @@ import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_SETTINGS } from "@/config/gameConfig";
+import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const route = useRoute();
@@ -64,7 +65,7 @@ function startGame() {
 
 async function copyRoomCode() {
   await copy(roomCode.value);
-  showNotification("Copied!");
+  showNotification(i18n.global.t("common.copied"));
 }
 
 function showLeaveDialog() {
@@ -115,7 +116,7 @@ function toggleRoomPadVisibility() {
         <button
           type="button"
           class="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-white/45 bg-white/20 px-4 py-2 transition-all hover:border-white hover:bg-white/30"
-          title="Click to copy room code"
+          :title="$t('lobby.copyRoomCode')"
           @click="copyRoomCode"
         >
           🎨

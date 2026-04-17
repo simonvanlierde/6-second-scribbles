@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
-import LocaleSelector from "@/components/LocaleSelector.vue";
+import NamePromptDialog from "@/components/NamePromptDialog.vue";
 import RoomCodeInput from "@/components/RoomCodeInput.vue";
 import { showNotification } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
 import { CreateRoomResponseSchema, RandomRoomResponseSchema, RoomStatusResponseSchema } from "@/generated/api";
+import { i18n } from "@/i18n";
 import { apiRequest } from "@/lib/api";
 import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { isValidRoomCode, normalizeRoomCode } from "@/shared/roomCode";
@@ -16,7 +16,15 @@ import { useGameStore } from "@/stores/game";
 const router = useRouter();
 const store = useGameStore();
 const { connect } = useGameConnection();
-const { fetchLocaleAvailability, localeOptions } = useLocaleAvailability();
+
+const props = withDefaults(
+  defineProps<{
+    openNameEditorSignal?: number;
+  }>(),
+  {
+    openNameEditorSignal: 0,
+  },
+);
 
 const playerName = computed({
   get: () => store.localPlayerName,
@@ -24,36 +32,29 @@ const playerName = computed({
     store.localPlayerName = value;
   },
 });
-const playerLocale = computed({
-  get: () => store.localPlayerLocale,
-  set: (value: string) => {
-    store.setLocalPlayerLocale(value);
-  },
-});
 
 const roomCodeModel = ref("");
 const joinBtnRef = ref<HTMLButtonElement | null>(null);
 const isJoiningRandom = ref(false);
 const isCheckingRoom = ref(false);
-
-onMounted(() => {
-  void fetchLocaleAvailability();
-});
+const nameDialogOpen = ref(false);
+const nameDraft = ref("");
+const pendingAction = ref<"create" | "join" | "random" | null>(null);
+const nameDialogDescriptionKey = ref("roomEntry.needNameText");
 
 watch(
-  localeOptions,
-  (options) => {
-    const selected = options.find((option) => option.code === playerLocale.value);
-    if (selected?.enabled) return;
-    const fallback = options.find((option) => option.enabled);
-    if (fallback) store.setLocalPlayerLocale(fallback.code);
+  () => props.openNameEditorSignal,
+  () => {
+    if (!props.openNameEditorSignal) return;
+    pendingAction.value = null;
+    nameDialogDescriptionKey.value = "home.editNameHelp";
+    focusPlayerName();
   },
-  { immediate: true },
 );
 
 function focusPlayerName() {
-  const el = document.getElementById("player-name") as HTMLInputElement | null;
-  if (el) el.focus();
+  nameDraft.value = playerName.value;
+  nameDialogOpen.value = true;
 }
 
 function onRoomCodeComplete() {
@@ -70,24 +71,12 @@ function onRoomCodeSubmit() {
   if (playerName.value.trim()) {
     void joinRoom();
   } else {
+    nameDialogDescriptionKey.value = "roomEntry.needNameText";
     focusPlayerName();
   }
 }
 
-function onNameEnter() {
-  if (roomCodeModel.value?.trim()) {
-    void joinRoom();
-  } else {
-    void createRoom();
-  }
-}
-
 async function createRoom() {
-  if (!playerName.value.trim()) {
-    showNotification("Please enter your name", "error");
-    return;
-  }
-
   try {
     const data = await apiRequest("/api/rooms", {
       method: "POST",
@@ -103,23 +92,19 @@ async function createRoom() {
     router.push({ name: "room", params: { roomCode } });
   } catch (err) {
     console.error("Error creating room:", err);
-    showNotification("Failed to create room. Please try again.", "error");
+    showNotification(i18n.global.t("notifications.createRoomFailed"), "error");
   }
 }
 
 async function joinRoom() {
-  if (!playerName.value.trim()) {
-    showNotification("Please enter your name", "error");
-    return;
-  }
   if (!roomCodeModel.value) {
-    showNotification("Please enter a room code", "error");
+    showNotification(i18n.global.t("notifications.enterRoomCode"), "error");
     return;
   }
 
   const code = normalizeRoomCode(roomCodeModel.value);
   if (!isValidRoomCode(code)) {
-    showNotification("Room code must be 6 characters (A–Z, 0–9)", "error");
+    showNotification(i18n.global.t("notifications.invalidRoomCode"), "error");
     return;
   }
 
@@ -130,7 +115,7 @@ async function joinRoom() {
       schema: RoomStatusResponseSchema,
     });
     if (!data.exists) {
-      showNotification(`That room doesn't exist. Join a different room or create a new one!`, "error");
+      showNotification(i18n.global.t("notifications.roomDoesNotExist"), "error");
       return;
     }
   } catch {
@@ -148,11 +133,6 @@ async function joinRoom() {
 }
 
 async function joinRandomRoom() {
-  if (!playerName.value.trim()) {
-    showNotification("Please enter your name", "error");
-    return;
-  }
-
   isJoiningRandom.value = true;
 
   try {
@@ -171,76 +151,120 @@ async function joinRandomRoom() {
     console.error("Error joining random room:", err);
     const message =
       err instanceof Error && err.message.includes("No available public rooms found")
-        ? "No available rooms found. Try creating a new room!"
-        : "Failed to connect. Please try again.";
+        ? i18n.global.t("notifications.noAvailableRooms")
+        : i18n.global.t("notifications.connectFailed");
     showNotification(message, "error");
   } finally {
     isJoiningRandom.value = false;
   }
 }
+
+function ensurePlayerName(action: "create" | "join" | "random") {
+  if (playerName.value.trim()) return false;
+  pendingAction.value = action;
+  nameDialogDescriptionKey.value = "roomEntry.needNameText";
+  focusPlayerName();
+  return true;
+}
+
+async function handleCreateRoom() {
+  if (ensurePlayerName("create")) return;
+  await createRoom();
+}
+
+async function handleJoinRoom() {
+  if (ensurePlayerName("join")) return;
+  await joinRoom();
+}
+
+async function handleJoinRandomRoom() {
+  if (ensurePlayerName("random")) return;
+  await joinRandomRoom();
+}
+
+async function handleNameConfirm() {
+  if (!nameDraft.value.trim()) return;
+  playerName.value = nameDraft.value.trim();
+  const action = pendingAction.value;
+  pendingAction.value = null;
+  if (action === "create") await createRoom();
+  if (action === "join") await joinRoom();
+  if (action === "random") await joinRandomRoom();
+}
+
+function handleNameCancel() {
+  pendingAction.value = null;
+}
 </script>
 
 <template>
-  <div class="rounded-xl bg-white p-8 shadow-lg">
-    <h2>{{ $t('home.createOrJoin') }}</h2>
-
-    <div class="mb-6">
-      <label for="player-name" class="mb-2 block font-semibold text-[#555]">{{ $t('home.yourName') }}</label>
-      <input
-        id="player-name"
-        v-model="playerName"
-        type="text"
-        class="w-full rounded-md border-2 border-[#ddd] px-3 py-3 text-base transition-colors focus:border-primary focus:outline-none"
-        :placeholder="$t('home.enterYourName')"
-        maxlength="20"
-        @keyup.enter="onNameEnter"
-      >
+  <div
+    class="overflow-hidden rounded-[28px] bg-white/96 p-4 shadow-[0_24px_60px_rgba(18,22,48,0.18)] backdrop-blur-sm md:p-6 lg:rounded-[32px] lg:px-7 lg:py-6"
+  >
+    <div class="mb-4 flex flex-col gap-3 md:mb-5 lg:gap-4">
+      <p class="m-0 max-w-[44rem] text-[0.98rem] leading-relaxed text-slate-500 md:text-base">
+        {{ $t('home.createOrJoinHelp') }}
+      </p>
     </div>
 
-    <LocaleSelector id="player-locale" v-model="playerLocale" :options="localeOptions" label="Language" compact />
-
-    <div class="flex flex-col gap-4">
-      <button
-        type="button"
-        class="cursor-pointer rounded-md border-0 bg-gradient-to-br from-primary to-secondary px-6 py-3.5 text-base font-bold text-white transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(102,126,234,0.45)]"
-        @click="createRoom"
+    <div class="grid gap-3 md:gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start xl:gap-5">
+      <section
+        class="flex min-w-0 self-start flex-col rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(102,126,234,0.12),rgba(255,255,255,0.72))] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] md:p-5 lg:pb-4"
       >
-        {{ $t('home.createRoom') }}
-      </button>
-
-      <div
-        class="flex items-center gap-3 text-[0.8125rem] text-gray-400 before:h-px before:flex-1 before:bg-gray-200 before:content-[''] after:h-px after:flex-1 after:bg-gray-200 after:content-['']"
-      >
-        <span>{{ $t('home.orJoin') }}</span>
-      </div>
-
-      <div class="flex flex-col items-center">
-        <RoomCodeInput v-model="roomCodeModel" @complete="onRoomCodeComplete" @submit="onRoomCodeSubmit" />
+        <div class="space-y-1.5">
+          <h3 class="m-0 text-[1.5rem] leading-tight font-bold text-slate-800">{{ $t('home.createRoom') }}</h3>
+          <p class="m-0 text-sm leading-relaxed text-slate-500 md:text-[0.96rem]">{{ $t('home.createRoomHelp') }}</p>
+        </div>
         <button
-          ref="joinBtnRef"
           type="button"
-          class="mt-3 w-full cursor-pointer rounded-md border-0 bg-success px-6 py-3.5 text-base font-semibold text-white transition-[background,transform] hover:-translate-y-px hover:bg-success-dark disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="isCheckingRoom"
-          @click="joinRoom"
+          class="mt-5 w-full cursor-pointer rounded-[20px] border-0 bg-gradient-to-br from-primary to-secondary px-6 py-3.5 text-base font-bold text-white transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(102,126,234,0.28)] md:mt-6"
+          @click="handleCreateRoom"
         >
-          {{ isCheckingRoom ? $t('home.checking') : $t('home.joinRoom') }}
+          {{ $t('home.createRoom') }}
         </button>
-      </div>
+      </section>
 
-      <div
-        class="flex items-center gap-3 text-[0.8125rem] text-gray-400 before:h-px before:flex-1 before:bg-gray-200 before:content-[''] after:h-px after:flex-1 after:bg-gray-200 after:content-['']"
+      <section
+        class="flex min-w-0 flex-col rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.9))] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] md:p-5"
       >
-        <span>{{ $t('home.or') }}</span>
-      </div>
+        <div class="space-y-1.5">
+          <h3 class="m-0 text-[1.5rem] leading-tight font-bold text-slate-800">{{ $t('home.joinRoom') }}</h3>
+          <p class="m-0 text-sm leading-relaxed text-slate-500 md:text-[0.96rem]">{{ $t('home.joinWithCodeHelp') }}</p>
+        </div>
 
-      <button
-        type="button"
-        class="cursor-pointer rounded-md border-0 bg-primary px-6 py-3.5 text-base font-semibold text-white transition-[background,transform] hover:-translate-y-px hover:bg-primary-dark disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
-        :disabled="isJoiningRandom"
-        @click="joinRandomRoom"
-      >
-        {{ isJoiningRandom ? $t('home.findingRoom') : $t('home.joinRandomRoom') }}
-      </button>
+        <div class="mt-4 flex min-w-0 flex-col items-center gap-3">
+          <RoomCodeInput v-model="roomCodeModel" @complete="onRoomCodeComplete" @submit="onRoomCodeSubmit" />
+          <button
+            ref="joinBtnRef"
+            type="button"
+            class="w-full cursor-pointer rounded-[20px] border border-transparent bg-success px-6 py-3.5 text-base font-semibold text-white transition-[background,transform,box-shadow] hover:-translate-y-px hover:bg-success-dark hover:shadow-[0_12px_24px_rgba(72,187,120,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="isCheckingRoom"
+            @click="handleJoinRoom"
+          >
+            {{ isCheckingRoom ? $t('home.checking') : $t('home.joinRoom') }}
+          </button>
+        </div>
+
+        <div class="mt-auto pt-4">
+          <button
+            type="button"
+            class="w-full cursor-pointer rounded-[20px] border border-primary/18 bg-white/90 px-6 py-3.5 text-base font-semibold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-[background,transform,box-shadow] hover:-translate-y-px hover:bg-primary/6 hover:shadow-[0_8px_20px_rgba(102,126,234,0.12)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="join-random-room-button"
+            :disabled="isJoiningRandom"
+            @click="handleJoinRandomRoom"
+          >
+            {{ isJoiningRandom ? $t('home.findingRoom') : $t('home.joinRandomRoom') }}
+          </button>
+        </div>
+      </section>
     </div>
+
+    <NamePromptDialog
+      v-model:open="nameDialogOpen"
+      v-model="nameDraft"
+      :description-key="nameDialogDescriptionKey"
+      @cancel="handleNameCancel"
+      @confirm="handleNameConfirm"
+    />
   </div>
 </template>

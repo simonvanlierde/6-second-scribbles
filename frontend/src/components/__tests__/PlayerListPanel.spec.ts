@@ -71,7 +71,7 @@ describe("PlayerListPanel", () => {
     const hostWrapper = mount(PlayerListPanel);
     await hostWrapper
       .findAll("button")
-      .find((button) => button.text() === "Kick")
+      .find((button) => button.text() === "Kick player")
       ?.trigger("click");
     expect(hostWrapper.text()).toContain("Kick player?");
 

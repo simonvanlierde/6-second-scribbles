@@ -6,6 +6,7 @@ import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_TIMINGS } from "@/config/gameConfig";
+import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -46,7 +47,7 @@ const resultsByPlayer = computed(() => {
       pointsEarned: number;
     }[];
     arr.push({
-      targetName: targetPlayer?.name || "Unknown",
+      targetName: targetPlayer?.name || i18n.global.t("common.unknown"),
       correctGuesses: result.correctGuesses,
       totalItems: result.totalItems,
       pointsEarned: result.pointsEarned,
@@ -92,7 +93,9 @@ function showLeaveDialog() {
     <header
       class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-black/25 px-6 py-3.5 backdrop-blur-md"
     >
-      <h1 class="m-0 text-[1.375rem] font-extrabold text-white">Round {{ store.currentRound }} Results</h1>
+      <h1 class="m-0 text-[1.375rem] font-extrabold text-white">
+        {{ $t("roundResults.title", { round: store.currentRound }) }}
+      </h1>
       <div class="flex items-center gap-3">
         <div
           class="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3.5 py-1.5 text-sm font-semibold text-white"
@@ -111,8 +114,8 @@ function showLeaveDialog() {
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          {{ isLastRound ? "Final results" : "Next round" }}
-          in {{ countdown }}s
+          {{ isLastRound ? $t("roundResults.finalResultsSoon") : $t("roundResults.nextRoundSoon") }}
+          {{ $t("common.countdownIn", { count: countdown }) }}
         </div>
         <button
           type="button"
@@ -132,14 +135,16 @@ function showLeaveDialog() {
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Leave
+          {{ $t("common.leave") }}
         </button>
       </div>
     </header>
 
     <div class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 p-6 max-[768px]:p-4">
       <section>
-        <h2 class="m-0 mb-3.5 text-lg font-bold tracking-wider text-white/95 uppercase">Round Performance</h2>
+        <h2 class="m-0 mb-3.5 text-lg font-bold tracking-wider text-white/95 uppercase">
+          {{ $t("roundResults.roundPerformance") }}
+        </h2>
         <div
           class="grid gap-4 max-[768px]:grid-cols-1"
           style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))"
@@ -155,23 +160,27 @@ function showLeaveDialog() {
                 class="rounded-sm border-l-[3px] border-primary bg-surface px-3 py-2"
               >
                 <span class="mb-1 block text-[0.8125rem] text-ink-muted">
-                  Guessed {{ result.targetName }}'s drawing
+                  {{ $t("roundResults.guessedPlayersDrawing", { name: result.targetName }) }}
                 </span>
                 <div class="flex items-center justify-between">
                   <span class="text-base font-bold text-ink-dark">
                     {{ result.correctGuesses }}/{{ result.totalItems }}
                   </span>
-                  <span class="text-[0.9375rem] font-bold text-primary"> +{{ result.pointsEarned }} pts </span>
+                  <span class="text-[0.9375rem] font-bold text-primary">
+                    +{{ $t("common.pointsShort", { count: result.pointsEarned }) }}
+                  </span>
                 </div>
               </div>
             </div>
-            <p v-else class="m-0 py-2 text-sm text-ink-muted italic">No guesses submitted</p>
+            <p v-else class="m-0 py-2 text-sm text-ink-muted italic">{{ $t("roundResults.noGuessesSubmitted") }}</p>
           </div>
         </div>
       </section>
 
       <section>
-        <h2 class="m-0 mb-3.5 text-lg font-bold tracking-wider text-white/95 uppercase">Current Standings</h2>
+        <h2 class="m-0 mb-3.5 text-lg font-bold tracking-wider text-white/95 uppercase">
+          {{ $t("roundResults.currentStandings") }}
+        </h2>
         <div class="flex flex-col gap-1.5 rounded-xl bg-white p-5 shadow-lg">
           <div
             v-for="(player, index) in currentScores"
@@ -197,11 +206,10 @@ function showLeaveDialog() {
               class="rounded-full px-2 py-0.5 text-xs font-bold text-white"
               :class="index === 0 ? 'bg-[#b8860b]' : 'bg-primary'"
             >
-              You
+              {{ $t("common.you") }}
             </span>
             <span class="font-bold" :class="index === 0 ? 'text-[#b8860b]' : 'text-primary'">
-              {{ player.score }}
-              pts
+              {{ $t("common.pointsShort", { count: player.score }) }}
             </span>
           </div>
         </div>

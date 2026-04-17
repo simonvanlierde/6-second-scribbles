@@ -8,7 +8,7 @@
     "redis>=5.0",
     "sqlalchemy>=2.0",
     "structlog>=25.5.0",
-    "uvicorn>=0.44.0",
+    "uvicorn[standard]>=0.44.0",
   ]
   description = "Backend for 6-second-scribbles"
   name = "backend"
@@ -40,11 +40,7 @@
   ]
 
 [tool.pytest.ini_options]
-  addopts = [
-    "--strict-markers",
-    "--tb=short",
-    "-v",
-  ]
+  addopts = ["--strict-markers", "--tb=short", "-v"]
   asyncio_default_fixture_loop_scope = "session"
   asyncio_default_test_loop_scope = "session"
   asyncio_mode = "auto"
@@ -57,12 +53,12 @@
 
 [tool.coverage.run]
   branch = true
+  omit   = ["alembic/*"]
   source = ["app", "scripts", "translation"]
-  omit = ["alembic/*"]
 
 [tool.coverage.report]
   fail_under = 80
-  omit = ["alembic/*"]
+  omit       = ["alembic/*"]
 
 [tool.ruff]
   line-length    = 120

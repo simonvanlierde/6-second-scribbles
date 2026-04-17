@@ -2,6 +2,7 @@ import { computed, ref } from "vue";
 import { z } from "zod";
 
 import { LocaleAvailabilityItemSchema } from "@/generated/api";
+import { i18n } from "@/i18n";
 import { apiRequest } from "@/lib/api";
 import { type LocaleAvailability, type LocaleOption, SUPPORTED_LOCALES } from "@/shared/locales";
 
@@ -17,15 +18,15 @@ function normalizeLocale(locale: string): string {
 
 function getDisabledReason(item: LocaleAvailability | undefined): string {
   if (!item || item.category_count <= 0) {
-    return "No playable categories yet";
+    return i18n.global.t("localeSelector.noPlayableCategories");
   }
 
   const hasDifficultyCoverage = Object.values(item.difficulty_counts ?? {}).some((count) => count > 0);
   if (!hasDifficultyCoverage) {
-    return "Missing prompt coverage across difficulties";
+    return i18n.global.t("localeSelector.missingPromptCoverage");
   }
 
-  return "Unavailable";
+  return i18n.global.t("common.unavailable");
 }
 
 async function fetchLocaleAvailability(force = false): Promise<void> {
@@ -48,7 +49,7 @@ async function fetchLocaleAvailability(force = false): Promise<void> {
     loaded = true;
     hasLoaded.value = true;
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : "Failed to load locale availability";
+    loadError.value = error instanceof Error ? error.message : i18n.global.t("localeSelector.failedToLoad");
   } finally {
     isLoading.value = false;
   }

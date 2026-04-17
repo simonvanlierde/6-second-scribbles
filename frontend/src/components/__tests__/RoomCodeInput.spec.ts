@@ -134,21 +134,31 @@ describe("RoomCodeInput", () => {
 });
 
 describe("CreateJoinCard (via HomeView)", () => {
-  it("keeps the player name input in sync with the store", async () => {
+  it("shows the saved player name in the compact chip", async () => {
+    storeMock.localPlayerName = "Persistent Player";
     const wrapper = mount(HomeView);
-    await wrapper.find("#player-name").setValue("Persistent Player");
 
-    expect(storeMock.localPlayerName).toBe("Persistent Player");
+    await wrapper.get('[data-testid="home-player-preferences-toggle"]').trigger("click");
+    expect(wrapper.get('[data-testid="player-name-chip"]').text()).toContain("Persistent Player");
+  });
+
+  it("prompts for a name when creating a room without a saved name", async () => {
+    const wrapper = mount(HomeView);
+
+    const createButton = wrapper.findAll("button").find((button) => button.text().match(/create room/i));
+    await createButton?.trigger("click");
+
+    expect(wrapper.find('[data-testid="name-prompt-input"]').exists()).toBe(true);
   });
 
   it("shows a toast when the room does not exist", async () => {
+    storeMock.localPlayerName = "Persistent Player";
     // First call: locale availability fetch performed by CreateJoinCard on mount.
     fetchMock.mockResolvedValueOnce({ json: async () => [] } as Response);
     // Second call: room status check should return `exists: false`.
     fetchMock.mockResolvedValueOnce({ json: async () => ({ exists: false }) } as Response);
 
     const wrapper = mount(HomeView);
-    await wrapper.find("#player-name").setValue("Persistent Player");
 
     const codeInputs = wrapper.findAll("input.code-input");
     const code = "ABC123";

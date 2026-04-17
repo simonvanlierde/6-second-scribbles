@@ -1,5 +1,6 @@
 import { computed } from "vue";
 
+import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 type LeaveDialogConfig = {
@@ -26,36 +27,36 @@ export function useRoomLeave(context: LeaveContext = {}) {
   const dialog = computed<LeaveDialogConfig>(() => {
     if (store.gamePhase === "drawing") {
       return {
-        title: "Leave Game?",
-        message: "Your drawing progress will be lost and the round will continue without you.",
-        confirmLabel: "Leave",
-        cancelLabel: "Stay",
+        title: i18n.global.t("leaveDialog.drawingTitle"),
+        message: i18n.global.t("leaveDialog.drawingMessage"),
+        confirmLabel: i18n.global.t("leaveDialog.leave"),
+        cancelLabel: i18n.global.t("leaveDialog.stay"),
       };
     }
 
     if (store.gamePhase === "guessing") {
       return {
-        title: "Leave Round?",
-        message: "Your guesses will be lost and the round will continue without you.",
-        confirmLabel: "Leave",
-        cancelLabel: "Stay",
+        title: i18n.global.t("leaveDialog.guessingTitle"),
+        message: i18n.global.t("leaveDialog.guessingMessage"),
+        confirmLabel: i18n.global.t("leaveDialog.leave"),
+        cancelLabel: i18n.global.t("leaveDialog.stay"),
       };
     }
 
     if (store.isHost && store.playersList.length > 1) {
       return {
-        title: "Leave Room?",
-        message: "Host will pass to another player when you leave.",
-        confirmLabel: "Leave room",
-        cancelLabel: "Stay",
+        title: i18n.global.t("leaveDialog.hostTitle"),
+        message: i18n.global.t("leaveDialog.hostMessage"),
+        confirmLabel: i18n.global.t("leaveDialog.leaveRoom"),
+        cancelLabel: i18n.global.t("leaveDialog.stay"),
       };
     }
 
     return {
-      title: "Leave Room?",
+      title: i18n.global.t("leaveDialog.defaultTitle"),
       message: "",
-      confirmLabel: "Leave",
-      cancelLabel: "Cancel",
+      confirmLabel: i18n.global.t("leaveDialog.leave"),
+      cancelLabel: i18n.global.t("leaveDialog.cancel"),
     };
   });
 

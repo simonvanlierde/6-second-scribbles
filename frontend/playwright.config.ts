@@ -13,7 +13,7 @@ export default defineConfig({
   reporter: "html",
   use: {
     actionTimeout: 2000,
-    baseURL: process.env.CI ? "http://127.0.0.1:4173" : "http://127.0.0.1:3001",
+    baseURL: process.env.CI ? "http://127.0.0.1:4173" : "http://localhost:3001",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -39,7 +39,7 @@ export default defineConfig({
 
   webServer: {
     command: "just e2e-dev",
-    url: process.env.CI ? "http://127.0.0.1:4173" : "http://127.0.0.1:3001",
+    url: process.env.CI ? "http://127.0.0.1:4173" : "http://localhost:3001",
     reuseExistingServer: !process.env.CI,
     timeout: 180 * 1000,
   },

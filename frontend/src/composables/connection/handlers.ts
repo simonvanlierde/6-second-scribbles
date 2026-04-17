@@ -11,6 +11,7 @@ import type { Router } from "vue-router";
 import type { NotificationType } from "@/composables/notifications";
 import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEventGroup, ServerEventOf } from "@/generated/protocol";
+import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
 import type { useGameStore } from "@/stores/game";
 
@@ -51,23 +52,23 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
   switch (message.type) {
     case "join_error":
       if (message.error === "game_in_progress") {
-        showNotification(message.message || "This round is already in progress. You can join next round.", "info");
+        showNotification(message.message || i18n.global.t("notifications.roundInProgressJoinLater"), "info");
         break;
       }
 
       if (message.error === "room_full" && isObserverConnection.value) {
-        showNotification(message.message || "This room is full, but you can keep watching.", "error");
+        showNotification(message.message || i18n.global.t("notifications.roomFullWatchOnly"), "error");
         break;
       }
 
-      showNotification(message.message || "Unable to join room", "error");
+      showNotification(message.message || i18n.global.t("notifications.unableToJoinRoom"), "error");
       console.error("[WebSocket] Join error:", message.message);
       setTimeout(() => router.push({ name: "home" }), UI_TIMINGS.JOIN_ERROR_REDIRECT_MS);
       break;
 
     case "host_restored":
       console.log("[WebSocket] Host status restored");
-      showNotification("Host status restored", "success");
+      showNotification(i18n.global.t("notifications.hostStatusRestored"), "success");
       break;
 
     case "room_state":
@@ -92,10 +93,14 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
     case "host_changed":
       store.setHost(message.newHostId);
       if (message.newHostId === store.localPlayerId) {
-        showNotification("You are now the host", "success");
+        showNotification(i18n.global.t("notifications.youAreNowHost"), "success");
       } else {
         const nextHost = store.players.get(message.newHostId);
-        showNotification(nextHost ? `${nextHost.name} is now the host` : "Host changed");
+        showNotification(
+          nextHost
+            ? i18n.global.t("notifications.hostChanged", { name: nextHost.name })
+            : i18n.global.t("notifications.hostChangedFallback"),
+        );
       }
       break;
   }
@@ -165,7 +170,7 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
     case "settings_update":
       store.applySettingsUpdate(message);
       if (!store.isHost) {
-        showNotification("Host updated game settings");
+        showNotification(i18n.global.t("notifications.hostUpdatedSettings"));
       }
       break;
 
@@ -173,7 +178,11 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
       if (message.locale) {
         store.setDefaultLocale(message.locale);
         if (!store.isHost) {
-          showNotification(`Room language changed to ${formatLocaleLabel(message.locale)}`);
+          showNotification(
+            i18n.global.t("notifications.roomLanguageChanged", {
+              locale: formatLocaleLabel(message.locale),
+            }),
+          );
         }
       }
       break;
@@ -209,9 +218,7 @@ export function handleDrawingEvent(message: DrawingEvent, ctx: HandlerContext): 
     case "pad_visibility":
       store.setRoomPadVisible(message.visible);
       if (!store.isHost) {
-        showNotification(
-          message.visible ? "Host showed the drawpad for the room" : "Host hid the drawpad for the room",
-        );
+        showNotification(i18n.global.t(message.visible ? "notifications.drawpadShown" : "notifications.drawpadHidden"));
       }
       break;
   }
@@ -230,9 +237,9 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
         expiresAt: message.expiresAt,
       });
       if (message.initiatorId === store.localPlayerId) {
-        showNotification(`Started kick vote for ${message.targetPlayerName}`);
+        showNotification(i18n.global.t("moderation.kickVoteStartedByYou", { name: message.targetPlayerName }));
       } else {
-        showNotification(`Kick vote started for ${message.targetPlayerName}`);
+        showNotification(i18n.global.t("moderation.kickVoteStarted", { name: message.targetPlayerName }));
       }
       break;
 
@@ -247,21 +254,21 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
       store.removePlayer(message.playerId);
       store.removeKickVote(message.playerId);
       if (message.playerId === store.localPlayerId) {
-        showNotification("You have been kicked from the room", "error");
+        showNotification(i18n.global.t("moderation.youWereKicked"), "error");
         store.reset();
         router.push({ name: "home" });
       } else {
-        showNotification(`${message.playerName} was kicked from the room`);
+        showNotification(i18n.global.t("moderation.playerKicked", { name: message.playerName }));
       }
       break;
 
     case "kick_vote_expired":
       store.removeKickVote(message.targetPlayerId);
-      showNotification(`Kick vote for ${message.targetPlayerId} expired`);
+      showNotification(i18n.global.t("moderation.kickVoteExpired", { name: message.targetPlayerId }));
       break;
 
     case "kick_error":
-      showNotification(message.error || "Failed to process kick request", "error");
+      showNotification(message.error || i18n.global.t("moderation.kickRequestFailed"), "error");
       break;
   }
 }

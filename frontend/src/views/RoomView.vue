@@ -8,7 +8,7 @@ import { useGameStore } from "@/stores/game";
 import GameView from "@/views/GameView.vue";
 import LobbyView from "@/views/LobbyView.vue";
 import ResultsView from "@/views/ResultsView.vue";
-import RoomEntryView from "@/views/RoomEntryView.vue";
+import RoomAccessView from "@/views/RoomAccessView.vue";
 import RoundResultsView from "@/views/RoundResultsView.vue";
 import SpectatorRoomView from "@/views/SpectatorRoomView.vue";
 
@@ -19,12 +19,13 @@ const inActiveRoom = computed(() => Boolean(store.localPlayerId) && store.roomCo
 const gamePhase = computed(() => normalizeGamePhase(store.gamePhase));
 const isSpectating = computed(
   () =>
-    store.isSpectatorMode || (!inActiveRoom.value && (gamePhase.value === "drawing" || gamePhase.value === "guessing")),
+    (!inActiveRoom.value && store.isSpectatorMode && gamePhase.value !== "lobby") ||
+    (!inActiveRoom.value && (gamePhase.value === "drawing" || gamePhase.value === "guessing")),
 );
 </script>
 
 <template>
-  <RoomEntryView v-if="!inActiveRoom && !isSpectating" />
+  <RoomAccessView v-if="!inActiveRoom && !isSpectating" />
   <SpectatorRoomView v-else-if="isSpectating" />
   <LobbyView v-else-if="gamePhase === 'lobby'" />
   <GameView v-else-if="gamePhase === 'drawing' || gamePhase === 'guessing'" />

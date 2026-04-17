@@ -2,11 +2,11 @@
   <div>
     <div class="mb-2 flex flex-wrap items-center gap-2 max-[768px]:text-sm max-[480px]:gap-1.5">
       <div class="flex items-center gap-1">
-        <label class="text-sm font-medium max-[768px]:text-xs">Color:</label>
+        <label class="text-sm font-medium max-[768px]:text-xs">{{ $t("common.color") }}:</label>
         <input v-model="color" type="color">
       </div>
       <div class="flex items-center gap-1">
-        <label class="text-sm font-medium max-[768px]:text-xs">Size:</label>
+        <label class="text-sm font-medium max-[768px]:text-xs">{{ $t("common.size") }}:</label>
         <input v-model.number="width" type="range" min="1" max="20">
       </div>
       <div class="flex items-center gap-1">
@@ -15,7 +15,7 @@
           class="cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-semibold transition-all max-[480px]:px-2.5 max-[480px]:py-1.5 max-[480px]:text-xs"
           @click="clearLocal"
         >
-          Clear
+          {{ $t("common.clear") }}
         </button>
       </div>
     </div>
@@ -23,9 +23,7 @@
       ref="canvasEl"
       class="mini-canvas h-[200px] w-full cursor-crosshair touch-none rounded border border-gray-300 bg-white max-[768px]:h-[180px] max-[480px]:h-[150px]"
     />
-    <p class="mt-2 text-center text-sm text-gray-500 max-[768px]:text-xs">
-      Draw together with other players while waiting!
-    </p>
+    <p class="mt-2 text-center text-sm text-gray-500 max-[768px]:text-xs">{{ $t("lobby.drawTogetherWhileWaiting") }}</p>
   </div>
 </template>
 

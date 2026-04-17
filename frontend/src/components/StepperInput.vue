@@ -16,6 +16,8 @@ const modelValue = defineModel<number>({ required: true });
 
 const decrementLabel = computed(() => (props.step === 1 ? "−" : `−${props.step}${props.suffix}`));
 const incrementLabel = computed(() => (props.step === 1 ? "+" : `+${props.step}${props.suffix}`));
+const decrementAriaLabel = computed(() => `Decrease ${props.label}`);
+const incrementAriaLabel = computed(() => `Increase ${props.label}`);
 
 function decrement() {
   const next = modelValue.value - props.step;
@@ -39,7 +41,7 @@ function increment() {
       class="cursor-pointer border-0 bg-surface px-3.5 py-2 leading-none font-bold text-primary transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-300"
       :class="step === 1 ? 'text-lg' : 'text-[0.8125rem]'"
       :disabled="modelValue <= min"
-      :aria-label="`Decrease ${label}`"
+      :aria-label="decrementAriaLabel"
       @click="decrement"
     >
       {{ decrementLabel }}
@@ -52,7 +54,7 @@ function increment() {
       class="cursor-pointer border-0 bg-surface px-3.5 py-2 leading-none font-bold text-primary transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-300"
       :class="step === 1 ? 'text-lg' : 'text-[0.8125rem]'"
       :disabled="modelValue >= max"
-      :aria-label="`Increase ${label}`"
+      :aria-label="incrementAriaLabel"
       @click="increment"
     >
       {{ incrementLabel }}

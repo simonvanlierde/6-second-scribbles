@@ -9,7 +9,7 @@ vi.mock("vue-router", () => ({
   useRoute: () => ({ params: { roomCode: "ROOM1" } }),
 }));
 
-vi.mock("@/views/RoomEntryView.vue", () => ({ default: { template: "<div>guest</div>" } }));
+vi.mock("@/views/RoomAccessView.vue", () => ({ default: { template: "<div>guest</div>" } }));
 vi.mock("@/views/SpectatorRoomView.vue", () => ({ default: { template: "<div>spectator</div>" } }));
 vi.mock("@/views/LobbyView.vue", () => ({ default: { template: "<div>waiting</div>" } }));
 vi.mock("@/views/GameView.vue", () => ({ default: { template: "<div>game</div>" } }));
@@ -30,5 +30,17 @@ describe("RoomView", () => {
     const wrapper = mount(RoomView);
 
     expect(wrapper.text()).toContain("guest");
+  });
+
+  it("drops spectator mode once the room returns to the lobby", () => {
+    const store = useGameStore();
+    store.isSpectatorMode = true;
+    store.gamePhase = "lobby";
+    store.roomCode = "ROOM1";
+
+    const wrapper = mount(RoomView);
+
+    expect(wrapper.text()).toContain("guest");
+    expect(wrapper.text()).not.toContain("spectator");
   });
 });

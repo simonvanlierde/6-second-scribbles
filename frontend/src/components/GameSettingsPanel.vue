@@ -6,6 +6,7 @@ import StepperInput from "@/components/StepperInput.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
 import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
+import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
 import type { Difficulty } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
@@ -76,11 +77,14 @@ function setDifficulty(d: Difficulty) {
 
 watch(rounds, (val) => {
   if (!Number.isFinite(val)) {
-    roundsError.value = "Please enter a valid number";
+    roundsError.value = i18n.global.t("settings.enterValidNumber");
     return;
   }
   if (val < GAME_SETTINGS.rounds.MIN || val > GAME_SETTINGS.rounds.MAX) {
-    roundsError.value = `Must be between ${GAME_SETTINGS.rounds.MIN} and ${GAME_SETTINGS.rounds.MAX}`;
+    roundsError.value = i18n.global.t("settings.mustBeBetween", {
+      min: GAME_SETTINGS.rounds.MIN,
+      max: GAME_SETTINGS.rounds.MAX,
+    });
   } else {
     roundsError.value = null;
     store.maxRounds = Math.floor(val);
@@ -143,13 +147,13 @@ const difficultyChipClass: Record<Difficulty, string> = {
         class="rounded-full border px-2.5 py-1 text-[0.8125rem] font-medium capitalize"
         :class="difficultyChipClass[difficulty]"
       >
-        {{ difficulty }}
+        {{ $t(`settings.${difficulty}`) }}
       </span>
       <span
         class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.8125rem] font-medium text-ink-dark capitalize"
       >
         {{ rounds }}
-        rounds
+        {{ $t("settings.rounds") }}
       </span>
       <span
         class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.8125rem] font-medium text-ink-dark capitalize"
@@ -168,7 +172,9 @@ const difficultyChipClass: Record<Difficulty, string> = {
   <div v-else class="my-4 flex flex-col gap-4">
     <!-- Language -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase"> 🌐 Room language </label>
+      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
+        🌐 {{ $t("settings.roomLanguage") }}
+      </label>
       <LocaleSelector
         id="room-default-locale"
         :model-value="store.defaultLocale"
@@ -176,15 +182,15 @@ const difficultyChipClass: Record<Difficulty, string> = {
         compact
         @update:model-value="changeDefaultLocale"
       />
-      <p class="m-0 text-[0.8125rem] leading-snug text-ink-muted">
-        Used as the shared fallback when a prompt or category is not available in a player's language.
-      </p>
+      <p class="m-0 text-[0.8125rem] leading-snug text-ink-muted">{{ $t("settings.fallbackHelp") }}</p>
     </div>
 
     <!-- Difficulty -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase"> Difficulty </label>
-      <div class="flex gap-1.5" role="group" aria-label="Difficulty">
+      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
+        {{ $t("settings.difficulty") }}
+      </label>
+      <div class="flex gap-1.5" role="group" :aria-label="$t('settings.difficulty')">
         <button
           v-for="d in DIFFICULTIES"
           :key="d"
@@ -197,15 +203,22 @@ const difficultyChipClass: Record<Difficulty, string> = {
           "
           @click="setDifficulty(d)"
         >
-          {{ d }}
+          {{ $t(`settings.${d}`) }}
         </button>
       </div>
     </div>
 
     <!-- Rounds -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase"> Rounds </label>
-      <StepperInput v-model="rounds" label="Rounds" :min="GAME_SETTINGS.rounds.MIN" :max="GAME_SETTINGS.rounds.MAX" />
+      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
+        {{ $t("settings.rounds") }}
+      </label>
+      <StepperInput
+        v-model="rounds"
+        :label="$t('settings.rounds')"
+        :min="GAME_SETTINGS.rounds.MIN"
+        :max="GAME_SETTINGS.rounds.MAX"
+      />
       <p v-if="roundsError" class="mt-0.5 text-[0.8125rem] text-danger">{{ roundsError }}</p>
     </div>
 
@@ -231,16 +244,18 @@ const difficultyChipClass: Record<Difficulty, string> = {
       >
         <polyline points="6 9 12 15 18 9" />
       </svg>
-      Advanced Settings
+      {{ $t("settings.advancedSettings") }}
     </button>
 
     <Transition name="collapse">
       <div v-if="advancedOpen" class="flex flex-col gap-3.5 rounded-md border border-slate-200 bg-surface p-3.5">
         <div class="flex flex-col gap-1.5">
-          <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase"> ✏️ Drawing time </label>
+          <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
+            ✏️ {{ $t("settings.drawingTime") }}
+          </label>
           <StepperInput
             v-model="drawingTimeLimit"
-            label="Drawing time"
+            :label="$t('settings.drawingTime')"
             :min="GAME_SETTINGS.drawingTimeLimitSeconds.MIN"
             :max="GAME_SETTINGS.drawingTimeLimitSeconds.MAX"
             :step="10"
@@ -250,11 +265,11 @@ const difficultyChipClass: Record<Difficulty, string> = {
 
         <div class="flex flex-col gap-1.5">
           <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
-            💬 Guessing time
+            💬 {{ $t("settings.guessingTime") }}
           </label>
           <StepperInput
             v-model="guessingTimeLimit"
-            label="Guessing time"
+            :label="$t('settings.guessingTime')"
             :min="GAME_SETTINGS.guessingTimeLimitSeconds.MIN"
             :max="GAME_SETTINGS.guessingTimeLimitSeconds.MAX"
             :step="10"
@@ -280,8 +295,8 @@ const difficultyChipClass: Record<Difficulty, string> = {
           />
         </span>
         <span class="flex flex-col gap-0.5 text-[0.9375rem] font-medium text-ink-dark">
-          Private Room
-          <span class="text-xs font-normal text-ink-muted"> Private rooms won't appear in random join </span>
+          {{ $t("settings.privateRoom") }}
+          <span class="text-xs font-normal text-ink-muted"> {{ $t("settings.privateRoomHelp") }} </span>
         </span>
       </label>
     </div>

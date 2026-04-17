@@ -101,13 +101,13 @@ onMounted(() => {
 
 <template>
   <div
-    class="flex items-center justify-center gap-1.5 max-[480px]:gap-[0.45rem] max-[480px]:px-2"
+    class="flex w-full max-w-full items-center justify-center gap-1.5 overflow-hidden max-[480px]:gap-[0.35rem] max-[480px]:px-0"
     @paste.prevent="onPaste"
   >
     <template v-for="(val, i) in codeInputs" :key="i">
       <input
         :ref="(el) => setRef(el, i)"
-        class="code-input h-[3.2rem] w-[2.9rem] min-w-[2.1rem] max-w-[3.6rem] flex-[0_1_auto] rounded-lg border border-[#ccc] bg-white py-[0.15rem] text-center font-mono text-base leading-[1.1rem] transition-[border-color,box-shadow,transform] duration-150 ease-out focus:border-[#5b8def] focus:outline-none focus:shadow-[0_0_0_3px_rgba(91,141,239,0.12)] max-[480px]:h-[3.4rem] max-[480px]:flex-1 max-[480px]:text-[1.1rem]"
+        class="code-input h-[3.2rem] w-[2.9rem] min-w-0 max-w-[3.4rem] flex-[1_1_0] rounded-lg border border-[#ccc] bg-white py-[0.15rem] text-center font-mono text-base leading-[1.1rem] transition-[border-color,box-shadow,transform] duration-150 ease-out focus:border-[#5b8def] focus:outline-none focus:shadow-[0_0_0_3px_rgba(91,141,239,0.12)] max-[480px]:h-[3.15rem] max-[480px]:w-full max-[480px]:max-w-none max-[480px]:text-[1rem]"
         :value="codeInputs[i]"
         maxlength="1"
         inputmode="text"

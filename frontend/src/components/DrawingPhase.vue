@@ -7,6 +7,7 @@ import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { STORAGE_KEYS } from "@/config/gameConfig";
+import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -25,7 +26,7 @@ const canvasElement = ref<HTMLCanvasElement | null>(null);
 const hasSubmittedDrawing = ref(false);
 const leaveDialogOpen = ref(false);
 
-const category = computed(() => store.localPlayerCard?.category || "Loading...");
+const category = computed(() => store.localPlayerCard?.category || i18n.global.t("drawing.loadingCategory"));
 const items = computed(() => store.localPlayerCard?.items || []);
 const currentScore = computed(() => store.localPlayer?.score || 0);
 
@@ -133,7 +134,7 @@ function handleBrushSizeChange(event: Event) {
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Leave
+          {{ $t("common.leave") }}
         </button>
       </div>
 
@@ -146,13 +147,15 @@ function handleBrushSizeChange(event: Event) {
 
       <div class="flex flex-col items-end gap-0.5 justify-self-end">
         <span class="whitespace-nowrap text-sm font-semibold text-white/95">
-          Round {{ store.currentRound }} / {{ store.maxRounds }}
+          {{ $t("common.roundProgress", { current: store.currentRound, total: store.maxRounds }) }}
           <span v-if="store.readyCount > 0" class="font-medium text-white/55">
             · {{ store.readyCount }}/{{ store.totalPlayers }}
             ✓</span
           >
         </span>
-        <span class="whitespace-nowrap text-[0.8125rem] font-medium text-white/70">{{ currentScore }} pts</span>
+        <span class="whitespace-nowrap text-[0.8125rem] font-medium text-white/70">
+          {{ $t("common.pointsShort", { count: currentScore }) }}
+        </span>
       </div>
     </header>
 
@@ -183,7 +186,7 @@ function handleBrushSizeChange(event: Event) {
             :disabled="hasSubmittedDrawing"
             @click="endDrawingPhase"
           >
-            {{ hasSubmittedDrawing ? "⏳ Waiting…" : "✓ Finish" }}
+            {{ hasSubmittedDrawing ? $t("drawing.waiting") : $t("drawing.finish") }}
           </button>
         </div>
       </aside>
@@ -194,7 +197,7 @@ function handleBrushSizeChange(event: Event) {
       >
         <div class="mb-3 flex flex-wrap items-center gap-4 border-b border-[#e2e8f0] pb-3">
           <div class="flex items-center gap-2">
-            <label class="text-[0.8125rem] font-semibold text-ink-muted">Color</label>
+            <label class="text-[0.8125rem] font-semibold text-ink-muted">{{ $t("drawing.color") }}</label>
             <input
               type="color"
               :value="canvas.currentColor.value"
@@ -203,7 +206,7 @@ function handleBrushSizeChange(event: Event) {
             >
           </div>
           <div class="flex items-center gap-2">
-            <label class="text-[0.8125rem] font-semibold text-ink-muted">Size</label>
+            <label class="text-[0.8125rem] font-semibold text-ink-muted">{{ $t("drawing.size") }}</label>
             <input
               type="range"
               min="1"
@@ -218,7 +221,7 @@ function handleBrushSizeChange(event: Event) {
             class="ml-auto cursor-pointer rounded-[var(--radius-sm)] border-[1.5px] border-[#e2e8f0] bg-surface px-3 py-1.5 text-[0.8125rem] font-semibold text-ink-dark transition-all hover:bg-[#e9ecef]"
             @click="canvas.clear()"
           >
-            🧹 Clear
+            {{ $t("drawing.clear") }}
           </button>
         </div>
         <canvas
@@ -232,7 +235,7 @@ function handleBrushSizeChange(event: Event) {
             :disabled="hasSubmittedDrawing"
             @click="endDrawingPhase"
           >
-            {{ hasSubmittedDrawing ? "⏳ Waiting…" : "✓ Finish" }}
+            {{ hasSubmittedDrawing ? $t("drawing.waiting") : $t("drawing.finish") }}
           </button>
         </div>
       </div>

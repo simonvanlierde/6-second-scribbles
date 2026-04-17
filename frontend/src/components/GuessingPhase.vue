@@ -151,7 +151,7 @@ function confirmLeave() {
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Leave
+          {{ $t("common.leave") }}
         </button>
       </div>
 
@@ -164,13 +164,15 @@ function confirmLeave() {
 
       <div class="flex flex-col items-end gap-0.5 justify-self-end">
         <span class="whitespace-nowrap text-sm font-semibold text-white/95">
-          Round {{ store.currentRound }} / {{ store.maxRounds }}
+          {{ $t("common.roundProgress", { current: store.currentRound, total: store.maxRounds }) }}
           <span v-if="store.readyCount > 0" class="font-medium text-white/55">
             · {{ store.readyCount }}/{{ store.totalPlayers }}
             ✓</span
           >
         </span>
-        <span class="whitespace-nowrap text-[0.8125rem] font-medium text-white/70">{{ currentScore }} pts</span>
+        <span class="whitespace-nowrap text-[0.8125rem] font-medium text-white/70">
+          {{ $t("common.pointsShort", { count: currentScore }) }}
+        </span>
       </div>
     </header>
 
@@ -184,7 +186,7 @@ function confirmLeave() {
           class="flex min-h-0 min-w-0 [flex:1.2] flex-col overflow-hidden rounded-[var(--radius-xl)] bg-white p-5 shadow-[var(--shadow-lg)] max-[768px]:flex-none max-[768px]:p-3.5"
         >
           <h2 class="mb-3.5 mt-0 shrink-0 border-b-2 border-primary pb-2 text-lg font-bold text-ink-dark">
-            Guess {{ assignedTargetPlayer.name }}'s drawing
+            {{ $t("guessing.guessPlayerDrawing", { name: assignedTargetPlayer.name }) }}
           </h2>
           <div
             class="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[var(--radius-md)] border-[1.5px] border-[#e2e8f0] bg-surface max-[768px]:h-[min(155px,26dvh)] max-[768px]:flex-none"
@@ -192,14 +194,14 @@ function confirmLeave() {
             <img
               v-if="assignedTargetPlayer.drawing && !brokenImages.has(assignedTargetPlayer.id)"
               :src="assignedTargetPlayer.drawing"
-              alt="Player drawing"
+              :alt="$t('guessing.playerDrawingAlt')"
               class="max-h-full max-w-full object-contain"
               @error="handleImageError(assignedTargetPlayer.id)"
             >
             <p v-else-if="brokenImages.has(assignedTargetPlayer.id)" class="italic text-ink-muted">
-              Drawing failed to load.
+              {{ $t("guessing.drawingFailed") }}
             </p>
-            <p v-else class="italic text-ink-muted">Waiting for drawing…</p>
+            <p v-else class="italic text-ink-muted">{{ $t("guessing.waitingForDrawing") }}</p>
           </div>
         </div>
 
@@ -222,13 +224,13 @@ function confirmLeave() {
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            Guesses submitted! Waiting for others…
+            {{ $t("guessing.submittedWaiting") }}
           </div>
           <div v-else class="flex flex-col gap-3.5 rounded-[var(--radius-xl)] bg-white p-5 shadow-[var(--shadow-lg)]">
             <h3
               class="m-0 flex shrink-0 items-center gap-2 text-[0.9375rem] font-semibold tracking-[0.04em] text-ink-muted uppercase"
             >
-              Your guesses
+              {{ $t("guessing.yourGuesses") }}
               <span
                 class="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[0.8125rem] font-bold normal-case tracking-normal text-primary"
               >
@@ -242,7 +244,7 @@ function confirmLeave() {
                 :key="idx"
                 v-model="guessesFor(assignedTargetPlayer.id)[idx]"
                 type="text"
-                :placeholder="`Guess ${idx + 1}`"
+                :placeholder="$t('guessing.guessNumber', { number: idx + 1 })"
                 enterkeyhint="next"
                 class="guess-input rounded-[var(--radius-md)] border-[1.5px] border-[#e2e8f0] px-3 py-2.5 text-[0.9375rem] text-ink-dark transition-[border-color] focus:border-primary focus:shadow-[0_0_0_3px_rgba(102,126,234,0.25)] focus:outline-none"
                 @input="onGuessInput(assignedTargetPlayer.id, idx)"
@@ -254,14 +256,14 @@ function confirmLeave() {
               class="shrink-0 cursor-pointer rounded-[var(--radius-md)] border-none bg-gradient-to-br from-primary to-secondary p-3 text-base font-bold text-white transition-all hover:-translate-y-px hover:brightness-[1.08]"
               @click="submitGuessesForPlayer(assignedTargetPlayer.id)"
             >
-              Submit Guesses
+              {{ $t("guessing.submitGuesses") }}
             </button>
           </div>
         </div>
       </template>
 
       <div v-else class="flex w-full items-center justify-center text-[1.0625rem] text-white/80">
-        <p class="italic text-ink-muted">Waiting for your assigned drawing…</p>
+        <p class="italic text-ink-muted">{{ $t("guessing.waitingForAssignedDrawing") }}</p>
       </div>
     </div>
 
@@ -277,10 +279,10 @@ function confirmLeave() {
 
     <ConfirmDialog
       v-model:open="skipDialogOpen"
-      title="No guesses entered"
-      message="You haven't entered any guesses. Submit anyway?"
-      confirm-label="Submit anyway"
-      cancel-label="Go back"
+      :title="$t('guessing.noGuessesTitle')"
+      :message="$t('guessing.noGuessesMessage')"
+      :confirm-label="$t('guessing.submitAnyway')"
+      :cancel-label="$t('guessing.goBack')"
       variant="primary"
       @confirm="confirmSkipGuesses"
       @cancel="cancelSkipGuesses"

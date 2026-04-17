@@ -36,4 +36,21 @@ describe("LocaleSelector", () => {
 
     expect(wrapper.emitted("update:modelValue")).toEqual([["fr"]]);
   });
+
+  it("keeps the inline variant compact and exposes a centered chevron wrapper", () => {
+    const wrapper = mount(LocaleSelector, {
+      props: {
+        modelValue: "en",
+        variant: "inline",
+        options: [
+          { code: "en", enabled: true },
+          { code: "fr", enabled: true },
+        ],
+      },
+    });
+
+    expect(wrapper.get('[data-testid="inline-locale-selector"]').classes()).toContain("items-center");
+    expect(wrapper.get("select").classes()).toContain("pr-3");
+    expect(wrapper.get('[data-testid="inline-locale-chevron"]').classes()).toContain("-translate-y-1/2");
+  });
 });

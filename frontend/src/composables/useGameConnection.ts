@@ -40,6 +40,12 @@ export function useGameConnection() {
   };
 
   function connect(roomCode: string, options: ConnectOptions = {}) {
+    const normalizedRoomCode = roomCode.trim();
+    if (!normalizedRoomCode) {
+      if (import.meta.env.DEV) console.warn("[WebSocket] Refused to connect without a room code");
+      return;
+    }
+
     const observeOnly = options.observeOnly ?? false;
     if (ws) {
       ws.close();
@@ -47,10 +53,10 @@ export function useGameConnection() {
     store.setSpectatorMode(observeOnly);
     isObserverConnection.value = observeOnly;
 
-    const url = `${BACKEND_HOST}/ws/${roomCode}`;
+    const url = `${BACKEND_HOST}/ws/${normalizedRoomCode}`;
     const socket = new WebSocket(url);
     ws = socket;
-    currentRoomCode.value = roomCode;
+    currentRoomCode.value = normalizedRoomCode;
 
     socket.onopen = () => {
       if (ws !== socket) return;
@@ -59,6 +65,7 @@ export function useGameConnection() {
       lastJoinError.value = null;
 
       if (!observeOnly) {
+        store.addPlayer(store.localPlayerId, store.localPlayerName);
         send({
           type: "join",
           playerId: store.localPlayerId,
@@ -76,7 +83,7 @@ export function useGameConnection() {
 
       startHeartbeat();
       if (observeOnly) {
-        startStateRefresh(roomCode);
+        startStateRefresh(normalizedRoomCode);
       } else {
         stopStateRefresh();
       }

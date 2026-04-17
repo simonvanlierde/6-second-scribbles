@@ -339,4 +339,12 @@ describe("client message handlers", () => {
     expect(invalid).toBe(false);
     expect(socket?.sent).not.toContain(JSON.stringify({ type: "submit_guess", playerId: "p1" }));
   });
+
+  it("does not open a websocket for an empty room code", () => {
+    const { connect } = useGameConnection();
+
+    connect("");
+
+    expect(MockWebSocket.instances).toHaveLength(0);
+  });
 });

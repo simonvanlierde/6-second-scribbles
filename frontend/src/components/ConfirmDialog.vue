@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
+import { i18n } from "@/i18n";
 
 interface Props {
   title: string;
@@ -11,8 +12,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   message: "",
-  confirmLabel: "Confirm",
-  cancelLabel: "Cancel",
+  confirmLabel: "",
+  cancelLabel: "",
   variant: "danger",
 });
 
@@ -41,6 +42,9 @@ function onConfirm() {
   open.value = false;
   emit("confirm");
 }
+
+const confirmText = computed(() => props.confirmLabel || i18n.global.t("common.confirm"));
+const cancelText = computed(() => props.cancelLabel || i18n.global.t("common.cancel"));
 </script>
 
 <template>
@@ -58,7 +62,7 @@ function onConfirm() {
         class="cursor-pointer rounded-md border-[1.5px] border-slate-300 bg-transparent px-5 py-2 text-[0.9375rem] font-semibold text-ink-dark transition-all duration-150 hover:border-slate-400 hover:bg-slate-50"
         @click="onCancel"
       >
-        {{ cancelLabel }}
+        {{ cancelText }}
       </button>
       <button
         type="button"
@@ -70,7 +74,7 @@ function onConfirm() {
         "
         @click="onConfirm"
       >
-        {{ confirmLabel }}
+        {{ confirmText }}
       </button>
     </div>
   </dialog>

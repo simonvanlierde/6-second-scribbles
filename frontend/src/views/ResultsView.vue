@@ -6,6 +6,7 @@ import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_TIMINGS } from "@/config/gameConfig";
+import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -48,17 +49,17 @@ const rankedScores = computed(() => {
 });
 
 const winners = computed(() => rankedScores.value.filter((player) => player.rank === 1));
-const winnerHeading = computed(() => (winners.value.length > 1 ? "Winners" : "Winner"));
+const winnerHeading = computed(() => i18n.global.t(winners.value.length > 1 ? "results.winners" : "results.winner"));
 const winnerNames = computed(() => formatNames(winners.value.map((player) => player.playerName)));
 const winnerScoreText = computed(() =>
   winners.value.length > 1
-    ? `Tied at ${winners.value[0]?.score ?? 0} points`
-    : `${winners.value[0]?.score ?? 0} points`,
+    ? i18n.global.t("results.tiedAtPoints", { score: winners.value[0]?.score ?? 0 })
+    : i18n.global.t("results.points", { score: winners.value[0]?.score ?? 0 }),
 );
 
 function formatNames(names: string[]) {
-  if (names.length <= 1) return names[0] || "Unknown";
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  if (names.length <= 1) return names[0] || i18n.global.t("common.unknown");
+  if (names.length === 2) return `${names[0]} ${i18n.global.t("results.and")} ${names[1]}`;
   return names.join(", ");
 }
 

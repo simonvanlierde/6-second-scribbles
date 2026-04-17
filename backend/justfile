@@ -10,7 +10,7 @@ default:
 # Start the backend dev server.
 [group('dev')]
 dev:
-    uv run uvicorn app.main:app --reload --port 8000
+    uv run uvicorn app.main:app --port 8000
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
