@@ -2,13 +2,16 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_TIMINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const router = useRouter();
 const { disconnect } = useGameConnection();
+const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 
 function leaveRoom() {
   disconnect();
@@ -17,6 +20,7 @@ function leaveRoom() {
 }
 
 const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
+const leaveDialogOpen = ref(false);
 let countdownInterval: number | null = null;
 
 const currentScores = computed(() =>
@@ -70,6 +74,14 @@ onUnmounted(() => {
     countdownInterval = null;
   }
 });
+
+function showLeaveDialog() {
+  if (!shouldConfirm.value) {
+    leaveRoom();
+    return;
+  }
+  leaveDialogOpen.value = true;
+}
 </script>
 
 <template>
@@ -105,7 +117,7 @@ onUnmounted(() => {
         <button
           type="button"
           class="btn-leave flex cursor-pointer items-center gap-1 rounded-md border-[1.5px] border-white/45 bg-white/15 px-3.5 py-2 text-sm font-semibold text-white transition-all hover:border-white/75 hover:bg-white/25"
-          @click="leaveRoom"
+          @click="showLeaveDialog"
         >
           <svg
             width="14"
@@ -195,5 +207,15 @@ onUnmounted(() => {
         </div>
       </section>
     </div>
+
+    <ConfirmDialog
+      v-model:open="leaveDialogOpen"
+      :title="leaveDialog.title"
+      :message="leaveDialog.message"
+      :confirm-label="leaveDialog.confirmLabel"
+      :cancel-label="leaveDialog.cancelLabel"
+      variant="danger"
+      @confirm="leaveRoom"
+    />
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { formatLocaleLabel } from "@/shared/locales";
 import { useGameStore } from "@/stores/game";
@@ -11,17 +12,43 @@ const { send } = useGameConnection();
 const showKickConfirm = ref<string | null>(null);
 
 const activeKickVotes = computed(() => store.kickVotes);
+const kickDialogOpen = computed({
+  get: () => showKickConfirm.value !== null,
+  set: (value: boolean) => {
+    if (!value) {
+      showKickConfirm.value = null;
+    }
+  },
+});
+const targetPlayer = computed(() => store.playersList.find((player) => player.id === showKickConfirm.value) ?? null);
+const isHostKick = computed(() =>
+  Boolean(store.isHost && targetPlayer.value && targetPlayer.value.id !== store.hostId),
+);
+const confirmTitle = computed(() => (isHostKick.value ? "Kick player?" : "Start vote-kick?"));
+const confirmMessage = computed(() => {
+  if (!targetPlayer.value) return "";
+  if (isHostKick.value) {
+    return `${targetPlayer.value.name} will be removed from the room immediately.`;
+  }
+  return `${targetPlayer.value.name} will stay in the room unless enough players vote to remove them.`;
+});
+const confirmLabel = computed(() => (isHostKick.value ? "Kick player" : "Start vote"));
 
-function canKickPlayer(playerId: string): boolean {
-  return playerId !== store.localPlayerId;
+function canHostKick(playerId: string): boolean {
+  return store.isHost && playerId !== store.localPlayerId;
 }
 
-function initiateKick(targetPlayerId: string) {
+function canVoteKick(playerId: string): boolean {
+  return !store.isHost && !store.isPrivateRoom && playerId !== store.localPlayerId && playerId !== store.hostId;
+}
+
+function openKickConfirm(targetPlayerId: string) {
   showKickConfirm.value = targetPlayerId;
 }
 
-function confirmKick(targetPlayerId: string) {
-  send({ type: "initiate_kick", targetPlayerId });
+function confirmKick() {
+  if (!showKickConfirm.value) return;
+  send({ type: "initiate_kick", targetPlayerId: showKickConfirm.value });
   showKickConfirm.value = null;
 }
 
@@ -32,9 +59,6 @@ function cancelKick() {
 function voteToKick(targetPlayerId: string) {
   send({ type: "cast_kick_vote", targetPlayerId });
 }
-
-const targetPlayerName = computed(() => store.playersList.find((p) => p.id === showKickConfirm.value)?.name);
-const targetIsHost = computed(() => store.playersList.find((p) => p.id === showKickConfirm.value)?.id === store.hostId);
 </script>
 
 <template>
@@ -61,69 +85,55 @@ const targetIsHost = computed(() => store.playersList.find((p) => p.id === showK
           <span v-if="store.hostId === player.id" class="rounded bg-yellow-400 px-2 py-1 text-sm text-black">
             Host
           </span>
-        </div>
-
-        <div
-          v-if="activeKickVotes.has(player.id)"
-          class="flex items-center gap-2 rounded border border-yellow-400 bg-yellow-100 px-3 py-1.5"
-        >
-          <span class="text-sm font-semibold text-yellow-900">
-            Kick vote:
+          <span
+            v-if="activeKickVotes.has(player.id)"
+            class="rounded-full border border-yellow-300 bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-900"
+          >
+            Vote:
             {{ activeKickVotes.get(player.id)?.currentVotes }}/{{ activeKickVotes.get(player.id)?.requiredVotes }}
           </span>
-          <button
-            v-if="player.id !== store.localPlayerId"
-            type="button"
-            class="cursor-pointer rounded bg-red-400 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500"
-            @click="voteToKick(player.id)"
-          >
-            Vote Kick
-          </button>
         </div>
 
-        <button
-          v-else-if="canKickPlayer(player.id)"
-          type="button"
-          class="cursor-pointer rounded bg-danger px-3 py-1.5 text-sm font-semibold text-white hover:bg-danger-dark"
-          @click="initiateKick(player.id)"
-        >
-          {{ store.isHost ? 'Kick' : 'Vote Kick' }}
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="activeKickVotes.has(player.id) && player.id !== store.localPlayerId"
+            type="button"
+            class="cursor-pointer rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100"
+            @click="voteToKick(player.id)"
+          >
+            Vote kick
+          </button>
+
+          <button
+            v-else-if="canHostKick(player.id)"
+            type="button"
+            class="cursor-pointer rounded bg-danger px-3 py-1.5 text-sm font-semibold text-white hover:bg-danger-dark"
+            @click="openKickConfirm(player.id)"
+          >
+            Kick
+          </button>
+
+          <button
+            v-else-if="canVoteKick(player.id)"
+            type="button"
+            class="cursor-pointer rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-100"
+            @click="openKickConfirm(player.id)"
+          >
+            Vote kick
+          </button>
+        </div>
       </li>
     </ul>
 
-    <div
-      v-if="showKickConfirm"
-      class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-      @click="cancelKick"
-    >
-      <div class="w-[90%] max-w-md rounded-md bg-white p-8 shadow-md" @click.stop>
-        <h2 class="mb-4 text-xl font-bold text-ink">{{ store.isHost ? 'Kick Player?' : 'Start Kick Vote?' }}</h2>
-        <p v-if="store.isHost" class="mb-6 text-gray-600">Are you sure you want to kick {{ targetPlayerName }}?</p>
-        <p v-else class="mb-6 text-gray-600">
-          Start a vote to kick {{ targetPlayerName }}?
-          {{ targetIsHost
-              ? 'All players must vote unanimously to kick the host.'
-              : 'Requires 2/3 majority vote.' }}
-        </p>
-        <div class="flex justify-end gap-4">
-          <button
-            type="button"
-            class="cursor-pointer rounded-md border-0 bg-success py-3.5 px-6 text-base font-semibold text-white transition-all hover:bg-success-dark"
-            @click="cancelKick"
-          >
-            Cancel
-          </button>
-          <button
-            v-if="showKickConfirm"
-            type="button"
-            class="cursor-pointer rounded-md bg-danger px-6 py-3 font-semibold text-white hover:bg-danger-dark"
-            @click="confirmKick(showKickConfirm)"
-          >
-            {{ store.isHost ? 'Kick' : 'Start Vote' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      v-model:open="kickDialogOpen"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmLabel"
+      cancel-label="Cancel"
+      variant="danger"
+      @confirm="confirmKick"
+      @cancel="cancelKick"
+    />
   </div>
 </template>

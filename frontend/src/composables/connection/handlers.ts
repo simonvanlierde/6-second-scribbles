@@ -91,6 +91,12 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
 
     case "host_changed":
       store.setHost(message.newHostId);
+      if (message.newHostId === store.localPlayerId) {
+        showNotification("You are now the host", "success");
+      } else {
+        const nextHost = store.players.get(message.newHostId);
+        showNotification(nextHost ? `${nextHost.name} is now the host` : "Host changed");
+      }
       break;
   }
 }

@@ -7,17 +7,13 @@ import { useGameStore } from "@/stores/game";
 import RoomEntryView from "@/views/RoomEntryView.vue";
 
 const connectMock = vi.fn();
-const pushMock = vi.fn();
-const fetchMock = vi.fn();
 const leaveRoomMock = vi.fn();
+const fetchMock = vi.fn();
 let routeRoomCode = "ROOM01";
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({
     params: { roomCode: routeRoomCode },
-  }),
-  useRouter: () => ({
-    push: pushMock,
   }),
 }));
 
@@ -48,7 +44,6 @@ beforeEach(() => {
   setActivePinia(createPinia());
   routeRoomCode = "ROOM01";
   connectMock.mockClear();
-  pushMock.mockClear();
   leaveRoomMock.mockClear();
   fetchMock.mockReset();
   vi.stubGlobal(
@@ -57,13 +52,10 @@ beforeEach(() => {
       json: async () => ({ exists: true, players: 2, game_phase: "lobby" }),
     } as Response),
   );
-
-  HTMLDialogElement.prototype.close = vi.fn();
-  HTMLDialogElement.prototype.showModal = vi.fn();
 });
 
 describe("RoomEntryView", () => {
-  it("prompts for a name when none is saved", async () => {
+  it("renders an inline name form instead of a dialog when no name is saved", async () => {
     const store = useGameStore();
     store.localPlayerName = "";
 
@@ -74,17 +66,12 @@ describe("RoomEntryView", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain("Enter your name");
+    expect(wrapper.find("dialog").exists()).toBe(false);
+    expect(wrapper.find("input.name-input").exists()).toBe(true);
     expect(wrapper.text()).toContain("Waiting room preview");
-    expect(wrapper.find(".guest-card").exists()).toBe(false);
-
-    await wrapper.get("input.name-input").setValue("Guest Player");
-    await wrapper.get("form.name-form").trigger("submit.prevent");
-
-    expect(store.localPlayerName).toBe("Guest Player");
-    expect(connectMock).toHaveBeenCalledWith("ROOM01");
   });
 
-  it("joins an existing room when a name is already saved", async () => {
+  it("prefills the inline name field from saved state and joins the room", async () => {
     const store = useGameStore();
     store.localPlayerName = "Alice";
 
@@ -93,11 +80,11 @@ describe("RoomEntryView", () => {
     await flushPromises();
     await nextTick();
 
-    expect(wrapper.text()).toContain("Join room");
-    expect(wrapper.text()).toContain("Waiting room preview");
+    expect((wrapper.get("input.name-input").element as HTMLInputElement).value).toBe("Alice");
 
-    await wrapper.get("form.name-form").trigger("submit.prevent");
-    await flushPromises();
+    await wrapper.get("button").trigger("click");
+    const joinButton = wrapper.findAll("button").find((button) => button.text().match(/join room/i));
+    await joinButton?.trigger("click");
 
     expect(connectMock).toHaveBeenCalledWith("ROOM01");
     expect(store.roomCode).toBe("ROOM01");
@@ -119,20 +106,17 @@ describe("RoomEntryView", () => {
     expect(wrapper.text()).toContain("Watch room");
     expect(wrapper.find(".preview-room").exists()).toBe(true);
 
-    await wrapper.get("form.name-form").trigger("submit.prevent");
-    await flushPromises();
+    const watchButton = wrapper.findAll("button").find((button) => button.text().match(/watch room/i));
+    await watchButton?.trigger("click");
 
-    expect(connectMock).toHaveBeenCalledWith("ROOM01", { observeOnly: true });
+    expect(connectMock).toHaveBeenLastCalledWith("ROOM01", { observeOnly: true });
     expect(store.localPlayerId).toBe("");
   });
 
-  it("shows round results behind the name modal during round results", async () => {
+  it("shows round results behind the inline card during round results", async () => {
     fetchMock.mockResolvedValueOnce({
       json: async () => ({ exists: true, players: 2, game_phase: "round_results" }),
     } as Response);
-
-    const store = useGameStore();
-    store.localPlayerName = "";
 
     const wrapper = mount(RoomEntryView);
 
@@ -143,13 +127,10 @@ describe("RoomEntryView", () => {
     expect(wrapper.text()).toContain("Enter your name");
   });
 
-  it("shows final results behind the name modal during final results", async () => {
+  it("shows final results behind the inline card during final results", async () => {
     fetchMock.mockResolvedValueOnce({
       json: async () => ({ exists: true, players: 2, game_phase: "final_results" }),
     } as Response);
-
-    const store = useGameStore();
-    store.localPlayerName = "";
 
     const wrapper = mount(RoomEntryView);
 
@@ -160,13 +141,10 @@ describe("RoomEntryView", () => {
     expect(wrapper.text()).toContain("Enter your name");
   });
 
-  it("shows a create action when the room does not exist", async () => {
+  it("shows a missing-room message and returns home after a timeout", async () => {
     fetchMock.mockResolvedValueOnce({
       json: async () => ({ exists: false }),
     } as Response);
-
-    const store = useGameStore();
-    store.localPlayerName = "Alice";
 
     vi.useFakeTimers();
     const wrapper = mount(RoomEntryView);
@@ -175,8 +153,7 @@ describe("RoomEntryView", () => {
     await nextTick();
 
     expect(wrapper.text()).toContain("Room not found");
-    expect(wrapper.text()).toContain("This room does not exist, bringing you back to the lobby...");
-    expect(wrapper.findAll("dialog")).toHaveLength(1);
+    expect(wrapper.text()).toContain("bringing you back to the lobby");
 
     await vi.advanceTimersByTimeAsync(5000);
     expect(leaveRoomMock).toHaveBeenCalledTimes(1);

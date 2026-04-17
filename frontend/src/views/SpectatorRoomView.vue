@@ -3,11 +3,12 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 import { useGameConnection } from "@/composables/useGameConnection";
+import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const router = useRouter();
-const { disconnect } = useGameConnection();
+const { connect, disconnect } = useGameConnection();
 
 function leaveRoom() {
   disconnect();
@@ -15,8 +16,23 @@ function leaveRoom() {
   router.push({ name: "home" });
 }
 
+function joinNextGame() {
+  if (!store.roomCode || !store.localPlayerName.trim()) return;
+  store.setSpectatorMode(false);
+  store.setLocalPlayer(getOrCreatePlayerId(), store.localPlayerName.trim());
+  connect(store.roomCode);
+}
+
 const drawings = computed(() => store.playersList.filter((player) => player.drawing));
-const phaseLabel = computed(() => (store.gamePhase === "drawing" ? "Drawing round" : "Guessing round"));
+const phaseLabel = computed(() => {
+  if (store.gamePhase === "drawing") return "Drawing round";
+  if (store.gamePhase === "guessing") return "Guessing round";
+  if (store.gamePhase === "lobby") return "Room is back in the lobby";
+  if (store.gamePhase === "round_results") return "Round results";
+  if (store.gamePhase === "final_results") return "Final results";
+  return "Watching room";
+});
+const canJoinNow = computed(() => store.gamePhase === "lobby" && store.localPlayerName.trim().length > 0);
 </script>
 
 <template>
@@ -30,15 +46,29 @@ const phaseLabel = computed(() => (store.gamePhase === "drawing" ? "Drawing roun
       <div>
         <p class="m-0 mb-2 text-xs tracking-widest text-white/70 uppercase">Room {{ store.roomCode }}</p>
         <h1 class="m-0">{{ phaseLabel }}</h1>
-        <p class="m-0 mt-2 text-white/80">Watching live updates. You can join when the room returns to the lobby.</p>
+        <p class="m-0 mt-2 text-white/80">
+          {{ canJoinNow
+              ? 'The room is joinable again. Jump in for the next game whenever you are ready.'
+              : 'Watching live updates. You can join when the room returns to the lobby.' }}
+        </p>
       </div>
-      <button
-        type="button"
-        class="leave-btn cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
-        @click="leaveRoom"
-      >
-        Leave room
-      </button>
+      <div class="flex flex-wrap justify-end gap-3">
+        <button
+          v-if="canJoinNow"
+          type="button"
+          class="cursor-pointer rounded-xl border-0 bg-gradient-to-br from-[#ffd166] to-[#ff8e72] px-4 py-3.5 font-extrabold text-[#1e1e1e]"
+          @click="joinNextGame"
+        >
+          Join next game
+        </button>
+        <button
+          type="button"
+          class="leave-btn cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
+          @click="leaveRoom"
+        >
+          Leave room
+        </button>
+      </div>
     </header>
 
     <section
@@ -88,7 +118,13 @@ const phaseLabel = computed(() => (store.gamePhase === "drawing" ? "Drawing roun
       class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
     >
       <h2 class="m-0">Round status</h2>
-      <p class="p-3 text-white/85">Guessing is in progress. We'll move on once the round is complete.</p>
+      <p v-if="store.gamePhase === 'guessing'" class="p-3 text-white/85">
+        Guessing is in progress. We'll move on once the round is complete.
+      </p>
+      <p v-else-if="store.gamePhase === 'lobby'" class="p-3 text-white/85">
+        The room is waiting in the lobby again. Use “Join next game” to enter as a player.
+      </p>
+      <p v-else class="p-3 text-white/85">This room is between rounds. We'll keep you updated live.</p>
     </section>
   </div>
 </template>

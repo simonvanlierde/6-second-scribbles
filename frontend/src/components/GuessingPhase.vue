@@ -5,11 +5,13 @@ import { useRouter } from "vue-router";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
+import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const router = useRouter();
 const { send, disconnect } = useGameConnection();
+const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 
 function leaveRoom() {
   disconnect();
@@ -112,6 +114,10 @@ function handleImageError(playerId: string) {
 }
 
 function showLeaveDialog() {
+  if (!shouldConfirm.value) {
+    confirmLeave();
+    return;
+  }
   leaveDialogOpen.value = true;
 }
 
@@ -261,10 +267,10 @@ function confirmLeave() {
 
     <ConfirmDialog
       v-model:open="leaveDialogOpen"
-      title="Leave Game?"
-      message="Are you sure you want to leave?"
-      confirm-label="Leave"
-      cancel-label="Stay"
+      :title="leaveDialog.title"
+      :message="leaveDialog.message"
+      :confirm-label="leaveDialog.confirmLabel"
+      :cancel-label="leaveDialog.cancelLabel"
       variant="danger"
       @confirm="confirmLeave"
     />

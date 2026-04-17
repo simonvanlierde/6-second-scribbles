@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useClipboard } from "@vueuse/core";
 import { computed, ref } from "vue";
-import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
@@ -10,16 +9,17 @@ import PlayerListPanel from "@/components/PlayerListPanel.vue";
 import SharedDrawpad from "@/components/SharedDrawpad.vue";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_SETTINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const route = useRoute();
 const router = useRouter();
 const store = useGameStore();
-const { t } = useI18n();
 const { send, disconnect } = useGameConnection();
 const { showNotification } = useNotifications();
 const { copy } = useClipboard();
+const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 
 function leaveRoom() {
   disconnect();
@@ -68,6 +68,10 @@ async function copyRoomCode() {
 }
 
 function showLeaveDialog() {
+  if (!shouldConfirm.value) {
+    leaveRoom();
+    return;
+  }
   leaveDialogOpen.value = true;
 }
 
@@ -209,10 +213,10 @@ function toggleRoomPadVisibility() {
 
     <ConfirmDialog
       v-model:open="leaveDialogOpen"
-      :title="t('lobby.leaveDialogTitle')"
-      :message="t('lobby.leaveDialogText')"
-      :confirm-label="t('lobby.leave')"
-      :cancel-label="t('lobby.cancel')"
+      :title="leaveDialog.title"
+      :message="leaveDialog.message"
+      :confirm-label="leaveDialog.confirmLabel"
+      :cancel-label="leaveDialog.cancelLabel"
       variant="danger"
       @confirm="confirmLeave"
     />

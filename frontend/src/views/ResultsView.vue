@@ -2,15 +2,19 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_TIMINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const router = useRouter();
 const { send, disconnect } = useGameConnection();
+const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const isReady = ref(false);
 const autoRestartTimeout = ref<number | null>(null);
+const leaveDialogOpen = ref(false);
 
 const finalScores = computed(() => store.getFinalScores());
 
@@ -113,6 +117,14 @@ function leaveRoom() {
   router.push({ name: "home" });
 }
 
+function showLeaveDialog() {
+  if (!shouldConfirm.value) {
+    leaveRoom();
+    return;
+  }
+  leaveDialogOpen.value = true;
+}
+
 onUnmounted(() => {
   clearAutoRestartTimeout();
 });
@@ -202,7 +214,7 @@ onUnmounted(() => {
           <button
             type="button"
             class="cursor-pointer rounded-md border-0 bg-success py-3.5 px-6 text-base font-semibold text-white transition-all hover:bg-success-dark"
-            @click="leaveRoom"
+            @click="showLeaveDialog"
           >
             {{ $t('results.leaveRoom') }}
           </button>
@@ -227,5 +239,15 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model:open="leaveDialogOpen"
+      :title="leaveDialog.title"
+      :message="leaveDialog.message"
+      :confirm-label="leaveDialog.confirmLabel"
+      :cancel-label="leaveDialog.cancelLabel"
+      variant="danger"
+      @confirm="leaveRoom"
+    />
   </div>
 </template>

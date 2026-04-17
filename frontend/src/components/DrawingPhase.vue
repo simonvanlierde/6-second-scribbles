@@ -5,6 +5,7 @@ import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
+import { useRoomLeave } from "@/composables/useRoomLeave";
 import { STORAGE_KEYS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
@@ -12,6 +13,7 @@ const store = useGameStore();
 const router = useRouter();
 const { send, disconnect } = useGameConnection();
 const canvas = useDrawingCanvas();
+const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 
 function leaveRoom() {
   disconnect();
@@ -85,6 +87,10 @@ function endDrawingPhase() {
 }
 
 function showLeaveDialog() {
+  if (!shouldConfirm.value) {
+    confirmLeave();
+    return;
+  }
   leaveDialogOpen.value = true;
 }
 
@@ -234,10 +240,10 @@ function handleBrushSizeChange(event: Event) {
 
     <ConfirmDialog
       v-model:open="leaveDialogOpen"
-      title="Leave Game?"
-      message="Your drawing progress will be lost."
-      confirm-label="Leave"
-      cancel-label="Stay"
+      :title="leaveDialog.title"
+      :message="leaveDialog.message"
+      :confirm-label="leaveDialog.confirmLabel"
+      :cancel-label="leaveDialog.cancelLabel"
       variant="danger"
       @confirm="confirmLeave"
     />
