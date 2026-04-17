@@ -41,6 +41,7 @@ words:
   # Software terms
   - argostranslate
   - argosmodel
+  - ACMR
   - Caddyfile
   - cloudflared
   - dedup
