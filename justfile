@@ -7,11 +7,22 @@ default:
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
-# Start Docker, then the frontend and backend dev servers.
+# Start local frontend/backend dev servers against Dockerized infra.
 [group('dev')]
-dev: up
+dev: dev-infra-up
     just frontend/dev &
     just backend/dev
+
+# Start only the infrastructure needed for local development.
+[group('dev')]
+dev-infra-up:
+    docker compose up -d database cache
+    docker compose run --rm --build database-migrations
+
+# Stop the infrastructure used by local development.
+[group('dev')]
+dev-down:
+    docker compose stop database cache
 
 # Start the local dev stack for Playwright e2e against the real backend.
 [group('docker')]
