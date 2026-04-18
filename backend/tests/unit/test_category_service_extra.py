@@ -1,4 +1,5 @@
 """Additional category service coverage for locale fallback and caching branches."""
+# spell-checker: ignore animaux, animales, gato, minou
 
 from __future__ import annotations
 

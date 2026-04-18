@@ -1,4 +1,5 @@
 """Tests for automatic translation of seed data."""
+# spell-checker: ignore animaux, gato
 
 from __future__ import annotations
 

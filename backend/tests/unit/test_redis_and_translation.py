@@ -1,4 +1,5 @@
 """Focused coverage for Redis helpers and translation infrastructure."""
+# spell-checker: ignore chien, gato, setex
 
 from __future__ import annotations
 
