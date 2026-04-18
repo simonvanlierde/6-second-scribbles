@@ -47,4 +47,15 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("../styles/texture.svg");
+    background-size: 200px 200px;
+    opacity: 0.04;
+    mix-blend-mode: multiply;
+    z-index: 0;
+  }
 }
