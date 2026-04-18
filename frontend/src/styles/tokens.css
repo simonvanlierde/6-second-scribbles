@@ -6,7 +6,7 @@
   --color-paper: #FDFBF7;
   --color-card: #FFFFFF;
   --color-ink: #2D2D2D;
-  --color-ink-muted: #5e5847;
+  --color-ink-muted: #5E5847;
   --color-marker-red: #FF4D4D;
   --color-ballpoint-blue: #2D5DA1;
   --color-highlighter-yellow: #FFF9C4;
@@ -91,13 +91,15 @@
   color-scheme: light;
 }
 
-/* Dark mode — applied via prefers-color-scheme OR explicit [data-theme="dark"] */
+/* Dark mode tokens. Two blocks below MUST stay in sync — see comment. */
+
+/* DARK_TOKENS_KEEP_IN_SYNC — system-preference branch */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-paper: #1A1614;
     --color-card: #231E1B;
     --color-ink: #F2EDE2;
-    --color-ink-muted: #b5ada0;
+    --color-ink-muted: #B5ADA0;
     --color-marker-red: #FF6B6B;
     --color-ballpoint-blue: #7BA4E6;
     --color-highlighter-yellow: #FFE066;
@@ -106,11 +108,12 @@
   }
 }
 
+/* DARK_TOKENS_KEEP_IN_SYNC — explicit force-dark branch (works regardless of system) */
 :root[data-theme="dark"] {
   --color-paper: #1A1614;
   --color-card: #231E1B;
   --color-ink: #F2EDE2;
-  --color-ink-muted: #b5ada0;
+  --color-ink-muted: #B5ADA0;
   --color-marker-red: #FF6B6B;
   --color-ballpoint-blue: #7BA4E6;
   --color-highlighter-yellow: #FFE066;
