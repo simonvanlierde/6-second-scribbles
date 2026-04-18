@@ -1,0 +1,128 @@
+/* Design tokens for the 2026 redesign. Source of truth for color, type,
+ * motion, radius, shadow, rotation. Consumed by Tailwind theme + components. */
+
+:root {
+  /* Color — light (default) */
+  --color-paper: #FDFBF7;
+  --color-card: #FFFFFF;
+  --color-ink: #2D2D2D;
+  --color-ink-muted: #5e5847;
+  --color-marker-red: #FF4D4D;
+  --color-ballpoint-blue: #2D5DA1;
+  --color-highlighter-yellow: #FFF9C4;
+  --color-meadow-green: #B5E6B5;
+
+  /* Avatar palette (decorative only) */
+  --avatar-1: #FFB4A2;
+  --avatar-2: #B5E6B5;
+  --avatar-3: #ADD8E6;
+  --avatar-4: #FFE08A;
+  --avatar-5: #E0BBFF;
+  --avatar-6: #FFCBA4;
+
+  /* Semantic aliases */
+  --color-bg: var(--color-paper);
+  --color-surface: var(--color-card);
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-ink-muted);
+  --color-primary: var(--color-marker-red);
+  --color-secondary: var(--color-ballpoint-blue);
+  --color-accent: var(--color-highlighter-yellow);
+  --color-success: var(--color-meadow-green);
+  --color-danger: var(--color-marker-red);
+  --color-ring: var(--color-ballpoint-blue);
+
+  /* Typography */
+  --font-display: "Kalam", "Caveat", system-ui, sans-serif;
+  --font-body: "Patrick Hand", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", monospace;
+
+  --text-display-lg: 56px;
+  --text-display-md: 40px;
+  --text-display-sm: 32px;
+  --text-heading-lg: 28px;
+  --text-heading-md: 22px;
+  --text-heading-sm: 18px;
+  --text-body-lg: 18px;
+  --text-body-md: 16px;
+  --text-label-md: 14px;
+  --text-label-sm: 13px;
+
+  /* Radius (wobbly — four different per corner) */
+  --r-card: 16px 22px 14px 18px;
+  --r-button: 14px 22px 16px 12px;
+  --r-input: 14px 18px 12px 16px;
+  --r-pill: 8px 12px 8px 12px;
+  --r-avatar: 11px 14px 10px 13px;
+
+  /* Borders */
+  --border-input: 2px;
+  --border-card: 2.5px;
+  --border-button: 2.5px;
+
+  /* Shadow (hard offset, no blur) */
+  --shadow-card: 4px 4px 0 var(--color-ink);
+  --shadow-button: 3px 3px 0 var(--color-ink);
+  --shadow-pill: 2px 2px 0 var(--color-ink);
+  --shadow-avatar: 2.5px 2.5px 0 var(--color-ink);
+
+  /* Rotation defaults (per-element overridable via --rotate) */
+  --rotate-card: -0.4deg;
+  --rotate-button: -0.5deg;
+  --rotate-postit: -1.2deg;
+
+  /* Motion */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  color-scheme: light;
+}
+
+/* Dark mode — applied via prefers-color-scheme OR explicit [data-theme="dark"] */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper: #1A1614;
+    --color-card: #231E1B;
+    --color-ink: #F2EDE2;
+    --color-ink-muted: #b5ada0;
+    --color-marker-red: #FF6B6B;
+    --color-ballpoint-blue: #7BA4E6;
+    --color-highlighter-yellow: #FFE066;
+    --color-meadow-green: #9CDB9C;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-paper: #1A1614;
+  --color-card: #231E1B;
+  --color-ink: #F2EDE2;
+  --color-ink-muted: #b5ada0;
+  --color-marker-red: #FF6B6B;
+  --color-ballpoint-blue: #7BA4E6;
+  --color-highlighter-yellow: #FFE066;
+  --color-meadow-green: #9CDB9C;
+  color-scheme: dark;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}
