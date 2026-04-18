@@ -1,5 +1,6 @@
 import "./assets/main.css";
 
+import { MotionPlugin } from "@vueuse/motion";
 import { createPinia } from "pinia";
 import { createPersistedState } from "pinia-plugin-persistedstate";
 import { createApp } from "vue";
@@ -16,5 +17,6 @@ pinia.use(createPersistedState());
 app.use(pinia);
 app.use(router);
 app.use(i18n);
+app.use(MotionPlugin);
 
 app.mount("#app");
