@@ -1,60 +1,50 @@
 @import "tailwindcss";
+@import "../styles/fonts.css";
+@import "../styles/tokens.css";
 
+/* Bridge our CSS tokens into Tailwind's theme so utilities like `bg-paper`,
+ * `text-ink`, `rounded-card`, `shadow-card` work. */
 @theme {
-  --color-primary: #667eea;
-  --color-primary-dark: #5568d3;
-  --color-secondary: #764ba2;
-  --color-success: #48bb78;
-  --color-success-dark: #38a169;
-  --color-danger: #dc3545;
-  --color-danger-dark: #c82333;
-  --color-warning: #f56565;
-  --color-ink: #333;
-  --color-ink-muted: #b6c8e3;
-  --color-ink-dark: #2d3748;
-  --color-surface: #f7fafc;
+  --color-paper: var(--color-paper);
+  --color-card: var(--color-card);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-marker-red: var(--color-marker-red);
+  --color-ballpoint-blue: var(--color-ballpoint-blue);
+  --color-highlighter-yellow: var(--color-highlighter-yellow);
+  --color-meadow-green: var(--color-meadow-green);
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 5px 20px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
-
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-
-  --animate-timer-pulse: timer-pulse 1s infinite;
-}
-
-@keyframes timer-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.06);
-  }
+  --shadow-card: var(--shadow-card);
+  --shadow-button: var(--shadow-button);
+  --shadow-pill: var(--shadow-pill);
 }
 
 @layer base {
   body {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
     min-height: 100vh;
-    color: var(--color-ink);
-    font-family: var(--font-sans);
+    font-size: var(--text-body-md);
+    line-height: 1.5;
   }
-  h1 {
-    font-size: 3rem;
-    color: white;
-    text-align: center;
-    margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-text);
   }
-  @media (max-width: 768px) {
-    h1 {
-      font-size: 2rem;
-    }
+  h1 { font-size: var(--text-display-md); }
+  h2 { font-size: var(--text-heading-lg); }
+  h3 { font-size: var(--text-heading-md); }
+  h4 { font-size: var(--text-heading-sm); }
+  /* Universal focus ring */
+  *:focus-visible {
+    outline: 3px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
