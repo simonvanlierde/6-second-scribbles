@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 
 import LocaleSelector from "@/components/LocaleSelector.vue";
@@ -21,8 +21,12 @@ const open = defineModel<boolean>("open", { default: false });
 const store = useGameStore();
 const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
-const { localeOptions } = useLocaleAvailability();
+const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
 const { t } = useI18n();
+
+onMounted(() => {
+  void fetchLocaleAvailability();
+});
 
 const playerName = computed({
   get: () => store.localPlayerName,

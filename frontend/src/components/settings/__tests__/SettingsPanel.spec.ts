@@ -11,7 +11,10 @@ vi.mock("@/components/LocaleSelector.vue", () => ({
 }));
 
 vi.mock("@/composables/useLocaleAvailability", () => ({
-  useLocaleAvailability: () => ({ localeOptions: { value: [] } }),
+  useLocaleAvailability: () => ({
+    localeOptions: { value: [] },
+    fetchLocaleAvailability: vi.fn(),
+  }),
 }));
 
 function mountPanel(initialState: Record<string, unknown> = {}) {
