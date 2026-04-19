@@ -69,7 +69,7 @@ defineEmits<{ click: [MouseEvent] }>();
 }
 .hd-btn--success {
   background: var(--color-meadow-green);
-  color: var(--color-ink);
+  color: var(--color-ink-fixed);
   --rotate-button: -0.3deg;
   border-radius: 12px 18px 14px 22px;
 }

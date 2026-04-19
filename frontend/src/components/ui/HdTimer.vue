@@ -42,7 +42,7 @@ const isUrgent = computed(() => props.seconds <= props.urgentAt);
 }
 .hd-timer--calm {
   background: var(--color-highlighter-yellow);
-  color: var(--color-ink);
+  color: var(--color-ink-fixed);
 }
 .hd-timer--urgent {
   background: var(--color-marker-red);

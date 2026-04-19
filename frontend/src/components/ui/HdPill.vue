@@ -35,6 +35,6 @@ const props = withDefaults(defineProps<Props>(), { variant: "default" });
 }
 .hd-pill--success {
   background: var(--color-meadow-green);
-  color: var(--color-ink);
+  color: var(--color-ink-fixed);
 }
 </style>

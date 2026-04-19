@@ -38,7 +38,7 @@ onUpdated(applyBackground);
   box-shadow: var(--shadow-avatar);
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--color-ink);
+  color: var(--color-ink-fixed);
   flex-shrink: 0;
   user-select: none;
 }

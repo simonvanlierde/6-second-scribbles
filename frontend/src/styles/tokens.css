@@ -20,6 +20,12 @@
   --avatar-5: #e0bbff;
   --avatar-6: #ffcba4;
 
+  /* Mode-invariant ink. Used for text that sits on a light accent background
+   * (yellow post-it, green success, highlighter timer, light avatars) —
+   * those backgrounds stay light in both light AND dark modes, so the text
+   * on them must stay dark in both modes too. */
+  --color-ink-fixed: #2d2d2d;
+
   /* Semantic aliases */
   --color-bg: var(--color-paper);
   --color-surface: var(--color-card);
@@ -93,13 +99,16 @@
 
 /* Dark mode tokens. Two blocks below MUST stay in sync — see comment. */
 
-/* DARK_TOKENS_KEEP_IN_SYNC — system-preference branch */
+/* DARK_TOKENS_KEEP_IN_SYNC — system-preference branch.
+ * Palette is intentionally warm dark (not pitch black): paper is a warm
+ * charcoal rather than OLED-black to reduce harshness, card is lifted
+ * above it, ink is creamy off-white rather than pure white. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-paper: #1a1614;
-    --color-card: #231e1b;
-    --color-ink: #f2ede2;
-    --color-ink-muted: #b5ada0;
+    --color-paper: #23201c;
+    --color-card: #2e2823;
+    --color-ink: #e6ddcb;
+    --color-ink-muted: #9f958a;
     --color-marker-red: #ff6b6b;
     --color-ballpoint-blue: #7ba4e6;
     --color-highlighter-yellow: #ffe066;
@@ -110,10 +119,10 @@
 
 /* DARK_TOKENS_KEEP_IN_SYNC — explicit force-dark branch (works regardless of system) */
 :root[data-theme="dark"] {
-  --color-paper: #1a1614;
-  --color-card: #231e1b;
-  --color-ink: #f2ede2;
-  --color-ink-muted: #b5ada0;
+  --color-paper: #23201c;
+  --color-card: #2e2823;
+  --color-ink: #e6ddcb;
+  --color-ink-muted: #9f958a;
   --color-marker-red: #ff6b6b;
   --color-ballpoint-blue: #7ba4e6;
   --color-highlighter-yellow: #ffe066;

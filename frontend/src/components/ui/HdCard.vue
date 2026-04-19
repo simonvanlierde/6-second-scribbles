@@ -25,6 +25,7 @@ const props = withDefaults(defineProps<Props>(), { variant: "default" });
 }
 .hd-card--postit {
   background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
   --rotate-card: var(--rotate-postit);
   border-width: 1px;
   border-color: rgba(0, 0, 0, 0.1);

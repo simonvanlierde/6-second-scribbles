@@ -37,6 +37,7 @@ const { notifications } = useNotifications();
 }
 .hd-toast--success {
   background: var(--color-meadow-green);
+  color: var(--color-ink-fixed);
 }
 .hd-toast--error {
   background: var(--color-marker-red);
@@ -44,5 +45,6 @@ const { notifications } = useNotifications();
 }
 .hd-toast--info {
   background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
 }
 </style>
