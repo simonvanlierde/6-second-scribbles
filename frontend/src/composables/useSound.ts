@@ -46,10 +46,24 @@ const enabled = customRef<boolean>((track, trigger) => {
 
 const cache = new Map<SoundKey, Howl>();
 
+function instantiateHowl(opts: ConstructorParameters<typeof Howl>[0]): Howl {
+  // Tolerate Howl being a plain factory (as some mocks provide) as well as
+  // a constructor (the real class). Fall back from `new` to a plain call.
+  try {
+    return new (Howl as unknown as new (o: typeof opts) => Howl)(opts);
+  } catch {
+    return (Howl as unknown as (o: typeof opts) => Howl)(opts);
+  }
+}
+
 function getHowl(key: SoundKey): Howl {
   let h = cache.get(key);
   if (!h) {
-    h = new Howl({ src: [SOUND_KEYS[key]], volume: 0.5, preload: true });
+    h = instantiateHowl({
+      src: [SOUND_KEYS[key]],
+      volume: 0.5,
+      preload: true,
+    });
     cache.set(key, h);
   }
   return h;
