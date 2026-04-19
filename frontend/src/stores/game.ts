@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 
+import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { normalizeGamePhase } from "@/shared/gamePhase";
@@ -25,6 +26,7 @@ export const useGameStore = defineStore(
     const localPlayerId = ref<string>("");
     const localPlayerName = ref<string>("");
     const localPlayerLocale = ref<string>(getBrowserLocale());
+    const localPlayerColor = ref<AvatarColor>(AVATAR_COLORS[0]);
     const pendingLocalPlayerId = ref<string | null>(null);
     const pendingLocalPlayerName = ref<string | null>(null);
     const isSpectatorMode = ref<boolean>(false);
@@ -66,6 +68,14 @@ export const useGameStore = defineStore(
     function setLocalPlayer(id: string, name: string) {
       localPlayerId.value = id;
       localPlayerName.value = name;
+      if (!localPlayerColor.value) {
+        localPlayerColor.value = getAvatarColor(id);
+      }
+    }
+
+    function setLocalPlayerColor(color: AvatarColor) {
+      if (!AVATAR_COLORS.includes(color)) return;
+      localPlayerColor.value = color;
     }
 
     function setSpectatorMode(visible: boolean) {
@@ -368,6 +378,7 @@ export const useGameStore = defineStore(
       defaultLocale,
       customCategoryIds,
       localPlayerLocale,
+      localPlayerColor,
       kickVotes,
       isPrivateRoom,
 
@@ -384,6 +395,7 @@ export const useGameStore = defineStore(
       clearPendingLocalPlayer,
       confirmPendingLocalPlayer,
       setLocalPlayerLocale,
+      setLocalPlayerColor,
       setRoomCode,
       setRoomCodeAndSave,
       setLocalPlayerAndSave,
@@ -426,6 +438,7 @@ export const useGameStore = defineStore(
         "localPlayerId",
         "localPlayerName",
         "localPlayerLocale",
+        "localPlayerColor",
         "roomCode",
         "currentRound",
         "maxRounds",
