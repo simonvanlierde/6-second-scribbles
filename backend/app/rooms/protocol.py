@@ -54,6 +54,7 @@ class JoinEvent(ClientPlayerEventModel):
     type: Literal["join"]
     name: str
     preferred_locale: LanguageCode | None = Field(default=None, alias="preferredLocale")
+    preferred_color: str | None = Field(default=None, alias="preferredColor")
 
 
 class GameSettingsEventModel(ClientEventModel):
@@ -234,6 +235,7 @@ class PlayerSnapshot(BaseModel):
 
     id: str
     name: str
+    color: str | None = None
     categories: list[str] = Field(default_factory=list)
 
 
@@ -242,6 +244,7 @@ class PlayerListItem(BaseModel):
 
     id: str
     name: str
+    color: str | None = None
 
 
 class RoomStateEvent(ServerEventModel):

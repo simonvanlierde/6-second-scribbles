@@ -11,7 +11,14 @@ export const ServerEventSchema = z.union([
     .object({
       type: z.literal("room_state"),
       players: z.array(
-        z.object({ id: z.string(), name: z.string(), categories: z.array(z.string()).optional() }).strict(),
+        z
+          .object({
+            id: z.string(),
+            name: z.string(),
+            color: z.union([z.string(), z.null()]).default(null),
+            categories: z.array(z.string()).optional(),
+          })
+          .strict(),
       ),
       hostId: z.union([z.string(), z.null()]).default(null),
       categories: z.array(z.string()).optional(),
@@ -36,7 +43,9 @@ export const ServerEventSchema = z.union([
       type: z.literal("player_joined"),
       playerId: z.string(),
       name: z.string(),
-      players: z.array(z.object({ id: z.string(), name: z.string() }).strict()),
+      players: z.array(
+        z.object({ id: z.string(), name: z.string(), color: z.union([z.string(), z.null()]).default(null) }).strict(),
+      ),
       isHost: z.boolean(),
     })
     .strict(),
@@ -282,6 +291,7 @@ export const ClientEventSchema = z.union([
     playerId: z.string(),
     name: z.string(),
     preferredLocale: z.union([z.string().regex(/^[a-z]{2,5}$/), z.null()]).default(null),
+    preferredColor: z.union([z.string(), z.null()]).default(null),
   }),
   z.object({
     type: z.literal("start_game"),

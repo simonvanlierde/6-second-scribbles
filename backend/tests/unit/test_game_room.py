@@ -173,8 +173,13 @@ class TestGameRoom:
         player_list = room_with_players.get_player_list()
 
         assert len(player_list) == 2
-        assert {"id": PLAYER_ONE_ID, "name": PLAYER_ONE_NAME} in player_list
-        assert {"id": PLAYER_TWO_ID, "name": PLAYER_TWO_NAME} in player_list
+        ids_and_names = {(p.id, p.name) for p in player_list}
+        assert (PLAYER_ONE_ID, PLAYER_ONE_NAME) in ids_and_names
+        assert (PLAYER_TWO_ID, PLAYER_TWO_NAME) in ids_and_names
+        # Each player should have been assigned a colour token.
+        for p in player_list:
+            assert p.color is not None
+            assert p.color.startswith("var(--avatar-")
 
     async def test_is_empty(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test checking if room is empty."""

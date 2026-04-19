@@ -13,7 +13,6 @@ from app.rooms.protocol import (
     JoinErrorEvent,
     PlayerJoinedEvent,
     PlayerLeftEvent,
-    PlayerListItem,
     RoomCustomCategoriesUpdateServerEvent,
     StartGuessingEvent,
     StartRoundServerEvent,
@@ -86,6 +85,7 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
             session.websocket,
             preferred_locale=session.resolve_join_locale(event.preferred_locale),
             user_id=session.current_user.id if session.current_user is not None else None,
+            preferred_color=event.preferred_color,
         )
     except ValueError as exc:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
@@ -101,7 +101,7 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         PlayerJoinedEvent(
             playerId=event.player_id,
             name=event.name,
-            players=[PlayerListItem(**player) for player in session.room.get_player_list()],
+            players=session.room.get_player_list(),
             isHost=event.player_id == session.room.host_id,
         ),
     )

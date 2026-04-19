@@ -7,6 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from app.core.avatar import AVATAR_COLOR_TOKENS, pick_avatar_color
 from app.rooms.protocol import HostChangedEvent
 
 if TYPE_CHECKING:
@@ -27,6 +28,7 @@ async def add_player(
     *,
     preferred_locale: str | None = None,
     user_id: str | None = None,
+    preferred_color: str | None = None,
     max_players: int,
     player_info_factory: type[PlayerInfo],
 ) -> tuple[PlayerInfo, bool]:
@@ -43,11 +45,25 @@ async def add_player(
     room.emptied_at = None
 
     is_reconnecting_host = player_id == room.last_host_id and player_id not in room.players
+
+    # Reuse an existing player's colour on reconnect; otherwise prefer the
+    # client-supplied colour if valid; otherwise pick one not taken by another
+    # player in the room.
+    existing = room.players.get(player_id)
+    if existing is not None and existing.color:
+        color = existing.color
+    elif preferred_color and preferred_color in AVATAR_COLOR_TOKENS:
+        color = preferred_color
+    else:
+        used = [p.color for p in room.players.values() if p.color and p.id != player_id]
+        color = pick_avatar_color(player_id, used)
+
     player = player_info_factory(
         id=player_id,
         name=name,
         websocket=websocket,
         last_activity=time.time(),
+        color=color,
     )
     room.players[player_id] = player
     room.metadata.player_locales[player_id] = preferred_locale or room.metadata.default_locale

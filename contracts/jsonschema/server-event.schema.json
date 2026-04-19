@@ -54,6 +54,18 @@
                 "title": "Name",
                 "type": "string"
               },
+              "color": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Color"
+              },
               "categories": {
                 "items": {
                   "type": "string"
@@ -225,6 +237,18 @@
               "name": {
                 "title": "Name",
                 "type": "string"
+              },
+              "color": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Color"
               }
             },
             "required": ["id", "name"],

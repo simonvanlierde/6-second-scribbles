@@ -71,6 +71,7 @@ export function useGameConnection() {
           playerId: store.localPlayerId,
           name: store.localPlayerName,
           preferredLocale: store.localPlayerLocale,
+          preferredColor: store.localPlayerColor,
         });
       } else {
         store.setSpectatorMode(true);

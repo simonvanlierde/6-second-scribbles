@@ -114,7 +114,9 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
 
         room_state = receive_json(websocket)
         assert room_state["type"] == ROOM_STATE
-        assert room_state["players"] == [{"id": PLAYER_ONE_ID, "name": PLAYER_ONE_NAME, "categories": []}]
+        assert room_state["players"] == [
+            {"id": PLAYER_ONE_ID, "name": PLAYER_ONE_NAME, "color": "var(--avatar-1)", "categories": []},
+        ]
         assert room_state["difficulty"] == MEDIUM
         assert room_state["maxRounds"] == 5
         assert room_state["padVisibility"]

@@ -39,6 +39,7 @@ from app.rooms import lifecycle as room_lifecycle
 from app.rooms.protocol import (
     PlayerCardPayload,
     PlayerLeftEvent,
+    PlayerListItem,
     PlayerSnapshot,
     ReadyStatusEvent,
     RoomStateEvent,
@@ -72,6 +73,7 @@ class PlayerInfo:
     name: str
     websocket: WebSocket
     last_activity: float = field(default_factory=time.time)
+    color: str | None = None
 
 
 @dataclass(frozen=True)
@@ -238,6 +240,7 @@ class GameRoom:
         *,
         preferred_locale: LanguageCode | None = None,
         user_id: str | None = None,
+        preferred_color: str | None = None,
     ) -> tuple[PlayerInfo, bool]:
         """Add a player to the room.
 
@@ -251,6 +254,7 @@ class GameRoom:
             websocket,
             preferred_locale=preferred_locale,
             user_id=user_id,
+            preferred_color=preferred_color,
             max_players=settings.max_players,
             player_info_factory=PlayerInfo,
         )
@@ -298,7 +302,10 @@ class GameRoom:
         """Build the canonical websocket room-state snapshot."""
         return RoomStateEvent.model_validate(
             {
-                "players": [PlayerSnapshot(id=player.id, name=player.name) for player in self.players.values()],
+                "players": [
+                    PlayerSnapshot(id=player.id, name=player.name, color=player.color)
+                    for player in self.players.values()
+                ],
                 "hostId": self.host_id,
                 "categories": self.metadata.categories,
                 "gamePhase": self.metadata.game_phase,
@@ -403,9 +410,9 @@ class GameRoom:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
                 await self.remove_player(player_id)
 
-    def get_player_list(self) -> list[dict[str, str]]:
+    def get_player_list(self) -> list[PlayerListItem]:
         """Get the list of all players in the room."""
-        return [{"id": p.id, "name": p.name} for p in self.players.values()]
+        return [PlayerListItem(id=p.id, name=p.name, color=p.color) for p in self.players.values()]
 
     async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> KickVoteResult:
         """Initiate a vote to kick a player.
