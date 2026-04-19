@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
 import { useRoomLeave } from "@/composables/useRoomLeave";
@@ -267,7 +267,7 @@ function confirmLeave() {
       </div>
     </div>
 
-    <ConfirmDialog
+    <HdDialog
       v-model:open="leaveDialogOpen"
       :title="leaveDialog.title"
       :message="leaveDialog.message"
@@ -277,7 +277,7 @@ function confirmLeave() {
       @confirm="confirmLeave"
     />
 
-    <ConfirmDialog
+    <HdDialog
       v-model:open="skipDialogOpen"
       :title="$t('guessing.noGuessesTitle')"
       :message="$t('guessing.noGuessesMessage')"

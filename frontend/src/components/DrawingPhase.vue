@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
@@ -241,7 +241,7 @@ function handleBrushSizeChange(event: Event) {
       </div>
     </div>
 
-    <ConfirmDialog
+    <HdDialog
       v-model:open="leaveDialogOpen"
       :title="leaveDialog.title"
       :message="leaveDialog.message"

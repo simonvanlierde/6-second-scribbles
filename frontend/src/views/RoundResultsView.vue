@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_TIMINGS } from "@/config/gameConfig";
@@ -216,7 +216,7 @@ function showLeaveDialog() {
       </section>
     </div>
 
-    <ConfirmDialog
+    <HdDialog
       v-model:open="leaveDialogOpen"
       :title="leaveDialog.title"
       :message="leaveDialog.message"
