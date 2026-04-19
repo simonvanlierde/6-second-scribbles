@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy import cast as sa_cast
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import selectinload
 
 from app.categories.models import Category, CategoryPrompt, Prompt, normalize_locale_code
 from app.categories.schemas import (
@@ -84,7 +85,9 @@ async def _load_category_prompts(
     if not category_ids:
         return {}
     result = await db.execute(
-        select(CategoryPrompt).where(CategoryPrompt.category_id.in_(category_ids)).join(CategoryPrompt.prompt)
+        select(CategoryPrompt)
+        .where(CategoryPrompt.category_id.in_(category_ids))
+        .options(selectinload(CategoryPrompt.prompt))
     )
     m: dict[int, list[CategoryPrompt]] = {}
     for cp in result.scalars().all():
