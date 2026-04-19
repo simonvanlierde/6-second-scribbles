@@ -55,9 +55,10 @@ function setTheme(t: "light" | "dark" | null): void {
     <header class="ds-header">
       <h1>Design system · v1</h1>
       <div class="ds-header__actions">
-        <HdButton variant="ghost" @click="setTheme('light')">Light</HdButton>
-        <HdButton variant="ghost" @click="setTheme('dark')">Dark</HdButton>
-        <HdButton variant="ghost" @click="setTheme(null)">System</HdButton>
+        <span class="ds-header__label">Theme:</span>
+        <HdButton variant="secondary" @click="setTheme('light')">Light</HdButton>
+        <HdButton variant="secondary" @click="setTheme('dark')">Dark</HdButton>
+        <HdButton variant="secondary" @click="setTheme(null)">Auto</HdButton>
       </div>
     </header>
 
@@ -177,6 +178,13 @@ function setTheme(t: "light" | "dark" | null): void {
 .ds-header__actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+.ds-header__label {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  color: var(--color-ink-muted);
+  margin-right: 4px;
 }
 .ds-section {
   margin-bottom: 40px;
