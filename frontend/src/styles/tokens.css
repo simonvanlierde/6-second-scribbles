@@ -2,11 +2,14 @@
  * motion, radius, shadow, rotation. Consumed by Tailwind theme + components. */
 
 :root {
-  /* Color — light (default) */
+  /* Color — light (default).
+   * Ink is intentionally a warm charcoal (not near-black) so borders and
+   * hard-offset shadows don't feel visually heavy. Still AAA contrast on
+   * paper and card backgrounds. */
   --color-paper: #fdfbf7;
   --color-card: #ffffff;
-  --color-ink: #2d2d2d;
-  --color-ink-muted: #5e5847;
+  --color-ink: #3a332c;
+  --color-ink-muted: #6b6459;
   --color-marker-red: #ff4d4d;
   --color-ballpoint-blue: #2d5da1;
   --color-highlighter-yellow: #fff9c4;
@@ -23,8 +26,9 @@
   /* Mode-invariant ink. Used for text that sits on a light accent background
    * (yellow post-it, green success, highlighter timer, light avatars) —
    * those backgrounds stay light in both light AND dark modes, so the text
-   * on them must stay dark in both modes too. */
-  --color-ink-fixed: #2d2d2d;
+   * on them must stay dark in both modes too. Matches --color-ink's warm
+   * charcoal tone for visual consistency. */
+  --color-ink-fixed: #3a332c;
 
   /* Semantic aliases */
   --color-bg: var(--color-paper);
