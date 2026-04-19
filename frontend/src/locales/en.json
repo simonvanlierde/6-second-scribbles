@@ -61,7 +61,21 @@
     "fallbackHelp": "Used as the shared fallback when a prompt or category is not available in a player's language.",
     "easy": "easy",
     "medium": "medium",
-    "hard": "hard"
+    "hard": "hard",
+    "title": "Settings",
+    "identity": "Identity",
+    "yourName": "Your name",
+    "namePlaceholder": "Pick a name",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
+    "sound": "Sound",
+    "soundOn": "on",
+    "soundOff": "off",
+    "toggle": "Toggle",
+    "about": "About"
   },
   "lobby": {
     "leaveRoom": "Leave Room",
