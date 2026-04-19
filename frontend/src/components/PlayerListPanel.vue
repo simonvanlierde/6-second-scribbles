@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import HdAvatar from "@/components/ui/HdAvatar.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
+import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
+import type { Player } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -62,6 +65,13 @@ function cancelKick() {
 function voteToKick(targetPlayerId: string) {
   send({ type: "cast_kick_vote", targetPlayerId });
 }
+
+function colorFor(player: Player): string {
+  // Prefer server-supplied colour; fall back to a deterministic one derived
+  // from the player id (keeps the UI stable for older rooms without server colours).
+  const serverColor = (player as Player & { color?: string }).color;
+  return serverColor ?? getAvatarColor(player.id);
+}
 </script>
 
 <template>
@@ -81,6 +91,7 @@ function voteToKick(targetPlayerId: string) {
         class="my-2 flex items-center justify-between gap-3 rounded bg-gray-50 p-3"
       >
         <div class="flex flex-1 items-center gap-2">
+          <HdAvatar :initial="getAvatarInitial(player.name)" :color="colorFor(player)" size="sm" />
           <span class="font-medium">{{ player.name }}</span>
           <span v-if="player.id === store.localPlayerId" class="rounded bg-gray-200 px-2 py-1 text-sm text-gray-600">
             ({{ $t("common.you") }})
@@ -128,7 +139,7 @@ function voteToKick(targetPlayerId: string) {
       </li>
     </ul>
 
-    <ConfirmDialog
+    <HdDialog
       v-model:open="kickDialogOpen"
       :title="confirmTitle"
       :message="confirmMessage"

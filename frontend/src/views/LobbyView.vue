@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { useClipboard } from "@vueuse/core";
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
 import PlayerListPanel from "@/components/PlayerListPanel.vue";
 import SharedDrawpad from "@/components/SharedDrawpad.vue";
+import HdButton from "@/components/ui/HdButton.vue";
+import HdCard from "@/components/ui/HdCard.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
+import HdIconButton from "@/components/ui/HdIconButton.vue";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_SETTINGS } from "@/config/gameConfig";
-import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useGameStore();
@@ -21,12 +25,6 @@ const { send, disconnect } = useGameConnection();
 const { showNotification } = useNotifications();
 const { copy } = useClipboard();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
 
 const leaveDialogOpen = ref(false);
 
@@ -40,6 +38,12 @@ const localPadVisible = computed({
 const roomCode = computed(() => route.params.roomCode as string);
 const playerCount = computed(() => store.playersList.length);
 const canStart = computed(() => store.canStartGame && store.isHost);
+
+function leaveRoom() {
+  disconnect();
+  store.reset();
+  void router.push({ name: "home" });
+}
 
 function handleClear() {
   if (store.isHost) {
@@ -65,7 +69,7 @@ function startGame() {
 
 async function copyRoomCode() {
   await copy(roomCode.value);
-  showNotification(i18n.global.t("common.copied"));
+  showNotification(t("common.copied"));
 }
 
 function showLeaveDialog() {
@@ -76,10 +80,6 @@ function showLeaveDialog() {
   leaveDialogOpen.value = true;
 }
 
-function confirmLeave() {
-  leaveRoom();
-}
-
 function toggleRoomPadVisibility() {
   const visible = !store.roomPadVisible;
   store.setRoomPadVisible(visible);
@@ -88,143 +88,178 @@ function toggleRoomPadVisibility() {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-start justify-center p-5 pt-5">
-    <div class="max-w-[1200px] w-full">
-      <!-- Header -->
-      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border-[1.5px] border-white/45 bg-white/15 px-3.5 py-2 text-sm font-semibold text-white transition-all hover:border-white/75 hover:bg-white/25"
-          @click="showLeaveDialog"
+  <div class="lobby-page">
+    <div class="lobby-topbar">
+      <HdButton variant="secondary" @click="showLeaveDialog"> ← {{ t('lobby.leaveRoom') }} </HdButton>
+      <button type="button" class="lobby-code" :title="t('common.copyRoomCode')" @click="copyRoomCode">
+        <span class="lobby-code__label"
+          >{{ t('common.roomCode', { code: '' }).replace(/\s*\{code\}\s*/, '').trim() || 'Room' }}</span
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          {{ $t('lobby.leaveRoom') }}
-        </button>
-
-        <button
-          type="button"
-          class="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-white/45 bg-white/20 px-4 py-2 transition-all hover:border-white hover:bg-white/30"
-          :title="$t('lobby.copyRoomCode')"
-          @click="copyRoomCode"
+        <span class="lobby-code__value">{{ roomCode }}</span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
         >
-          🎨
-          <span class="font-mono text-[1.2rem] font-bold tracking-widest text-white">{{ roomCode }}</span>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            class="shrink-0 text-white/70"
-          >
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Two-column layout -->
-      <div class="grid items-start gap-5 max-[768px]:grid-cols-1 md:grid-cols-2">
-        <!-- Left: Players + Settings + Start -->
-        <div class="rounded-xl bg-white p-8 shadow-lg">
-          <h2>{{ $t('lobby.players', { count: playerCount }) }}</h2>
-          <PlayerListPanel />
-
-          <div class="mt-2 border-t border-gray-200 pt-2"><GameSettingsPanel /></div>
-
-          <div v-if="store.isHost" class="mt-4">
-            <button
-              type="button"
-              class="w-full cursor-pointer rounded-md border-0 bg-gradient-to-br from-primary to-secondary px-4 py-3.5 text-[1.0625rem] font-bold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(102,126,234,0.4)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none"
-              :disabled="!canStart"
-              @click="startGame"
-            >
-              {{ canStart ? $t('lobby.startGame') : $t('lobby.waitingForPlayers') }}
-            </button>
-          </div>
-          <p
-            v-else
-            class="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3.5 text-center text-[0.9375rem] font-medium text-slate-700"
-          >
-            {{ playerCount >= 2 ? $t('lobby.waitingForHost') : $t('lobby.waitingForMore') }}
-          </p>
-        </div>
-
-        <!-- Right: Drawpad -->
-        <div v-if="store.isHost || store.roomPadVisible">
-          <div class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.2)]">
-            <div class="flex items-center justify-between">
-              <h3 class="m-0 text-[1.0625rem] font-bold text-ink-dark">{{ $t('lobby.doodleTitle') }}</h3>
-            </div>
-
-            <div v-if="store.isHost" class="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                class="cursor-pointer rounded border border-primary/25 bg-primary/10 px-2.5 py-1.5 text-[0.8125rem] font-semibold whitespace-nowrap text-primary-dark transition-all hover:bg-primary/20"
-                @click="handleClear"
-              >
-                {{ $t('lobby.clearForAll') }}
-              </button>
-              <button
-                type="button"
-                class="cursor-pointer rounded border border-primary/25 bg-primary/10 px-2.5 py-1.5 text-[0.8125rem] font-semibold whitespace-nowrap text-primary-dark transition-all hover:bg-primary/20"
-                @click="toggleRoomPadVisibility"
-              >
-                {{ store.roomPadVisible ? $t('lobby.hideForAll') : $t('lobby.showForAll') }}
-              </button>
-              <button
-                v-if="store.roomPadVisible"
-                type="button"
-                class="cursor-pointer rounded border border-success/30 bg-success/10 px-2.5 py-1.5 text-[0.8125rem] font-semibold whitespace-nowrap text-success-dark transition-all hover:bg-success/20"
-                @click="toggleDrawpad"
-              >
-                {{ localPadVisible ? $t('lobby.hideMyPad') : $t('lobby.showMyPad') }}
-              </button>
-            </div>
-            <button
-              v-else-if="!store.isHost"
-              type="button"
-              class="cursor-pointer rounded border border-success/30 bg-success/10 px-3 py-1.5 text-[0.8125rem] font-semibold whitespace-nowrap text-success-dark transition-all hover:bg-success/20"
-              @click="toggleDrawpad"
-            >
-              {{ localPadVisible ? $t('lobby.hideMyPad') : $t('lobby.showMyPad') }}
-            </button>
-
-            <div v-if="store.roomPadVisible && localPadVisible" class="drawpad-canvas mt-1"><SharedDrawpad /></div>
-          </div>
-        </div>
-      </div>
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      </button>
     </div>
 
-    <ConfirmDialog
+    <div class="lobby-grid">
+      <HdCard class="lobby-main">
+        <h2 class="lobby-main__title">{{ t('lobby.players', { count: playerCount }) }}</h2>
+        <PlayerListPanel />
+
+        <div class="lobby-main__settings"><GameSettingsPanel /></div>
+
+        <HdButton
+          v-if="store.isHost"
+          variant="primary"
+          class="lobby-main__start"
+          :disabled="!canStart"
+          @click="startGame"
+        >
+          {{ canStart ? t('lobby.startGame') : t('lobby.waitingForPlayers') }}
+        </HdButton>
+        <HdCard v-else variant="postit" class="lobby-main__waiting">
+          {{ playerCount >= 2 ? t('lobby.waitingForHost') : t('lobby.waitingForMore') }}
+        </HdCard>
+      </HdCard>
+
+      <HdCard v-if="store.isHost || store.roomPadVisible" class="lobby-drawpad">
+        <div class="lobby-drawpad__head">
+          <h3 class="lobby-drawpad__title">{{ t('lobby.doodleTitle') }}</h3>
+        </div>
+
+        <div v-if="store.isHost" class="lobby-drawpad__actions">
+          <HdButton variant="secondary" @click="handleClear">{{ t('lobby.clearForAll') }}</HdButton>
+          <HdButton variant="secondary" @click="toggleRoomPadVisibility">
+            {{ store.roomPadVisible ? t('lobby.hideForAll') : t('lobby.showForAll') }}
+          </HdButton>
+          <HdButton v-if="store.roomPadVisible" variant="success" @click="toggleDrawpad">
+            {{ localPadVisible ? t('lobby.hideMyPad') : t('lobby.showMyPad') }}
+          </HdButton>
+        </div>
+        <HdButton v-else variant="success" @click="toggleDrawpad">
+          {{ localPadVisible ? t('lobby.hideMyPad') : t('lobby.showMyPad') }}
+        </HdButton>
+
+        <div v-if="store.roomPadVisible && localPadVisible" class="drawpad-canvas"><SharedDrawpad /></div>
+      </HdCard>
+    </div>
+
+    <HdDialog
       v-model:open="leaveDialogOpen"
       :title="leaveDialog.title"
       :message="leaveDialog.message"
       :confirm-label="leaveDialog.confirmLabel"
       :cancel-label="leaveDialog.cancelLabel"
       variant="danger"
-      @confirm="confirmLeave"
+      @confirm="leaveRoom"
     />
   </div>
 </template>
 
 <style scoped>
+.lobby-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+.lobby-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.lobby-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
+  border: 2px dashed var(--color-ink);
+  border-radius: 12px 18px 14px 22px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--ease-spring);
+}
+.lobby-code:hover {
+  transform: translateY(-1px);
+}
+.lobby-code__label {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  opacity: 0.7;
+}
+.lobby-code__value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+}
+.lobby-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lobby-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.lobby-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lobby-main__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-md);
+  margin: 0;
+  color: var(--color-ink);
+}
+.lobby-main__settings {
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-ink);
+}
+.lobby-main__start {
+  margin-top: 8px;
+}
+.lobby-main__waiting {
+  margin-top: 8px;
+  text-align: center;
+}
+.lobby-drawpad {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lobby-drawpad__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-md);
+  margin: 0;
+}
+.lobby-drawpad__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .drawpad-canvas :global(.mini-canvas) {
   height: 320px;
 }

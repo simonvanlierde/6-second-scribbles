@@ -24,6 +24,7 @@ export interface Player {
   id: string;
   name: string;
   score: number;
+  color?: string | null;
   currentCard?: Card;
   drawing?: string; // Base64 data URL of canvas drawing
 }

@@ -126,7 +126,7 @@ export const useGameStore = defineStore(
       }
     }
 
-    function setPlayers(nextPlayers: Array<{ id: string; name: string }>) {
+    function setPlayers(nextPlayers: Array<{ id: string; name: string; color?: string | null }>) {
       const next = new Map<string, Player>();
       for (const incoming of nextPlayers) {
         const existing = players.value.get(incoming.id);
@@ -134,6 +134,7 @@ export const useGameStore = defineStore(
           id: incoming.id,
           name: incoming.name,
           score: existing?.score ?? 0,
+          color: incoming.color ?? existing?.color ?? null,
           currentCard: existing?.currentCard,
           drawing: existing?.drawing,
         });
