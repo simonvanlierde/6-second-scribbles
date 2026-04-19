@@ -164,6 +164,11 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export const MatchMethodSchema = z.enum(["exact", "fuzzy", "alternative", "none"]);
 export type MatchMethod = z.infer<typeof MatchMethodSchema>;
 
+export const QuickPlayResponseSchema = z
+  .object({ kind: z.enum(["existing", "created"]), room_code: z.string() })
+  .describe("Response for quick-play: a joinable room, existing or freshly created.");
+export type QuickPlayResponse = z.infer<typeof QuickPlayResponseSchema>;
+
 export const RandomRoomResponseSchema = z
   .object({ max_players: z.number().int(), player_count: z.number().int(), room_code: z.string() })
   .describe("Response for finding a random joinable room.");
@@ -267,6 +272,7 @@ export const apiSchemaNames = [
   "LocaleAvailabilityItem",
   "LoginRequest",
   "MatchMethod",
+  "QuickPlayResponse",
   "RandomRoomResponse",
   "RegisterRequest",
   "RoomStatusResponse",

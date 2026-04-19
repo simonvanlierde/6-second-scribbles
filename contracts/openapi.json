@@ -311,6 +311,23 @@
         "enum": ["exact", "fuzzy", "alternative", "none"],
         "type": "string"
       },
+      "QuickPlayResponse": {
+        "description": "Response for quick-play: a joinable room, existing or freshly created.",
+        "properties": {
+          "kind": {
+            "enum": ["existing", "created"],
+            "title": "Kind",
+            "type": "string"
+          },
+          "room_code": {
+            "title": "Room Code",
+            "type": "string"
+          }
+        },
+        "required": ["room_code", "kind"],
+        "title": "QuickPlayResponse",
+        "type": "object"
+      },
       "RandomRoomResponse": {
         "description": "Response for finding a random joinable room.",
         "properties": {
@@ -1025,6 +1042,26 @@
           }
         },
         "summary": "Create Room",
+        "tags": ["rooms"]
+      }
+    },
+    "/api/rooms/quick-play": {
+      "post": {
+        "description": "Return a joinable public room, creating one if none are available.\n\nIntended for the Home screen's one-tap \"Quick-play\" action: pick a random\npublic room in the lobby phase with room left, or create a fresh one.",
+        "operationId": "quick_play_api_rooms_quick_play_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickPlayResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Quick Play",
         "tags": ["rooms"]
       }
     },

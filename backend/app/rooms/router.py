@@ -14,6 +14,7 @@ from app.core.redis import get_redis
 from app.rooms.manager import room_manager
 from app.rooms.schemas import (
     CreateRoomResponse,
+    QuickPlayResponse,
     RandomRoomResponse,
     RoomStatusResponse,
 )
@@ -91,23 +92,38 @@ async def create_room() -> CreateRoomResponse:
     Redis key so multiple server instances won't collide. On success it creates
     the in-memory room and persists initial state.
     """
+    code = await _reserve_new_room_code()
+    return CreateRoomResponse(room_code=code)
+
+
+@router.post("/quick-play", response_model=QuickPlayResponse)
+async def quick_play() -> QuickPlayResponse:
+    """Return a joinable public room, creating one if none are available.
+
+    Intended for the Home screen's one-tap "Quick-play" action: pick a random
+    public room in the lobby phase with room left, or create a fresh one.
+    """
+    existing = room_manager.find_random_public_room(max_players=settings.max_players)
+    if existing:
+        return QuickPlayResponse(room_code=existing, kind="existing")
+
+    code = await _reserve_new_room_code()
+    return QuickPlayResponse(room_code=code, kind="created")
+
+
+async def _reserve_new_room_code() -> str:
+    """Reserve a unique room code in Redis and create the in-memory room."""
     r = await get_redis()
     attempts = 10
     for _ in range(attempts):
         code = "".join(secrets.choice(ALLOWED_CHARS) for _ in range(ROOM_CODE_LENGTH))
         key = f"room:{code}"
-
-        # Prepare an initial RoomState JSON so the key contains a valid persisted value
         state = RoomState(room_id=code)
         value = state.model_dump_json()
-
-        # Try to atomically set the key only if it doesn't exist
-        # redis-py returns True when successful
         ok = await r.set(key, value, nx=True, ex=settings.room_ttl_seconds)
         if ok:
-            # Reserve succeeded. Create in-memory room and persist canonical state
             room = room_manager.get_or_create_room(code)
             await room.persist()
-            return CreateRoomResponse(room_code=code)
+            return code
 
     raise HTTPException(status_code=500, detail="Failed to generate unique room code. Try again.")

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel
 
 from app.core.types import GamePhase
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 
 class RandomRoomResponse(BaseModel):
@@ -27,3 +32,10 @@ class CreateRoomResponse(BaseModel):
     """Response for newly created room."""
 
     room_code: str
+
+
+class QuickPlayResponse(BaseModel):
+    """Response for quick-play: a joinable room, existing or freshly created."""
+
+    room_code: str
+    kind: Literal["existing", "created"]
