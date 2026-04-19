@@ -32,15 +32,28 @@
     font-size: var(--text-body-md);
     line-height: 1.5;
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     font-weight: 700;
     color: var(--color-text);
   }
-  h1 { font-size: var(--text-display-md); }
-  h2 { font-size: var(--text-heading-lg); }
-  h3 { font-size: var(--text-heading-md); }
-  h4 { font-size: var(--text-heading-sm); }
+  h1 {
+    font-size: var(--text-display-md);
+  }
+  h2 {
+    font-size: var(--text-heading-lg);
+  }
+  h3 {
+    font-size: var(--text-heading-md);
+  }
+  h4 {
+    font-size: var(--text-heading-sm);
+  }
   /* Universal focus ring */
   *:focus-visible {
     outline: 3px solid var(--color-ring);
