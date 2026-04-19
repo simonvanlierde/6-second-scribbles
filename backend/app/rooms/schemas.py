@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Literal  # noqa: TC003 - Pydantic needs runtime Literal for model_rebuild
 
 from pydantic import BaseModel
 
 from app.core.types import GamePhase
-
-if TYPE_CHECKING:
-    from typing import Literal
 
 
 class RandomRoomResponse(BaseModel):
