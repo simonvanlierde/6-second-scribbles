@@ -24,6 +24,11 @@ const router = createRouter({
       },
     },
     {
+      path: "/__ds",
+      name: "design-system",
+      component: () => import("@/views/DesignSystemView.vue"),
+    },
+    {
       path: "/:pathMatch(.*)*",
       redirect: "/",
     },
