@@ -29,6 +29,9 @@ function writeEnabled(v: boolean): void {
   }
 }
 
+// enabled is a module-level singleton: initial value is read from localStorage
+// ONCE at module load. Tests that need a pre-seeded value must vi.resetModules()
+// and re-import, not just write to localStorage before import.
 const enabled = customRef<boolean>((track, trigger) => {
   let value = readEnabled();
   return {
@@ -46,20 +49,10 @@ const enabled = customRef<boolean>((track, trigger) => {
 
 const cache = new Map<SoundKey, Howl>();
 
-function instantiateHowl(opts: ConstructorParameters<typeof Howl>[0]): Howl {
-  // Tolerate Howl being a plain factory (as some mocks provide) as well as
-  // a constructor (the real class). Fall back from `new` to a plain call.
-  try {
-    return new (Howl as unknown as new (o: typeof opts) => Howl)(opts);
-  } catch {
-    return (Howl as unknown as (o: typeof opts) => Howl)(opts);
-  }
-}
-
 function getHowl(key: SoundKey): Howl {
   let h = cache.get(key);
   if (!h) {
-    h = instantiateHowl({
+    h = new Howl({
       src: [SOUND_KEYS[key]],
       volume: 0.5,
       preload: true,

@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const playMock = vi.fn();
-const muteMock = vi.fn();
 
 vi.mock("howler", () => ({
-  Howl: vi.fn().mockImplementation(() => ({
-    play: playMock,
-    mute: muteMock,
-  })),
+  Howl: vi.fn().mockImplementation(function (this: { play: typeof playMock }) {
+    this.play = playMock;
+  }),
 }));
 
 import { SOUND_KEYS, useSound } from "@/composables/useSound";
@@ -15,7 +13,6 @@ import { SOUND_KEYS, useSound } from "@/composables/useSound";
 describe("useSound", () => {
   beforeEach(() => {
     playMock.mockClear();
-    muteMock.mockClear();
     localStorage.clear();
   });
 
@@ -37,12 +34,13 @@ describe("useSound", () => {
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
-  it("persists the enabled flag to localStorage", () => {
-    const { enabled } = useSound();
-    enabled.value = true;
+  it("persists the enabled flag to localStorage across module reloads", async () => {
+    const first = await import("@/composables/useSound");
+    first.useSound().enabled.value = true;
     expect(localStorage.getItem("ds:sound-enabled")).toBe("true");
 
-    const second = useSound();
-    expect(second.enabled.value).toBe(true);
+    vi.resetModules();
+    const second = await import("@/composables/useSound");
+    expect(second.useSound().enabled.value).toBe(true);
   });
 });
