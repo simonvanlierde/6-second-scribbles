@@ -23,6 +23,11 @@
   },
   "home": {
     "title": "Six Second Scribbles",
+    "tagline": "Doodle. Guess. Laugh.",
+    "roomCodeLabel": "Room code",
+    "quickPlayHeading": "Just play.",
+    "quickPlayBody": "No name, no fuss.",
+    "quickPlayCta": "Quick-play →",
     "createOrJoin": "Create or Join a Room",
     "createOrJoinHelp": "Start a room for friends, join with a code, or hop into a public game.",
     "yourName": "Your Name",

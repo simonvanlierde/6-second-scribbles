@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 
@@ -7,6 +7,7 @@ import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import ToastContainer from "@/components/ToastContainer.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { setLocale } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useGameStore } from "@/stores/game";
@@ -16,8 +17,7 @@ const authStore = useAuthStore();
 const { connect, isConnected } = useGameConnection();
 const route = useRoute();
 const { t } = useI18n();
-
-const settingsOpen = ref(false);
+const { isOpen: settingsOpen, open: openSettings } = useSettingsPanel();
 
 watch(
   () => store.localPlayerLocale,
@@ -47,7 +47,7 @@ onMounted(async () => {
 
 <template>
   <div id="app">
-    <HdIconButton class="app-settings-btn" :label="t('settings.title')" @click="settingsOpen = true">
+    <HdIconButton class="app-settings-btn" :label="t('settings.title')" @click="openSettings()">
       <svg
         viewBox="0 0 24 24"
         fill="none"
