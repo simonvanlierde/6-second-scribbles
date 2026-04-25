@@ -8,13 +8,9 @@ import HdCard from "@/components/ui/HdCard.vue";
 import HdInput from "@/components/ui/HdInput.vue";
 import { showNotification } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
-import {
-  CreateRoomResponseSchema,
-  QuickPlayResponseSchema,
-  RandomRoomResponseSchema,
-  RoomStatusResponseSchema,
-} from "@/generated/api";
+import { CreateRoomResponseSchema, QuickPlayResponseSchema, RoomStatusResponseSchema } from "@/generated/api";
 import { apiRequest } from "@/lib/api";
+import { generateRandomName } from "@/shared/nameGenerator";
 import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { isValidRoomCode, normalizeRoomCode } from "@/shared/roomCode";
 import { useGameStore } from "@/stores/game";
@@ -27,7 +23,6 @@ const { connect } = useGameConnection();
 const emit = defineEmits<{ "open-settings": [] }>();
 
 const roomCodeModel = ref("");
-const isJoiningRandom = ref(false);
 const isCheckingRoom = ref(false);
 const isQuickPlaying = ref(false);
 
@@ -89,27 +84,10 @@ async function handleJoinRoom() {
   await navigateToRoom(code);
 }
 
-async function handleJoinRandomRoom() {
-  if (!ensurePlayerName()) return;
-  isJoiningRandom.value = true;
-  try {
-    const data = await apiRequest("/api/rooms/random", {
-      schema: RandomRoomResponseSchema,
-    });
-    await navigateToRoom(data.room_code);
-  } catch (err) {
-    const message =
-      err instanceof Error && err.message.includes("No available public rooms found")
-        ? t("notifications.noAvailableRooms")
-        : t("notifications.connectFailed");
-    showNotification(message, "error");
-  } finally {
-    isJoiningRandom.value = false;
-  }
-}
-
 async function handleQuickPlay() {
-  if (!ensurePlayerName()) return;
+  if (!store.localPlayerName.trim()) {
+    store.localPlayerName = generateRandomName();
+  }
   isQuickPlaying.value = true;
   try {
     const data = await apiRequest("/api/rooms/quick-play", {
@@ -129,9 +107,6 @@ async function handleQuickPlay() {
   <HdCard class="home-cta">
     <div class="home-cta__primary">
       <HdButton variant="primary" @click="handleCreateRoom"> {{ t("home.createRoom") }} </HdButton>
-      <HdButton variant="secondary" :disabled="isJoiningRandom" @click="handleJoinRandomRoom">
-        {{ isJoiningRandom ? t("home.findingRoom") : t("home.joinRandomRoom") }}
-      </HdButton>
     </div>
 
     <div class="home-cta__join">
