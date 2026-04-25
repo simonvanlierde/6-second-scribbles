@@ -5,9 +5,7 @@ import { useI18n } from "vue-i18n";
 import LocaleSelector from "@/components/LocaleSelector.vue";
 import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
-import HdButton from "@/components/ui/HdButton.vue";
 import HdInput from "@/components/ui/HdInput.vue";
-import HdPill from "@/components/ui/HdPill.vue";
 import HdSegmented from "@/components/ui/HdSegmented.vue";
 import HdSidepanel from "@/components/ui/HdSidepanel.vue";
 import { getAvatarInitial } from "@/composables/useAvatar";
@@ -89,14 +87,36 @@ const themeOptions = computed<Array<{ value: Theme; label: string }>>(() => [
       <HdSegmented v-model="theme" :options="themeOptions" name="ds-theme" :aria-label="t('settings.theme')" />
     </section>
 
-    <section class="settings-section">
-      <h3 class="settings-section__title">{{ t("settings.sound") }}</h3>
-      <div class="settings-sound">
-        <HdPill :variant="soundEnabled ? 'success' : 'default'">
-          {{ soundEnabled ? t("settings.soundOn") : t("settings.soundOff") }}
-        </HdPill>
-        <HdButton variant="secondary" @click="soundEnabled = !soundEnabled"> {{ t("settings.toggle") }} </HdButton>
-      </div>
+    <section class="settings-section settings-section--row">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="settings-icon"
+      >
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <template v-if="soundEnabled">
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        </template>
+        <template v-else>
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        </template>
+      </svg>
+      <button
+        type="button"
+        class="settings-sound-toggle"
+        :aria-label="soundEnabled ? t('settings.soundOn') : t('settings.soundOff')"
+        :aria-pressed="soundEnabled"
+        @click="soundEnabled = !soundEnabled"
+      >
+        {{ soundEnabled ? t('settings.soundOn') : t('settings.soundOff') }}
+      </button>
     </section>
 
     <section class="settings-section settings-about">
@@ -145,10 +165,32 @@ const themeOptions = computed<Array<{ value: Theme; label: string }>>(() => [
   gap: 14px;
   margin-bottom: 14px;
 }
-.settings-sound {
+.settings-section--row {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--color-ink);
+}
+.settings-section--row:last-child {
+  border-bottom: 0;
+}
+.settings-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--color-ink);
+}
+.settings-sound-toggle {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  color: var(--color-ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .settings-about__text {
   font-size: var(--text-label-md);
