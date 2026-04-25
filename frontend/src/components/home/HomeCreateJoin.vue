@@ -115,6 +115,8 @@ async function handleQuickPlay() {
         variant="code"
         :aria-label="t('home.roomCodeLabel')"
         :placeholder="t('home.roomCodeLabel')"
+        maxlength="6"
+        @keydown.enter="handleJoinRoom"
       />
       <HdButton variant="success" :disabled="isCheckingRoom" @click="handleJoinRoom">
         {{ isCheckingRoom ? t("home.checking") : t("home.joinRoom") }}
