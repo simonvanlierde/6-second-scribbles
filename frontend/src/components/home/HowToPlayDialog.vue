@@ -8,14 +8,7 @@ const { t } = useI18n({ useScope: "global" });
 </script>
 
 <template>
-  <HdDialog
-    v-model:open="open"
-    :title="t('home.howToPlay')"
-    :confirm-label="t('common.confirm')"
-    :cancel-label="t('common.cancel')"
-    variant="primary"
-    :message="''"
-  >
+  <HdDialog v-model:open="open" :title="t('home.howToPlay')" :confirm-label="t('common.confirm')" variant="primary">
     <ol class="htp">
       <li>{{ t('home.step1', { count: 10 }) }}</li>
       <li>{{ t('home.step2', { time: 60 }) }}</li>

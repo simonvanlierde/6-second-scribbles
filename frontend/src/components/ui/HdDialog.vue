@@ -14,8 +14,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   message: "",
   confirmLabel: "Confirm",
-  cancelLabel: "Cancel",
   variant: "danger",
+  // cancelLabel intentionally has no default
 });
 
 const open = defineModel<boolean>("open", { default: false });
@@ -49,8 +49,9 @@ function onCancel(): void {
   <dialog ref="dialogRef" class="hd-dialog" @click.self="onCancel" @close="onCancel">
     <h2 class="hd-dialog__title">{{ props.title }}</h2>
     <p v-if="props.message" class="hd-dialog__message">{{ props.message }}</p>
+    <slot />
     <div class="hd-dialog__actions">
-      <HdButton variant="secondary" data-testid="hd-dialog-cancel" @click="onCancel">
+      <HdButton v-if="props.cancelLabel" variant="secondary" data-testid="hd-dialog-cancel" @click="onCancel">
         {{ props.cancelLabel }}
       </HdButton>
       <HdButton
