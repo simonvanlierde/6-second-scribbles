@@ -2,11 +2,13 @@
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
+import AboutDialog from "@/components/home/AboutDialog.vue";
 import HomeCreateJoin from "@/components/home/HomeCreateJoin.vue";
 import HowToPlayDialog from "@/components/home/HowToPlayDialog.vue";
 
 const { t } = useI18n();
 const howOpen = ref(false);
+const aboutOpen = ref(false);
 </script>
 
 <template>
@@ -19,10 +21,13 @@ const howOpen = ref(false);
     <main class="home-main"><HomeCreateJoin /></main>
 
     <footer class="home-footer">
-      <button type="button" class="home-footer__how" @click="howOpen = true">{{ t("home.howToPlay") }}</button>
+      <button type="button" class="home-footer__link" @click="howOpen = true">{{ t("home.howToPlay") }}</button>
+      <span class="home-footer__sep" aria-hidden="true">·</span>
+      <button type="button" class="home-footer__link" @click="aboutOpen = true">{{ t("settings.about") }}</button>
     </footer>
 
     <HowToPlayDialog v-model:open="howOpen" />
+    <AboutDialog v-model:open="aboutOpen" />
   </div>
 </template>
 
@@ -56,9 +61,12 @@ const howOpen = ref(false);
   margin-bottom: 24px;
 }
 .home-footer {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
-.home-footer__how {
+.home-footer__link {
   background: transparent;
   border: 0;
   color: var(--color-ballpoint-blue);
@@ -67,6 +75,11 @@ const howOpen = ref(false);
   text-decoration: underline wavy;
   text-underline-offset: 4px;
   cursor: pointer;
-  padding: 8px 16px;
+  padding: 8px 12px;
+}
+.home-footer__sep {
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-md);
+  user-select: none;
 }
 </style>
