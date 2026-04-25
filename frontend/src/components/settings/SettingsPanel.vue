@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
-import LocaleSelector from "@/components/LocaleSelector.vue";
 import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdInput from "@/components/ui/HdInput.vue";
@@ -77,9 +76,26 @@ const themeOptions = computed<Array<{ value: Theme; label: string }>>(() => [
       <AvatarColorPicker v-model="playerColor" :initial="initial" />
     </section>
 
-    <section class="settings-section">
-      <h3 class="settings-section__title">{{ t("settings.language") }}</h3>
-      <LocaleSelector v-model="playerLocale" :options="localeOptions" variant="pill" />
+    <section class="settings-section settings-section--row">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="settings-icon"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+      <select v-model="playerLocale" class="settings-locale-select" :aria-label="t('settings.language')">
+        <option v-for="opt in localeOptions" :key="opt.code" :value="opt.code" :disabled="!opt.enabled">
+          {{ opt.label }}
+        </option>
+      </select>
     </section>
 
     <section class="settings-section">
@@ -191,6 +207,24 @@ const themeOptions = computed<Array<{ value: Theme; label: string }>>(() => [
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+.settings-locale-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--color-card);
+  border: 2px solid var(--color-ink);
+  border-radius: var(--r-pill);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  padding: 6px 12px;
+  box-shadow: var(--shadow-pill);
+  cursor: pointer;
+  flex: 1;
+}
+.settings-locale-select:focus {
+  outline: 3px solid var(--color-ring);
+  outline-offset: 2px;
 }
 .settings-about__text {
   font-size: var(--text-label-md);
