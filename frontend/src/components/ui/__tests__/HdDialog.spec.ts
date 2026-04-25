@@ -20,7 +20,7 @@ describe("HdDialog", () => {
   });
 
   it("emits cancel when the cancel button is clicked", async () => {
-    const w = mount(HdDialog, { props: { open: true, title: "T", message: "M" } });
+    const w = mount(HdDialog, { props: { open: true, title: "T", message: "M", cancelLabel: "Cancel" } });
     await w.find('[data-testid="hd-dialog-cancel"]').trigger("click");
     expect(w.emitted("cancel")).toHaveLength(1);
     expect(w.emitted("update:open")?.[0]).toEqual([false]);
