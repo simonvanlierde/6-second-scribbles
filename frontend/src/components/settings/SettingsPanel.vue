@@ -12,6 +12,7 @@ import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { useSound } from "@/composables/useSound";
 import { type Theme, useTheme } from "@/composables/useTheme";
+import { formatLocaleLabel } from "@/shared/locales";
 import { useGameStore } from "@/stores/game";
 
 const open = defineModel<boolean>("open", { default: false });
@@ -93,7 +94,7 @@ const themeOptions = computed<Array<{ value: Theme; label: string }>>(() => [
       </svg>
       <select v-model="playerLocale" class="settings-locale-select" :aria-label="t('settings.language')">
         <option v-for="opt in localeOptions" :key="opt.code" :value="opt.code" :disabled="!opt.enabled">
-          {{ opt.label }}
+          {{ formatLocaleLabel(opt.code) }}
         </option>
       </select>
     </section>
