@@ -22,7 +22,7 @@ const store = useGameStore();
 const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
 const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
-const { t } = useI18n();
+const { t } = useI18n({ useScope: "global" });
 
 onMounted(() => {
   void fetchLocaleAvailability();

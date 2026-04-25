@@ -19,7 +19,7 @@ import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { isValidRoomCode, normalizeRoomCode } from "@/shared/roomCode";
 import { useGameStore } from "@/stores/game";
 
-const { t } = useI18n();
+const { t } = useI18n({ useScope: "global" });
 const router = useRouter();
 const store = useGameStore();
 const { connect } = useGameConnection();

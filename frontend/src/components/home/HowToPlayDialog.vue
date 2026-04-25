@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import HdDialog from "@/components/ui/HdDialog.vue";
 
 const open = defineModel<boolean>("open", { default: false });
-const { t } = useI18n();
+const { t } = useI18n({ useScope: "global" });
 </script>
 
 <template>
