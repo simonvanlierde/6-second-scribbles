@@ -45,7 +45,12 @@
     "step2": "在 {time} 秒内尽可能多地画出来",
     "step3": "猜猜你其他玩家画了什么",
     "step4": "画画者和猜题者在答对时都能得分！",
-    "footerText": "{original} 的多人网页版 · 灵感来自 {inspiration} · {source}"
+    "footerText": "{original} 的多人网页版 · 灵感来自 {inspiration} · {source}",
+    "tagline": "Doodle. Guess. Laugh.",
+    "roomCodeLabel": "Room code",
+    "quickPlayHeading": "Just play.",
+    "quickPlayBody": "No name, no fuss.",
+    "quickPlayCta": "Quick-play →"
   },
   "settings": {
     "enterValidNumber": "Please enter a valid number",
@@ -61,7 +66,21 @@
     "fallbackHelp": "Used as the shared fallback when a prompt or category is not available in a player's language.",
     "easy": "easy",
     "medium": "medium",
-    "hard": "hard"
+    "hard": "hard",
+    "title": "Settings",
+    "identity": "Identity",
+    "yourName": "Your name",
+    "namePlaceholder": "Pick a name",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
+    "sound": "Sound",
+    "soundOn": "on",
+    "soundOff": "off",
+    "toggle": "Toggle",
+    "about": "About"
   },
   "lobby": {
     "leaveRoom": "离开房间",

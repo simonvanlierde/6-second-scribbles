@@ -45,7 +45,12 @@
     "step2": "Dibuja tantos como puedas en {time} segundos",
     "step3": "Adivina qué dibujaron los otros jugadores",
     "step4": "¡Tanto el dibujante como el adivinador ganan puntos por los aciertos!",
-    "footerText": "Una versión web multijugador de {original} de Gamely Games · Inspirado en {inspiration} · {source}"
+    "footerText": "Una versión web multijugador de {original} de Gamely Games · Inspirado en {inspiration} · {source}",
+    "tagline": "Dibuja. Adivina. Ríe.",
+    "roomCodeLabel": "Código de sala",
+    "quickPlayHeading": "Juega ya.",
+    "quickPlayBody": "Sin nombre, sin lío.",
+    "quickPlayCta": "Jugar rápido →"
   },
   "settings": {
     "enterValidNumber": "Please enter a valid number",
@@ -61,7 +66,21 @@
     "fallbackHelp": "Used as the shared fallback when a prompt or category is not available in a player's language.",
     "easy": "easy",
     "medium": "medium",
-    "hard": "hard"
+    "hard": "hard",
+    "title": "Configuración",
+    "identity": "Identidad",
+    "yourName": "Tu nombre",
+    "namePlaceholder": "Escribe tu nombre",
+    "language": "Idioma",
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeAuto": "Auto",
+    "sound": "Sonido",
+    "soundOn": "activado",
+    "soundOff": "desactivado",
+    "toggle": "Alternar",
+    "about": "Acerca de"
   },
   "lobby": {
     "leaveRoom": "Salir de la sala",

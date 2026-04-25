@@ -45,7 +45,12 @@
     "step2": "Teken er zoveel als je kunt in {time} seconden",
     "step3": "Raad wat andere spelers hebben getekend",
     "step4": "Zowel de tekenaar als de rader verdienen punten voor juiste antwoorden!",
-    "footerText": "Een multiplayer webversie van {original} van Gamely Games · Geïnspireerd door {inspiration} · {source}"
+    "footerText": "Een multiplayer webversie van {original} van Gamely Games · Geïnspireerd door {inspiration} · {source}",
+    "tagline": "Doodle. Guess. Laugh.",
+    "roomCodeLabel": "Room code",
+    "quickPlayHeading": "Just play.",
+    "quickPlayBody": "No name, no fuss.",
+    "quickPlayCta": "Quick-play →"
   },
   "settings": {
     "enterValidNumber": "Please enter a valid number",
@@ -61,7 +66,21 @@
     "fallbackHelp": "Used as the shared fallback when a prompt or category is not available in a player's language.",
     "easy": "easy",
     "medium": "medium",
-    "hard": "hard"
+    "hard": "hard",
+    "title": "Settings",
+    "identity": "Identity",
+    "yourName": "Your name",
+    "namePlaceholder": "Pick a name",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
+    "sound": "Sound",
+    "soundOn": "on",
+    "soundOff": "off",
+    "toggle": "Toggle",
+    "about": "About"
   },
   "lobby": {
     "leaveRoom": "Kamer verlaten",

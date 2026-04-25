@@ -45,7 +45,12 @@
     "step2": "{time}초 안에 가능한 한 많이 그리세요",
     "step3": "다른 플레이어가 무엇을 그렸는지 맞혀 보세요",
     "step4": "그린 사람과 맞힌 사람 모두 정답마다 점수를 얻습니다!",
-    "footerText": "Gamely Games의 {original}을 웹에서 즐기는 멀티플레이 버전 · {inspiration}에서 영감 · {source}"
+    "footerText": "Gamely Games의 {original}을 웹에서 즐기는 멀티플레이 버전 · {inspiration}에서 영감 · {source}",
+    "tagline": "Doodle. Guess. Laugh.",
+    "roomCodeLabel": "Room code",
+    "quickPlayHeading": "Just play.",
+    "quickPlayBody": "No name, no fuss.",
+    "quickPlayCta": "Quick-play →"
   },
   "settings": {
     "enterValidNumber": "Please enter a valid number",
@@ -61,7 +66,21 @@
     "fallbackHelp": "Used as the shared fallback when a prompt or category is not available in a player's language.",
     "easy": "easy",
     "medium": "medium",
-    "hard": "hard"
+    "hard": "hard",
+    "title": "Settings",
+    "identity": "Identity",
+    "yourName": "Your name",
+    "namePlaceholder": "Pick a name",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
+    "sound": "Sound",
+    "soundOn": "on",
+    "soundOff": "off",
+    "toggle": "Toggle",
+    "about": "About"
   },
   "lobby": {
     "leaveRoom": "방 나가기",
