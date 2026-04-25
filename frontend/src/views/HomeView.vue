@@ -4,10 +4,8 @@ import { useI18n } from "vue-i18n";
 
 import HomeCreateJoin from "@/components/home/HomeCreateJoin.vue";
 import HowToPlayDialog from "@/components/home/HowToPlayDialog.vue";
-import { useSettingsPanel } from "@/composables/useSettingsPanel";
 
 const { t } = useI18n();
-const { open: openSettings } = useSettingsPanel();
 const howOpen = ref(false);
 </script>
 
@@ -18,7 +16,7 @@ const howOpen = ref(false);
       <p class="home-tagline">{{ t("home.tagline") }}</p>
     </header>
 
-    <main class="home-main"><HomeCreateJoin @open-settings="openSettings()" /></main>
+    <main class="home-main"><HomeCreateJoin /></main>
 
     <footer class="home-footer">
       <button type="button" class="home-footer__how" @click="howOpen = true">{{ t("home.howToPlay") }}</button>

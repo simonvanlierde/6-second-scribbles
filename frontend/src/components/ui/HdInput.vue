@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
+const inputRef = ref<HTMLInputElement | null>(null);
+defineExpose({ focus: () => inputRef.value?.focus() });
+
 type Variant = "default" | "code";
 
 interface Props {
@@ -26,6 +31,7 @@ function onInput(e: Event): void {
 
 <template>
   <input
+    ref="inputRef"
     :value="props.modelValue"
     :placeholder="props.placeholder"
     :type="props.type"

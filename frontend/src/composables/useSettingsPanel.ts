@@ -1,17 +1,23 @@
 import { ref } from "vue";
 
-// Module-level singleton: the global settings panel lives in App.vue and any
-// view/composite can request it opens via useSettingsPanel().open().
 const isOpen = ref(false);
+const focusNameOnOpen = ref(false);
 
 export function useSettingsPanel() {
   function open(): void {
+    focusNameOnOpen.value = false;
+    isOpen.value = true;
+  }
+
+  function openForName(): void {
+    focusNameOnOpen.value = true;
     isOpen.value = true;
   }
 
   function close(): void {
     isOpen.value = false;
+    focusNameOnOpen.value = false;
   }
 
-  return { isOpen, open, close };
+  return { isOpen, focusNameOnOpen, open, openForName, close };
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import LocaleSelector from "@/components/LocaleSelector.vue";
@@ -12,6 +12,7 @@ import HdSegmented from "@/components/ui/HdSegmented.vue";
 import HdSidepanel from "@/components/ui/HdSidepanel.vue";
 import { getAvatarInitial } from "@/composables/useAvatar";
 import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
+import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { useSound } from "@/composables/useSound";
 import { type Theme, useTheme } from "@/composables/useTheme";
 import { useGameStore } from "@/stores/game";
@@ -21,6 +22,17 @@ const open = defineModel<boolean>("open", { default: false });
 const store = useGameStore();
 const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
+const { focusNameOnOpen } = useSettingsPanel();
+const nameInputRef = ref<InstanceType<typeof HdInput> | null>(null);
+
+watch(focusNameOnOpen, (v) => {
+  if (v) {
+    nextTick(() => {
+      nameInputRef.value?.focus();
+      focusNameOnOpen.value = false;
+    });
+  }
+});
 const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
 const { t } = useI18n({ useScope: "global" });
 
@@ -58,6 +70,7 @@ const themeOptions = computed<Array<{ value: Theme; label: string }>>(() => [
       <div class="settings-identity">
         <HdAvatar :initial="initial" :color="playerColor" size="lg" />
         <HdInput
+          ref="nameInputRef"
           v-model="playerName"
           :aria-label="t('settings.yourName')"
           :placeholder="t('settings.namePlaceholder')"

@@ -8,6 +8,7 @@ import HdCard from "@/components/ui/HdCard.vue";
 import HdInput from "@/components/ui/HdInput.vue";
 import { showNotification } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { CreateRoomResponseSchema, QuickPlayResponseSchema, RoomStatusResponseSchema } from "@/generated/api";
 import { apiRequest } from "@/lib/api";
 import { generateRandomName } from "@/shared/nameGenerator";
@@ -19,8 +20,7 @@ const { t } = useI18n({ useScope: "global" });
 const router = useRouter();
 const store = useGameStore();
 const { connect } = useGameConnection();
-
-const emit = defineEmits<{ "open-settings": [] }>();
+const { openForName } = useSettingsPanel();
 
 const roomCodeModel = ref("");
 const isCheckingRoom = ref(false);
@@ -28,7 +28,7 @@ const isQuickPlaying = ref(false);
 
 function ensurePlayerName(): boolean {
   if (store.localPlayerName.trim()) return true;
-  emit("open-settings");
+  openForName();
   return false;
 }
 
