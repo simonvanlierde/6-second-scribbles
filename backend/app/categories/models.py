@@ -14,23 +14,28 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 _LOCALE_PATTERN = re.compile(r"^[a-z]{2,5}(?:-[a-z0-9]{2,8})?$")
+_LOCALE_SEPARATOR = "-"
 DEFAULT_CATEGORY_SOURCE = "system"
 
 
 def normalize_locale_code(locale: str | None) -> str | None:
     """Normalize locale code for coverage metrics.
 
-    We standardize region variants to their base locale (for example, fr-CA -> fr)
-    so availability reflects playable language families rather than country variants.
+    We canonicalize casing while preserving region variants (for example,
+    zh-cn -> zh-CN) so availability can distinguish playable regional content.
     """
     if not locale:
         return None
 
-    raw = locale.strip().lower().replace("_", "-")
+    raw = locale.strip().lower().replace("_", _LOCALE_SEPARATOR)
     if not raw or not _LOCALE_PATTERN.match(raw):
         return None
 
-    return raw.split("-", 1)[0]
+    if _LOCALE_SEPARATOR not in raw:
+        return raw
+
+    language, region = raw.split(_LOCALE_SEPARATOR, 1)
+    return f"{language}{_LOCALE_SEPARATOR}{region.upper() if len(region) == 2 else region}"
 
 
 class Category(Base):

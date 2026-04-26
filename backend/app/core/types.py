@@ -28,6 +28,6 @@ class GamePhase(StrEnum):
     FINAL_RESULTS = "final_results"
 
 
-type LanguageCode = Annotated[str, StringConstraints(pattern=r"^[a-z]{2,5}$", to_lower=True)]
+type LanguageCode = Annotated[str, StringConstraints(pattern=r"^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$")]
 type PositiveRoundCount = Annotated[int, Field(ge=1)]
 type PositiveRoundLengthSeconds = Annotated[int, Field(ge=1)]

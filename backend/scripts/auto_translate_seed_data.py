@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from app.categories.models import normalize_locale_code
 from translation import TranslationService
 
 if TYPE_CHECKING:
@@ -57,7 +58,7 @@ def _normalize_locales(locales: list[str] | tuple[str, ...] | None) -> list[str]
         return list(DEFAULT_TARGET_LOCALES)
     normalized: list[str] = []
     for locale in locales:
-        value = locale.strip().lower()
+        value = normalize_locale_code(locale) or locale.strip()
         if value and value not in normalized:
             normalized.append(value)
     return normalized
@@ -66,7 +67,8 @@ def _normalize_locales(locales: list[str] | tuple[str, ...] | None) -> list[str]
 def _translations_by_locale(translations: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     indexed: dict[str, dict[str, Any]] = {}
     for translation in translations:
-        locale = str(translation.get("locale", "")).strip().lower()
+        raw_locale = str(translation.get("locale", "")).strip()
+        locale = normalize_locale_code(raw_locale) or raw_locale
         if locale:
             indexed[locale] = translation
     return indexed
@@ -209,7 +211,7 @@ def apply_auto_translations(
         "skipped_missing_source": 0,
         "total_operations": 0,
     }
-    normalized_source = source_locale.strip().lower()
+    normalized_source = normalize_locale_code(source_locale) or source_locale.strip()
     normalized_targets = [locale for locale in _normalize_locales(target_locales) if locale != normalized_source]
 
     # Pre-fetch all language pairs if provided

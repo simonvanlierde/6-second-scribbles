@@ -34,7 +34,7 @@ export const ServerEventSchema = z.union([
       guessTargets: z.record(z.string(), z.string()).optional(),
       padVisibility: z.boolean(),
       isPrivate: z.boolean(),
-      defaultLocale: z.string().regex(/^[a-z]{2,5}$/),
+      defaultLocale: z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/),
       customCategoryIds: z.union([z.array(z.number().int()), z.null()]).default(null),
     })
     .strict(),
@@ -111,7 +111,12 @@ export const ServerEventSchema = z.union([
     .strict(),
   z.object({ type: z.literal("ready_status"), readyCount: z.number().int(), totalPlayers: z.number().int() }).strict(),
   z.object({ type: z.literal("host_changed"), newHostId: z.string() }).strict(),
-  z.object({ type: z.literal("default_locale_update"), locale: z.string().regex(/^[a-z]{2,5}$/) }).strict(),
+  z
+    .object({
+      type: z.literal("default_locale_update"),
+      locale: z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("room_custom_categories_update"),
@@ -290,7 +295,7 @@ export const ClientEventSchema = z.union([
     type: z.literal("join"),
     playerId: z.string(),
     name: z.string(),
-    preferredLocale: z.union([z.string().regex(/^[a-z]{2,5}$/), z.null()]).default(null),
+    preferredLocale: z.union([z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/), z.null()]).default(null),
     preferredColor: z.union([z.string(), z.null()]).default(null),
   }),
   z.object({
@@ -341,7 +346,7 @@ export const ClientEventSchema = z.union([
     type: z.literal("default_locale_update"),
     locale: z
       .string()
-      .regex(/^[a-z]{2,5}$/)
+      .regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/)
       .optional(),
   }),
   z.object({

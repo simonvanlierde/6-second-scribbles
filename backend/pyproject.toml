@@ -27,7 +27,7 @@
 
   db-migrations = ["alembic>=1.17.2"]
   db-seed = ["pyyaml>=6.0.1"]
-  db-translate = ["argostranslate>=1.9.6", "pyyaml>=6.0.1"]
+  db-translate = ["argostranslate>=1.9.6", "opencc-python-reimplemented>=0.1.7", "pyyaml>=6.0.1"]
   testing = [
     "fakeredis>=2.34.1",
     "greenlet>=3.3.2",

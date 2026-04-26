@@ -74,8 +74,8 @@ async def test_list_locale_availability_uses_cached_payload(monkeypatch: pytest.
     assert result[0].category_count == 4
 
 
-async def test_list_locale_availability_normalizes_locales_and_caches(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Normalize region variants and persist the cached payload."""
+async def test_list_locale_availability_preserves_region_locales_and_caches(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Preserve region variants and persist the cached payload."""
     written: list[tuple[str | None, list[dict[str, object]]]] = []
 
     async def _no_cache(_difficulty: str | None) -> None:
@@ -96,14 +96,15 @@ async def test_list_locale_availability_normalizes_locales_and_caches(monkeypatc
 
     as_map = {item.locale: item for item in result}
     assert as_map[DEFAULT_LOCALE].category_count == 1
-    assert as_map["es"].category_count == 1
-    assert as_map["fr"].category_count == 2
-    assert as_map["fr"].difficulty_counts == {"easy": 1, "hard": 1}
+    assert as_map["es-MX"].category_count == 1
+    assert as_map["fr"].category_count == 1
+    assert as_map["fr-CA"].category_count == 1
+    assert as_map["fr-CA"].difficulty_counts == {"easy": 1}
 
     assert len(written) == 1
     assert written[0][0] is None
     cached_locales = {item["locale"] for item in written[0][1]}
-    assert cached_locales == {DEFAULT_LOCALE, "es", "fr"}
+    assert cached_locales == {DEFAULT_LOCALE, "es-MX", "fr", "fr-CA"}
 
 
 async def test_redis_locale_availability_cache_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:

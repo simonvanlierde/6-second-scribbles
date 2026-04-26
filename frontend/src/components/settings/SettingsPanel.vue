@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
@@ -7,11 +7,10 @@ import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdInput from "@/components/ui/HdInput.vue";
 import { getAvatarInitial } from "@/composables/useAvatar";
-import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { useSound } from "@/composables/useSound";
 import { type Theme, useTheme } from "@/composables/useTheme";
-import { formatLocaleLabel } from "@/shared/locales";
+import { formatLocaleLabel, SUPPORTED_LOCALES } from "@/shared/locales";
 import { useGameStore } from "@/stores/game";
 
 const open = defineModel<boolean>("open", { default: false });
@@ -43,12 +42,9 @@ watch(focusNameOnOpen, (v) => {
   }
 });
 
-const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
 const { t } = useI18n({ useScope: "global" });
 
-onMounted(() => {
-  void fetchLocaleAvailability();
-});
+const localeOptions = SUPPORTED_LOCALES.map((code) => ({ code, enabled: true }));
 
 function close() {
   open.value = false;
@@ -398,10 +394,7 @@ function handleThemeBlur(e: FocusEvent) {
 <style scoped>
 /* ─── Dialog shell ─── */
 .settings-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  margin: auto;
   background: var(--color-card);
   color: var(--color-ink);
   border: 2.5px solid var(--color-ink);
@@ -409,9 +402,10 @@ function handleThemeBlur(e: FocusEvent) {
   box-shadow: var(--shadow-card);
   width: min(420px, calc(100vw - 32px));
   max-height: min(640px, calc(100vh - 48px));
-  margin: 0;
   padding: 0;
   overflow: hidden;
+}
+.settings-dialog[open] {
   display: flex;
   flex-direction: column;
 }
@@ -422,12 +416,8 @@ function handleThemeBlur(e: FocusEvent) {
 
 /* On narrow screens: bottom sheet */
 @media (max-width: 500px) {
-  .settings-dialog {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    transform: none;
+  .settings-dialog[open] {
+    margin: auto auto 0;
     width: 100%;
     max-width: 100%;
     max-height: 88vh;

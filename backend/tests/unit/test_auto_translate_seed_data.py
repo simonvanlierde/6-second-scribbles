@@ -10,12 +10,15 @@ from translation import TranslationService
 LOCALE_EN = "en"
 LOCALE_ES = "es"
 LOCALE_FR = "fr"
+LOCALE_ZH_CN = "zh-CN"
+LOCALE_ZH_TW = "zh-TW"
 CAT_ES = "cat<en->es>"
 ANIMALS_FR = "Animals<en->fr>"
 GATO = "gato"
 GATITO = "gatito"
 CAT_ES_OVERWRITE = "cat<en->es>"
 KITTY_ES_OVERWRITE = "kitty<en->es>"
+ZH_TW_CAT_CONVERSION = "猫<zh-CN->zh-TW>"
 
 
 class MockTranslationService(TranslationService):
@@ -140,6 +143,35 @@ class TestAutoTranslateSeedData:
         assert es_translation["aliases"] == [KITTY_ES_OVERWRITE]
         assert stats["prompts_translated"] == 1
         assert stats["aliases_translated"] == 1
+
+    def test_apply_auto_translations_preserves_region_locale_tags(self) -> None:
+        """Region locale tags stay canonical when auto-translation adds entries."""
+        seed_data = {
+            "prompts": [
+                {
+                    "id": "cat",
+                    "translations": [
+                        {"locale": LOCALE_ZH_CN, "label": "猫", "aliases": ["小猫"]},
+                    ],
+                }
+            ]
+        }
+
+        service = MockTranslationService()
+        stats = apply_auto_translations(
+            seed_data,
+            source_locale=LOCALE_ZH_CN,
+            target_locales=[LOCALE_ZH_TW],
+            service=service,
+            overwrite_existing=False,
+        )
+
+        translations = seed_data["prompts"][0]["translations"]
+        tw_translation = next(t for t in translations if t["locale"] == LOCALE_ZH_TW)
+
+        assert {t["locale"] for t in translations} == {LOCALE_ZH_CN, LOCALE_ZH_TW}
+        assert tw_translation["label"] == ZH_TW_CAT_CONVERSION
+        assert stats["prompts_translated"] == 1
 
     def test_service_handles_deduplication_internally(self) -> None:
         """Let the translation service deduplicate repeated aliases."""

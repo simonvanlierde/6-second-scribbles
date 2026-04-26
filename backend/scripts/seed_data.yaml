@@ -47,10 +47,14 @@ prompts:
     - aeronave
     - jet
     - plano
-  - locale: zh
+  - locale: zh-CN
     label: 飞机
     aliases:
     - 飞机
+  - locale: zh-TW
+    label: 飛機
+    aliases:
+    - 飛機
   - locale: ja
     label: 飛行機
     aliases:
@@ -100,10 +104,14 @@ prompts:
     aliases:
     - aeródromo
     - terminal
-  - locale: zh
+  - locale: zh-CN
     label: 机场
     aliases:
     - 机场
+  - locale: zh-TW
+    label: 機場
+    aliases:
+    - 機場
   - locale: ja
     label: 空港空港
     aliases:
@@ -161,10 +169,14 @@ prompts:
     - fúria
     - ultraje
     - raiva
-  - locale: zh
+  - locale: zh-CN
     label: 愤怒
     aliases:
     - 愤怒
+  - locale: zh-TW
+    label: 憤怒
+    aliases:
+    - 憤怒
   - locale: ja
     label: ログイン
     aliases:
@@ -227,10 +239,14 @@ prompts:
     - furioso
     - louco
     - perturbação
-  - locale: zh
+  - locale: zh-CN
     label: 愤怒
     aliases:
     - 愤怒
+  - locale: zh-TW
+    label: 憤怒
+    aliases:
+    - 憤怒
   - locale: ja
     label: アングリー
     aliases:
@@ -282,10 +298,14 @@ prompts:
     aliases:
     - formiga preta
     - colônia
-  - locale: zh
+  - locale: zh-CN
     label: 蚂蚁
     aliases:
     - 黑蚁
+  - locale: zh-TW
+    label: 螞蟻
+    aliases:
+    - 黑蟻
   - locale: ja
     label: ログイン
     aliases:
@@ -315,8 +335,10 @@ prompts:
     label: jabłko
   - locale: pt
     label: maçã
-  - locale: zh
+  - locale: zh-CN
     label: 苹果
+  - locale: zh-TW
+    label: 蘋果
   - locale: ja
     label: アップル
   - locale: ko
@@ -344,7 +366,9 @@ prompts:
     label: Akwedukt
   - locale: pt
     label: Aqueduto
-  - locale: zh
+  - locale: zh-CN
+    label: 管道
+  - locale: zh-TW
     label: 管道
   - locale: ja
     label: アケダクト
@@ -390,10 +414,14 @@ prompts:
     aliases:
     - gateway
     - portal
-  - locale: zh
+  - locale: zh-CN
     label: 拱门
     aliases:
     - 网关
+  - locale: zh-TW
+    label: 拱門
+    aliases:
+    - 網關
   - locale: ja
     label: アーカイブ
     aliases:
@@ -436,10 +464,14 @@ prompts:
     label: braço
     aliases:
     - membro
-  - locale: zh
+  - locale: zh-CN
     label: 手臂
     aliases:
     - 肢体
+  - locale: zh-TW
+    label: 手臂
+    aliases:
+    - 肢體
   - locale: ja
     label: アーム
     aliases:
@@ -494,10 +526,14 @@ prompts:
     - criador
     - pintor
     - escultor
-  - locale: zh
+  - locale: zh-CN
     label: 艺术家
     aliases:
     - 创建者
+  - locale: zh-TW
+    label: 藝術家
+    aliases:
+    - 創建者
   - locale: ja
     label: アーティスト
     aliases:
@@ -547,7 +583,11 @@ prompts:
     aliases:
     - molécula
     - núcleo
-  - locale: zh
+  - locale: zh-CN
+    label: 原子
+    aliases:
+    - 分子
+  - locale: zh-TW
     label: 原子
     aliases:
     - 分子
@@ -594,10 +634,14 @@ prompts:
     label: machado
     aliases:
     - machado
-  - locale: zh
+  - locale: zh-CN
     label: 轴
     aliases:
     - 斧头
+  - locale: zh-TW
+    label: 軸
+    aliases:
+    - 斧頭
   - locale: ja
     label: アックス
     aliases:
@@ -657,10 +701,14 @@ prompts:
     - saco
     - mochila
     - saco da escola
-  - locale: zh
+  - locale: zh-CN
     label: 背负
     aliases:
     - 包装
+  - locale: zh-TW
+    label: 揹負
+    aliases:
+    - 包裝
   - locale: ja
     label: バックパック
     aliases:
@@ -704,10 +752,14 @@ prompts:
     label: bola
     aliases:
     - esfera
-  - locale: zh
+  - locale: zh-CN
     label: 球头
     aliases:
     - 区域
+  - locale: zh-TW
+    label: 球頭
+    aliases:
+    - 區域
   - locale: ja
     label: ボールボール
     aliases:
@@ -750,10 +802,14 @@ prompts:
     label: balão
     aliases:
     - dirigível
-  - locale: zh
+  - locale: zh-CN
     label: 气球
     aliases:
     - 飞机
+  - locale: zh-TW
+    label: 氣球
+    aliases:
+    - 飛機
   - locale: ja
     label: バルーン
     aliases:
@@ -797,10 +853,14 @@ prompts:
     label: banana
     aliases:
     - banana
-  - locale: zh
+  - locale: zh-CN
     label: 香蕉
     aliases:
     - 计划
+  - locale: zh-TW
+    label: 香蕉
+    aliases:
+    - 計劃
   - locale: ja
     label: バナナ
     aliases:
@@ -849,10 +909,14 @@ prompts:
     aliases:
     - hardball
     - softball
-  - locale: zh
+  - locale: zh-CN
     label: 棒球队
     aliases:
     - 硬弹
+  - locale: zh-TW
+    label: 棒球隊
+    aliases:
+    - 硬彈
   - locale: ja
     label: 野球野球
     aliases:
@@ -899,10 +963,14 @@ prompts:
     label: basquete
     aliases:
     - aros
-  - locale: zh
+  - locale: zh-CN
     label: 篮球
     aliases:
     - 击球
+  - locale: zh-TW
+    label: 籃球
+    aliases:
+    - 擊球
   - locale: ja
     label: バスケットボール
     aliases:
@@ -950,10 +1018,14 @@ prompts:
     aliases:
     - banho
     - banheira
-  - locale: zh
+  - locale: zh-CN
     label: 浴缸
     aliases:
     - 洗个澡
+  - locale: zh-TW
+    label: 浴缸
+    aliases:
+    - 洗個澡
   - locale: ja
     label: バスタブ
     aliases:
@@ -1003,10 +1075,14 @@ prompts:
     aliases:
     - litoral
     - costa
-  - locale: zh
+  - locale: zh-CN
     label: 海滩
     aliases:
     - 海边
+  - locale: zh-TW
+    label: 海灘
+    aliases:
+    - 海邊
   - locale: ja
     label: ビーチビーチ
     aliases:
@@ -1061,10 +1137,14 @@ prompts:
     - beliche
     - cot
     - colchão
-  - locale: zh
+  - locale: zh-CN
     label: 床单
     aliases:
     - 铺位
+  - locale: zh-TW
+    label: 床單
+    aliases:
+    - 鋪位
   - locale: ja
     label: ベッド
     aliases:
@@ -1120,10 +1200,14 @@ prompts:
     - bumblebee
     - abelhas
     - ferrão
-  - locale: zh
+  - locale: zh-CN
     label: 蜜蜂
     aliases:
     - 大黄蜂
+  - locale: zh-TW
+    label: 蜜蜂
+    aliases:
+    - 大黃蜂
   - locale: ja
     label: ビー
     aliases:
@@ -1153,8 +1237,10 @@ prompts:
     label: żuk
   - locale: pt
     label: besouro
-  - locale: zh
+  - locale: zh-CN
     label: 甲虫鱼
+  - locale: zh-TW
+    label: 甲蟲魚
   - locale: ja
     label: ビートル
   - locale: ko
@@ -1207,10 +1293,14 @@ prompts:
     - pimenta
     - capsicum
     - paprica
-  - locale: zh
+  - locale: zh-CN
     label: 钟辣椒
     aliases:
     - 胡椒酱
+  - locale: zh-TW
+    label: 鍾辣椒
+    aliases:
+    - 胡椒醬
   - locale: ja
     label: ベルペッパー
     aliases:
@@ -1254,8 +1344,12 @@ prompts:
     label: banco
     aliases:
     - lugares
-  - locale: zh
+  - locale: zh-CN
     label: 长椅
+    aliases:
+    - 座位
+  - locale: zh-TW
+    label: 長椅
     aliases:
     - 座位
   - locale: ja
@@ -1312,10 +1406,14 @@ prompts:
     - bicicleta
     - ciclo
     - rodas
-  - locale: zh
+  - locale: zh-CN
     label: 自行车
     aliases:
     - 自行车
+  - locale: zh-TW
+    label: 自行車
+    aliases:
+    - 自行車
   - locale: ja
     label: 自転車
     aliases:
@@ -1365,10 +1463,14 @@ prompts:
     aliases:
     - finch
     - pardal
-  - locale: zh
+  - locale: zh-CN
     label: 鸟
     aliases:
     - 鳍
+  - locale: zh-TW
+    label: 鳥
+    aliases:
+    - 鰭
   - locale: ja
     label: 鳥羽鳥
     aliases:
@@ -1413,10 +1515,14 @@ prompts:
     label: mirtilo
     aliases:
     - bagas
-  - locale: zh
+  - locale: zh-CN
     label: 蓝莓
     aliases:
     - 樱桃
+  - locale: zh-TW
+    label: 藍莓
+    aliases:
+    - 櫻桃
   - locale: ja
     label: ブルーベリー
     aliases:
@@ -1481,8 +1587,12 @@ prompts:
     - bote a remos
     - navio
     - iate
-  - locale: zh
+  - locale: zh-CN
     label: 轮船
+    aliases:
+    - 木筏
+  - locale: zh-TW
+    label: 輪船
     aliases:
     - 木筏
   - locale: ja
@@ -1547,10 +1657,14 @@ prompts:
     - romance
     - livro
     - tomo
-  - locale: zh
+  - locale: zh-CN
     label: 书本
     aliases:
     - 笔记本
+  - locale: zh-TW
+    label: 書本
+    aliases:
+    - 筆記本
   - locale: ja
     label: パンフレット
     aliases:
@@ -1603,10 +1717,14 @@ prompts:
     aliases:
     - maçante
     - desinteressado
-  - locale: zh
+  - locale: zh-CN
     label: 无聊
     aliases:
     - 无聊
+  - locale: zh-TW
+    label: 無聊
+    aliases:
+    - 無聊
   - locale: ja
     label: ボーダー
     aliases:
@@ -1657,10 +1775,14 @@ prompts:
     aliases:
     - bacia
     - prato
-  - locale: zh
+  - locale: zh-CN
     label: 圆碗
     aliases:
     - 区域
+  - locale: zh-TW
+    label: 圓碗
+    aliases:
+    - 區域
   - locale: ja
     label: ボウル
     aliases:
@@ -1704,10 +1826,14 @@ prompts:
     label: bowling
     aliases:
     - bowling de dez pinos
-  - locale: zh
+  - locale: zh-CN
     label: 保龄球
     aliases:
     - 十进制保龄球
+  - locale: zh-TW
+    label: 保齡球
+    aliases:
+    - 十進制保齡球
   - locale: ja
     label: ボウリング
     aliases:
@@ -1758,10 +1884,14 @@ prompts:
     aliases:
     - luta
     - luvas
-  - locale: zh
+  - locale: zh-CN
     label: 拳击
     aliases:
     - 战斗
+  - locale: zh-TW
+    label: 拳擊
+    aliases:
+    - 戰鬥
   - locale: ja
     label: ボクシング
     aliases:
@@ -1824,10 +1954,14 @@ prompts:
     - pão
     - torrado
     - fermento
-  - locale: zh
+  - locale: zh-CN
     label: 面包
     aliases:
     - 纸袋
+  - locale: zh-TW
+    label: 麵包
+    aliases:
+    - 紙袋
   - locale: ja
     label: パンケーキ
     aliases:
@@ -1875,10 +2009,14 @@ prompts:
     aliases:
     - ultrapassagem
     - viaduto
-  - locale: zh
+  - locale: zh-CN
     label: 桥
     aliases:
     - 越线
+  - locale: zh-TW
+    label: 橋
+    aliases:
+    - 越線
   - locale: ja
     label: ブリッジ
     aliases:
@@ -1922,10 +2060,14 @@ prompts:
     label: brócolos
     aliases:
     - floret
-  - locale: zh
+  - locale: zh-CN
     label: 西兰花
     aliases:
     - 软糖
+  - locale: zh-TW
+    label: 西蘭花
+    aliases:
+    - 軟糖
   - locale: ja
     label: ブロッコリー
     aliases:
@@ -1981,10 +2123,14 @@ prompts:
     - trabalhadores da construção civil
     - contratante
     - trabalhador
-  - locale: zh
+  - locale: zh-CN
     label: 构建器
     aliases:
     - 建筑工人
+  - locale: zh-TW
+    label: 構建器
+    aliases:
+    - 建築工人
   - locale: ja
     label: ビルダー
     aliases:
@@ -2044,11 +2190,16 @@ prompts:
     - cheeseburger
     - hamburguer
     - patty
-  - locale: zh
+  - locale: zh-CN
     label: 汉堡
     aliases:
     - 芝士汉堡
     - 帕蒂,你好吗?
+  - locale: zh-TW
+    label: 漢堡
+    aliases:
+    - 芝士漢堡
+    - 帕蒂,你好嗎?
   - locale: ja
     label: ハンバーガー
     aliases:
@@ -2100,10 +2251,14 @@ prompts:
     aliases:
     - treinador
     - vaivém
-  - locale: zh
+  - locale: zh-CN
     label: 公共汽车
     aliases:
     - 教练
+  - locale: zh-TW
+    label: 公共汽車
+    aliases:
+    - 教練
   - locale: ja
     label: バスバス
     aliases:
@@ -2146,10 +2301,14 @@ prompts:
     label: borboleta
     aliases:
     - monarca
-  - locale: zh
+  - locale: zh-CN
     label: 蝴蝶队
     aliases:
     - 国王
+  - locale: zh-TW
+    label: 蝴蝶隊
+    aliases:
+    - 國王
   - locale: ja
     label: バタフライ
     aliases:
@@ -2193,10 +2352,14 @@ prompts:
     label: botão
     aliases:
     - fecho
-  - locale: zh
+  - locale: zh-CN
     label: 按钮
     aliases:
     - 粘结器
+  - locale: zh-TW
+    label: 按鈕
+    aliases:
+    - 粘結器
   - locale: ja
     label: ボタン
     aliases:
@@ -2239,10 +2402,14 @@ prompts:
     label: César
     aliases:
     - júlio césar
-  - locale: zh
+  - locale: zh-CN
     label: 凯撒
     aliases:
     - 朱利叶斯·凯撒
+  - locale: zh-TW
+    label: 凱撒
+    aliases:
+    - 朱利葉斯·凱撒
   - locale: ja
     label: シーザー
     aliases:
@@ -2306,10 +2473,14 @@ prompts:
     - sobremesa
     - gateau
     - pastelaria
-  - locale: zh
+  - locale: zh-CN
     label: 蛋糕
     aliases:
     - 生日快乐蛋糕
+  - locale: zh-TW
+    label: 蛋糕
+    aliases:
+    - 生日快樂蛋糕
   - locale: ja
     label: ケーキ
     aliases:
@@ -2353,7 +2524,11 @@ prompts:
     label: Canela doce
     aliases:
     - menta-pimenta
-  - locale: zh
+  - locale: zh-CN
+    label: 糖果拄杖
+    aliases:
+    - 胡椒薄荷棒
+  - locale: zh-TW
     label: 糖果拄杖
     aliases:
     - 胡椒薄荷棒
@@ -2418,10 +2593,14 @@ prompts:
     - automóvel
     - passeio
     - veículo
-  - locale: zh
+  - locale: zh-CN
     label: 汽车
     aliases:
     - 自动
+  - locale: zh-TW
+    label: 汽車
+    aliases:
+    - 自動
   - locale: ja
     label: レンタカー
     aliases:
@@ -2471,10 +2650,14 @@ prompts:
     aliases:
     - toffee
     - manteiga
-  - locale: zh
+  - locale: zh-CN
     label: 焦糖
     aliases:
     - 调味料
+  - locale: zh-TW
+    label: 焦糖
+    aliases:
+    - 調味料
   - locale: ja
     label: キャラメル
     aliases:
@@ -2517,10 +2700,14 @@ prompts:
     label: cenoura
     aliases:
     - produtos hortícolas de raiz
-  - locale: zh
+  - locale: zh-CN
     label: 胡萝卜
     aliases:
     - 根状植物
+  - locale: zh-TW
+    label: 胡蘿蔔
+    aliases:
+    - 根狀植物
   - locale: ja
     label: ニンジン
     aliases:
@@ -2579,10 +2766,14 @@ prompts:
     - fortaleza
     - solar
     - palácio
-  - locale: zh
+  - locale: zh-CN
     label: 城堡( 城堡)
     aliases:
     - 堡垒
+  - locale: zh-TW
+    label: 城堡( 城堡)
+    aliases:
+    - 堡壘
   - locale: ja
     label: 城崎城
     aliases:
@@ -2647,10 +2838,14 @@ prompts:
     - felina
     - gatinho
     - tomcat
-  - locale: zh
+  - locale: zh-CN
     label: 猫
     aliases:
     - 丝线
+  - locale: zh-TW
+    label: 貓
+    aliases:
+    - 絲線
   - locale: ja
     label: クーポン
     aliases:
@@ -2702,10 +2897,14 @@ prompts:
     aliases:
     - larva
     - tipo- verme
-  - locale: zh
+  - locale: zh-CN
     label: 毛虫鱼
     aliases:
     - 幼虫
+  - locale: zh-TW
+    label: 毛蟲魚
+    aliases:
+    - 幼蟲
   - locale: ja
     label: キャメルピラー
     aliases:
@@ -2761,11 +2960,16 @@ prompts:
     - minster
     - basílica
     - igreja grande
-  - locale: zh
+  - locale: zh-CN
     label: 大教堂
     aliases:
     - 分钟
     - 巴西里卡语name
+  - locale: zh-TW
+    label: 大教堂
+    aliases:
+    - 分鐘
+    - 巴西里卡語name
   - locale: ja
     label: 大聖堂
     aliases:
@@ -2829,7 +3033,11 @@ prompts:
     - assento
     - fezes
     - reclinável
-  - locale: zh
+  - locale: zh-CN
+    label: 椅子
+    aliases:
+    - 臂椅
+  - locale: zh-TW
     label: 椅子
     aliases:
     - 臂椅
@@ -2883,10 +3091,14 @@ prompts:
     aliases:
     - quadro negro
     - ardósia
-  - locale: zh
+  - locale: zh-CN
     label: 粉笔板
     aliases:
     - 黑盘
+  - locale: zh-TW
+    label: 粉筆板
+    aliases:
+    - 黑盤
   - locale: ja
     label: チョークボード
     aliases:
@@ -2945,10 +3157,14 @@ prompts:
     - padeiro
     - cozinhe
     - artista culinário
-  - locale: zh
+  - locale: zh-CN
     label: 厨师
     aliases:
     - 面包师
+  - locale: zh-TW
+    label: 廚師
+    aliases:
+    - 麵包師
   - locale: ja
     label: スタッフ
     aliases:
@@ -2992,10 +3208,14 @@ prompts:
     label: cereja
     aliases:
     - cerejas
-  - locale: zh
+  - locale: zh-CN
     label: 樱桃
     aliases:
     - 樱桃
+  - locale: zh-TW
+    label: 櫻桃
+    aliases:
+    - 櫻桃
   - locale: ja
     label: チェリー
     aliases:
@@ -3052,8 +3272,13 @@ prompts:
     - cacau
     - chocolate escuro
     - barra de doces
-  - locale: zh
+  - locale: zh-CN
     label: 巧克力块
+    aliases:
+    - 可可
+    - 深色巧克力( 深色巧克力 )
+  - locale: zh-TW
+    label: 巧克力塊
     aliases:
     - 可可
     - 深色巧克力( 深色巧克力 )
@@ -3116,8 +3341,12 @@ prompts:
     - catedral
     - capela
     - templo
-  - locale: zh
+  - locale: zh-CN
     label: 教会
+    aliases:
+    - 大教堂
+  - locale: zh-TW
+    label: 教會
     aliases:
     - 大教堂
   - locale: ja
@@ -3179,10 +3408,14 @@ prompts:
     - mexilhão
     - ostra
     - shell
-  - locale: zh
+  - locale: zh-CN
     label: 蛤
     aliases:
     - 贻贝
+  - locale: zh-TW
+    label: 蛤
+    aliases:
+    - 貽貝
   - locale: ja
     label: ログイン
     aliases:
@@ -3213,8 +3446,10 @@ prompts:
     label: Kleopatra
   - locale: pt
     label: Cleópatra
-  - locale: zh
+  - locale: zh-CN
     label: 克利奥帕特拉
+  - locale: zh-TW
+    label: 克利奧帕特拉
   - locale: ja
     label: クレオパトラ
   - locale: ko
@@ -3277,10 +3512,14 @@ prompts:
     - timer
     - relógio de parede
     - observar
-  - locale: zh
+  - locale: zh-CN
     label: 时钟
     aliases:
     - 闹钟
+  - locale: zh-TW
+    label: 時鐘
+    aliases:
+    - 鬧鐘
   - locale: ja
     label: クロック
     aliases:
@@ -3352,10 +3591,14 @@ prompts:
     - nevoeiro
     - neblina
     - céu
-  - locale: zh
+  - locale: zh-CN
     label: 阴云
     aliases:
     - 积分
+  - locale: zh-TW
+    label: 陰雲
+    aliases:
+    - 積分
   - locale: ja
     label: クラウド
     aliases:
@@ -3407,10 +3650,14 @@ prompts:
     aliases:
     - cloudscape
     - nublado
-  - locale: zh
+  - locale: zh-CN
     label: 云层
     aliases:
     - 云层
+  - locale: zh-TW
+    label: 雲層
+    aliases:
+    - 雲層
   - locale: ja
     label: クラウド
     aliases:
@@ -3469,11 +3716,16 @@ prompts:
     - casaco
     - revestimento
     - parka
-  - locale: zh
+  - locale: zh-CN
     label: 涂层
     aliases:
     - 夹克
     - 公园a
+  - locale: zh-TW
+    label: 塗層
+    aliases:
+    - 夾克
+    - 公園a
   - locale: ja
     label: コート
     aliases:
@@ -3548,10 +3800,14 @@ prompts:
     - dime
     - moeda
     - trimestre
-  - locale: zh
+  - locale: zh-CN
     label: 硬币
     aliases:
     - 变动
+  - locale: zh-TW
+    label: 硬幣
+    aliases:
+    - 變動
   - locale: ja
     label: コイン
     aliases:
@@ -3597,10 +3853,14 @@ prompts:
     label: Colombo
     aliases:
     - cristóvão colombo
-  - locale: zh
+  - locale: zh-CN
     label: 哥伦布
     aliases:
     - 克里斯托弗·哥伦布
+  - locale: zh-TW
+    label: 哥倫布
+    aliases:
+    - 克里斯托弗·哥倫布
   - locale: ja
     label: コロンバス
     aliases:
@@ -3651,8 +3911,12 @@ prompts:
     aliases:
     - pilar
     - post
-  - locale: zh
+  - locale: zh-CN
     label: 栏
+    aliases:
+    - 支柱
+  - locale: zh-TW
+    label: 欄
     aliases:
     - 支柱
   - locale: ja
@@ -3714,8 +3978,12 @@ prompts:
     - desnorteado
     - perdido
     - intrigado
-  - locale: zh
+  - locale: zh-CN
     label: 混乱
+    aliases:
+    - 困惑
+  - locale: zh-TW
+    label: 混亂
     aliases:
     - 困惑
   - locale: ja
@@ -3768,10 +4036,14 @@ prompts:
     aliases:
     - biscoitos
     - doce lanche
-  - locale: zh
+  - locale: zh-CN
     label: 饼干
     aliases:
     - 饼干
+  - locale: zh-TW
+    label: 餅乾
+    aliases:
+    - 餅乾
   - locale: ja
     label: メニュー
     aliases:
@@ -3822,7 +4094,11 @@ prompts:
     aliases:
     - milho
     - milho na espiga
-  - locale: zh
+  - locale: zh-CN
+    label: 玉米
+    aliases:
+    - 玉米
+  - locale: zh-TW
     label: 玉米
     aliases:
     - 玉米
@@ -3896,10 +4172,15 @@ prompts:
     - touro
     - moo-moo
     - boi
-  - locale: zh
+  - locale: zh-CN
     label: 黄牛
     aliases:
     - 牛头
+    - moo
+  - locale: zh-TW
+    label: 黃牛
+    aliases:
+    - 牛頭
     - moo
   - locale: ja
     label: クーポン
@@ -3949,10 +4230,14 @@ prompts:
     aliases:
     - crustáceo
     - marisco
-  - locale: zh
+  - locale: zh-CN
     label: 蟹类
     aliases:
     - 甲壳类
+  - locale: zh-TW
+    label: 蟹類
+    aliases:
+    - 甲殼類
   - locale: ja
     label: ログイン
     aliases:
@@ -4002,11 +4287,16 @@ prompts:
     aliases:
     - picles
     - cabaça
-  - locale: zh
+  - locale: zh-CN
     label: 黄瓜
     aliases:
     - 腌黄瓜
     - 古德语name
+  - locale: zh-TW
+    label: 黃瓜
+    aliases:
+    - 醃黃瓜
+    - 古德語name
   - locale: ja
     label: キュウリ
     aliases:
@@ -4073,10 +4363,14 @@ prompts:
     - cálice
     - vidro
     - caneca
-  - locale: zh
+  - locale: zh-CN
     label: 来杯
     aliases:
     - 烧杯
+  - locale: zh-TW
+    label: 來杯
+    aliases:
+    - 燒杯
   - locale: ja
     label: カップカップ
     aliases:
@@ -4127,7 +4421,11 @@ prompts:
     aliases:
     - tábua de cortar
     - placa de preparação
-  - locale: zh
+  - locale: zh-CN
+    label: 剪切板
+    aliases:
+    - 剪切板
+  - locale: zh-TW
     label: 剪切板
     aliases:
     - 剪切板
@@ -4188,10 +4486,14 @@ prompts:
     - dança
     - disco
     - bailarina
-  - locale: zh
+  - locale: zh-CN
     label: 跳舞
     aliases:
     - 舞会
+  - locale: zh-TW
+    label: 跳舞
+    aliases:
+    - 舞會
   - locale: ja
     label: ダンス
     aliases:
@@ -4249,10 +4551,14 @@ prompts:
     - mesa de estudo
     - tabela
     - estação de trabalho
-  - locale: zh
+  - locale: zh-CN
     label: 办公桌
     aliases:
     - 学习台
+  - locale: zh-TW
+    label: 辦公桌
+    aliases:
+    - 學習臺
   - locale: ja
     label: デスクデスク
     aliases:
@@ -4316,10 +4622,14 @@ prompts:
     - doc
     - médico
     - cirurgião
-  - locale: zh
+  - locale: zh-CN
     label: 医生
     aliases:
     - 医生
+  - locale: zh-TW
+    label: 醫生
+    aliases:
+    - 醫生
   - locale: ja
     label: 医者
     aliases:
@@ -4395,10 +4705,14 @@ prompts:
     - pooch
     - pup
     - cachorrinho
-  - locale: zh
+  - locale: zh-CN
     label: 狗头
     aliases:
     - 警犬队
+  - locale: zh-TW
+    label: 狗頭
+    aliases:
+    - 警犬隊
   - locale: ja
     label: 犬の犬
     aliases:
@@ -4451,10 +4765,14 @@ prompts:
     aliases:
     - figura da ação
     - pessoa do brinquedo
-  - locale: zh
+  - locale: zh-CN
     label: 洋娃娃
     aliases:
     - 动作图
+  - locale: zh-TW
+    label: 洋娃娃
+    aliases:
+    - 動作圖
   - locale: ja
     label: ドール
     aliases:
@@ -4506,10 +4824,14 @@ prompts:
     aliases:
     - flipper
     - topoise
-  - locale: zh
+  - locale: zh-CN
     label: 海豚鱼
     aliases:
     - 翻转器
+  - locale: zh-TW
+    label: 海豚魚
+    aliases:
+    - 翻轉器
   - locale: ja
     label: イルカ
     aliases:
@@ -4566,10 +4888,14 @@ prompts:
     - cúpula
     - hemisfério
     - telhado curvo
-  - locale: zh
+  - locale: zh-CN
     label: 圆顶
     aliases:
     - 库波拉
+  - locale: zh-TW
+    label: 圓頂
+    aliases:
+    - 庫波拉
   - locale: ja
     label: ドーム
     aliases:
@@ -4621,10 +4947,14 @@ prompts:
     aliases:
     - entrada
     - portão
-  - locale: zh
+  - locale: zh-CN
     label: 门
     aliases:
     - 进入
+  - locale: zh-TW
+    label: 門
+    aliases:
+    - 進入
   - locale: ja
     label: ドア
     aliases:
@@ -4681,10 +5011,14 @@ prompts:
     - monstro mítico
     - respirador de fogo
     - hyvern
-  - locale: zh
+  - locale: zh-CN
     label: 龙
     aliases:
     - 神话中的野兽
+  - locale: zh-TW
+    label: 龍
+    aliases:
+    - 神話中的野獸
   - locale: ja
     label: ドラゴン
     aliases:
@@ -4728,10 +5062,14 @@ prompts:
     label: libélula
     aliases:
     - voar com quatro asas
-  - locale: zh
+  - locale: zh-CN
     label: 飞龙
     aliases:
     - 飞四翼
+  - locale: zh-TW
+    label: 飛龍
+    aliases:
+    - 飛四翼
   - locale: ja
     label: ドラゴンフライ
     aliases:
@@ -4780,10 +5118,14 @@ prompts:
     label: vestido
     aliases:
     - vestido
-  - locale: zh
+  - locale: zh-CN
     label: 服装
     aliases:
     - 摇滚
+  - locale: zh-TW
+    label: 服裝
+    aliases:
+    - 搖滾
   - locale: ja
     label: ドレス
     aliases:
@@ -4842,10 +5184,14 @@ prompts:
     - broca de alimentação
     - fabricante de buracos
     - ferramenta
-  - locale: zh
+  - locale: zh-CN
     label: 钻
     aliases:
     - 动力钻
+  - locale: zh-TW
+    label: 鑽
+    aliases:
+    - 動力鑽
   - locale: ja
     label: ドリル
     aliases:
@@ -4908,10 +5254,14 @@ prompts:
     - kit de tambores
     - laço
     - bongo
-  - locale: zh
+  - locale: zh-CN
     label: 鼓声
     aliases:
     - 冲击
+  - locale: zh-TW
+    label: 鼓聲
+    aliases:
+    - 衝擊
   - locale: ja
     label: ドラム
     aliases:
@@ -4964,10 +5314,14 @@ prompts:
     aliases:
     - patinho
     - marismo
-  - locale: zh
+  - locale: zh-CN
     label: 鸭子
     aliases:
     - 鸭子
+  - locale: zh-TW
+    label: 鴨子
+    aliases:
+    - 鴨子
   - locale: ja
     label: ダック
     aliases:
@@ -5018,10 +5372,14 @@ prompts:
     aliases:
     - água com patos
     - lago pequeno
-  - locale: zh
+  - locale: zh-CN
     label: 鸭塘
     aliases:
     - 有鸭子的水
+  - locale: zh-TW
+    label: 鴨塘
+    aliases:
+    - 有鴨子的水
   - locale: ja
     label: 鴨池
     aliases:
@@ -5065,10 +5423,14 @@ prompts:
     label: orelha
     aliases:
     - órgão auditivo
-  - locale: zh
+  - locale: zh-CN
     label: 耳朵
     aliases:
     - 听证机构
+  - locale: zh-TW
+    label: 耳朵
+    aliases:
+    - 聽證機構
   - locale: ja
     label: イヤー
     aliases:
@@ -5132,10 +5494,14 @@ prompts:
     - jantar
     - mastigação
     - engolir
-  - locale: zh
+  - locale: zh-CN
     label: 吃饭
     aliases:
     - 进食
+  - locale: zh-TW
+    label: 吃飯
+    aliases:
+    - 進食
   - locale: ja
     label: 食べる
     aliases:
@@ -5179,10 +5545,14 @@ prompts:
     label: Edison
     aliases:
     - thomas edison
-  - locale: zh
+  - locale: zh-CN
     label: 爱迪生
     aliases:
     - 托马斯·爱迪生
+  - locale: zh-TW
+    label: 愛迪生
+    aliases:
+    - 托馬斯·愛迪生
   - locale: ja
     label: エジソン
     aliases:
@@ -5233,10 +5603,14 @@ prompts:
     aliases:
     - ovos cozidos
     - ovo frito
-  - locale: zh
+  - locale: zh-CN
     label: 鸡蛋
     aliases:
     - 煮鸡蛋
+  - locale: zh-TW
+    label: 雞蛋
+    aliases:
+    - 煮雞蛋
   - locale: ja
     label: ログイン
     aliases:
@@ -5279,10 +5653,14 @@ prompts:
     label: Einstein
     aliases:
     - albert einstein
-  - locale: zh
+  - locale: zh-CN
     label: 爱因斯坦
     aliases:
     - 阿尔伯特·爱因斯坦
+  - locale: zh-TW
+    label: 愛因斯坦
+    aliases:
+    - 阿爾伯特·愛因斯坦
   - locale: ja
     label: アインスタイン
     aliases:
@@ -5345,10 +5723,14 @@ prompts:
     - atual
     - tensão
     - relâmpago
-  - locale: zh
+  - locale: zh-CN
     label: 电力
     aliases:
     - 电源
+  - locale: zh-TW
+    label: 電力
+    aliases:
+    - 電源
   - locale: ja
     label: 電気
     aliases:
@@ -5404,10 +5786,14 @@ prompts:
     - pequena criatura
     - santa helper
     - pixie
-  - locale: zh
+  - locale: zh-CN
     label: 精灵
     aliases:
     - 小动物
+  - locale: zh-TW
+    label: 精靈
+    aliases:
+    - 小動物
   - locale: ja
     label: エルフ
     aliases:
@@ -5473,10 +5859,14 @@ prompts:
     - força
     - vitalidade
     - combustível
-  - locale: zh
+  - locale: zh-CN
     label: 能源
     aliases:
     - 电源
+  - locale: zh-TW
+    label: 能源
+    aliases:
+    - 電源
   - locale: ja
     label: エネルギー
     aliases:
@@ -5533,10 +5923,14 @@ prompts:
     - motor
     - pistão
     - parte da máquina
-  - locale: zh
+  - locale: zh-CN
     label: 引擎
     aliases:
     - 发动机
+  - locale: zh-TW
+    label: 引擎
+    aliases:
+    - 發動機
   - locale: ja
     label: エンジン
     aliases:
@@ -5588,7 +5982,11 @@ prompts:
     aliases:
     - ferramenta de correção
     - borracha
-  - locale: zh
+  - locale: zh-CN
+    label: 擦除器
+    aliases:
+    - 校正工具
+  - locale: zh-TW
     label: 擦除器
     aliases:
     - 校正工具
@@ -5649,10 +6047,14 @@ prompts:
     - darwin
     - selecção natural
     - alteração
-  - locale: zh
+  - locale: zh-CN
     label: 进化
     aliases:
     - 达尔文
+  - locale: zh-TW
+    label: 進化
+    aliases:
+    - 達爾文
   - locale: ja
     label: エボリューション
     aliases:
@@ -5712,10 +6114,14 @@ prompts:
     - ansioso
     - hype
     - emocionado
-  - locale: zh
+  - locale: zh-CN
     label: 兴奋
     aliases:
     - 急着
+  - locale: zh-TW
+    label: 興奮
+    aliases:
+    - 急著
   - locale: ja
     label: エキサイティング
     aliases:
@@ -5767,10 +6173,14 @@ prompts:
     aliases:
     - globo ocular
     - visão
-  - locale: zh
+  - locale: zh-CN
     label: 双眼
     aliases:
     - 双眼
+  - locale: zh-TW
+    label: 雙眼
+    aliases:
+    - 雙眼
   - locale: ja
     label: ログイン
     aliases:
@@ -5825,10 +6235,14 @@ prompts:
     - sprite
     - pixie
     - criatura mágica
-  - locale: zh
+  - locale: zh-CN
     label: 仙女们
     aliases:
     - 图标
+  - locale: zh-TW
+    label: 仙女們
+    aliases:
+    - 圖標
   - locale: ja
     label: フェアリー
     aliases:
@@ -5886,10 +6300,14 @@ prompts:
     - agriculturista
     - cultivador
     - plantador
-  - locale: zh
+  - locale: zh-CN
     label: 农民
     aliases:
     - 农业学家
+  - locale: zh-TW
+    label: 農民
+    aliases:
+    - 農業學家
   - locale: ja
     label: 農業従事者
     aliases:
@@ -5962,10 +6380,14 @@ prompts:
     - fobia
     - terror
     - horror
-  - locale: zh
+  - locale: zh-CN
     label: 恐惧
     aliases:
     - 吓人
+  - locale: zh-TW
+    label: 恐懼
+    aliases:
+    - 嚇人
   - locale: ja
     label: ファイヤー
     aliases:
@@ -6015,10 +6437,14 @@ prompts:
     aliases:
     - corpo de bombeiros
     - estação
-  - locale: zh
+  - locale: zh-CN
     label: 消防站
     aliases:
     - 消防队
+  - locale: zh-TW
+    label: 消防站
+    aliases:
+    - 消防隊
   - locale: ja
     label: 消防署
     aliases:
@@ -6069,10 +6495,14 @@ prompts:
     aliases:
     - oficial de fogo
     - bombeiro
-  - locale: zh
+  - locale: zh-CN
     label: 消防员
     aliases:
     - 消防员
+  - locale: zh-TW
+    label: 消防員
+    aliases:
+    - 消防員
   - locale: ja
     label: 消防士
     aliases:
@@ -6124,10 +6554,14 @@ prompts:
     aliases:
     - peixe-dourado
     - guppy
-  - locale: zh
+  - locale: zh-CN
     label: 鱼
     aliases:
     - 金鱼
+  - locale: zh-TW
+    label: 魚
+    aliases:
+    - 金魚
   - locale: ja
     label: 魚釣り
     aliases:
@@ -6205,10 +6639,14 @@ prompts:
     - planta
     - rosa
     - tulipa
-  - locale: zh
+  - locale: zh-CN
     label: 鲜花
     aliases:
     - 开花
+  - locale: zh-TW
+    label: 鮮花
+    aliases:
+    - 開花
   - locale: ja
     label: フラワー
     aliases:
@@ -6262,10 +6700,14 @@ prompts:
     aliases:
     - tubo
     - vento de madeira
-  - locale: zh
+  - locale: zh-CN
     label: 长笛
     aliases:
     - 烟斗
+  - locale: zh-TW
+    label: 長笛
+    aliases:
+    - 菸斗
   - locale: ja
     label: フルート
     aliases:
@@ -6319,10 +6761,14 @@ prompts:
     aliases:
     - neblina
     - nuvem no solo
-  - locale: zh
+  - locale: zh-CN
     label: 雾
     aliases:
     - 雾
+  - locale: zh-TW
+    label: 霧
+    aliases:
+    - 霧
   - locale: ja
     label: フォグ
     aliases:
@@ -6390,10 +6836,14 @@ prompts:
     - salto
     - sola
     - dedos dos pés
-  - locale: zh
+  - locale: zh-CN
     label: 脚
     aliases:
     - 脚
+  - locale: zh-TW
+    label: 腳
+    aliases:
+    - 腳
   - locale: ja
     label: 足コキ
     aliases:
@@ -6445,10 +6895,14 @@ prompts:
     aliases:
     - jogo de bola
     - futebol
-  - locale: zh
+  - locale: zh-CN
     label: 橄榄球
     aliases:
     - 球赛
+  - locale: zh-TW
+    label: 橄欖球
+    aliases:
+    - 球賽
   - locale: ja
     label: サッカー
     aliases:
@@ -6505,8 +6959,12 @@ prompts:
     - utensílios
     - prong
     - ferramenta de jantar
-  - locale: zh
+  - locale: zh-CN
     label: 叉头
+    aliases:
+    - 器具
+  - locale: zh-TW
+    label: 叉頭
     aliases:
     - 器具
   - locale: ja
@@ -6564,10 +7022,14 @@ prompts:
     - jacto de água
     - pulverizar
     - recurso de água
-  - locale: zh
+  - locale: zh-CN
     label: 喷泉
     aliases:
     - 喷水机
+  - locale: zh-TW
+    label: 噴泉
+    aliases:
+    - 噴水機
   - locale: ja
     label: 噴水
     aliases:
@@ -6624,10 +7086,14 @@ prompts:
     - liberdade
     - independente
     - sem correntes
-  - locale: zh
+  - locale: zh-CN
     label: 自由
     aliases:
     - 自由权
+  - locale: zh-TW
+    label: 自由
+    aliases:
+    - 自由權
   - locale: ja
     label: フリーダム
     aliases:
@@ -6692,10 +7158,14 @@ prompts:
     - calor
     - arrastar
     - resistência
-  - locale: zh
+  - locale: zh-CN
     label: 滑动
     aliases:
     - 擦伤
+  - locale: zh-TW
+    label: 滑動
+    aliases:
+    - 擦傷
   - locale: ja
     label: フリクション
     aliases:
@@ -6754,8 +7224,12 @@ prompts:
     aliases:
     - fichas
     - batatas fritas
-  - locale: zh
+  - locale: zh-CN
     label: 薯条
+    aliases:
+    - 芯片
+  - locale: zh-TW
+    label: 薯條
     aliases:
     - 芯片
   - locale: ja
@@ -6801,10 +7275,14 @@ prompts:
     label: frisbee
     aliases:
     - disco voador
-  - locale: zh
+  - locale: zh-CN
     label: 飞盘
     aliases:
     - 飞盘
+  - locale: zh-TW
+    label: 飛盤
+    aliases:
+    - 飛盤
   - locale: ja
     label: フリスビー
     aliases:
@@ -6867,10 +7345,15 @@ prompts:
     - sapo
     - saltador
     - girino
-  - locale: zh
+  - locale: zh-CN
     label: 青蛙
     aliases:
     - 两栖动物
+    - ta
+  - locale: zh-TW
+    label: 青蛙
+    aliases:
+    - 兩棲動物
     - ta
   - locale: ja
     label: ログイン
@@ -6915,10 +7398,14 @@ prompts:
     label: Gandhi
     aliases:
     - mahatma gandhi
-  - locale: zh
+  - locale: zh-CN
     label: 甘地( 甘地 )
     aliases:
     - 圣雄甘地
+  - locale: zh-TW
+    label: 甘地( 甘地 )
+    aliases:
+    - 聖雄甘地
   - locale: ja
     label: ガンジー
     aliases:
@@ -6988,10 +7475,14 @@ prompts:
     - colosso
     - alto
     - enorme
-  - locale: zh
+  - locale: zh-CN
     label: 巨头
     aliases:
     - 巨头
+  - locale: zh-TW
+    label: 巨頭
+    aliases:
+    - 巨頭
   - locale: ja
     label: ジャイアント
     aliases:
@@ -7034,7 +7525,11 @@ prompts:
     label: luvas
     aliases:
     - mitenes
-  - locale: zh
+  - locale: zh-CN
+    label: 手套
+    aliases:
+    - 手套
+  - locale: zh-TW
     label: 手套
     aliases:
     - 手套
@@ -7094,10 +7589,14 @@ prompts:
     - adesivo
     - colar
     - líquido pegajoso
-  - locale: zh
+  - locale: zh-CN
     label: 胶
     aliases:
     - 粘着
+  - locale: zh-TW
+    label: 膠
+    aliases:
+    - 粘著
   - locale: ja
     label: 接着剤
     aliases:
@@ -7161,11 +7660,17 @@ prompts:
     - pequeno monstro
     - imp
     - gremlina
-  - locale: zh
+  - locale: zh-CN
     label: 红宝石
     aliases:
     - 兽人c
     - 小怪兽
+    - ưμ㼯a
+  - locale: zh-TW
+    label: 紅寶石
+    aliases:
+    - 獸人c
+    - 小怪獸
     - ưμ㼯a
   - locale: ja
     label: ゴブリン
@@ -7225,10 +7730,14 @@ prompts:
     - peixe laranja
     - peixe de companhia
     - carpa
-  - locale: zh
+  - locale: zh-CN
     label: 金鱼
     aliases:
     - 橙鱼
+  - locale: zh-TW
+    label: 金魚
+    aliases:
+    - 橙魚
   - locale: ja
     label: 金魚
     aliases:
@@ -7272,10 +7781,14 @@ prompts:
     label: golfe
     aliases:
     - colocando
-  - locale: zh
+  - locale: zh-CN
     label: 高尔夫球
     aliases:
     - 设置
+  - locale: zh-TW
+    label: 高爾夫球
+    aliases:
+    - 設置
   - locale: ja
     label: ゴルフ
     aliases:
@@ -7345,10 +7858,14 @@ prompts:
     - ferro
     - cunha
     - taco de golfe
-  - locale: zh
+  - locale: zh-CN
     label: 高尔夫俱乐部
     aliases:
     - 倒计时
+  - locale: zh-TW
+    label: 高爾夫俱樂部
+    aliases:
+    - 倒計時
   - locale: ja
     label: ゴルフクラブ
     aliases:
@@ -7392,10 +7909,14 @@ prompts:
     label: uvas
     aliases:
     - videira
-  - locale: zh
+  - locale: zh-CN
     label: 葡萄
     aliases:
     - 葡萄树
+  - locale: zh-TW
+    label: 葡萄
+    aliases:
+    - 葡萄樹
   - locale: ja
     label: グレープ
     aliases:
@@ -7461,10 +7982,14 @@ prompts:
     - peso
     - força
     - newton
-  - locale: zh
+  - locale: zh-CN
     label: 重力
     aliases:
     - 坠落
+  - locale: zh-TW
+    label: 重力
+    aliases:
+    - 墜落
   - locale: ja
     label: グラビティ
     aliases:
@@ -7525,10 +8050,14 @@ prompts:
     - guitarra acústica
     - guitarra elétrica
     - strings
-  - locale: zh
+  - locale: zh-CN
     label: 吉他
     aliases:
     - 音响吉他
+  - locale: zh-TW
+    label: 吉他
+    aliases:
+    - 音響吉他
   - locale: ja
     label: ギター
     aliases:
@@ -7578,7 +8107,11 @@ prompts:
     aliases:
     - goma de mascar
     - bubblegum
-  - locale: zh
+  - locale: zh-CN
+    label: 口香糖
+    aliases:
+    - 嚼口香糖
+  - locale: zh-TW
     label: 口香糖
     aliases:
     - 嚼口香糖
@@ -7638,11 +8171,16 @@ prompts:
     - urso doce
     - ursinho-de-mel
     - snack
-  - locale: zh
+  - locale: zh-CN
     label: 可爱的熊
     aliases:
     - 糖熊 糖熊 糖熊 糖熊
     - 果冻熊
+  - locale: zh-TW
+    label: 可愛的熊
+    aliases:
+    - 糖熊 糖熊 糖熊 糖熊
+    - 果凍熊
   - locale: ja
     label: gummy クマ
     aliases:
@@ -7698,10 +8236,14 @@ prompts:
     - chuva de gelo
     - pequenas bolas de gelo
     - chuva congelada
-  - locale: zh
+  - locale: zh-CN
     label: 冰雹
     aliases:
     - 冰冻雨
+  - locale: zh-TW
+    label: 冰雹
+    aliases:
+    - 冰凍雨
   - locale: ja
     label: ログイン
     aliases:
@@ -7766,10 +8308,14 @@ prompts:
     - pêlos da cabeça
     - peruca
     - fechaduras
-  - locale: zh
+  - locale: zh-CN
     label: 头发
     aliases:
     - 线条
+  - locale: zh-TW
+    label: 頭髮
+    aliases:
+    - 線條
   - locale: ja
     label: ヘアケア
     aliases:
@@ -7833,10 +8379,14 @@ prompts:
     - marreta
     - controlador de unhas
     - ferramenta
-  - locale: zh
+  - locale: zh-CN
     label: 锤子
     aliases:
     - 圆柱形
+  - locale: zh-TW
+    label: 錘子
+    aliases:
+    - 圓柱形
   - locale: ja
     label: ハンマー
     aliases:
@@ -7893,10 +8443,14 @@ prompts:
     - roedor
     - animal de estimação
     - animal pequeno
-  - locale: zh
+  - locale: zh-CN
     label: 仓鼠
     aliases:
     - 啮齿动物
+  - locale: zh-TW
+    label: 倉鼠
+    aliases:
+    - 齧齒動物
   - locale: ja
     label: ハムスター
     aliases:
@@ -7956,10 +8510,14 @@ prompts:
     - dedos
     - punho
     - palmeira
-  - locale: zh
+  - locale: zh-CN
     label: 手执
     aliases:
     - 指头
+  - locale: zh-TW
+    label: 手執
+    aliases:
+    - 指頭
   - locale: ja
     label: ハンド
     aliases:
@@ -8022,10 +8580,14 @@ prompts:
     - contente
     - alegria
     - a sorrir
-  - locale: zh
+  - locale: zh-CN
     label: 快乐
     aliases:
     - 高兴
+  - locale: zh-TW
+    label: 快樂
+    aliases:
+    - 高興
   - locale: ja
     label: お問い合わせ
     aliases:
@@ -8053,7 +8615,9 @@ prompts:
     label: harmonijka
   - locale: pt
     label: harmónica
-  - locale: zh
+  - locale: zh-CN
+    label: 口琴
+  - locale: zh-TW
     label: 口琴
   - locale: ja
     label: ハーモニカ
@@ -8113,10 +8677,14 @@ prompts:
     - capota
     - cápsula
     - fedora
-  - locale: zh
+  - locale: zh-CN
     label: 帽子
     aliases:
     - 贝尼
+  - locale: zh-TW
+    label: 帽子
+    aliases:
+    - 貝尼
   - locale: ja
     label: 帽子帽子
     aliases:
@@ -8168,10 +8736,14 @@ prompts:
     aliases:
     - helicóptero
     - helo
-  - locale: zh
+  - locale: zh-CN
     label: 直升机
     aliases:
     - 直升机
+  - locale: zh-TW
+    label: 直升機
+    aliases:
+    - 直升機
   - locale: ja
     label: ヘリコプター
     aliases:
@@ -8226,11 +8798,16 @@ prompts:
     - chapéu rígido
     - protecção da cabeça
     - viseira
-  - locale: zh
+  - locale: zh-CN
     label: 头盔
     aliases:
     - 硬帽子( 硬帽子 )
     - 头部保护
+  - locale: zh-TW
+    label: 頭盔
+    aliases:
+    - 硬帽子( 硬帽子 )
+    - 頭部保護
   - locale: ja
     label: ヘルメット
     aliases:
@@ -8281,11 +8858,16 @@ prompts:
     aliases:
     - pau de hóquei no gelo
     - puck striker
-  - locale: zh
+  - locale: zh-CN
     label: 曲棍球棒
     aliases:
     - 冰球棍 冰球棍
     - 击球手
+  - locale: zh-TW
+    label: 曲棍球棒
+    aliases:
+    - 冰球棍 冰球棍
+    - 擊球手
   - locale: ja
     label: ホッケースティック
     aliases:
@@ -8337,8 +8919,12 @@ prompts:
     aliases:
     - residência
     - habitação
-  - locale: zh
+  - locale: zh-CN
     label: 家为
+    aliases:
+    - 住所
+  - locale: zh-TW
+    label: 家為
     aliases:
     - 住所
   - locale: ja
@@ -8398,10 +8984,14 @@ prompts:
     - otimismo
     - expectativa
     - desejo
-  - locale: zh
+  - locale: zh-CN
     label: 希望
     aliases:
     - 乐观主义
+  - locale: zh-TW
+    label: 希望
+    aliases:
+    - 樂觀主義
   - locale: ja
     label: お問い合わせ
     aliases:
@@ -8459,7 +9049,11 @@ prompts:
     - chinter
     - trompa do carro
     - trompete
-  - locale: zh
+  - locale: zh-CN
+    label: 喇叭
+    aliases:
+    - 鹿角
+  - locale: zh-TW
     label: 喇叭
     aliases:
     - 鹿角
@@ -8528,10 +9122,14 @@ prompts:
     - pônei
     - garanhão
     - corcel
-  - locale: zh
+  - locale: zh-CN
     label: 马
     aliases:
     - 母马
+  - locale: zh-TW
+    label: 馬
+    aliases:
+    - 母馬
   - locale: ja
     label: ログイン
     aliases:
@@ -8589,10 +9187,14 @@ prompts:
     - clínica
     - centro médico
     - enfermaria
-  - locale: zh
+  - locale: zh-CN
     label: 医院
     aliases:
     - 诊所
+  - locale: zh-TW
+    label: 醫院
+    aliases:
+    - 診所
   - locale: ja
     label: 病院紹介
     aliases:
@@ -8648,10 +9250,14 @@ prompts:
     - frankfurter
     - cachorro-quente
     - salsicha
-  - locale: zh
+  - locale: zh-CN
     label: 热狗
     aliases:
     - 光纤
+  - locale: zh-TW
+    label: 熱狗
+    aliases:
+    - 光纖
   - locale: ja
     label: ホットドッグ
     aliases:
@@ -8721,10 +9327,14 @@ prompts:
     - casa
     - residência
     - villa
-  - locale: zh
+  - locale: zh-CN
     label: 房屋
     aliases:
     - 大楼
+  - locale: zh-TW
+    label: 房屋
+    aliases:
+    - 大樓
   - locale: ja
     label: ホーム
     aliases:
@@ -8788,10 +9398,14 @@ prompts:
     - iogurte congelado
     - gelato
     - sundae
-  - locale: zh
+  - locale: zh-CN
     label: 冰激凌
     aliases:
     - 圆锥
+  - locale: zh-TW
+    label: 冰激凌
+    aliases:
+    - 圓錐
   - locale: ja
     label: アイスクリーム
     aliases:
@@ -8841,10 +9455,14 @@ prompts:
     aliases:
     - cabana de gelo
     - casa de neve
-  - locale: zh
+  - locale: zh-CN
     label: 伊格卢
     aliases:
     - 冰层小屋
+  - locale: zh-TW
+    label: 伊格盧
+    aliases:
+    - 冰層小屋
   - locale: ja
     label: ログイン
     aliases:
@@ -8888,10 +9506,14 @@ prompts:
     label: jack na caixa
     aliases:
     - caixa surpresa
-  - locale: zh
+  - locale: zh-CN
     label: 插进盒子里
     aliases:
     - 惊喜框
+  - locale: zh-TW
+    label: 插進盒子裡
+    aliases:
+    - 驚喜框
   - locale: ja
     label: ボックス内のジャック
     aliases:
@@ -8941,10 +9563,14 @@ prompts:
     aliases:
     - feijão gelatinoso
     - feijão doce
-  - locale: zh
+  - locale: zh-CN
     label: 果冻
     aliases:
     - 果冻豆
+  - locale: zh-TW
+    label: 果凍
+    aliases:
+    - 果凍豆
   - locale: ja
     label: ジェリービーン
     aliases:
@@ -8999,10 +9625,14 @@ prompts:
     - medusa
     - geleia de mar
     - criatura mesquinha
-  - locale: zh
+  - locale: zh-CN
     label: 水母鱼
     aliases:
     - 草药
+  - locale: zh-TW
+    label: 水母魚
+    aliases:
+    - 草藥
   - locale: ja
     label: ゼリーフィッシュ
     aliases:
@@ -9061,10 +9691,14 @@ prompts:
     - felicidade
     - deleite
     - glee
-  - locale: zh
+  - locale: zh-CN
     label: 欢乐
     aliases:
     - 快乐
+  - locale: zh-TW
+    label: 歡樂
+    aliases:
+    - 快樂
   - locale: ja
     label: ログイン
     aliases:
@@ -9120,10 +9754,14 @@ prompts:
     - saltos
     - salto
     - pulping
-  - locale: zh
+  - locale: zh-CN
     label: 跳跃
     aliases:
     - 跳跃
+  - locale: zh-TW
+    label: 跳躍
+    aliases:
+    - 跳躍
   - locale: ja
     label: ジャンプ
     aliases:
@@ -9189,8 +9827,12 @@ prompts:
     - juiz
     - lei
     - escalas
-  - locale: zh
+  - locale: zh-CN
     label: 司法权
+    aliases:
+    - 公正性
+  - locale: zh-TW
+    label: 司法權
     aliases:
     - 公正性
   - locale: ja
@@ -9250,10 +9892,14 @@ prompts:
     - papagaio de diamante
     - brinquedo de vento
     - cordas e asas
-  - locale: zh
+  - locale: zh-CN
     label: 风筝
     aliases:
     - 钻石风筝
+  - locale: zh-TW
+    label: 風箏
+    aliases:
+    - 鑽石風箏
   - locale: ja
     label: キツネ
     aliases:
@@ -9303,11 +9949,16 @@ prompts:
     aliases:
     - kiwis
     - frutos fuzzy
-  - locale: zh
+  - locale: zh-CN
     label: 基维
     aliases:
     - ki果
     - 模糊的果实
+  - locale: zh-TW
+    label: 基維
+    aliases:
+    - ki果
+    - 模糊的果實
   - locale: ja
     label: キウイ
     aliases:
@@ -9374,10 +10025,14 @@ prompts:
     - cortador
     - artigos de prata
     - punhal
-  - locale: zh
+  - locale: zh-CN
     label: 刀锋
     aliases:
     - 叶片
+  - locale: zh-TW
+    label: 刀鋒
+    aliases:
+    - 葉片
   - locale: ja
     label: アクセサリー
     aliases:
@@ -9435,10 +10090,14 @@ prompts:
     - besouro
     - joaninha
     - insecto vermelho com pontos
-  - locale: zh
+  - locale: zh-CN
     label: 女士错误
     aliases:
     - 甲虫鱼
+  - locale: zh-TW
+    label: 女士錯誤
+    aliases:
+    - 甲蟲魚
   - locale: ja
     label: レディーブグ
     aliases:
@@ -9510,10 +10169,14 @@ prompts:
     - lâmpada
     - luz da noite
     - luz de secretária
-  - locale: zh
+  - locale: zh-CN
     label: 灯
     aliases:
     - 灯笼
+  - locale: zh-TW
+    label: 燈
+    aliases:
+    - 燈籠
   - locale: ja
     label: ランプ
     aliases:
@@ -9576,10 +10239,14 @@ prompts:
     - rindo
     - ha-ha
     - diversão
-  - locale: zh
+  - locale: zh-CN
     label: 欢笑
     aliases:
     - 欢笑
+  - locale: zh-TW
+    label: 歡笑
+    aliases:
+    - 歡笑
   - locale: ja
     label: 笑う笑い
     aliases:
@@ -9634,10 +10301,14 @@ prompts:
     - folhagem
     - folha verde
     - pétala
-  - locale: zh
+  - locale: zh-CN
     label: 叶子
     aliases:
     - 叶片
+  - locale: zh-TW
+    label: 葉子
+    aliases:
+    - 葉片
   - locale: ja
     label: リーフレット
     aliases:
@@ -9709,10 +10380,14 @@ prompts:
     - quadril a pé
     - membro
     - coxa
-  - locale: zh
+  - locale: zh-CN
     label: 脚
     aliases:
     - 臀部到脚
+  - locale: zh-TW
+    label: 腳
+    aliases:
+    - 臀部到腳
   - locale: ja
     label: レッグ
     aliases:
@@ -9762,7 +10437,11 @@ prompts:
     aliases:
     - salada
     - verde folhoso
-  - locale: zh
+  - locale: zh-CN
+    label: 生菜
+    aliases:
+    - 沙拉
+  - locale: zh-TW
     label: 生菜
     aliases:
     - 沙拉
@@ -9815,10 +10494,14 @@ prompts:
     aliases:
     - coleção de livros
     - arquivo
-  - locale: zh
+  - locale: zh-CN
     label: 图书馆
     aliases:
     - 书籍收藏
+  - locale: zh-TW
+    label: 圖書館
+    aliases:
+    - 書籍收藏
   - locale: ja
     label: ライブラリ
     aliases:
@@ -9873,10 +10556,14 @@ prompts:
     - farol
     - torre costeira
     - luz do mar
-  - locale: zh
+  - locale: zh-CN
     label: 灯塔
     aliases:
     - 信标
+  - locale: zh-TW
+    label: 燈塔
+    aliases:
+    - 信標
   - locale: ja
     label: ライトハウス
     aliases:
@@ -9931,10 +10618,14 @@ prompts:
     - trovão
     - faísca elétrica
     - luz de tempestade
-  - locale: zh
+  - locale: zh-CN
     label: 闪电
     aliases:
     - 霹雳
+  - locale: zh-TW
+    label: 閃電
+    aliases:
+    - 霹靂
   - locale: ja
     label: スワッピング
     aliases:
@@ -9991,10 +10682,14 @@ prompts:
     - crustáceo grande
     - frutos do mar
     - garras
-  - locale: zh
+  - locale: zh-CN
     label: 龙虾
     aliases:
     - 大型甲壳类动物
+  - locale: zh-TW
+    label: 龍蝦
+    aliases:
+    - 大型甲殼類動物
   - locale: ja
     label: ロブスター
     aliases:
@@ -10045,10 +10740,14 @@ prompts:
     aliases:
     - otário
     - doce no pau
-  - locale: zh
+  - locale: zh-CN
     label: 棒棒糖
     aliases:
     - 废物
+  - locale: zh-TW
+    label: 棒棒糖
+    aliases:
+    - 廢物
   - locale: ja
     label: ロリポップ
     aliases:
@@ -10114,10 +10813,14 @@ prompts:
     - romance
     - afecção
     - valentina
-  - locale: zh
+  - locale: zh-CN
     label: 爱
     aliases:
     - 心脏
+  - locale: zh-TW
+    label: 愛
+    aliases:
+    - 心臟
   - locale: ja
     label: 恋物癖
     aliases:
@@ -10172,10 +10875,14 @@ prompts:
     - atractor metálico
     - força magnética
     - ímã de ferradura
-  - locale: zh
+  - locale: zh-CN
     label: 磁铁
     aliases:
     - 金属吸引器
+  - locale: zh-TW
+    label: 磁鐵
+    aliases:
+    - 金屬吸引器
   - locale: ja
     label: マグネット
     aliases:
@@ -10224,10 +10931,14 @@ prompts:
     aliases:
     - agitadores
     - percussão
-  - locale: zh
+  - locale: zh-CN
     label: 马拉卡斯
     aliases:
     - 摇动器
+  - locale: zh-TW
+    label: 馬拉卡斯
+    aliases:
+    - 搖動器
   - locale: ja
     label: マラカス
     aliases:
@@ -10283,10 +10994,14 @@ prompts:
     - malva
     - campo de tratamento de incêndio
     - doces fofinhos
-  - locale: zh
+  - locale: zh-CN
     label: 棉花糖
     aliases:
     - 商场
+  - locale: zh-TW
+    label: 棉花糖
+    aliases:
+    - 商場
   - locale: ja
     label: マシュマロ
     aliases:
@@ -10343,10 +11058,14 @@ prompts:
     - donzela do mar
     - peixe feminino
     - sirene
-  - locale: zh
+  - locale: zh-CN
     label: 美人鱼
     aliases:
     - 海娘们
+  - locale: zh-TW
+    label: 美人魚
+    aliases:
+    - 海娘們
   - locale: ja
     label: マーメイド
     aliases:
@@ -10408,10 +11127,14 @@ prompts:
     - menta-pimenta
     - menta de lança
     - mentol
-  - locale: zh
+  - locale: zh-CN
     label: 薄荷
     aliases:
     - 草药
+  - locale: zh-TW
+    label: 薄荷
+    aliases:
+    - 草藥
   - locale: ja
     label: ログイン
     aliases:
@@ -10462,10 +11185,14 @@ prompts:
     aliases:
     - vidro de reflexão
     - espelho
-  - locale: zh
+  - locale: zh-CN
     label: 镜像
     aliases:
     - 反射镜
+  - locale: zh-TW
+    label: 鏡像
+    aliases:
+    - 反射鏡
   - locale: ja
     label: ミラー
     aliases:
@@ -10514,10 +11241,14 @@ prompts:
     aliases:
     - grupo átomo
     - ligação química
-  - locale: zh
+  - locale: zh-CN
     label: 分子
     aliases:
     - 原子组
+  - locale: zh-TW
+    label: 分子
+    aliases:
+    - 原子組
   - locale: ja
     label: モレカル
     aliases:
@@ -10579,11 +11310,16 @@ prompts:
     - lunar
     - estrela lunar
     - noite
-  - locale: zh
+  - locale: zh-CN
     label: 月球
     aliases:
     - 月经
     - 月球恒星( 月球)
+  - locale: zh-TW
+    label: 月球
+    aliases:
+    - 月經
+    - 月球恆星( 月球)
   - locale: ja
     label: ムーン
     aliases:
@@ -10635,10 +11371,14 @@ prompts:
     aliases:
     - praga
     - ferrão
-  - locale: zh
+  - locale: zh-CN
     label: 蚊子
     aliases:
     - 害虫
+  - locale: zh-TW
+    label: 蚊子
+    aliases:
+    - 害蟲
   - locale: ja
     label: 蚊帳
     aliases:
@@ -10698,10 +11438,14 @@ prompts:
     - bicicleta
     - helicóptero
     - moto
-  - locale: zh
+  - locale: zh-CN
     label: 摩托车
     aliases:
     - 自行车
+  - locale: zh-TW
+    label: 摩托車
+    aliases:
+    - 自行車
   - locale: ja
     label: オートバイ
     aliases:
@@ -10765,10 +11509,14 @@ prompts:
     - gama de montanhas
     - pico
     - cimeira
-  - locale: zh
+  - locale: zh-CN
     label: 山区
     aliases:
     - 山顶
+  - locale: zh-TW
+    label: 山區
+    aliases:
+    - 山頂
   - locale: ja
     label: ログイン
     aliases:
@@ -10826,10 +11574,14 @@ prompts:
     - roedor
     - rato de computador
     - ranger
-  - locale: zh
+  - locale: zh-CN
     label: 鼠标
     aliases:
     - 啮齿动物
+  - locale: zh-TW
+    label: 鼠標
+    aliases:
+    - 齧齒動物
   - locale: ja
     label: マウス
     aliases:
@@ -10889,10 +11641,14 @@ prompts:
     - lábios
     - dentes
     - língua
-  - locale: zh
+  - locale: zh-CN
     label: 口号
     aliases:
     - 双唇
+  - locale: zh-TW
+    label: 口號
+    aliases:
+    - 雙唇
   - locale: ja
     label: マウス
     aliases:
@@ -10936,10 +11692,14 @@ prompts:
     label: Mozart
     aliases:
     - wolfgang amadeus mozart
-  - locale: zh
+  - locale: zh-CN
     label: 莫扎特语Name
     aliases:
     - 沃尔夫冈·阿马德乌斯·莫扎特
+  - locale: zh-TW
+    label: 莫扎特語Name
+    aliases:
+    - 沃爾夫岡·阿馬德烏斯·莫扎特
   - locale: ja
     label: モーツァルト
     aliases:
@@ -11002,10 +11762,14 @@ prompts:
     - museu de arte
     - exposição
     - museu de história
-  - locale: zh
+  - locale: zh-CN
     label: 博物馆
     aliases:
     - 画廊
+  - locale: zh-TW
+    label: 博物館
+    aliases:
+    - 畫廊
   - locale: ja
     label: ミュージアム
     aliases:
@@ -11063,10 +11827,14 @@ prompts:
     - toadstool
     - fungo
     - esporos
-  - locale: zh
+  - locale: zh-CN
     label: 蘑菇
     aliases:
     - 托盘
+  - locale: zh-TW
+    label: 蘑菇
+    aliases:
+    - 托盤
   - locale: ja
     label: メニュー
     aliases:
@@ -11130,8 +11898,12 @@ prompts:
     - pico
     - unha de metal
     - martelo e prego
-  - locale: zh
+  - locale: zh-CN
     label: 钉子
+    aliases:
+    - 手指甲
+  - locale: zh-TW
+    label: 釘子
     aliases:
     - 手指甲
   - locale: ja
@@ -11191,10 +11963,14 @@ prompts:
     - napoleão bonaparte
     - imperador francês
     - geral
-  - locale: zh
+  - locale: zh-CN
     label: 拿破仑
     aliases:
     - 拿破仑·波拿巴
+  - locale: zh-TW
+    label: 拿破崙
+    aliases:
+    - 拿破崙·波拿巴
   - locale: ja
     label: ナポレオン
     aliases:
@@ -11255,8 +12031,12 @@ prompts:
     - narina
     - cheiro
     - focinho
-  - locale: zh
+  - locale: zh-CN
     label: 鼻头
+    aliases:
+    - 鼻孔
+  - locale: zh-TW
+    label: 鼻頭
     aliases:
     - 鼻孔
   - locale: ja
@@ -11323,10 +12103,14 @@ prompts:
     - diário
     - bloco de notas
     - caderno espiral
-  - locale: zh
+  - locale: zh-CN
     label: 笔记本
     aliases:
     - 日记
+  - locale: zh-TW
+    label: 筆記本
+    aliases:
+    - 日記
   - locale: ja
     label: ノートブック
     aliases:
@@ -11378,10 +12162,14 @@ prompts:
     aliases:
     - cuidador
     - trabalhador de saúde
-  - locale: zh
+  - locale: zh-CN
     label: 护士
     aliases:
     - 照顾者
+  - locale: zh-TW
+    label: 護士
+    aliases:
+    - 照顧者
   - locale: ja
     label: 看護師
     aliases:
@@ -11437,10 +12225,14 @@ prompts:
     - bulbo vegetal
     - anel
     - lágrimas
-  - locale: zh
+  - locale: zh-CN
     label: 洋葱
     aliases:
     - 灯泡蔬菜
+  - locale: zh-TW
+    label: 洋蔥
+    aliases:
+    - 燈泡蔬菜
   - locale: ja
     label: オニオン
     aliases:
@@ -11492,8 +12284,12 @@ prompts:
     aliases:
     - citrinos
     - cor laranja
-  - locale: zh
+  - locale: zh-CN
     label: 橙红色
+    aliases:
+    - 柑橘
+  - locale: zh-TW
+    label: 橙紅色
     aliases:
     - 柑橘
   - locale: ja
@@ -11551,10 +12347,14 @@ prompts:
     aliases:
     - frigideira
     - ferramenta de cozinha
-  - locale: zh
+  - locale: zh-CN
     label: 页
     aliases:
     - 煎锅
+  - locale: zh-TW
+    label: 頁
+    aliases:
+    - 煎鍋
   - locale: ja
     label: ログイン
     aliases:
@@ -11619,10 +12419,14 @@ prompts:
     - playground
     - parque público
     - espaço verde
-  - locale: zh
+  - locale: zh-CN
     label: 公园
     aliases:
     - 园艺
+  - locale: zh-TW
+    label: 公園
+    aliases:
+    - 園藝
   - locale: ja
     label: 公園
     aliases:
@@ -11679,10 +12483,14 @@ prompts:
     - arara
     - pássaro falante
     - pássaro tropical
-  - locale: zh
+  - locale: zh-CN
     label: 鹦鹉
     aliases:
     - 鹦鹉
+  - locale: zh-TW
+    label: 鸚鵡
+    aliases:
+    - 鸚鵡
   - locale: ja
     label: パロット
     aliases:
@@ -11746,10 +12554,14 @@ prompts:
     - nenhuma guerra
     - sinal de paz
     - pomba
-  - locale: zh
+  - locale: zh-CN
     label: 和平
     aliases:
     - 镇静
+  - locale: zh-TW
+    label: 和平
+    aliases:
+    - 鎮靜
   - locale: ja
     label: フィードバック
     aliases:
@@ -11794,10 +12606,14 @@ prompts:
     label: pera
     aliases:
     - frutos de pêra
-  - locale: zh
+  - locale: zh-CN
     label: 梨树
     aliases:
     - 梨子果实
+  - locale: zh-TW
+    label: 梨樹
+    aliases:
+    - 梨子果實
   - locale: ja
     label: ペア
     aliases:
@@ -11852,10 +12668,14 @@ prompts:
     - alavanca do pé
     - pedal de bicicleta
     - pedal de gás
-  - locale: zh
+  - locale: zh-CN
     label: 脚踏车
     aliases:
     - 脚杠杆
+  - locale: zh-TW
+    label: 腳踏車
+    aliases:
+    - 腳槓桿
   - locale: ja
     label: ペダル
     aliases:
@@ -11914,8 +12734,12 @@ prompts:
     - grafite
     - caneta
     - ferramenta de escrita
-  - locale: zh
+  - locale: zh-CN
     label: 铅笔
+    aliases:
+    - 石墨
+  - locale: zh-TW
+    label: 鉛筆
     aliases:
     - 石墨
   - locale: ja
@@ -11975,7 +12799,11 @@ prompts:
     - energia vegetal
     - luz solar aos alimentos
     - clorofila
-  - locale: zh
+  - locale: zh-CN
+    label: 光合作用
+    aliases:
+    - 植物能源
+  - locale: zh-TW
     label: 光合作用
     aliases:
     - 植物能源
@@ -12037,10 +12865,14 @@ prompts:
     - piano de cauda
     - teclado
     - piano vertical
-  - locale: zh
+  - locale: zh-CN
     label: 钢琴
     aliases:
     - 大钢琴
+  - locale: zh-TW
+    label: 鋼琴
+    aliases:
+    - 大鋼琴
   - locale: ja
     label: ピアノ
     aliases:
@@ -12085,10 +12917,14 @@ prompts:
     label: Picasso
     aliases:
     - pablo picasso
-  - locale: zh
+  - locale: zh-CN
     label: 毕加索
     aliases:
     - 巴勃罗毕加索
+  - locale: zh-TW
+    label: 畢加索
+    aliases:
+    - 巴勃羅畢加索
   - locale: ja
     label: ピカソ
     aliases:
@@ -12137,10 +12973,14 @@ prompts:
     aliases:
     - cesto alimentar
     - cesto de piquenique
-  - locale: zh
+  - locale: zh-CN
     label: 野餐篮
     aliases:
     - 食品篮
+  - locale: zh-TW
+    label: 野餐籃
+    aliases:
+    - 食品籃
   - locale: ja
     label: ピクニックバスケット
     aliases:
@@ -12200,10 +13040,14 @@ prompts:
     - porco
     - leitão
     - suínos
-  - locale: zh
+  - locale: zh-CN
     label: 猪
     aliases:
     - 猪
+  - locale: zh-TW
+    label: 豬
+    aliases:
+    - 豬
   - locale: ja
     label: ログイン
     aliases:
@@ -12264,10 +13108,14 @@ prompts:
     - aviador
     - capitão.
     - folheto
-  - locale: zh
+  - locale: zh-CN
     label: 飞行员
     aliases:
     - 飞行员
+  - locale: zh-TW
+    label: 飛行員
+    aliases:
+    - 飛行員
   - locale: ja
     label: パイロット
     aliases:
@@ -12311,10 +13159,14 @@ prompts:
     label: abacaxi
     aliases:
     - ananas
-  - locale: zh
+  - locale: zh-CN
     label: 菠萝
     aliases:
     - 阿纳纳斯
+  - locale: zh-TW
+    label: 菠蘿
+    aliases:
+    - 阿納納斯
   - locale: ja
     label: パイナップル
     aliases:
@@ -12365,10 +13217,14 @@ prompts:
     aliases:
     - massa
     - pimenta de pepperoni
-  - locale: zh
+  - locale: zh-CN
     label: 披萨
     aliases:
     - 钱
+  - locale: zh-TW
+    label: 披薩
+    aliases:
+    - 錢
   - locale: ja
     label: ピザ
     aliases:
@@ -12431,10 +13287,14 @@ prompts:
     - avião
     - aeronave
     - jet
-  - locale: zh
+  - locale: zh-CN
     label: 飞机
     aliases:
     - 飞机
+  - locale: zh-TW
+    label: 飛機
+    aliases:
+    - 飛機
   - locale: ja
     label: 飛行機
     aliases:
@@ -12492,10 +13352,14 @@ prompts:
     - prato
     - platter
     - pires
-  - locale: zh
+  - locale: zh-CN
     label: 盘
     aliases:
     - 盘子
+  - locale: zh-TW
+    label: 盤
+    aliases:
+    - 盤子
   - locale: ja
     label: プレート
     aliases:
@@ -12552,8 +13416,12 @@ prompts:
     - ferramenta de aperto
     - alfinetadas
     - alcaçuz
-  - locale: zh
+  - locale: zh-CN
     label: 钳子
+    aliases:
+    - 抓取工具
+  - locale: zh-TW
+    label: 鉗子
     aliases:
     - 抓取工具
   - locale: ja
@@ -12618,10 +13486,14 @@ prompts:
     - polícia
     - homem da lei
     - policial
-  - locale: zh
+  - locale: zh-CN
     label: 警察人员
     aliases:
     - 牡诡
+  - locale: zh-TW
+    label: 警察人員
+    aliases:
+    - 牡詭
   - locale: ja
     label: 警察官
     aliases:
@@ -12679,10 +13551,14 @@ prompts:
     - molho
     - panela de cozinha
     - navio
-  - locale: zh
+  - locale: zh-CN
     label: 锅
     aliases:
     - 酱油
+  - locale: zh-TW
+    label: 鍋
+    aliases:
+    - 醬油
   - locale: ja
     label: ログイン
     aliases:
@@ -12740,10 +13616,14 @@ prompts:
     - spud
     - tubérculo
     - batatas fritas à base
-  - locale: zh
+  - locale: zh-CN
     label: 马铃薯
     aliases:
     - 块
+  - locale: zh-TW
+    label: 馬鈴薯
+    aliases:
+    - 塊
   - locale: ja
     label: ジャガイモ
     aliases:
@@ -12788,10 +13668,14 @@ prompts:
     label: puzzle
     aliases:
     - jigsaw
-  - locale: zh
+  - locale: zh-CN
     label: 谜题
     aliases:
     - 拼图
+  - locale: zh-TW
+    label: 謎題
+    aliases:
+    - 拼圖
   - locale: ja
     label: パズル
     aliases:
@@ -12847,7 +13731,11 @@ prompts:
     - pirâmide egípcia
     - edifício triângulo
     - gizé
-  - locale: zh
+  - locale: zh-CN
+    label: 金字塔
+    aliases:
+    - 埃及金字塔
+  - locale: zh-TW
     label: 金字塔
     aliases:
     - 埃及金字塔
@@ -12902,10 +13790,15 @@ prompts:
     aliases:
     - coelho
     - lebre
-  - locale: zh
+  - locale: zh-CN
     label: 兔头
     aliases:
     - 兔子,宝贝
+    - 兔子
+  - locale: zh-TW
+    label: 兔頭
+    aliases:
+    - 兔子,寶貝
     - 兔子
   - locale: ja
     label: ウサギ
@@ -12979,10 +13872,14 @@ prompts:
     - chuveiro
     - chuveiros
     - tempestade
-  - locale: zh
+  - locale: zh-CN
     label: 雨声
     aliases:
     - 滴盘
+  - locale: zh-TW
+    label: 雨聲
+    aliases:
+    - 滴盤
   - locale: ja
     label: 雨の日
     aliases:
@@ -13044,7 +13941,11 @@ prompts:
     - cores
     - cores no céu
     - espectro
-  - locale: zh
+  - locale: zh-CN
+    label: 彩虹
+    aliases:
+    - 弧形
+  - locale: zh-TW
     label: 彩虹
     aliases:
     - 弧形
@@ -13107,10 +14008,14 @@ prompts:
     - estudando
     - percussão
     - verme de biblioteca
-  - locale: zh
+  - locale: zh-CN
     label: 读取
     aliases:
     - 学习
+  - locale: zh-TW
+    label: 讀取
+    aliases:
+    - 學習
   - locale: ja
     label: インフォメーション
     aliases:
@@ -13175,10 +14080,14 @@ prompts:
     - café
     - restaurante
     - produtos alimentares
-  - locale: zh
+  - locale: zh-CN
     label: 餐厅
     aliases:
     - 双胞胎
+  - locale: zh-TW
+    label: 餐廳
+    aliases:
+    - 雙胞胎
   - locale: ja
     label: レストラン
     aliases:
@@ -13244,10 +14153,14 @@ prompts:
     - riacho
     - fluxo
     - via navegável
-  - locale: zh
+  - locale: zh-CN
     label: 河流
     aliases:
     - 溪头
+  - locale: zh-TW
+    label: 河流
+    aliases:
+    - 溪頭
   - locale: ja
     label: 河川温泉
     aliases:
@@ -13299,10 +14212,14 @@ prompts:
     aliases:
     - autômato
     - bot
-  - locale: zh
+  - locale: zh-CN
     label: 机器人
     aliases:
     - 自动马通
+  - locale: zh-TW
+    label: 機器人
+    aliases:
+    - 自動馬通
   - locale: ja
     label: ロボット
     aliases:
@@ -13353,10 +14270,14 @@ prompts:
     aliases:
     - cubo mágico
     - cubo do puzzle
-  - locale: zh
+  - locale: zh-CN
     label: 鲁比克的立方体
     aliases:
     - 魔方块
+  - locale: zh-TW
+    label: 魯比克的立方體
+    aliases:
+    - 魔方塊
   - locale: ja
     label: Rubikのキューブ
     aliases:
@@ -13407,10 +14328,14 @@ prompts:
     aliases:
     - ferramenta de medição
     - borda reta
-  - locale: zh
+  - locale: zh-CN
     label: 标尺
     aliases:
     - 测量工具
+  - locale: zh-TW
+    label: 標尺
+    aliases:
+    - 測量工具
   - locale: ja
     label: ルール
     aliases:
@@ -13474,10 +14399,14 @@ prompts:
     - sprinting
     - corrida
     - caminhada rápida
-  - locale: zh
+  - locale: zh-CN
     label: 运行
     aliases:
     - 冲刺
+  - locale: zh-TW
+    label: 運行
+    aliases:
+    - 衝刺
   - locale: ja
     label: ランニング
     aliases:
@@ -13545,10 +14474,14 @@ prompts:
     - para baixo
     - triste
     - infeliz
-  - locale: zh
+  - locale: zh-CN
     label: 悲伤
     aliases:
     - 哭个不停
+  - locale: zh-TW
+    label: 悲傷
+    aliases:
+    - 哭個不停
   - locale: ja
     label: 悲しい
     aliases:
@@ -13600,10 +14533,14 @@ prompts:
     aliases:
     - sanduíche clube
     - sub
-  - locale: zh
+  - locale: zh-CN
     label: 三明治( T)
     aliases:
     - 俱乐部三明治
+  - locale: zh-TW
+    label: 三明治( T)
+    aliases:
+    - 俱樂部三明治
   - locale: ja
     label: サンドイッチ
     aliases:
@@ -13660,10 +14597,14 @@ prompts:
     - sonda espacial
     - orbital
     - antena no espaço
-  - locale: zh
+  - locale: zh-CN
     label: 卫星
     aliases:
     - 空间探测器
+  - locale: zh-TW
+    label: 衛星
+    aliases:
+    - 空間探測器
   - locale: ja
     label: 衛星放送
     aliases:
@@ -13727,10 +14668,14 @@ prompts:
     - lâmina
     - cortador de madeira
     - ferramenta
-  - locale: zh
+  - locale: zh-CN
     label: 锯
     aliases:
     - 手锯
+  - locale: zh-TW
+    label: 鋸
+    aliases:
+    - 手鋸
   - locale: ja
     label: おすすめ
     aliases:
@@ -13796,10 +14741,14 @@ prompts:
     - medo
     - assustado
     - aterrorizado
-  - locale: zh
+  - locale: zh-CN
     label: 吓坏了
     aliases:
     - 恐惧
+  - locale: zh-TW
+    label: 嚇壞了
+    aliases:
+    - 恐懼
   - locale: ja
     label: スカーフ
     aliases:
@@ -13851,10 +14800,14 @@ prompts:
     aliases:
     - silenciador
     - wrap
-  - locale: zh
+  - locale: zh-CN
     label: 围巾
     aliases:
     - 搅拌器
+  - locale: zh-TW
+    label: 圍巾
+    aliases:
+    - 攪拌器
   - locale: ja
     label: スカーフ
     aliases:
@@ -13912,10 +14865,14 @@ prompts:
     - academia
     - faculdade
     - universidade
-  - locale: zh
+  - locale: zh-CN
     label: 学校
     aliases:
     - 学院
+  - locale: zh-TW
+    label: 學校
+    aliases:
+    - 學院
   - locale: ja
     label: 学校概况
     aliases:
@@ -13971,7 +14928,11 @@ prompts:
     - tesouras
     - cortadores
     - ferramenta de corte
-  - locale: zh
+  - locale: zh-CN
+    label: 剪刀
+    aliases:
+    - 剪切
+  - locale: zh-TW
     label: 剪刀
     aliases:
     - 剪切
@@ -14030,10 +14991,14 @@ prompts:
     - motorista
     - philips head
     - ferramenta manual
-  - locale: zh
+  - locale: zh-CN
     label: 螺丝刀
     aliases:
     - 驱动程序
+  - locale: zh-TW
+    label: 螺絲刀
+    aliases:
+    - 驅動程序
   - locale: ja
     label: スクリュードライバー
     aliases:
@@ -14076,10 +15041,14 @@ prompts:
     label: Cavalo marinho
     aliases:
     - pônei marinho
-  - locale: zh
+  - locale: zh-CN
     label: 海马
     aliases:
     - 海马
+  - locale: zh-TW
+    label: 海馬
+    aliases:
+    - 海馬
   - locale: ja
     label: シーホース
     aliases:
@@ -14122,10 +15091,14 @@ prompts:
     label: selo
     aliases:
     - leão marinho
-  - locale: zh
+  - locale: zh-CN
     label: 密封
     aliases:
     - 海狮
+  - locale: zh-TW
+    label: 密封
+    aliases:
+    - 海獅
   - locale: ja
     label: シール
     aliases:
@@ -14180,10 +15153,14 @@ prompts:
     - cinto de segurança
     - fivela de fecho
     - precinta do carro
-  - locale: zh
+  - locale: zh-CN
     label: 安全带
     aliases:
     - 安全带
+  - locale: zh-TW
+    label: 安全帶
+    aliases:
+    - 安全帶
   - locale: ja
     label: シートベルト
     aliases:
@@ -14227,10 +15204,14 @@ prompts:
     label: Shakespeare
     aliases:
     - william shakespeare
-  - locale: zh
+  - locale: zh-CN
     label: 莎士比亚
     aliases:
     - 威廉·莎士比亚
+  - locale: zh-TW
+    label: 莎士比亞
+    aliases:
+    - 威廉·莎士比亞
   - locale: ja
     label: シェイクスピア
     aliases:
@@ -14285,10 +15266,14 @@ prompts:
     - sabão capilar
     - lavagem de cabelo
     - limpador
-  - locale: zh
+  - locale: zh-CN
     label: 洗发水
     aliases:
     - 发型肥皂
+  - locale: zh-TW
+    label: 洗髮水
+    aliases:
+    - 髮型肥皂
   - locale: ja
     label: シャンプー
     aliases:
@@ -14347,10 +15332,15 @@ prompts:
     - ovelha
     - cordeiro
     - carneiro
-  - locale: zh
+  - locale: zh-CN
     label: 绵羊
     aliases:
     - 母猫
+    - 公羊( 公羊)
+  - locale: zh-TW
+    label: 綿羊
+    aliases:
+    - 母貓
     - 公羊( 公羊)
   - locale: ja
     label: シープ
@@ -14411,10 +15401,14 @@ prompts:
     - blusa
     - t-shirt
     - topo
-  - locale: zh
+  - locale: zh-CN
     label: 衬衫
     aliases:
     - 衬衫
+  - locale: zh-TW
+    label: 襯衫
+    aliases:
+    - 襯衫
   - locale: ja
     label: シャツ
     aliases:
@@ -14474,8 +15468,12 @@ prompts:
     - botas
     - calçado
     - sapatilhas
-  - locale: zh
+  - locale: zh-CN
     label: 双鞋
+    aliases:
+    - 靴子
+  - locale: zh-TW
+    label: 雙鞋
     aliases:
     - 靴子
   - locale: ja
@@ -14539,10 +15537,14 @@ prompts:
     - empatar
     - chuva
     - pulverizador de água
-  - locale: zh
+  - locale: zh-CN
     label: 冲澡
     aliases:
     - 冲洗
+  - locale: zh-TW
+    label: 沖澡
+    aliases:
+    - 沖洗
   - locale: ja
     label: シャワー
     aliases:
@@ -14594,10 +15596,14 @@ prompts:
     aliases:
     - camarão
     - marisco pequeno
-  - locale: zh
+  - locale: zh-CN
     label: 虾
     aliases:
     - 虾
+  - locale: zh-TW
+    label: 蝦
+    aliases:
+    - 蝦
   - locale: ja
     label: スリンプ
     aliases:
@@ -14661,10 +15667,14 @@ prompts:
     - coro
     - melodia
     - microfone
-  - locale: zh
+  - locale: zh-CN
     label: 歌声
     aliases:
     - 声音
+  - locale: zh-TW
+    label: 歌聲
+    aliases:
+    - 聲音
   - locale: ja
     label: ログイン
     aliases:
@@ -14721,10 +15731,14 @@ prompts:
     - lavabasina
     - torneira
     - toque
-  - locale: zh
+  - locale: zh-CN
     label: 隐藏
     aliases:
     - 冲洗盆
+  - locale: zh-TW
+    label: 隱藏
+    aliases:
+    - 沖洗盆
   - locale: ja
     label: ログイン
     aliases:
@@ -14779,10 +15793,14 @@ prompts:
     - repouso
     - sentado
     - batata do sofá
-  - locale: zh
+  - locale: zh-CN
     label: 坐着
     aliases:
     - 休息时间
+  - locale: zh-TW
+    label: 坐著
+    aliases:
+    - 休息時間
   - locale: ja
     label: 座談会
     aliases:
@@ -14834,7 +15852,11 @@ prompts:
     aliases:
     - convés
     - patinação
-  - locale: zh
+  - locale: zh-CN
+    label: 滑板
+    aliases:
+    - 甲板
+  - locale: zh-TW
     label: 滑板
     aliases:
     - 甲板
@@ -14889,7 +15911,11 @@ prompts:
     aliases:
     - esqui
     - desportos de neve
-  - locale: zh
+  - locale: zh-CN
+    label: 滑雪
+    aliases:
+    - 滑雪
+  - locale: zh-TW
     label: 滑雪
     aliases:
     - 滑雪
@@ -14935,8 +15961,12 @@ prompts:
     label: saia
     aliases:
     - mini-saia
-  - locale: zh
+  - locale: zh-CN
     label: 线条
+    aliases:
+    - 小型短裙
+  - locale: zh-TW
+    label: 線條
     aliases:
     - 小型短裙
   - locale: ja
@@ -14994,10 +16024,14 @@ prompts:
     aliases:
     - edifício alto
     - torre
-  - locale: zh
+  - locale: zh-CN
     label: 斯凯克
     aliases:
     - 高楼
+  - locale: zh-TW
+    label: 斯凱克
+    aliases:
+    - 高樓
   - locale: ja
     label: スカイスクレイパー
     aliases:
@@ -15067,10 +16101,14 @@ prompts:
     - zzz
     - cama
     - sonhando
-  - locale: zh
+  - locale: zh-CN
     label: 睡觉
     aliases:
     - 睡觉
+  - locale: zh-TW
+    label: 睡覺
+    aliases:
+    - 睡覺
   - locale: ja
     label: 寝取られ
     aliases:
@@ -15130,8 +16168,12 @@ prompts:
     - sonolento
     - exausto
     - cansado
-  - locale: zh
+  - locale: zh-CN
     label: 睡着了
+    aliases:
+    - 昏暗
+  - locale: zh-TW
+    label: 睡著了
     aliases:
     - 昏暗
   - locale: ja
@@ -15189,10 +16231,14 @@ prompts:
     - slide de playground
     - planador
     - escorregadio
-  - locale: zh
+  - locale: zh-CN
     label: 幻灯片
     aliases:
     - 游乐场幻灯片
+  - locale: zh-TW
+    label: 幻燈片
+    aliases:
+    - 遊樂場幻燈片
   - locale: ja
     label: スライド
     aliases:
@@ -15257,10 +16303,14 @@ prompts:
     - cobra
     - víbora
     - réptil
-  - locale: zh
+  - locale: zh-CN
     label: 蛇头
     aliases:
     - 蛇头
+  - locale: zh-TW
+    label: 蛇頭
+    aliases:
+    - 蛇頭
   - locale: ja
     label: ヘビヘビ
     aliases:
@@ -15325,10 +16375,14 @@ prompts:
     - cristal de gelo
     - pó branco
     - tempo de inverno
-  - locale: zh
+  - locale: zh-CN
     label: 积雪
     aliases:
     - 暴风雪
+  - locale: zh-TW
+    label: 積雪
+    aliases:
+    - 暴風雪
   - locale: ja
     label: スノーボード
     aliases:
@@ -15391,10 +16445,14 @@ prompts:
     - limpador
     - bolhas
     - suds
-  - locale: zh
+  - locale: zh-CN
     label: 肥皂
     aliases:
     - 肥皂条
+  - locale: zh-TW
+    label: 肥皂
+    aliases:
+    - 肥皂條
   - locale: ja
     label: 石鹸
     aliases:
@@ -15440,10 +16498,14 @@ prompts:
     label: Bola de Futebol
     aliases:
     - futebol
-  - locale: zh
+  - locale: zh-CN
     label: 足球舞会
     aliases:
     - 橄榄球
+  - locale: zh-TW
+    label: 足球舞會
+    aliases:
+    - 橄欖球
   - locale: ja
     label: サッカーボール
     aliases:
@@ -15493,10 +16555,14 @@ prompts:
     label: meias
     aliases:
     - meias
-  - locale: zh
+  - locale: zh-CN
     label: 袜子
     aliases:
     - 喜悦
+  - locale: zh-TW
+    label: 襪子
+    aliases:
+    - 喜悅
   - locale: ja
     label: ソックス
     aliases:
@@ -15553,10 +16619,14 @@ prompts:
     - girador
     - flipper
     - ferramenta de cozinha
-  - locale: zh
+  - locale: zh-CN
     label: 斯图拉
     aliases:
     - 转动器
+  - locale: zh-TW
+    label: 斯圖拉
+    aliases:
+    - 轉動器
   - locale: ja
     label: スパチュラ
     aliases:
@@ -15599,8 +16669,12 @@ prompts:
     label: aranha
     aliases:
     - aracnida
-  - locale: zh
+  - locale: zh-CN
     label: 蜘蛛鱼
+    aliases:
+    - 阿拉赫尼德
+  - locale: zh-TW
+    label: 蜘蛛魚
     aliases:
     - 阿拉赫尼德
   - locale: ja
@@ -15661,10 +16735,16 @@ prompts:
     - talheres
     - concha
     - colher de chá
-  - locale: zh
+  - locale: zh-CN
     label: 汤匙
     aliases:
     - 餐饮
+    - lad
+    - te
+  - locale: zh-TW
+    label: 湯匙
+    aliases:
+    - 餐飲
     - lad
     - te
   - locale: ja
@@ -15718,10 +16798,14 @@ prompts:
     aliases:
     - estrela brilhante
     - brilho
-  - locale: zh
+  - locale: zh-CN
     label: 星号
     aliases:
     - 闪亮的星星
+  - locale: zh-TW
+    label: 星號
+    aliases:
+    - 閃亮的星星
   - locale: ja
     label: スタースター
     aliases:
@@ -15764,10 +16848,14 @@ prompts:
     label: estrela-do-mar
     aliases:
     - estrela do mar
-  - locale: zh
+  - locale: zh-CN
     label: 海星鱼
     aliases:
     - 海星号
+  - locale: zh-TW
+    label: 海星魚
+    aliases:
+    - 海星號
   - locale: ja
     label: スターフィッシュ
     aliases:
@@ -15810,10 +16898,14 @@ prompts:
     label: volante
     aliases:
     - roda
-  - locale: zh
+  - locale: zh-CN
     label: 方向盘
     aliases:
     - 轮子
+  - locale: zh-TW
+    label: 方向盤
+    aliases:
+    - 輪子
   - locale: ja
     label: ステアリングホイール
     aliases:
@@ -15872,10 +16964,14 @@ prompts:
     - mercado
     - saída
     - loja
-  - locale: zh
+  - locale: zh-CN
     label: 存储
     aliases:
     - 市场
+  - locale: zh-TW
+    label: 存儲
+    aliases:
+    - 市場
   - locale: ja
     label: ショップ
     aliases:
@@ -15936,10 +17032,14 @@ prompts:
     - tempestade
     - trovão
     - furacão
-  - locale: zh
+  - locale: zh-CN
     label: 风暴
     aliases:
     - 暴风雨
+  - locale: zh-TW
+    label: 風暴
+    aliases:
+    - 暴風雨
   - locale: ja
     label: ストーム
     aliases:
@@ -15983,10 +17083,14 @@ prompts:
     label: morango
     aliases:
     - bagas
-  - locale: zh
+  - locale: zh-CN
     label: 草莓( 草莓)
     aliases:
     - 浆果
+  - locale: zh-TW
+    label: 草莓( 草莓)
+    aliases:
+    - 漿果
   - locale: ja
     label: ストロベリー
     aliases:
@@ -16037,10 +17141,14 @@ prompts:
     aliases:
     - sub
     - submersível
-  - locale: zh
+  - locale: zh-CN
     label: 潜艇
     aliases:
     - 次级
+  - locale: zh-TW
+    label: 潛艇
+    aliases:
+    - 次級
   - locale: ja
     label: サブマリン
     aliases:
@@ -16114,10 +17222,14 @@ prompts:
     - luz solar
     - ensolarado
     - sol
-  - locale: zh
+  - locale: zh-CN
     label: 太阳
     aliases:
     - 太阳
+  - locale: zh-TW
+    label: 太陽
+    aliases:
+    - 太陽
   - locale: ja
     label: 太陽
     aliases:
@@ -16178,10 +17290,14 @@ prompts:
     - espantado
     - choque
     - atordoado
-  - locale: zh
+  - locale: zh-CN
     label: 惊讶
     aliases:
     - 惊讶
+  - locale: zh-TW
+    label: 驚訝
+    aliases:
+    - 驚訝
   - locale: ja
     label: 驚き
     aliases:
@@ -16233,10 +17349,14 @@ prompts:
     aliases:
     - esportes de piscina
     - nadar
-  - locale: zh
+  - locale: zh-CN
     label: 游泳
     aliases:
     - 游泳池运动
+  - locale: zh-TW
+    label: 游泳
+    aliases:
+    - 游泳池運動
   - locale: ja
     label: スイミング
     aliases:
@@ -16263,8 +17383,10 @@ prompts:
     label: huśtawka
   - locale: pt
     label: balanço
-  - locale: zh
+  - locale: zh-CN
     label: 摇摆
+  - locale: zh-TW
+    label: 搖擺
   - locale: ja
     label: スワッピング
   - locale: ko
@@ -16319,10 +17441,14 @@ prompts:
     - mesa
     - mesa de jantar
     - bancada de trabalho
-  - locale: zh
+  - locale: zh-CN
     label: 图表
     aliases:
     - 办公桌
+  - locale: zh-TW
+    label: 圖表
+    aliases:
+    - 辦公桌
   - locale: ja
     label: テーブル
     aliases:
@@ -16372,10 +17498,14 @@ prompts:
     aliases:
     - jingles
     - tambor de mão
-  - locale: zh
+  - locale: zh-CN
     label: 手动鼓
     aliases:
     - 铃声
+  - locale: zh-TW
+    label: 手動鼓
+    aliases:
+    - 鈴聲
   - locale: ja
     label: タンブリン
     aliases:
@@ -16431,10 +17561,14 @@ prompts:
     - fita métrica
     - régua
     - régua longa
-  - locale: zh
+  - locale: zh-CN
     label: 磁带测量
     aliases:
     - 测量磁带
+  - locale: zh-TW
+    label: 磁帶測量
+    aliases:
+    - 測量磁帶
   - locale: ja
     label: テープ測定
     aliases:
@@ -16510,8 +17644,12 @@ prompts:
     - professor
     - mestre da escola
     - tutor
-  - locale: zh
+  - locale: zh-CN
     label: 老师
+    aliases:
+    - 教育工作者
+  - locale: zh-TW
+    label: 老師
     aliases:
     - 教育工作者
   - locale: ja
@@ -16564,11 +17702,16 @@ prompts:
     aliases:
     - brinquedo de pelúcia
     - bichos de pelúcia
-  - locale: zh
+  - locale: zh-CN
     label: 泰迪熊 泰迪熊 泰迪熊 泰迪熊 泰迪熊
     aliases:
     - +h 玩具
     - 饲养动物
+  - locale: zh-TW
+    label: 泰迪熊 泰迪熊 泰迪熊 泰迪熊 泰迪熊
+    aliases:
+    - +h 玩具
+    - 飼養動物
   - locale: ja
     label: テディベア
     aliases:
@@ -16632,10 +17775,15 @@ prompts:
     - presas
     - brancos perolados
     - sorrir
-  - locale: zh
+  - locale: zh-CN
     label: 牙齿
     aliases:
     - 牙齿
+    - 珍珠白s
+  - locale: zh-TW
+    label: 牙齒
+    aliases:
+    - 牙齒
     - 珍珠白s
   - locale: ja
     label: 歯の歯
@@ -16679,10 +17827,14 @@ prompts:
     label: tênis
     aliases:
     - jogo de raquete
-  - locale: zh
+  - locale: zh-CN
     label: 网球
     aliases:
     - 勒索游戏
+  - locale: zh-TW
+    label: 網球
+    aliases:
+    - 勒索遊戲
   - locale: ja
     label: テニス
     aliases:
@@ -16731,10 +17883,14 @@ prompts:
     aliases:
     - taco de ténis
     - strings e frame
-  - locale: zh
+  - locale: zh-CN
     label: 网球赛
     aliases:
     - 网球棒
+  - locale: zh-TW
+    label: 網球賽
+    aliases:
+    - 網球棒
   - locale: ja
     label: テニスラケット
     aliases:
@@ -16794,10 +17950,14 @@ prompts:
     - tenda de campismo
     - abrigo
     - teepee
-  - locale: zh
+  - locale: zh-CN
     label: 帐篷
     aliases:
     - 露营帐篷
+  - locale: zh-TW
+    label: 帳篷
+    aliases:
+    - 露營帳篷
   - locale: ja
     label: テント
     aliases:
@@ -16850,10 +18010,14 @@ prompts:
     aliases:
     - boom
     - rumble
-  - locale: zh
+  - locale: zh-CN
     label: 雷电
     aliases:
     - 轰
+  - locale: zh-TW
+    label: 雷電
+    aliases:
+    - 轟
   - locale: ja
     label: ログイン
     aliases:
@@ -16910,10 +18074,14 @@ prompts:
     - manteiga
     - caramelo
     - doces pegajosos
-  - locale: zh
+  - locale: zh-CN
     label: 调味料
     aliases:
     - 奶油丝
+  - locale: zh-TW
+    label: 調味料
+    aliases:
+    - 奶油絲
   - locale: ja
     label: トッフィー
     aliases:
@@ -16979,10 +18147,14 @@ prompts:
     - comodo
     - lavatório
     - trono de porcelana
-  - locale: zh
+  - locale: zh-CN
     label: 厕所
     aliases:
     - 卢
+  - locale: zh-TW
+    label: 廁所
+    aliases:
+    - 盧
   - locale: ja
     label: トイレ
     aliases:
@@ -17015,8 +18187,10 @@ prompts:
     label: pomidor
   - locale: pt
     label: tomate
-  - locale: zh
+  - locale: zh-CN
     label: 番茄酱
+  - locale: zh-TW
+    label: 番茄醬
   - locale: ja
     label: トマト
   - locale: ko
@@ -17061,10 +18235,14 @@ prompts:
     aliases:
     - tool bast
     - kit de reparação
-  - locale: zh
+  - locale: zh-CN
     label: 工具箱
     aliases:
     - 工具胸针
+  - locale: zh-TW
+    label: 工具箱
+    aliases:
+    - 工具胸針
   - locale: ja
     label: ツールボックス
     aliases:
@@ -17113,7 +18291,11 @@ prompts:
     aliases:
     - escova dentária
     - pincel
-  - locale: zh
+  - locale: zh-CN
+    label: 牙刷
+    aliases:
+    - 牙刷
+  - locale: zh-TW
     label: 牙刷
     aliases:
     - 牙刷
@@ -17160,10 +18342,14 @@ prompts:
     label: pasta de dentes
     aliases:
     - dentifrício
-  - locale: zh
+  - locale: zh-CN
     label: 牙膏
     aliases:
     - 脱脂
+  - locale: zh-TW
+    label: 牙膏
+    aliases:
+    - 脫脂
   - locale: ja
     label: 歯磨き粉
     aliases:
@@ -17214,8 +18400,12 @@ prompts:
     aliases:
     - torção
     - ciclone
-  - locale: zh
+  - locale: zh-CN
     label: 旋风
+    aliases:
+    - 扭矩
+  - locale: zh-TW
+    label: 旋風
     aliases:
     - 扭矩
   - locale: ja
@@ -17274,10 +18464,14 @@ prompts:
     - toalha
     - toalha de banho
     - pano de secagem
-  - locale: zh
+  - locale: zh-CN
     label: 毛巾
     aliases:
     - 冲洗布
+  - locale: zh-TW
+    label: 毛巾
+    aliases:
+    - 沖洗布
   - locale: ja
     label: タオル
     aliases:
@@ -17340,10 +18534,14 @@ prompts:
     - arranha- céus
     - torreta
     - edifício alto
-  - locale: zh
+  - locale: zh-CN
     label: 塔楼
     aliases:
     - 树枝
+  - locale: zh-TW
+    label: 塔樓
+    aliases:
+    - 樹枝
   - locale: ja
     label: タワー
     aliases:
@@ -17403,10 +18601,14 @@ prompts:
     - expresso
     - locomotiva
     - transporte ferroviário
-  - locale: zh
+  - locale: zh-CN
     label: 火车
     aliases:
     - 表达式
+  - locale: zh-TW
+    label: 火車
+    aliases:
+    - 表達式
   - locale: ja
     label: トレイン
     aliases:
@@ -17489,10 +18691,14 @@ prompts:
     - pinheiro
     - tronco
     - madeira
-  - locale: zh
+  - locale: zh-CN
     label: 树
     aliases:
     - 灌木丛
+  - locale: zh-TW
+    label: 樹
+    aliases:
+    - 灌木叢
   - locale: ja
     label: ツリー
     aliases:
@@ -17525,7 +18731,9 @@ prompts:
     label: trójkąt
   - locale: pt
     label: triângulo
-  - locale: zh
+  - locale: zh-CN
+    label: 三角形
+  - locale: zh-TW
     label: 三角形
   - locale: ja
     label: トライアングル
@@ -17585,10 +18793,14 @@ prompts:
     - criatura da caverna
     - troll da internet
     - habitante da ponte
-  - locale: zh
+  - locale: zh-CN
     label: 巨怪们
     aliases:
     - 怪兽
+  - locale: zh-TW
+    label: 巨怪們
+    aliases:
+    - 怪獸
   - locale: ja
     label: トロール
     aliases:
@@ -17646,10 +18858,14 @@ prompts:
     - jeans
     - calças
     - solas
-  - locale: zh
+  - locale: zh-CN
     label: 裤子
     aliases:
     - 牛仔裤
+  - locale: zh-TW
+    label: 褲子
+    aliases:
+    - 牛仔褲
   - locale: ja
     label: ズボン
     aliases:
@@ -17709,10 +18925,14 @@ prompts:
     - camião
     - captador
     - van
-  - locale: zh
+  - locale: zh-CN
     label: 卡车
     aliases:
     - 卡车
+  - locale: zh-TW
+    label: 卡車
+    aliases:
+    - 卡車
   - locale: ja
     label: トラック
     aliases:
@@ -17764,10 +18984,14 @@ prompts:
     aliases:
     - latão
     - corno
-  - locale: zh
+  - locale: zh-CN
     label: 小号
     aliases:
     - 铜
+  - locale: zh-TW
+    label: 小號
+    aliases:
+    - 銅
   - locale: ja
     label: トランペット
     aliases:
@@ -17815,10 +19039,14 @@ prompts:
     label: tronco
     aliases:
     - tórax
-  - locale: zh
+  - locale: zh-CN
     label: 后备箱
     aliases:
     - 胸针
+  - locale: zh-TW
+    label: 後備箱
+    aliases:
+    - 胸針
   - locale: ja
     label: トランク
     aliases:
@@ -17877,8 +19105,12 @@ prompts:
     - crença
     - confiança
     - fiabilidade
-  - locale: zh
+  - locale: zh-CN
     label: 信托
+    aliases:
+    - 宗教信仰
+  - locale: zh-TW
+    label: 信託
     aliases:
     - 宗教信仰
   - locale: ja
@@ -17933,10 +19165,14 @@ prompts:
     aliases:
     - tartaruga marinha
     - tartaruga
-  - locale: zh
+  - locale: zh-CN
     label: 乌龟
     aliases:
     - 海龟
+  - locale: zh-TW
+    label: 烏龜
+    aliases:
+    - 海龜
   - locale: ja
     label: タトル
     aliases:
@@ -17993,10 +19229,14 @@ prompts:
     - cavalo cornudo
     - criatura mágica
     - besta mítica
-  - locale: zh
+  - locale: zh-CN
     label: 独角兽
     aliases:
     - 角马
+  - locale: zh-TW
+    label: 獨角獸
+    aliases:
+    - 角馬
   - locale: ja
     label: ユニコーン
     aliases:
@@ -18027,7 +19267,9 @@ prompts:
     label: Prędkość
   - locale: pt
     label: Velocidade
-  - locale: zh
+  - locale: zh-CN
+    label: 速度
+  - locale: zh-TW
     label: 速度
   - locale: ja
     label: ヴェロシティ
@@ -18083,10 +19325,14 @@ prompts:
     - instrumento curvado
     - violino
     - strings
-  - locale: zh
+  - locale: zh-CN
     label: 小提琴
     aliases:
     - 弓形仪器
+  - locale: zh-TW
+    label: 小提琴
+    aliases:
+    - 弓形儀器
   - locale: ja
     label: バイオリン
     aliases:
@@ -18142,10 +19388,14 @@ prompts:
     - jogo líquido
     - servir e espigar
     - desportos de areia
-  - locale: zh
+  - locale: zh-CN
     label: 排球
     aliases:
     - 净游戏
+  - locale: zh-TW
+    label: 排球
+    aliases:
+    - 淨遊戲
   - locale: ja
     label: バレーボール
     aliases:
@@ -18189,10 +19439,14 @@ prompts:
     label: melancia
     aliases:
     - melão
-  - locale: zh
+  - locale: zh-CN
     label: 西瓜
     aliases:
     - 瓜类
+  - locale: zh-TW
+    label: 西瓜
+    aliases:
+    - 瓜類
   - locale: ja
     label: ウォーターメロン
     aliases:
@@ -18255,10 +19509,14 @@ prompts:
     - adeus
     - onda de mão
     - saudação
-  - locale: zh
+  - locale: zh-CN
     label: 挥手
     aliases:
     - 哈啰
+  - locale: zh-TW
+    label: 揮手
+    aliases:
+    - 哈囉
   - locale: ja
     label: ログイン
     aliases:
@@ -18323,10 +19581,14 @@ prompts:
     - jante
     - ferramenta de círculo
     - rotação
-  - locale: zh
+  - locale: zh-CN
     label: 轮子
     aliases:
     - 轮胎
+  - locale: zh-TW
+    label: 輪子
+    aliases:
+    - 輪胎
   - locale: ja
     label: ホイール
     aliases:
@@ -18382,10 +19644,14 @@ prompts:
     - batedor
     - batedor de ovos
     - ferramenta de agitação
-  - locale: zh
+  - locale: zh-CN
     label: 长须
     aliases:
     - 击球手
+  - locale: zh-TW
+    label: 長鬚
+    aliases:
+    - 擊球手
   - locale: ja
     label: ウイスキー
     aliases:
@@ -18450,10 +19716,14 @@ prompts:
     - rajada
     - ar em movimento
     - rascunho
-  - locale: zh
+  - locale: zh-CN
     label: 风
     aliases:
     - 微风
+  - locale: zh-TW
+    label: 風
+    aliases:
+    - 微風
   - locale: ja
     label: ログイン
     aliases:
@@ -18506,8 +19776,12 @@ prompts:
     aliases:
     - moinho
     - energia eólica
-  - locale: zh
+  - locale: zh-CN
     label: 风车
+    aliases:
+    - 磨坊
+  - locale: zh-TW
+    label: 風車
     aliases:
     - 磨坊
   - locale: ja
@@ -18538,7 +19812,9 @@ prompts:
     label: okno
   - locale: pt
     label: janela
-  - locale: zh
+  - locale: zh-CN
+    label: 窗口
+  - locale: zh-TW
     label: 窗口
   - locale: ja
     label: ウィンドウ
@@ -18579,10 +19855,14 @@ prompts:
     label: Sabedoria
     aliases:
     - coruja
-  - locale: zh
+  - locale: zh-CN
     label: 智慧
     aliases:
     - 猫头鹰
+  - locale: zh-TW
+    label: 智慧
+    aliases:
+    - 貓頭鷹
   - locale: ja
     label: ウィズダム
     aliases:
@@ -18640,10 +19920,15 @@ prompts:
     - feiticeira
     - hag
     - piloto de vassoura
-  - locale: zh
+  - locale: zh-CN
     label: 巫师
     aliases:
     - 巫师
+    - ha
+  - locale: zh-TW
+    label: 巫師
+    aliases:
+    - 巫師
     - ha
   - locale: ja
     label: ウィッチ
@@ -18710,10 +19995,14 @@ prompts:
     - mago
     - bruxo
     - homem mágico
-  - locale: zh
+  - locale: zh-CN
     label: 向导
     aliases:
     - 术士
+  - locale: zh-TW
+    label: 嚮導
+    aliases:
+    - 術士
   - locale: ja
     label: ウィザード
     aliases:
@@ -18771,8 +20060,12 @@ prompts:
     - minhoca
     - rastejante
     - isco
-  - locale: zh
+  - locale: zh-CN
     label: 蠕虫
+    aliases:
+    - 蚯蚓
+  - locale: zh-TW
+    label: 蠕蟲
     aliases:
     - 蚯蚓
   - locale: ja
@@ -18826,10 +20119,14 @@ prompts:
     aliases:
     - chaveiro
     - chave inglesa ajustável
-  - locale: zh
+  - locale: zh-CN
     label: 扳手
     aliases:
     - 横刀
+  - locale: zh-TW
+    label: 扳手
+    aliases:
+    - 橫刀
   - locale: ja
     label: ログイン
     aliases:
@@ -18873,10 +20170,14 @@ prompts:
     label: yo-yo
     aliases:
     - yo yo
-  - locale: zh
+  - locale: zh-CN
     label: 哟哟
     aliases:
     - 哟,哟
+  - locale: zh-TW
+    label: 喲喲
+    aliases:
+    - 喲,喲
   - locale: ja
     label: ヨーヨーヨー
     aliases:
@@ -18921,10 +20222,14 @@ prompts:
     label: zoo
     aliases:
     - parque safári
-  - locale: zh
+  - locale: zh-CN
     label: 动物园
     aliases:
     - 萨法里公园
+  - locale: zh-TW
+    label: 動物園
+    aliases:
+    - 薩法裡公園
   - locale: ja
     label: ツイート
     aliases:
@@ -18954,8 +20259,10 @@ system_categories:
     name: Zwierzęta
   - locale: pt
     name: Animais
-  - locale: zh
+  - locale: zh-CN
     name: 动物
+  - locale: zh-TW
+    name: 動物
   - locale: ja
     name: アニマル
   - locale: ko
@@ -18991,7 +20298,9 @@ system_categories:
     name: Owoce
   - locale: pt
     name: Frutos
-  - locale: zh
+  - locale: zh-CN
+    name: 水果
+  - locale: zh-TW
     name: 水果
   - locale: ja
     name: フルーツ
@@ -19028,8 +20337,10 @@ system_categories:
     name: Pojazdy
   - locale: pt
     name: Veículos
-  - locale: zh
+  - locale: zh-CN
     name: 车辆
+  - locale: zh-TW
+    name: 車輛
   - locale: ja
     name: 車輌
   - locale: ko
@@ -19065,8 +20376,10 @@ system_categories:
     name: Odzież
   - locale: pt
     name: Roupas
-  - locale: zh
+  - locale: zh-CN
     name: 服装
+  - locale: zh-TW
+    name: 服裝
   - locale: ja
     name: アクセサリー
   - locale: ko
@@ -19102,7 +20415,9 @@ system_categories:
     name: Zabawki
   - locale: pt
     name: Brinquedos
-  - locale: zh
+  - locale: zh-CN
+    name: 玩具
+  - locale: zh-TW
     name: 玩具
   - locale: ja
     name: おもちゃ
@@ -19139,8 +20454,10 @@ system_categories:
     name: Żywność
   - locale: pt
     name: Alimentos
-  - locale: zh
+  - locale: zh-CN
     name: 粮食
+  - locale: zh-TW
+    name: 糧食
   - locale: ja
     name: フード
   - locale: ko
@@ -19176,8 +20493,10 @@ system_categories:
     name: Przyroda
   - locale: pt
     name: Natureza
-  - locale: zh
+  - locale: zh-CN
     name: 性质
+  - locale: zh-TW
+    name: 性質
   - locale: ja
     name: ネイチャー
   - locale: ko
@@ -19213,8 +20532,10 @@ system_categories:
     name: Gospodarstwo domowe
   - locale: pt
     name: Família
-  - locale: zh
+  - locale: zh-CN
     name: 户口
+  - locale: zh-TW
+    name: 戶口
   - locale: ja
     name: 家具
   - locale: ko
@@ -19250,8 +20571,10 @@ system_categories:
     name: Sport
   - locale: pt
     name: Esportes
-  - locale: zh
+  - locale: zh-CN
     name: 体育
+  - locale: zh-TW
+    name: 體育
   - locale: ja
     name: スポーツ
   - locale: ko
@@ -19287,7 +20610,9 @@ system_categories:
     name: Miejsca pracy
   - locale: pt
     name: Trabalhos
-  - locale: zh
+  - locale: zh-CN
+    name: 工作
+  - locale: zh-TW
     name: 工作
   - locale: ja
     name: 求人情報
@@ -19324,8 +20649,10 @@ system_categories:
     name: Instrumenty muzyczne
   - locale: pt
     name: Instrumentos musicais
-  - locale: zh
+  - locale: zh-CN
     name: 乐器
+  - locale: zh-TW
+    name: 樂器
   - locale: ja
     name: 音楽楽器
   - locale: ko
@@ -19361,7 +20688,9 @@ system_categories:
     name: Stworzenia morskie
   - locale: pt
     name: Criaturas marinhas
-  - locale: zh
+  - locale: zh-CN
+    name: 海洋生物
+  - locale: zh-TW
     name: 海洋生物
   - locale: ja
     name: 海の生き物
@@ -19398,8 +20727,10 @@ system_categories:
     name: Budynki
   - locale: pt
     name: Edifícios
-  - locale: zh
+  - locale: zh-CN
     name: 大楼
+  - locale: zh-TW
+    name: 大樓
   - locale: ja
     name: 建物
   - locale: ko
@@ -19435,8 +20766,10 @@ system_categories:
     name: Działania
   - locale: pt
     name: Acções
-  - locale: zh
+  - locale: zh-CN
     name: 行动
+  - locale: zh-TW
+    name: 行動
   - locale: ja
     name: アクション
   - locale: ko
@@ -19470,8 +20803,10 @@ system_categories:
     name: Pogoda
   - locale: pt
     name: Tempo
-  - locale: zh
+  - locale: zh-CN
     name: 天气
+  - locale: zh-TW
+    name: 天氣
   - locale: ja
     name: 天気の天気
   - locale: ko
@@ -19507,8 +20842,10 @@ system_categories:
     name: Owady
   - locale: pt
     name: Insetos
-  - locale: zh
+  - locale: zh-CN
     name: 昆虫
+  - locale: zh-TW
+    name: 昆蟲
   - locale: ja
     name: 昆虫
   - locale: ko
@@ -19544,8 +20881,10 @@ system_categories:
     name: Emocje
   - locale: pt
     name: Emoções
-  - locale: zh
+  - locale: zh-CN
     name: 情绪
+  - locale: zh-TW
+    name: 情緒
   - locale: ja
     name: 感情
   - locale: ko
@@ -19581,8 +20920,10 @@ system_categories:
     name: Szkoła
   - locale: pt
     name: Escola
-  - locale: zh
+  - locale: zh-CN
     name: 学校
+  - locale: zh-TW
+    name: 學校
   - locale: ja
     name: スクール
   - locale: ko
@@ -19618,8 +20959,10 @@ system_categories:
     name: Części ciała
   - locale: pt
     name: Partes do corpo
-  - locale: zh
+  - locale: zh-CN
     name: 主体部件
+  - locale: zh-TW
+    name: 主體部件
   - locale: ja
     name: ボディ部品
   - locale: ko
@@ -19655,8 +20998,10 @@ system_categories:
     name: Cukierki
   - locale: pt
     name: Doces
-  - locale: zh
+  - locale: zh-CN
     name: 甜甜点
+  - locale: zh-TW
+    name: 甜甜點
   - locale: ja
     name: キャンディ
   - locale: ko
@@ -19692,8 +21037,10 @@ system_categories:
     name: Zwierzęta domowe
   - locale: pt
     name: Animais de estimação
-  - locale: zh
+  - locale: zh-CN
     name: 宠物
+  - locale: zh-TW
+    name: 寵物
   - locale: ja
     name: ペット
   - locale: ko
@@ -19729,7 +21076,9 @@ system_categories:
     name: Fantazja
   - locale: pt
     name: Fantasia
-  - locale: zh
+  - locale: zh-CN
+    name: 幻想
+  - locale: zh-TW
     name: 幻想
   - locale: ja
     name: ファンタシー
@@ -19766,8 +21115,10 @@ system_categories:
     name: Części transportowe
   - locale: pt
     name: Peças de transporte
-  - locale: zh
+  - locale: zh-CN
     name: 运输部件
+  - locale: zh-TW
+    name: 運輸部件
   - locale: ja
     name: 輸送の部品
   - locale: ko
@@ -19803,7 +21154,9 @@ system_categories:
     name: Narzędzia
   - locale: pt
     name: Ferramentas
-  - locale: zh
+  - locale: zh-CN
+    name: 工具
+  - locale: zh-TW
     name: 工具
   - locale: ja
     name: ツール
@@ -19840,8 +21193,10 @@ system_categories:
     name: W parku
   - locale: pt
     name: No Parque
-  - locale: zh
+  - locale: zh-CN
     name: 在公园
+  - locale: zh-TW
+    name: 在公園
   - locale: ja
     name: パーク
   - locale: ko
@@ -19877,8 +21232,10 @@ system_categories:
     name: Rzeczy, które są okrągłe
   - locale: pt
     name: Coisas que são redondas
-  - locale: zh
+  - locale: zh-CN
     name: 东西是圆的
+  - locale: zh-TW
+    name: 東西是圓的
   - locale: ja
     name: ラウンドしているもの
   - locale: ko
@@ -19914,7 +21271,9 @@ system_categories:
     name: Warzywa
   - locale: pt
     name: Produtos hortícolas
-  - locale: zh
+  - locale: zh-CN
+    name: 蔬菜
+  - locale: zh-TW
     name: 蔬菜
   - locale: ja
     name: 野菜
@@ -19951,8 +21310,10 @@ system_categories:
     name: Miejsca
   - locale: pt
     name: Locais
-  - locale: zh
+  - locale: zh-CN
     name: 地点
+  - locale: zh-TW
+    name: 地點
   - locale: ja
     name: 開催場所
   - locale: ko
@@ -19988,8 +21349,10 @@ system_categories:
     name: Wyroby kuchenne
   - locale: pt
     name: Itens da cozinha
-  - locale: zh
+  - locale: zh-CN
     name: 厨房项目
+  - locale: zh-TW
+    name: 廚房項目
   - locale: ja
     name: キッチン用品
   - locale: ko
@@ -20025,8 +21388,10 @@ system_categories:
     name: Na niebie
   - locale: pt
     name: No céu
-  - locale: zh
+  - locale: zh-CN
     name: 在天空里,我看见了
+  - locale: zh-TW
+    name: 在天空裡,我看見了
   - locale: ja
     name: 空中
   - locale: ko
@@ -20062,8 +21427,10 @@ system_categories:
     name: Wyroby łazienkowe
   - locale: pt
     name: Itens do banheiro
-  - locale: zh
+  - locale: zh-CN
     name: 浴室项目
+  - locale: zh-TW
+    name: 浴室項目
   - locale: ja
     name: 浴室用品
   - locale: ko
@@ -20099,8 +21466,10 @@ system_categories:
     name: Sprzęt sportowy
   - locale: pt
     name: Equipamento desportivo
-  - locale: zh
+  - locale: zh-CN
     name: 体育设备
+  - locale: zh-TW
+    name: 體育設備
   - locale: ja
     name: スポーツ用品
   - locale: ko
@@ -20136,8 +21505,10 @@ system_categories:
     name: Phenomena pogody
   - locale: pt
     name: Fenômenos meteorológicos
-  - locale: zh
+  - locale: zh-CN
     name: 天气现象
+  - locale: zh-TW
+    name: 天氣現象
   - locale: ja
     name: 天気現象
   - locale: ko
@@ -20173,7 +21544,9 @@ system_categories:
     name: Koncepty abstrakcyjne
   - locale: pt
     name: Conceitos abstratos
-  - locale: zh
+  - locale: zh-CN
+    name: 摘要概念
+  - locale: zh-TW
     name: 摘要概念
   - locale: ja
     name: 抽象的な概念
@@ -20210,8 +21583,10 @@ system_categories:
     name: Dane historyczne
   - locale: pt
     name: Números históricos
-  - locale: zh
+  - locale: zh-CN
     name: 历史数字
+  - locale: zh-TW
+    name: 歷史數字
   - locale: ja
     name: 歴史図
   - locale: ko
@@ -20247,8 +21622,10 @@ system_categories:
     name: Terminy naukowe
   - locale: pt
     name: Termos Científicos
-  - locale: zh
+  - locale: zh-CN
     name: 科学术语
+  - locale: zh-TW
+    name: 科學術語
   - locale: ja
     name: 科学用語
   - locale: ko
@@ -20284,8 +21661,10 @@ system_categories:
     name: Architektura
   - locale: pt
     name: Arquitetura
-  - locale: zh
+  - locale: zh-CN
     name: 建筑
+  - locale: zh-TW
+    name: 建築
   - locale: ja
     name: 建築設計
   - locale: ko

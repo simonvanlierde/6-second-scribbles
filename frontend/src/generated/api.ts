@@ -25,7 +25,7 @@ export const CategoryListItemSchema = z
   .object({
     difficulty: z.enum(["easy", "medium", "hard"]),
     id: z.number().int(),
-    locale: z.union([z.string().regex(/^[a-z]{2,5}$/), z.null()]),
+    locale: z.union([z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/), z.null()]),
     name: z.string(),
   })
   .describe("Compact localized category representation used by list endpoints.");
@@ -37,9 +37,9 @@ export const CategorySelectionRequestSchema = z
     difficulty: z.enum(["easy", "medium", "hard"]),
     locale: z
       .string()
-      .regex(/^[a-z]{2,5}$/)
+      .regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/)
       .optional(),
-    locales: z.array(z.string().regex(/^[a-z]{2,5}$/)).optional(),
+    locales: z.array(z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/)).optional(),
     player_count: z.number().int().gte(1).default(2),
   })
   .describe("Parameters for selecting category sets for a room/game.");
@@ -137,14 +137,14 @@ export const HTTPValidationErrorSchema = z.object({
 });
 export type HTTPValidationError = z.infer<typeof HTTPValidationErrorSchema>;
 
-export const LanguageCodeSchema = z.string().regex(/^[a-z]{2,5}$/);
+export const LanguageCodeSchema = z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/);
 export type LanguageCode = z.infer<typeof LanguageCodeSchema>;
 
 export const LocaleAvailabilityItemSchema = z
   .object({
     category_count: z.number().int(),
     difficulty_counts: z.record(z.string(), z.number().int()).optional(),
-    locale: z.string().regex(/^[a-z]{2,5}$/),
+    locale: z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/),
   })
   .describe("Aggregated locale support across selectable system categories.");
 export type LocaleAvailabilityItem = z.infer<typeof LocaleAvailabilityItemSchema>;

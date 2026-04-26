@@ -261,7 +261,7 @@
         "type": "object"
       },
       "LanguageCode": {
-        "pattern": "^[a-z]{2,5}$",
+        "pattern": "^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$",
         "type": "string"
       },
       "LocaleAvailabilityItem": {

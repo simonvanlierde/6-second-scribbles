@@ -37,4 +37,20 @@ describe("useLocaleAvailability", () => {
     expect(es?.reason).toContain("No playable categories yet");
     expect(fr?.enabled).toBe(false);
   });
+
+  it("uses backend playable locale codes for room language availability", async () => {
+    apiRequestMock.mockResolvedValueOnce([
+      { locale: "de", category_count: 37, difficulty_counts: { easy: 12, medium: 12, hard: 13 } },
+      { locale: "zh-CN", category_count: 37, difficulty_counts: { easy: 12, medium: 12, hard: 13 } },
+      { locale: "zh-TW", category_count: 37, difficulty_counts: { easy: 12, medium: 12, hard: 13 } },
+    ]);
+
+    const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
+    await fetchLocaleAvailability(true);
+
+    expect(localeOptions.value.some((option) => option.code === "zh")).toBe(false);
+    expect(localeOptions.value.find((option) => option.code === "de")?.enabled).toBe(true);
+    expect(localeOptions.value.find((option) => option.code === "zh-CN")?.enabled).toBe(true);
+    expect(localeOptions.value.find((option) => option.code === "zh-TW")?.enabled).toBe(true);
+  });
 });

@@ -15,6 +15,21 @@ export const SUPPORTED_LOCALES = [
   "zh-TW",
 ] as const;
 
+export const PLAYABLE_CONTENT_LOCALES = [
+  "en",
+  "de",
+  "es",
+  "fr",
+  "it",
+  "ja",
+  "ko",
+  "nl",
+  "pl",
+  "pt",
+  "zh-CN",
+  "zh-TW",
+] as const;
+
 export type LocaleAvailability = LocaleAvailabilityItem;
 
 export type LocaleOption = {

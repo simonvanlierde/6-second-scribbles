@@ -14,7 +14,14 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from sqlalchemy import delete, select
 
-from app.categories.models import DEFAULT_CATEGORY_SOURCE, Category, CategoryPrompt, Prompt, compute_available_locales
+from app.categories.models import (
+    DEFAULT_CATEGORY_SOURCE,
+    Category,
+    CategoryPrompt,
+    Prompt,
+    compute_available_locales,
+    normalize_locale_code,
+)
 from app.core.database import get_session_maker
 from app.core.logging import configure_logging
 from app.users.models import User
@@ -46,7 +53,7 @@ def _iter_system_categories(seed_data: dict[str, Any]) -> list[dict[str, Any]]:
 def _build_prompt_translations(translations: list[dict[str, Any]]) -> dict[str, object]:
     """Normalize prompt translations into the persisted dict shape."""
     return {
-        str(t_data["locale"]).lower(): {
+        normalize_locale_code(str(t_data["locale"])) or str(t_data["locale"]): {
             "label": str(t_data["label"]),
             "aliases": [str(alias) for alias in (t_data.get("aliases") or [])],
         }
@@ -56,7 +63,10 @@ def _build_prompt_translations(translations: list[dict[str, Any]]) -> dict[str, 
 
 def _build_category_translations(translations: list[dict[str, Any]]) -> dict[str, object]:
     """Normalize category translations into the persisted dict shape."""
-    return {str(t_data["locale"]).lower(): {"name": str(t_data["name"])} for t_data in translations}
+    return {
+        normalize_locale_code(str(t_data["locale"])) or str(t_data["locale"]): {"name": str(t_data["name"])}
+        for t_data in translations
+    }
 
 
 async def _seed_prompt_library(session: AsyncSession, prompts_data: list[dict[str, Any]]) -> None:

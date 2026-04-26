@@ -30,6 +30,8 @@ ANIMALES = "Animales"
 ANIMALS = "Animals"
 CAT = "cat"
 GATO = "gato"
+ZH_TW_ANIMALS = "動物"
+ZH_TW_CAT = "貓"
 
 
 class _ScalarResult:
@@ -83,7 +85,7 @@ def _category_prompt(
 
 def test_normalize_locale_list_deduplicates_and_appends_fallback() -> None:
     """Locale lists are normalized once and always include the fallback."""
-    assert _normalize_locale_list(["FR-ca", "fr", "nl_NL"], fallback="en") == ["fr", "nl", "en"]
+    assert _normalize_locale_list(["FR-ca", "fr", "nl_NL"], fallback="en") == ["fr-CA", "fr", "nl-NL", "en"]
 
 
 def test_select_scored_categories_prefers_higher_locale_scores(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -140,6 +142,41 @@ async def test_select_category_sets_falls_back_to_english(monkeypatch: pytest.Mo
     assert len(response.selections) == 1
     assert response.selections[0].category_name == ANIMALS
     assert response.selections[0].items == [CAT]
+
+
+async def test_select_category_sets_uses_region_locale(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Selection and prompt resolution preserve region-specific content locales."""
+    category = _category(
+        category_id=2,
+        available_locales=["zh-CN", "zh-TW"],
+        translations={"zh-CN": {"name": "动物"}, "zh-TW": {"name": "動物"}},
+    )
+    prompts = [
+        _category_prompt(
+            category_id=2,
+            prompt_id=20,
+            translations={
+                "zh-CN": {"label": "猫", "aliases": []},
+                "zh-TW": {"label": "貓", "aliases": []},
+            },
+        )
+    ]
+    session = _QueuedSession([category], prompts)
+
+    monkeypatch.setattr("app.categories.service.random.shuffle", lambda _items: None)
+
+    response = await select_category_sets(
+        cast("AsyncSession", session),
+        difficulty="easy",
+        count=1,
+        player_count=1,
+        locale="zh-TW",
+        locales=["zh-TW"],
+    )
+
+    assert len(response.selections) == 1
+    assert response.selections[0].category_name == ZH_TW_ANIMALS
+    assert response.selections[0].items == [ZH_TW_CAT]
 
 
 async def test_get_localized_category_set_raises_when_no_available_locales() -> None:

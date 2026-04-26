@@ -99,7 +99,7 @@ async def _load_category_prompts(
 
 def _score_category_by_locales(category: Category, requested_locales: list[str]) -> int:
     available = {loc.lower() for loc in category.available_locales}
-    return sum(1 for locale in requested_locales if locale in available)
+    return sum(1 for locale in requested_locales if locale.lower() in available)
 
 
 def _select_scored_categories(
@@ -126,11 +126,11 @@ def _select_scored_categories(
 
 def _select_locale_for_category(category: Category, requested_locales: list[str]) -> str | None:
     category_locales = {loc.lower() for loc in category.available_locales}
-    return next((locale for locale in requested_locales if locale in category_locales), None)
+    return next((locale for locale in requested_locales if locale.lower() in category_locales), None)
 
 
 def _category_supports_locale(category: Category, locale: str) -> bool:
-    return locale in {loc.lower() for loc in category.available_locales}
+    return locale.lower() in {loc.lower() for loc in category.available_locales}
 
 
 def _build_selected_category_set(
@@ -305,9 +305,9 @@ async def get_localized_category_set(
         fallback=DEFAULT_LANGUAGE_CODE,
     )
     available_set = {loc.lower() for loc in category.available_locales}
-    chosen_locale = next((loc for loc in candidate_locales if loc in available_set), None)
+    chosen_locale = next((loc for loc in candidate_locales if loc.lower() in available_set), None)
     if chosen_locale is None and category.available_locales:
-        chosen_locale = sorted(loc.lower() for loc in category.available_locales)[0]
+        chosen_locale = sorted(category.available_locales)[0]
     if chosen_locale is None:
         raise HTTPException(status_code=404, detail="Category has no available locales")
 
@@ -355,9 +355,9 @@ async def get_localized_scoring_targets(
 
     category = await _get_visible_category_or_404(db, category_id=category_id)
 
-    target_locale = preferred_locale.lower()
+    target_locale = _normalize_locale(preferred_locale)
     if target_locale not in category.translations:
-        target_locale = category.default_locale.lower()
+        target_locale = _normalize_locale(category.default_locale)
         if target_locale not in category.translations:
             target_locale = next(iter(category.translations.keys()), None)
 
@@ -374,7 +374,7 @@ async def get_localized_scoring_targets(
     for p in prompts:
         pt = p.translations.get(target_locale)
         if not pt:
-            pt = p.translations.get(category.default_locale.lower())
+            pt = p.translations.get(_normalize_locale(category.default_locale))
         if not pt and p.translations:
             pt = next(iter(p.translations.values()))
 
