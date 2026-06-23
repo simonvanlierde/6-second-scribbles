@@ -204,8 +204,8 @@ def test_cache_stats_summary_handles_zero_hits() -> None:
     assert CacheStats().format_summary() == ZERO_RATE_SUMMARY
 
 
-def test_translation_service_uses_session_cache_and_persistent_cache(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Service checks session cache before persistent cache and provider."""
+def test_translation_service_uses_persistent_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Service checks the persistent cache before calling the provider."""
     provider = _FakeProvider()
     cache = _MemoryCache()
     cache.values[("en", "fr", "dog")] = TRANSLATED_DOG
@@ -226,7 +226,6 @@ def test_translation_service_uses_session_cache_and_persistent_cache(monkeypatch
     assert service.cache_stats() == cache.summary
     service.reset_cache()
     assert cache.reset_called
-    assert service.session_cache == {}
 
 
 def test_argos_provider_translate_and_prefetch_paths() -> None:
