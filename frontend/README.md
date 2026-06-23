@@ -20,6 +20,18 @@ The frontend is a Vue 3 single-page app for creating rooms, joining games, drawi
 - `src/shared/`: shared types and small domain helpers
 - `src/generated/`: generated API and protocol types
 
+## Dependency notes
+
+Two dependencies are installed but not yet wired into screens — they were
+added during the design-system foundations sprint (Sprint 0) ahead of the
+sprints that consume them, so they will read as "unused" until then:
+
+- `@vueuse/motion` — registered globally in `src/main.ts`; press/stagger
+  animations land in Sprint 2 (Drawing + Guessing).
+- `html-to-image` — per-drawing PNG export lands in Sprint 4 (Final results).
+
+See `docs/superpowers/specs/2026-04-18-ui-redesign-2026-design.md` (§8.4).
+
 ## Routes
 
 - `/`: home and room entry flow
