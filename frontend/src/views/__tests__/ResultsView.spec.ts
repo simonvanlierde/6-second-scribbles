@@ -5,7 +5,6 @@ import ResultsView from "@/views/ResultsView.vue";
 
 const pushMock = vi.fn();
 const sendMock = vi.fn();
-const leaveRoomMock = vi.fn();
 
 type FinalScore = {
   playerId: string;
@@ -41,12 +40,6 @@ vi.mock("@/composables/useGameConnection", () => ({
   }),
 }));
 
-vi.mock("@/composables/useLeaveRoom", () => ({
-  useLeaveRoom: () => ({
-    leaveRoom: leaveRoomMock,
-  }),
-}));
-
 vi.mock("@/stores/game", () => ({
   useGameStore: () => storeMock,
 }));
@@ -74,7 +67,6 @@ function createStoreMock(finalScores: FinalScore[]): StoreMock {
 beforeEach(() => {
   pushMock.mockClear();
   sendMock.mockClear();
-  leaveRoomMock.mockClear();
   storeMock = createStoreMock([
     { playerId: "p1", playerName: "Alice", score: 42 },
     { playerId: "p2", playerName: "Bob", score: 42 },
