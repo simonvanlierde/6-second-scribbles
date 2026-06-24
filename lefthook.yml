@@ -22,7 +22,7 @@ pre-commit:
 
 pre-push:
   parallel: true
-  files: git diff --name-only --diff-filter=ACMR HEAD @{push}
+  files: git diff --name-only --diff-filter=ACMR HEAD @{push} 2>/dev/null || git ls-files
   commands:
     check-root:
       run: just check-root
