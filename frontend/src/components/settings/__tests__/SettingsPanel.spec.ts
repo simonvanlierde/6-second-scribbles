@@ -44,14 +44,20 @@ describe("SettingsPanel", () => {
     expect((input?.element as HTMLInputElement).value).toBe("Simon");
   });
 
-  it("renders three theme picker segments", () => {
+  it("renders three theme options in the theme dropdown", () => {
     const w = mountPanel();
-    const segs = w.findAll(".hd-seg__item");
-    expect(segs).toHaveLength(3);
+    // Locale + theme are both .ctrl__dropdown listboxes; the locale one is
+    // the scrollable variant, so the theme dropdown is the non-scroll one.
+    const themeDropdown = w.findAll(".ctrl__dropdown").find((d) => !d.classes().includes("ctrl__dropdown--scroll"));
+    expect(themeDropdown).toBeTruthy();
+    expect(themeDropdown?.findAll(".ctrl__option")).toHaveLength(3);
   });
 
-  it("renders an avatar color picker with 6 swatches", () => {
+  it("reveals an avatar color picker with 6 swatches when the avatar is clicked", async () => {
     const w = mountPanel({ localPlayerName: "Simon" });
+    // The picker is collapsed by default; clicking the avatar button expands it.
+    expect(w.find('[role="radiogroup"][aria-label="Avatar color"]').exists()).toBe(false);
+    await w.find(".avatar-btn").trigger("click");
     const picker = w.find('[role="radiogroup"][aria-label="Avatar color"]');
     expect(picker.exists()).toBe(true);
     expect(picker.findAll("button")).toHaveLength(6);
@@ -59,10 +65,8 @@ describe("SettingsPanel", () => {
 
   it("renders a sound toggle button", () => {
     const w = mountPanel();
-    // The sound section contains an HdPill + HdButton — the button is the
-    // one that isn't the dialog close. There's exactly one .hd-btn in the
-    // panel body (Toggle).
-    const toggles = w.findAll(".hd-btn");
-    expect(toggles.length).toBeGreaterThan(0);
+    // The sound control is the only button exposing aria-pressed state.
+    const soundBtn = w.find("button[aria-pressed]");
+    expect(soundBtn.exists()).toBe(true);
   });
 });
