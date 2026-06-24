@@ -123,7 +123,7 @@ jobs:
         uses: ./.github/actions/setup-node-pnpm
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Install root/frontend deps
         run: pnpm install --frozen-lockfile
