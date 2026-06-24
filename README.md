@@ -1,92 +1,50 @@
 # 6 Second Scribbles
 
-6 Second Scribbles is a real-time multiplayer drawing and guessing game for short, room-based rounds. One player draws through a rapid list of prompts, everyone else tries to identify what was drawn, and the room cycles through lobby, round, and results states over WebSockets.
+6 Second Scribbles is a real-time, multiplayer drawing-and-guessing game. One player races through a list of prompts while everyone else guesses what's being drawn, and rooms move through lobby, round, and results states over WebSockets.
 
-This repository contains the full stack application:
+> **Work in progress** — the full game loop works and is covered by tests, but there's no hosted demo yet and the UI is mid-redesign.
 
-- `frontend/`: Vue 3 app built with Vite, Pinia, and Vue Router
-- `backend/`: FastAPI application with PostgreSQL and Redis
-- `contracts/`: committed API and WebSocket contract artifacts shared between both sides
+## Stack
 
-## What The Project Includes
+- **Frontend** — Vue 3, TypeScript, Pinia, Vite, vue-i18n
+- **Backend** — FastAPI, SQLAlchemy, PostgreSQL, Redis
+- **Tooling** — pnpm, uv, just, Docker Compose, Vitest, Playwright, pytest
 
-- Public room flow with real-time multiplayer state
-- Guest and registered-user auth flows
-- Category and prompt data with locale-aware translations
-- Generated client/server contracts to keep frontend and backend aligned
-- Unit, integration, and end-to-end test coverage
+It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI and WebSocket schemas shared by both sides).
 
-## Tech Stack
+## Status
 
-- Frontend: Vue 3, TypeScript, Pinia, Vite, vue-i18n
-- Backend: FastAPI, SQLAlchemy, PostgreSQL, Redis
-- Tooling: pnpm, uv, just, Docker Compose, Playwright, Vitest, pytest
+### Working
 
-## Getting Started
+- Real-time multiplayer rooms over WebSockets
+- Full game loop: lobby → drawing → guessing → results
+- Guest and registered-user accounts
+- Locale-aware prompt categories and guess matching
+- Generated client/server contracts
+- Unit, integration, and end-to-end tests
 
-### Prerequisites
+### Planned
 
-- Node.js 24+
-- Python 3.14+
-- `pnpm`
-- `uv`
-- `just`
-- Docker and Docker Compose
+- A public hosted demo (it currently runs locally only)
+- Finishing the UI and design-system redesign (home and lobby done so far)
 
-### Local Development
+## Running locally
 
-1. Install dependencies:
-
-   ```bash
-   just install
-   ```
-
-2. Create local environment files:
-
-   ```bash
-   cp backend/.env.example backend/.env.dev
-   cp frontend/.env.example frontend/.env.local
-   ```
-
-3. Start the full development stack:
-
-   ```bash
-   just dev
-   ```
-
-This starts Docker services plus the frontend and backend dev servers. If you only want the containerized stack, use `just up`.
-
-### Useful Commands
+Requires Node 24+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
 
 ```bash
-just dev
-just up
-just down
-just test
-just check
-just format
-just generate-contracts
+just install                                   # install dependencies
+cp backend/.env.example backend/.env.dev
+cp frontend/.env.example frontend/.env.local
+just dev                                        # Docker services + dev servers
 ```
 
-## Project Docs
-
-- [Frontend](frontend/README.md)
-- [Backend](backend/README.md)
-- [Contracts](contracts/README.md)
-
-## Notes On Scope
-
-This is still an early-stage project. The codebase favors simple, understandable implementations over preserving every old behavior or optimization.
+`just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more.
 
 ## Attribution
 
-This multiplayer implementation is inspired by:
-
-1. *Six Second Scribbles*, created by Hazel Reynolds and published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles)
-2. The solo web version by Oliver Culley de Lange on [GitHub](https://github.com/OliverCulleyDeLange/6ss)
+Inspired by *Six Second Scribbles* by Hazel Reynolds, published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles), and the solo web version by [Oliver Culley de Lange](https://github.com/OliverCulleyDeLange/6ss).
 
 ## License
 
-The code in this repository is released under the MIT License.
-
-The original *Six Second Scribbles* game concept, brand, and card content remain the property of their respective owners.
+Code is released under the MIT License. The original *Six Second Scribbles* game concept, brand, and card content remain the property of their respective owners.
