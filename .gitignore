@@ -34,6 +34,3 @@ node_modules/
 AGENTS.md
 .claude
 .superpowers
-
-### Git worktrees
-.worktrees/
