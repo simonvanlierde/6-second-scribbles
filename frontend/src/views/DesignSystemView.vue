@@ -22,7 +22,7 @@ const timerSeconds = ref(42);
 const { enabled: soundEnabled, play } = useSound();
 const reactions = useReactions();
 
-const samplePlayers = ["simon", "maya", "jules", "anya", "rio", "kai"];
+const samplePlayers = ["simon", "maya", "jules", "anna", "rio", "kai"];
 const playerSwatches = computed(() =>
   samplePlayers.map((name) => ({
     name,
