@@ -25,6 +25,7 @@ ignorePaths:
   - "contracts/openapi.json"
   - "contracts/room-events.json"
   - "contracts/jsonschema/**"
+  - "docs/superpowers/**"
   - "frontend/src/locales/**"
   - "frontend/src/generated/**"
 
@@ -51,15 +52,25 @@ words:
   - htmlcov
   - Isguest
   - justfile
+  - kalam
   - nosniff
+  - opencc
   - persistedstate
-  - zstd
+  - postit
+  - selectinload
+  - uppercased
   - usefixtures
   - whereclause
+  - zstd
 
   # Language names
+  - Deutsch
   - Español
   - Français
+  - Italiano
+  - Nederlands
+  - Polski
+  - Português
 
   # Category names and aliases
   - agujereadora
