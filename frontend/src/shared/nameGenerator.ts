@@ -34,8 +34,10 @@ const NOUNS = [
   "Platypus",
 ];
 
+function pick(items: readonly string[]): string {
+  return items[Math.floor(Math.random() * items.length)] ?? "";
+}
+
 export function generateRandomName(): string {
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]!;
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)]!;
-  return `${adj} ${noun}`;
+  return `${pick(ADJECTIVES)} ${pick(NOUNS)}`;
 }
