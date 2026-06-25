@@ -4,8 +4,8 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
-import ToastContainer from "@/components/ToastContainer.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
+import HdToast from "@/components/ui/HdToast.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { setLocale } from "@/i18n";
@@ -65,7 +65,7 @@ onMounted(async () => {
     </HdIconButton>
 
     <RouterView />
-    <ToastContainer />
+    <HdToast />
     <SettingsPanel v-model:open="settingsOpen" />
   </div>
 </template>
