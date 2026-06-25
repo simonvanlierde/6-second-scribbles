@@ -232,7 +232,7 @@ def test_argos_provider_translate_and_prefetch_paths() -> None:
     """Argos provider trims translations, reuses installed pairs, and prefetches."""
     provider = _make_provider()
     translation = SimpleNamespace(translate=Mock(return_value=" gato "))
-    provider.argos_translate.get_translation_from_codes.return_value = translation
+    cast("Mock", provider.argos_translate.get_translation_from_codes).return_value = translation
 
     assert provider.translate("en", "es", "cat") == TRANSLATED_CAT_ES
     provider.prefetch_pairs("en", ["es", "fr"])
@@ -250,7 +250,7 @@ def test_argos_provider_errors_for_missing_dependency_and_package(monkeypatch: p
         ArgosTranslationProvider()
 
     provider = _make_provider()
-    provider.argos_translate.get_translation_from_codes.side_effect = AttributeError("missing")
+    cast("Mock", provider.argos_translate.get_translation_from_codes).side_effect = AttributeError("missing")
 
     with pytest.raises(RuntimeError, match="No Argos package available"):
         provider.ensure_pair("en", "it")
