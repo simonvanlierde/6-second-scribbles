@@ -21,7 +21,7 @@ pre-commit:
       stage_fixed: true
 
 # A fast confidence gate scoped to what's being pushed. The comprehensive
-# full-repo scans (spelling, security, contract regen + type-check) run in CI.
+# full-repo scans (spelling, security, contract regeneration + type-check) run in CI.
 pre-push:
   parallel: true
   files: git diff --name-only --diff-filter=ACMR HEAD @{push} 2>/dev/null || git ls-files

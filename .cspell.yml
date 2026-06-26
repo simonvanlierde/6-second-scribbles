@@ -20,6 +20,7 @@ ignorePaths:
   - "*-lock.*"
   - "*.sarif"
   - ".vscode/**"
+  - ".cspell.yml"
   - "backend/alembic/versions/**"
   - "backend/scripts/seed_data.yaml"
   - "backend/translation/.translation_cache.json"
