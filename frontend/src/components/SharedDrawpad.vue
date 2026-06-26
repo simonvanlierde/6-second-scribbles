@@ -1,23 +1,14 @@
 <template>
   <div>
-    <div class="mb-2 flex flex-wrap items-center gap-2 max-[768px]:text-sm max-[480px]:gap-1.5">
-      <div class="flex items-center gap-1">
-        <label class="text-sm font-medium max-[768px]:text-xs">{{ $t("common.color") }}:</label>
-        <input v-model="color" type="color">
-      </div>
-      <div class="flex items-center gap-1">
-        <label class="text-sm font-medium max-[768px]:text-xs">{{ $t("common.size") }}:</label>
-        <input v-model.number="width" type="range" min="1" max="20">
-      </div>
-      <div class="flex items-center gap-1">
-        <button
-          type="button"
-          class="cursor-pointer rounded-md border-0 px-4 py-2 text-sm font-semibold transition-all max-[480px]:px-2.5 max-[480px]:py-1.5 max-[480px]:text-xs"
-          @click="clearLocal"
-        >
-          {{ $t("common.clear") }}
-        </button>
-      </div>
+    <div class="mb-2">
+      <DrawingToolbar
+        :current-color="color"
+        :current-width="width"
+        @select-color="color = $event"
+        @select-size="width = $event"
+        @undo="canvas.undo()"
+        @clear="clearLocal"
+      />
     </div>
     <canvas
       ref="canvasEl"
@@ -30,8 +21,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue";
 
+import DrawingToolbar from "@/components/DrawingToolbar.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { BRUSH_SIZES, DRAW_PALETTE } from "@/config/drawing";
 import type { DrawStroke } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
@@ -40,8 +33,8 @@ const canvasEl = ref<HTMLCanvasElement | null>(null);
 const store = useGameStore();
 const { send } = useGameConnection();
 
-const color = ref("#000000");
-const width = ref(5);
+const color = ref<string>(DRAW_PALETTE[0]);
+const width = ref<number>(BRUSH_SIZES[1]);
 
 let rafId: number | null = null;
 let latestPartial: DrawStroke | null = null;
