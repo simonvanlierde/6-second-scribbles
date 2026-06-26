@@ -386,8 +386,8 @@ function confirmLeave() {
   gap: var(--space-1);
 }
 .swatch {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border: 2px solid var(--color-ink);
   border-radius: var(--r-pill);
   box-shadow: var(--shadow-pill);
@@ -404,8 +404,8 @@ function confirmLeave() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   background: var(--color-card);
   border: 2px solid var(--color-ink);
   border-radius: var(--r-pill);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, useId, watch } from "vue";
 
 import HdButton from "@/components/ui/HdButton.vue";
 
@@ -22,6 +22,8 @@ const open = defineModel<boolean>("open", { default: false });
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
 
 const dialogRef = ref<HTMLDialogElement | null>(null);
+const titleId = useId();
+const messageId = useId();
 
 watch(
   open,
@@ -46,9 +48,17 @@ function onCancel(): void {
 </script>
 
 <template>
-  <dialog ref="dialogRef" class="hd-dialog" @click.self="onCancel" @close="onCancel">
-    <h2 class="hd-dialog__title">{{ props.title }}</h2>
-    <p v-if="props.message" class="hd-dialog__message">{{ props.message }}</p>
+  <dialog
+    ref="dialogRef"
+    class="hd-dialog"
+    aria-modal="true"
+    :aria-labelledby="titleId"
+    :aria-describedby="props.message ? messageId : undefined"
+    @click.self="onCancel"
+    @close="onCancel"
+  >
+    <h2 :id="titleId" class="hd-dialog__title">{{ props.title }}</h2>
+    <p v-if="props.message" :id="messageId" class="hd-dialog__message">{{ props.message }}</p>
     <slot />
     <div class="hd-dialog__actions">
       <HdButton v-if="props.cancelLabel" variant="secondary" data-testid="hd-dialog-cancel" @click="onCancel">

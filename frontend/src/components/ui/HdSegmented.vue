@@ -67,7 +67,7 @@ function onChange(value: string): void {
   font-size: var(--text-body-md);
   color: var(--color-ink);
   cursor: pointer;
-  min-height: 36px;
+  min-height: 44px;
 }
 .hd-seg__item + .hd-seg__item {
   border-left: 1.5px solid var(--color-ink);

@@ -27,8 +27,8 @@ defineEmits<{ react: [ReactionKey] }>();
   justify-content: center;
 }
 .hd-rpad__btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px 16px 11px 14px;
   background: var(--color-card);
   border: 2px solid var(--color-ink);
