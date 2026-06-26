@@ -5,7 +5,7 @@ import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/u
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { normalizeGamePhase } from "@/shared/gamePhase";
-import type { Card, Difficulty, KickVote, Player, RoundResult } from "@/shared/types";
+import type { Card, Difficulty, KickVote, Player, RoundHighlights, RoundResult } from "@/shared/types";
 import { useDrawingStore } from "./drawing";
 
 function getBrowserLocale(): string {
@@ -49,6 +49,7 @@ export const useGameStore = defineStore(
     const guessTargets = ref<Record<string, string>>({});
     const localPlayerCard = ref<Card | undefined>();
     const lastRoundResults = ref<RoundResult[]>([]);
+    const lastHighlights = ref<RoundHighlights | null>(null);
     const readyCount = ref<number>(0);
     const totalPlayers = ref<number>(0);
 
@@ -241,6 +242,10 @@ export const useGameStore = defineStore(
       lastRoundResults.value = results;
     }
 
+    function setRoundHighlights(highlights: RoundHighlights | null) {
+      lastHighlights.value = highlights;
+    }
+
     function updateScores(scores: Record<string, number>) {
       for (const [playerId, score] of Object.entries(scores)) {
         const player = players.value.get(playerId);
@@ -337,6 +342,7 @@ export const useGameStore = defineStore(
       localPlayerCard.value = undefined;
       isSpectatorMode.value = false;
       lastRoundResults.value = [];
+      lastHighlights.value = null;
       categories.value = [];
       readyCount.value = 0;
       totalPlayers.value = 0;
@@ -372,6 +378,7 @@ export const useGameStore = defineStore(
       localPlayerCard,
       isSpectatorMode,
       lastRoundResults,
+      lastHighlights,
       categories,
       guessTargets,
       readyCount,
@@ -415,6 +422,7 @@ export const useGameStore = defineStore(
       endGame,
       setReadyStatus,
       setRoundResults,
+      setRoundHighlights,
       updateScores,
       getFinalScores,
       getWinner,

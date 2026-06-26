@@ -2,7 +2,14 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
+import GameHeader from "@/components/game/GameHeader.vue";
+import DrawingRevealGrid from "@/components/results/DrawingRevealGrid.vue";
+import RoundHighlights from "@/components/results/RoundHighlights.vue";
+import HdAvatar from "@/components/ui/HdAvatar.vue";
+import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
+import HdPill from "@/components/ui/HdPill.vue";
+import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_TIMINGS } from "@/config/gameConfig";
@@ -14,15 +21,13 @@ const router = useRouter();
 const { disconnect } = useGameConnection();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
-
 const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
 const leaveDialogOpen = ref(false);
 let countdownInterval: number | null = null;
+
+function avatarColorFor(playerId: string): string {
+  return store.players.get(playerId)?.color ?? getAvatarColor(playerId);
+}
 
 const currentScores = computed(() =>
   store.playersList.map((p) => ({ id: p.id, name: p.name, score: p.score })).sort((a, b) => b.score - a.score),
@@ -35,29 +40,35 @@ const resultsByPlayer = computed(() => {
   > = {};
 
   for (const result of store.lastRoundResults) {
-    if (!grouped[result.playerId]) {
-      grouped[result.playerId] = [];
-    }
-
     const targetPlayer = store.players.get(result.targetPlayerId);
-    const arr = grouped[result.playerId] as {
-      targetName: string;
-      correctGuesses: number;
-      totalItems: number;
-      pointsEarned: number;
-    }[];
-    arr.push({
+    const bucket = grouped[result.playerId] ?? [];
+    bucket.push({
       targetName: targetPlayer?.name || i18n.global.t("common.unknown"),
       correctGuesses: result.correctGuesses,
       totalItems: result.totalItems,
       pointsEarned: result.pointsEarned,
     });
+    grouped[result.playerId] = bucket;
   }
 
   return grouped;
 });
 
 const isLastRound = computed(() => store.currentRound >= store.maxRounds);
+
+function leaveRoom() {
+  disconnect();
+  store.reset();
+  router.push({ name: "home" });
+}
+
+function showLeaveDialog() {
+  if (!shouldConfirm.value) {
+    leaveRoom();
+    return;
+  }
+  leaveDialogOpen.value = true;
+}
 
 onMounted(() => {
   countdownInterval = window.setInterval(() => {
@@ -75,145 +86,65 @@ onUnmounted(() => {
     countdownInterval = null;
   }
 });
-
-function showLeaveDialog() {
-  if (!shouldConfirm.value) {
-    leaveRoom();
-    return;
-  }
-  leaveDialogOpen.value = true;
-}
 </script>
 
 <template>
-  <div
-    class="flex min-h-screen flex-col"
-    style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)"
-  >
-    <header
-      class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-black/25 px-6 py-3.5 backdrop-blur-md"
-    >
-      <h1 class="m-0 text-[1.375rem] font-extrabold text-white">
+  <div class="round-results">
+    <GameHeader :time-left="countdown" @leave="showLeaveDialog" />
+
+    <div class="round-results__body">
+      <p class="round-results__lead">
         {{ $t("roundResults.title", { round: store.currentRound }) }}
-      </h1>
-      <div class="flex items-center gap-3">
-        <div
-          class="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3.5 py-1.5 text-sm font-semibold text-white"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          {{ isLastRound ? $t("roundResults.finalResultsSoon") : $t("roundResults.nextRoundSoon") }}
-          {{ $t("common.countdownIn", { count: countdown }) }}
-        </div>
-        <button
-          type="button"
-          class="btn-leave flex cursor-pointer items-center gap-1 rounded-md border-[1.5px] border-white/45 bg-white/15 px-3.5 py-2 text-sm font-semibold text-white transition-all hover:border-white/75 hover:bg-white/25"
-          @click="showLeaveDialog"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          {{ $t("common.leave") }}
-        </button>
-      </div>
-    </header>
+        ·
+        {{ isLastRound ? $t("roundResults.finalResultsSoon") : $t("roundResults.nextRoundSoon") }}
+        {{ $t("common.countdownIn", { count: countdown }) }}
+      </p>
 
-    <div class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 p-6 max-[768px]:p-4">
-      <section>
-        <h2 class="m-0 mb-3.5 text-lg font-bold tracking-wider text-white/95 uppercase">
-          {{ $t("roundResults.roundPerformance") }}
-        </h2>
-        <div
-          class="grid gap-4 max-[768px]:grid-cols-1"
-          style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))"
-        >
-          <div v-for="player in store.playersList" :key="player.id" class="rounded-lg bg-white p-5 shadow-md">
-            <h3 class="m-0 mb-3.5 border-b-2 border-primary pb-2 text-[1.0625rem] font-bold text-ink-dark">
-              {{ player.name }}
-            </h3>
-            <div v-if="resultsByPlayer[player.id]" class="flex flex-col gap-2">
-              <div
-                v-for="(result, index) in resultsByPlayer[player.id]"
-                :key="index"
-                class="rounded-sm border-l-[3px] border-primary bg-surface px-3 py-2"
-              >
-                <span class="mb-1 block text-[0.8125rem] text-ink-muted">
-                  {{ $t("roundResults.guessedPlayersDrawing", { name: result.targetName }) }}
-                </span>
-                <div class="flex items-center justify-between">
-                  <span class="text-base font-bold text-ink-dark">
-                    {{ result.correctGuesses }}/{{ result.totalItems }}
-                  </span>
-                  <span class="text-[0.9375rem] font-bold text-primary">
-                    +{{ $t("common.pointsShort", { count: result.pointsEarned }) }}
-                  </span>
-                </div>
+      <RoundHighlights :highlights="store.lastHighlights" />
+
+      <div class="round-results__columns">
+        <section class="round-results__col">
+          <h2 class="round-results__heading">{{ $t("roundResults.roundPerformance") }}</h2>
+          <div class="performance">
+            <HdCard v-for="player in store.playersList" :key="player.id" class="performance__card">
+              <div class="performance__head">
+                <HdAvatar :initial="getAvatarInitial(player.name)" :color="avatarColorFor(player.id)" size="sm" />
+                <span class="performance__name">{{ player.name }}</span>
               </div>
-            </div>
-            <p v-else class="m-0 py-2 text-sm text-ink-muted italic">{{ $t("roundResults.noGuessesSubmitted") }}</p>
+              <ul v-if="resultsByPlayer[player.id]" class="performance__list">
+                <li v-for="(result, index) in resultsByPlayer[player.id]" :key="index" class="performance__row">
+                  <span class="performance__target">
+                    {{ $t("roundResults.guessedPlayersDrawing", { name: result.targetName }) }}
+                  </span>
+                  <span class="performance__score">{{ result.correctGuesses }}/{{ result.totalItems }}</span>
+                  <HdPill variant="success">+{{ $t("common.pointsShort", { count: result.pointsEarned }) }}</HdPill>
+                </li>
+              </ul>
+              <p v-else class="performance__empty">{{ $t("roundResults.noGuessesSubmitted") }}</p>
+            </HdCard>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section>
-        <h2 class="m-0 mb-3.5 text-lg font-bold tracking-wider text-white/95 uppercase">
-          {{ $t("roundResults.currentStandings") }}
-        </h2>
-        <div class="flex flex-col gap-1.5 rounded-xl bg-white p-5 shadow-lg">
-          <div
-            v-for="(player, index) in currentScores"
-            :key="player.id"
-            class="flex items-center gap-3 rounded-md bg-surface px-4 py-3 text-base transition-transform"
-            :class="[
-              index === 0 && 'bg-gradient-to-br !from-[#ffd700] !to-[#ffed4e] font-bold',
-              player.id === store.localPlayerId && 'border-2 border-primary !bg-indigo-50',
-              index === 0 &&
-                player.id === store.localPlayerId &&
-                '!border-[#b8860b] bg-gradient-to-br !from-[#ffd700] !to-[#ffed4e]',
-            ]"
-          >
-            <span
-              class="rank min-w-6 text-[1.0625rem] font-extrabold"
-              :class="index === 0 ? 'text-[#b8860b]' : 'text-primary'"
+        <section class="round-results__col">
+          <h2 class="round-results__heading">{{ $t("roundResults.currentStandings") }}</h2>
+          <HdCard class="standings">
+            <div
+              v-for="(player, index) in currentScores"
+              :key="player.id"
+              class="standings__row"
+              :class="{ 'standings__row--you': player.id === store.localPlayerId }"
             >
-              {{ index + 1 }}
-            </span>
-            <span class="flex-1 font-medium">{{ player.name }}</span>
-            <span
-              v-if="player.id === store.localPlayerId"
-              class="rounded-full px-2 py-0.5 text-xs font-bold text-white"
-              :class="index === 0 ? 'bg-[#b8860b]' : 'bg-primary'"
-            >
-              {{ $t("common.you") }}
-            </span>
-            <span class="font-bold" :class="index === 0 ? 'text-[#b8860b]' : 'text-primary'">
-              {{ $t("common.pointsShort", { count: player.score }) }}
-            </span>
-          </div>
-        </div>
-      </section>
+              <span class="standings__rank">{{ index + 1 }}</span>
+              <HdAvatar :initial="getAvatarInitial(player.name)" :color="avatarColorFor(player.id)" size="sm" />
+              <span class="standings__name">{{ player.name }}</span>
+              <HdPill v-if="player.id === store.localPlayerId" class="standings__you">{{ $t("common.you") }}</HdPill>
+              <span class="standings__score">{{ $t("common.pointsShort", { count: player.score }) }}</span>
+            </div>
+          </HdCard>
+        </section>
+      </div>
+
+      <DrawingRevealGrid />
     </div>
 
     <HdDialog
@@ -227,3 +158,134 @@ function showLeaveDialog() {
     />
   </div>
 </template>
+
+<style scoped>
+.round-results {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-paper);
+}
+.round-results__body {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.round-results__lead {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  color: var(--color-ink-muted);
+}
+.round-results__columns {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+.round-results__heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-heading-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+.performance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.performance__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.performance__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-sm);
+  color: var(--color-ink);
+}
+.performance__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.performance__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.performance__target {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  color: var(--color-ink-muted);
+}
+.performance__score {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.performance__empty {
+  margin: 0;
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+.standings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.standings__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-pill);
+}
+.standings__row--you {
+  background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
+}
+.standings__rank {
+  min-width: 1.25rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-marker-red);
+}
+.standings__name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+.standings__you {
+  font-size: var(--text-label-sm);
+}
+.standings__score {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+@media (max-width: 768px) {
+  .round-results__body {
+    padding: var(--space-4);
+    gap: var(--space-6);
+  }
+  .round-results__columns {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

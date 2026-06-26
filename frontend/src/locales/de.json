@@ -160,7 +160,18 @@
     "roundPerformance": "Round Performance",
     "currentStandings": "Current Standings",
     "guessedPlayersDrawing": "Guessed {name}'s drawing",
-    "noGuessesSubmitted": "No guesses submitted"
+    "noGuessesSubmitted": "No guesses submitted",
+    "highlightsTitle": "Round highlights",
+    "bestGuesser": "Best guesser",
+    "speedDemon": "Speed demon",
+    "wildestMiss": "Wildest miss",
+    "bestGuesserDetail": "Got {detail} right",
+    "speedDemonDetail": "First to guess",
+    "wildestMissDetail": "Guessed “{detail}”",
+    "noHighlights": "No highlights this round",
+    "revealTitle": "All drawings",
+    "noDrawings": "No drawings to show",
+    "drawingAlt": "{name}'s drawing"
   },
   "spectator": {
     "drawingRound": "Drawing round",

@@ -5,6 +5,7 @@ import {
   handleDrawingEvent,
   handleGameFlowEvent,
   handleKickEvent,
+  handleResultsEvent,
 } from "@/composables/connection/handlers";
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, UI_TIMINGS } from "@/config/gameConfig";
@@ -167,6 +168,10 @@ export function useGameConnection() {
       case "drawpad_clear":
       case "pad_visibility":
         handleDrawingEvent(message, ctx);
+        break;
+
+      case "reaction_received":
+        handleResultsEvent(message, ctx);
         break;
 
       case "kick_vote_started":

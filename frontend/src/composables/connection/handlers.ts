@@ -9,6 +9,7 @@ import type { Ref } from "vue";
 import type { Router } from "vue-router";
 
 import type { NotificationType } from "@/composables/notifications";
+import { REACTION_KEYS, type ReactionKey, useReactions } from "@/composables/useReactions";
 import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEventGroup, ServerEventOf } from "@/generated/protocol";
 import { i18n } from "@/i18n";
@@ -43,6 +44,11 @@ type GameFlowEvent = ServerEventOf<
 >;
 type DrawingEvent = ServerEventGroup<"drawing">;
 type KickEvent = ServerEventGroup<"moderation">;
+type ResultsEvent = ServerEventGroup<"results">;
+
+function isReactionKey(key: string): key is ReactionKey {
+  return (REACTION_KEYS as readonly string[]).includes(key);
+}
 
 // ── Connection & player events ────────────────────────────────────────────────
 
@@ -145,7 +151,9 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
       break;
 
     case "round_complete":
+      useReactions().clear(); // drop the previous round's reactions before showing this one
       store.setRoundResults(message.results);
+      store.setRoundHighlights(message.highlights ?? null);
       store.updateScores(message.scores);
       store.gamePhase = "round_results";
       store.readyCount = 0;
@@ -219,6 +227,18 @@ export function handleDrawingEvent(message: DrawingEvent, ctx: HandlerContext): 
       store.setRoomPadVisible(message.visible);
       if (!store.isHost) {
         showNotification(i18n.global.t(message.visible ? "notifications.drawpadShown" : "notifications.drawpadHidden"));
+      }
+      break;
+  }
+}
+
+// ── Results events (reactions) ────────────────────────────────────────────────
+
+export function handleResultsEvent(message: ResultsEvent, _ctx: HandlerContext): void {
+  switch (message.type) {
+    case "reaction_received":
+      if (isReactionKey(message.reactionKey)) {
+        useReactions().add(message.drawingId, message.reactionKey);
       }
       break;
   }

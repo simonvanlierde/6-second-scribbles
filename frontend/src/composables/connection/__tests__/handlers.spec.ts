@@ -7,7 +7,9 @@ import {
   handleConnectionEvent,
   handleGameFlowEvent,
   handleKickEvent,
+  handleResultsEvent,
 } from "@/composables/connection/handlers";
+import { useReactions } from "@/composables/useReactions";
 import { useGameStore } from "@/stores/game";
 
 describe("connection handlers translations", () => {
@@ -70,5 +72,37 @@ describe("connection handlers translations", () => {
 
     expect(showNotification).toHaveBeenNthCalledWith(1, "Started kick vote for Bob");
     expect(showNotification).toHaveBeenNthCalledWith(2, "Bob was kicked from the room");
+  });
+
+  it("stores highlights and clears stale reactions on round_complete", () => {
+    const reactions = useReactions();
+    reactions.clear();
+    reactions.add("p2", "laugh");
+
+    handleGameFlowEvent(
+      {
+        type: "round_complete",
+        results: [],
+        scores: { p1: 0 },
+        highlights: { bestGuesser: { playerId: "p1", detail: "2/2" }, speedDemon: null, wildestMiss: null },
+      },
+      ctx,
+    );
+
+    expect(store.lastHighlights?.bestGuesser?.playerId).toBe("p1");
+    expect(reactions.countsFor("p2").laugh).toBe(0);
+  });
+
+  it("records a received reaction and ignores unknown reaction keys", () => {
+    const reactions = useReactions();
+    reactions.clear();
+
+    handleResultsEvent({ type: "reaction_received", drawingId: "p2", reactionKey: "laugh", senderId: "p1" }, ctx);
+    handleResultsEvent(
+      { type: "reaction_received", drawingId: "p2", reactionKey: "bogus", senderId: "p1" } as never,
+      ctx,
+    );
+
+    expect(reactions.countsFor("p2").laugh).toBe(1);
   });
 });

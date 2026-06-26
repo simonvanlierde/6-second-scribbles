@@ -56,6 +56,19 @@ export interface RoundResult {
   pointsEarned: number;
 }
 
+export interface RoundHighlight {
+  playerId: string;
+  detail: string;
+}
+
+export interface RoundHighlights {
+  bestGuesser: RoundHighlight | null;
+  speedDemon: RoundHighlight | null;
+  wildestMiss: RoundHighlight | null;
+}
+
+export type HighlightKind = "bestGuesser" | "speedDemon" | "wildestMiss";
+
 export interface KickVote {
   currentVotes: number;
   requiredVotes: number;
