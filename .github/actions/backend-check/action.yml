@@ -23,21 +23,31 @@ runs:
           ${{ runner.os }}-uv-
 
     - name: Install backend deps
+      shell: bash
+      working-directory: backend
       run: uv sync --all-groups
 
     - name: Run backend ruff lint
-      run: uv run --project backend ruff check .
+      shell: bash
+      working-directory: backend
+      run: uv run ruff check .
 
     - name: Run backend type-check
-      run: uv run --project backend ty check .
+      shell: bash
+      working-directory: backend
+      run: uv run ty check .
 
     - name: Run backend unit tests
       if: ${{ inputs.run-tests-mode == 'unit' }}
-      run: uv run --project backend pytest -m unit -x --tb=short
+      shell: bash
+      working-directory: backend
+      run: uv run pytest tests/unit -x --tb=short
 
     - name: Run backend full tests
       if: ${{ inputs.run-tests-mode == 'all' }}
-      run: uv run --project backend pytest -x --tb=short
+      shell: bash
+      working-directory: backend
+      run: uv run pytest tests -x --tb=short
 
 inputs:
   run-tests-mode:
