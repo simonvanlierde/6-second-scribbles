@@ -380,3 +380,70 @@ def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> No
         join_response = join_player(ws_late, "p3", "Charlie")
         assert join_response["type"] == JOIN_ERROR
         assert join_response["error"] == GAME_IN_PROGRESS
+
+
+def test_round_complete_includes_highlights(test_client: TestClient) -> None:
+    """The round-complete payload carries computed highlights, broadcast identically."""
+    with joined_players(
+        test_client,
+        "HIGHLIGHT01",
+        [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
+    ) as (ws1, ws2):
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        receive_json(ws1)
+        receive_json(ws2)
+
+        send_json(
+            ws1,
+            {
+                "type": START_ROUND,
+                "round": 1,
+                "cards": {
+                    PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
+                    PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
+                },
+            },
+        )
+        receive_json(ws1)
+        receive_json(ws2)
+
+        send_json(ws1, {"type": "player_ready", "playerId": PLAYER_1})
+        receive_json(ws1)
+        receive_json(ws2)
+        send_json(ws2, {"type": "player_ready", "playerId": PLAYER_2})
+        # Drain the ready + start_guessing broadcasts for both clients.
+        for _ in range(4):
+            receive_json(ws1)
+        for _ in range(4):
+            receive_json(ws2)
+
+        send_json(ws1, {"type": "submit_guess", "playerId": PLAYER_1, "targetPlayerId": PLAYER_2, "guesses": ["x"]})
+        send_json(ws2, {"type": "submit_guess", "playerId": PLAYER_2, "targetPlayerId": PLAYER_1, "guesses": ["y"]})
+
+        round_complete = (receive_json(ws1), receive_json(ws2))
+        assert round_complete[0]["type"] == ROUND_COMPLETE
+        assert round_complete[0]["highlights"] == round_complete[1]["highlights"]
+
+        highlights = round_complete[0]["highlights"]
+        assert highlights is not None
+        # Both players submitted non-empty guesses, so a speed demon is always present.
+        assert highlights["speedDemon"]["playerId"] == PLAYER_1
+
+
+def test_reaction_send_broadcasts_to_all_players(test_client: TestClient) -> None:
+    """A reaction is echoed to every player in the room, including the sender."""
+    reaction_key = "laugh"
+    reaction_received = "reaction_received"
+    with joined_players(
+        test_client,
+        "REACT01",
+        [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
+    ) as (ws1, ws2):
+        send_json(ws1, {"type": "reaction_send", "drawingId": PLAYER_2, "reactionKey": reaction_key})
+
+        for socket in (ws1, ws2):
+            message = receive_json(socket)
+            assert message["type"] == reaction_received
+            assert message["drawingId"] == PLAYER_2
+            assert message["reactionKey"] == reaction_key
+            assert message["senderId"] == PLAYER_1

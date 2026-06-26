@@ -13,6 +13,7 @@ from app.rooms.protocol import (
     JoinErrorEvent,
     PlayerJoinedEvent,
     PlayerLeftEvent,
+    ReactionReceivedServerEvent,
     RoomCustomCategoriesUpdateServerEvent,
     StartGuessingEvent,
     StartRoundServerEvent,
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
         PadVisibilityEvent,
         PlayerReadyEvent,
         PrivacyChangedEvent,
+        ReactionSendEvent,
         RequestGameStateEvent,
         RestartGameEvent,
         RoomCustomCategoriesUpdateEvent,
@@ -309,6 +311,19 @@ async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEve
     await session.room.broadcast(event)
 
 
+async def handle_reaction_send(session: RoomWebSocketSession, event: ReactionSendEvent) -> None:
+    """Broadcast an ephemeral drawing reaction to everyone in the room (sender included)."""
+    if not session.player_id:
+        return
+    await session.room.broadcast(
+        ReactionReceivedServerEvent(
+            drawingId=event.drawing_id,
+            reactionKey=event.reaction_key,
+            senderId=session.player_id,
+        ),
+    )
+
+
 async def handle_disconnect(session: RoomWebSocketSession) -> None:
     """Remove the session player from the room and broadcast departure."""
     if not session.player_id:
@@ -339,6 +354,7 @@ _HANDLERS: dict[str, _Handler] = {
     "initiate_kick": handle_initiate_kick,
     "cast_kick_vote": handle_cast_kick_vote,
     "request_game_state": handle_request_game_state,
+    "reaction_send": handle_reaction_send,
 }
 
 

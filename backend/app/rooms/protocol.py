@@ -172,6 +172,15 @@ class RequestGameStateEvent(ClientEventModel):
     player_id: str | None = Field(default=None, alias="playerId")
 
 
+type ReactionKey = Literal["laugh", "shock", "art", "mind-blown", "think"]
+
+
+class ReactionSendEvent(ClientEventModel):
+    type: Literal["reaction_send"]
+    drawing_id: str = Field(alias="drawingId")  # owner of the drawing being reacted to
+    reaction_key: ReactionKey = Field(alias="reactionKey")
+
+
 ClientEvent = Annotated[
     JoinEvent
     | StartGameEvent
@@ -193,7 +202,8 @@ ClientEvent = Annotated[
     | PrivacyChangedEvent
     | InitiateKickEvent
     | CastKickVoteEvent
-    | RequestGameStateEvent,
+    | RequestGameStateEvent
+    | ReactionSendEvent,
     Field(discriminator="type"),
 ]
 
@@ -376,16 +386,41 @@ class RoundResultItem(BaseModel):
     points_earned: int = Field(alias="pointsEarned")
 
 
+class RoundHighlight(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    player_id: str = Field(alias="playerId")
+    # Non-localized data fragment (e.g. ratio "5/6" or the offending guess text);
+    # the display label is supplied by i18n on the client.
+    detail: str = ""
+
+
+class RoundHighlights(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    best_guesser: RoundHighlight | None = Field(default=None, alias="bestGuesser")
+    speed_demon: RoundHighlight | None = Field(default=None, alias="speedDemon")
+    wildest_miss: RoundHighlight | None = Field(default=None, alias="wildestMiss")
+
+
 class RoundCompleteServerEvent(ServerEventModel):
     type: Literal["round_complete"] = "round_complete"
     results: list[RoundResultItem]
     scores: dict[str, int]
+    highlights: RoundHighlights | None = None
 
 
 class GameCompleteServerEvent(ServerEventModel):
     type: Literal["game_complete"] = "game_complete"
     final_scores: dict[str, int] = Field(alias="finalScores")
     winner: str
+
+
+class ReactionReceivedServerEvent(ServerEventModel):
+    type: Literal["reaction_received"] = "reaction_received"
+    drawing_id: str = Field(alias="drawingId")
+    reaction_key: str = Field(alias="reactionKey")
+    sender_id: str = Field(alias="senderId")
 
 
 RelayedClientEvent = Annotated[
@@ -427,6 +462,7 @@ ServerEvent = Annotated[
     | PlayerKickedEvent
     | RoundCompleteServerEvent
     | GameCompleteServerEvent
+    | ReactionReceivedServerEvent
     | RelayedClientEvent,
     Field(discriminator="type"),
 ]
@@ -476,6 +512,7 @@ CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "pad_visibility": {"group": "drawing", "summary": "Show or hide the shared drawpad."},
     "cast_kick_vote": {"group": "moderation", "summary": "Cast a vote in an active kick vote."},
     "initiate_kick": {"group": "moderation", "summary": "Start a kick vote for a target player."},
+    "reaction_send": {"group": "results", "summary": "Send a reaction to a drawing during round results."},
 }
 
 SERVER_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
@@ -511,6 +548,7 @@ SERVER_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "protocol_error": {"group": "errors", "summary": "Malformed or invalid websocket payload."},
     "submit_guess_error": {"group": "errors", "summary": "Guess submission validation failed."},
     "host_changed": {"group": "gameFlow", "summary": "Host ownership changed."},
+    "reaction_received": {"group": "results", "summary": "A drawing reaction broadcast to the room."},
 }
 
 CONTRACT_EVENT_CATALOG = {

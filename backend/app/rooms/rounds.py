@@ -13,11 +13,13 @@ from app.rooms.protocol import (
     GameCompleteServerEvent,
     ReadyStatusEvent,
     RoundCompleteServerEvent,
+    RoundHighlight,
+    RoundHighlights,
     RoundResultItem,
     StartGuessingEvent,
 )
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from app.scoring import guess_matcher
+from app.scoring import GuessTarget, guess_matcher
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -151,7 +153,12 @@ def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id:
         )
         return False
 
-    submission = GuessSubmissionState(player_id=player_id, target_player_id=target_player_id, guesses=guesses)
+    submission = GuessSubmissionState(
+        player_id=player_id,
+        target_player_id=target_player_id,
+        guesses=guesses,
+        submitted_at=int(time.time() * 1000),
+    )
     room.metadata.guess_submissions.append(submission)
     room.metadata.submitted_players.add(player_id)
     submitted = len(room.metadata.submitted_players)
@@ -179,10 +186,84 @@ def assign_guess_targets(player_ids: list[str]) -> dict[str, str]:
     return {player_id: shuffled[(i + 1) % len(shuffled)] for i, player_id in enumerate(shuffled)}
 
 
+def _best_guesser_highlight(results: list[RoundResultItem]) -> RoundHighlight | None:
+    """Pick the player with the highest correct/total ratio (needs ≥1 correct guess)."""
+    best: RoundResultItem | None = None
+    best_ratio = 0.0
+    for item in results:
+        if item.total_items <= 0 or item.correct_guesses <= 0:
+            continue
+        ratio = item.correct_guesses / item.total_items
+        better_ratio = best is None or ratio > best_ratio
+        tie_break = best is not None and ratio == best_ratio and item.correct_guesses > best.correct_guesses
+        if better_ratio or tie_break:
+            best = item
+            best_ratio = ratio
+    if best is None:
+        return None
+    return RoundHighlight(playerId=best.player_id, detail=f"{best.correct_guesses}/{best.total_items}")
+
+
+def _speed_demon_highlight(submissions: list[GuessSubmissionState]) -> RoundHighlight | None:
+    """Pick the first player to submit a non-empty guess set."""
+    candidates = [s for s in submissions if s.submitted_at > 0 and any(g.strip() for g in s.guesses)]
+    if not candidates:
+        return None
+    fastest = min(candidates, key=lambda s: s.submitted_at)
+    return RoundHighlight(playerId=fastest.player_id, detail="")
+
+
+def _wildest_miss_highlight(miss_candidates: list[tuple[str, str, float]]) -> RoundHighlight | None:
+    """Pick the guess furthest (string-distance) from any target item."""
+    if not miss_candidates:
+        return None
+    player_id, guess, _distance = max(miss_candidates, key=lambda c: c[2])
+    return RoundHighlight(playerId=player_id, detail=guess)
+
+
+def compute_highlights(
+    results: list[RoundResultItem],
+    submissions: list[GuessSubmissionState],
+    miss_candidates: list[tuple[str, str, float]],
+) -> RoundHighlights | None:
+    """Build the per-round highlights; returns None for empty/degenerate rounds.
+
+    ``miss_candidates`` is a list of ``(player_id, guess, distance)`` for guesses that
+    matched no target, where distance is ``100 - nearest_similarity``.
+    """
+    if not submissions:
+        return None
+    highlights = RoundHighlights(
+        best_guesser=_best_guesser_highlight(results),
+        speed_demon=_speed_demon_highlight(submissions),
+        wildest_miss=_wildest_miss_highlight(miss_candidates),
+    )
+    if highlights.best_guesser is None and highlights.speed_demon is None and highlights.wildest_miss is None:
+        return None
+    return highlights
+
+
+def _collect_miss_candidates(
+    *,
+    player_id: str,
+    guesses: list[str],
+    matched_guesses: set[str],
+    targets: list[GuessTarget],
+    miss_candidates: list[tuple[str, str, float]],
+) -> None:
+    """Append (player_id, guess, distance) for each guess that matched no target."""
+    for guess in guesses:
+        if guess in matched_guesses or not guess_matcher.normalize(guess):
+            continue
+        nearest = max((guess_matcher.fuzzy_match(guess, t.label)[1] for t in targets), default=0.0)
+        miss_candidates.append((player_id, guess, 100.0 - nearest))
+
+
 async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEvent:
     """Score the current round and update cumulative room scores."""
     results: list[RoundResultItem] = []
     round_points: dict[str, int] = dict.fromkeys(room.players, 0)
+    miss_candidates: list[tuple[str, str, float]] = []
 
     for submission in room.metadata.guess_submissions:
         player_id = submission.player_id
@@ -206,6 +287,14 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
         correct_count = scoring_result.score
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
+        _collect_miss_candidates(
+            player_id=player_id,
+            guesses=guesses,
+            matched_guesses={match.guess for match in scoring_result.matches},
+            targets=scoring_targets.targets,
+            miss_candidates=miss_candidates,
+        )
+
         if player_id in round_points:
             round_points[player_id] += points_earned
         if target_player_id in round_points:
@@ -228,6 +317,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
     return RoundCompleteServerEvent(
         results=results,
         scores=dict(room.metadata.player_scores),
+        highlights=compute_highlights(results, room.metadata.guess_submissions, miss_candidates),
     )
 
 

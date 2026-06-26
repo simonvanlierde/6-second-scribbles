@@ -29,6 +29,7 @@ class GuessSubmissionState(BaseModel):
     player_id: str
     target_player_id: str
     guesses: list[str]
+    submitted_at: int = 0  # ms epoch; used to compute the "speed demon" highlight
 
 
 class RoomMetadataState(BaseModel):
