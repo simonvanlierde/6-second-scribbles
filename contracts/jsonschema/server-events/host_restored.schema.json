@@ -1,0 +1,17 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "host_restored",
+      "title": "Type",
+      "type": "string"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    }
+  },
+  "required": ["message", "type"],
+  "title": "HostRestoredEvent",
+  "type": "object"
+}

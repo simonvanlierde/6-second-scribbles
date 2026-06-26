@@ -1,0 +1,24 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "game_complete",
+      "title": "Type",
+      "type": "string"
+    },
+    "finalScores": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Finalscores",
+      "type": "object"
+    },
+    "winner": {
+      "title": "Winner",
+      "type": "string"
+    }
+  },
+  "required": ["finalScores", "type", "winner"],
+  "title": "GameCompleteServerEvent",
+  "type": "object"
+}

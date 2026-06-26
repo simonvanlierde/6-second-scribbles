@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "../styles/fonts.css";
+@import "../styles/tokens.css";
+
+/* Bridge our CSS tokens into Tailwind's theme so utilities like `bg-paper`,
+ * `text-ink`, `rounded-card`, `shadow-card` work. */
+@theme {
+  --color-paper: var(--color-paper);
+  --color-card: var(--color-card);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-marker-red: var(--color-marker-red);
+  --color-ballpoint-blue: var(--color-ballpoint-blue);
+  --color-highlighter-yellow: var(--color-highlighter-yellow);
+  --color-meadow-green: var(--color-meadow-green);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-button: var(--shadow-button);
+  --shadow-pill: var(--shadow-pill);
+}
+
+@layer base {
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    font-size: var(--text-body-md);
+    line-height: 1.5;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-text);
+  }
+  h1 {
+    font-size: var(--text-display-md);
+  }
+  h2 {
+    font-size: var(--text-heading-lg);
+  }
+  h3 {
+    font-size: var(--text-heading-md);
+  }
+  h4 {
+    font-size: var(--text-heading-sm);
+  }
+  /* Universal focus ring */
+  *:focus-visible {
+    outline: 3px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("../styles/texture.svg");
+    background-size: 200px 200px;
+    opacity: 0.04;
+    mix-blend-mode: multiply;
+    z-index: 0;
+  }
+}

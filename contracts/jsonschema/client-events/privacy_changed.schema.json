@@ -1,0 +1,16 @@
+{
+  "properties": {
+    "type": {
+      "const": "privacy_changed",
+      "title": "Type",
+      "type": "string"
+    },
+    "isPrivate": {
+      "title": "Isprivate",
+      "type": "boolean"
+    }
+  },
+  "required": ["isPrivate", "type"],
+  "title": "PrivacyChangedEvent",
+  "type": "object"
+}

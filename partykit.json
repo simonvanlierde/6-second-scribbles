@@ -1,7 +1,0 @@
-{
-  "$schema": "https://www.partykit.io/schema.json",
-  "name": "draw6s",
-  "main": "src/server/index.ts",
-  "compatibilityDate": "2025-11-11",
-  "port": 1999
-}

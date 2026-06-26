@@ -1,0 +1,31 @@
+{
+  "properties": {
+    "type": {
+      "const": "start_guessing",
+      "title": "Type",
+      "type": "string"
+    },
+    "guessingStartTime": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Guessingstarttime"
+    },
+    "guessTargets": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Guesstargets",
+      "type": "object"
+    }
+  },
+  "required": ["type"],
+  "title": "StartGuessingEvent",
+  "type": "object"
+}

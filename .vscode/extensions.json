@@ -1,11 +1,10 @@
 {
   "recommendations": [
-    "Vue.volar",
-    "vitest.explorer",
+    "biomejs.biome",
+    "charliermarsh.ruff",
+    "ms-python.python",
     "ms-playwright.playwright",
-    "dbaeumer.vscode-eslint",
-    "EditorConfig.EditorConfig",
-    "oxc.oxc-vscode",
-    "esbenp.prettier-vscode"
+    "vitest.explorer",
+    "Vue.volar"
   ]
 }

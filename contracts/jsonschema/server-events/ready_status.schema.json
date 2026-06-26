@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "ready_status",
+      "title": "Type",
+      "type": "string"
+    },
+    "readyCount": {
+      "title": "Readycount",
+      "type": "integer"
+    },
+    "totalPlayers": {
+      "title": "Totalplayers",
+      "type": "integer"
+    }
+  },
+  "required": ["readyCount", "totalPlayers", "type"],
+  "title": "ReadyStatusEvent",
+  "type": "object"
+}

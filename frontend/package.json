@@ -1,0 +1,58 @@
+{
+  "name": "six-second-scribbles-multiplayer",
+  "version": "0.1.0",
+  "description": "Multiplayer web implementation of Six Second Scribbles party drawing game",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "contracts:generate": "node scripts/generate-contracts.mjs",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui --headed",
+    "format": "biome check --write .",
+    "type-check": "vue-tsc --build",
+    "lint": "biome check ."
+  },
+  "dependencies": {
+    "@fontsource/kalam": "^5.2.8",
+    "@fontsource/patrick-hand": "^5.2.8",
+    "@vueuse/core": "^14.2.1",
+    "howler": "^2.2.4",
+    "pinia": "^3.0.4",
+    "pinia-plugin-persistedstate": "^4.7.1",
+    "vue": "^3.5.32",
+    "vue-i18n": "^11.3.2",
+    "vue-router": "^5.0.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@pinia/testing": "^1.0.3",
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tsconfig/node24": "^24.0.4",
+    "@types/howler": "^2.2.12",
+    "@types/jsdom": "^28.0.1",
+    "@types/node": "^25.6.0",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vitejs/plugin-vue-jsx": "^5.1.5",
+    "@vitest/coverage-v8": "^4.1.4",
+    "@vue/test-utils": "^2.4.6",
+    "@vue/tsconfig": "^0.9.1",
+    "jsdom": "^29.0.2",
+    "json-schema-to-zod": "^2.8.1",
+    "tailwindcss": "^4.2.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4",
+    "vue-tsc": "^3.2.6"
+  }
+}

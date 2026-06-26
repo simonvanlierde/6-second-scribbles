@@ -1,0 +1,56 @@
+name: "Backend check"
+description: "Install backend deps (uv) and run ruff/ty checks and optional tests via uv."
+runs:
+  using: "composite"
+  steps:
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v8.1.0
+
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache uv
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Install backend deps
+      shell: bash
+      working-directory: backend
+      run: uv sync --all-groups
+
+    - name: Run backend ruff lint
+      shell: bash
+      working-directory: backend
+      run: uv run ruff check .
+
+    - name: Run backend type-check
+      shell: bash
+      working-directory: backend
+      run: uv run ty check .
+
+    - name: Run backend unit tests
+      if: ${{ inputs.run-tests-mode == 'unit' }}
+      shell: bash
+      working-directory: backend
+      run: uv run pytest tests/unit -x --tb=short
+
+    - name: Run backend full tests
+      if: ${{ inputs.run-tests-mode == 'all' }}
+      shell: bash
+      working-directory: backend
+      run: uv run pytest tests -x --tb=short
+
+inputs:
+  run-tests-mode:
+    description: 'none | unit | all'
+    required: false
+    default: 'none'

@@ -1,0 +1,501 @@
+import { defineStore, storeToRefs } from "pinia";
+import { computed, ref } from "vue";
+
+import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
+import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
+import type { ServerEventOf } from "@/generated/protocol";
+import { normalizeGamePhase } from "@/shared/gamePhase";
+import type { Card, Difficulty, GalleryDrawing, KickVote, Player, RoundHighlights, RoundResult } from "@/shared/types";
+import { useDrawingStore } from "./drawing";
+
+function getBrowserLocale(): string {
+  if (typeof navigator === "undefined" || !navigator.language) {
+    return "en";
+  }
+
+  return navigator.language.split("-")[0]?.toLowerCase() || "en";
+}
+
+export const useGameStore = defineStore(
+  "game",
+  () => {
+    const drawing = useDrawingStore();
+    const { currentStrokes, localPadVisible, roomPadVisible } = storeToRefs(drawing);
+
+    // --- Player identity ---
+    const localPlayerId = ref<string>("");
+    const localPlayerName = ref<string>("");
+    const localPlayerLocale = ref<string>(getBrowserLocale());
+    const localPlayerColor = ref<AvatarColor>(AVATAR_COLORS[0]);
+    const pendingLocalPlayerId = ref<string | null>(null);
+    const pendingLocalPlayerName = ref<string | null>(null);
+    const isSpectatorMode = ref<boolean>(false);
+
+    // --- Room & players ---
+    const roomCode = ref<string>("");
+    const players = ref<Map<string, Player>>(new Map());
+    const hostId = ref<string | null>(null);
+    const kickVotes = ref<Map<string, KickVote>>(new Map());
+
+    // --- Game flow ---
+    const gamePhase = ref(normalizeGamePhase(undefined));
+    const currentRound = ref<number>(0);
+    const maxRounds = ref<number>(GAME_SETTINGS.rounds.DEFAULT);
+    const difficulty = ref<Difficulty>(GAME_SETTINGS.difficulty.DEFAULT);
+    const drawingTimeLimit = ref<number>(GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT);
+    const guessingTimeLimit = ref<number>(GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT);
+    const roundStartTime = ref<number | undefined>(undefined);
+    const guessingStartTime = ref<number | undefined>(undefined);
+    const guessTargets = ref<Record<string, string>>({});
+    const localPlayerCard = ref<Card | undefined>();
+    const lastRoundResults = ref<RoundResult[]>([]);
+    const lastHighlights = ref<RoundHighlights | null>(null);
+    // Session-only accumulators for the end-of-game gallery + stats. Not persisted
+    // (base64 PNGs are large) — rebuilt round-by-round as each round completes.
+    const drawingHistory = ref<GalleryDrawing[]>([]);
+    const totalGuessesMade = ref<number>(0);
+    const readyCount = ref<number>(0);
+    const totalPlayers = ref<number>(0);
+
+    // --- Room settings ---
+    const defaultLocale = ref<string>("en");
+    const customCategoryIds = ref<number[] | null>(null);
+    const isPrivateRoom = ref<boolean>(false);
+    const categories = ref<string[]>([]);
+
+    // --- Computed ---
+    const localPlayer = computed(() => players.value.get(localPlayerId.value));
+    const playersList = computed(() => Array.from(players.value.values()));
+    const canStartGame = computed(() => players.value.size >= 2 && gamePhase.value === "lobby");
+    const isHost = computed(() => hostId.value === localPlayerId.value);
+
+    // --- Actions: player identity ---
+    function setLocalPlayer(id: string, name: string) {
+      localPlayerId.value = id;
+      localPlayerName.value = name;
+      if (!localPlayerColor.value) {
+        localPlayerColor.value = getAvatarColor(id);
+      }
+    }
+
+    function setLocalPlayerColor(color: AvatarColor) {
+      if (!AVATAR_COLORS.includes(color)) return;
+      localPlayerColor.value = color;
+    }
+
+    function setSpectatorMode(visible: boolean) {
+      isSpectatorMode.value = visible;
+    }
+
+    function setPendingLocalPlayer(id: string, name: string) {
+      pendingLocalPlayerId.value = id;
+      pendingLocalPlayerName.value = name;
+    }
+
+    function clearPendingLocalPlayer() {
+      pendingLocalPlayerId.value = null;
+      pendingLocalPlayerName.value = null;
+    }
+
+    function confirmPendingLocalPlayer(id: string) {
+      if (pendingLocalPlayerId.value !== id || !pendingLocalPlayerName.value) return;
+      setLocalPlayer(id, pendingLocalPlayerName.value);
+      clearPendingLocalPlayer();
+    }
+
+    function setLocalPlayerLocale(nextLocale: string) {
+      localPlayerLocale.value = nextLocale;
+    }
+
+    // --- Actions: room & players ---
+    function setRoomCode(code: string) {
+      roomCode.value = code;
+    }
+
+    /** @deprecated Use setRoomCode — persistence is now automatic */
+    function setRoomCodeAndSave(code: string) {
+      setRoomCode(code);
+    }
+
+    /** @deprecated Use setLocalPlayer — persistence is now automatic */
+    function setLocalPlayerAndSave(id: string, name: string) {
+      setLocalPlayer(id, name);
+    }
+
+    function addPlayer(id: string, name: string) {
+      if (!players.value.has(id)) {
+        players.value.set(id, { id, name, score: 0 });
+      }
+      if (players.value.size === 1 && !hostId.value) {
+        hostId.value = id;
+      }
+    }
+
+    function setPlayers(nextPlayers: Array<{ id: string; name: string; color?: string | null }>) {
+      const next = new Map<string, Player>();
+      for (const incoming of nextPlayers) {
+        const existing = players.value.get(incoming.id);
+        next.set(incoming.id, {
+          id: incoming.id,
+          name: incoming.name,
+          score: existing?.score ?? 0,
+          color: incoming.color ?? existing?.color ?? null,
+          currentCard: existing?.currentCard,
+          drawing: existing?.drawing,
+        });
+      }
+      players.value = next;
+      if (players.value.size === 1 && !hostId.value) {
+        hostId.value = nextPlayers[0]?.id ?? null;
+      }
+    }
+
+    function removePlayer(id: string) {
+      // Replace with a new Map so Vue's reactivity picks up the change reliably.
+      if (players.value.has(id)) {
+        const next = new Map(players.value);
+        next.delete(id);
+        players.value = next;
+      }
+    }
+
+    function clearPlayers() {
+      players.value.clear();
+    }
+
+    function setHost(id: string | null) {
+      hostId.value = id;
+    }
+
+    // --- Actions: kick votes ---
+    function startKickVote(targetPlayerId: string, vote: KickVote) {
+      kickVotes.value.set(targetPlayerId, vote);
+    }
+
+    function updateKickVote(targetPlayerId: string, data: Pick<KickVote, "currentVotes" | "requiredVotes">) {
+      const existing = kickVotes.value.get(targetPlayerId);
+      if (existing) {
+        existing.currentVotes = data.currentVotes;
+        existing.requiredVotes = data.requiredVotes;
+      }
+    }
+
+    function removeKickVote(targetPlayerId: string) {
+      kickVotes.value.delete(targetPlayerId);
+    }
+
+    // --- Actions: game flow ---
+    function startGame(
+      gameDifficulty: Difficulty,
+      gameRounds: number,
+      drawingTimeLimitSec: number,
+      guessingTimeLimitSec: number,
+    ) {
+      difficulty.value = gameDifficulty;
+      maxRounds.value = gameRounds;
+      drawingTimeLimit.value = drawingTimeLimitSec;
+      guessingTimeLimit.value = guessingTimeLimitSec;
+      currentRound.value = 0;
+      gamePhase.value = "lobby";
+      for (const p of players.value.values()) p.score = 0;
+      drawingHistory.value = [];
+      totalGuessesMade.value = 0;
+    }
+
+    function startRound(roundNumber: number, cards: Record<string, Card>) {
+      currentRound.value = roundNumber;
+      gamePhase.value = "drawing";
+      readyCount.value = 0;
+      totalPlayers.value = players.value.size;
+      guessingStartTime.value = undefined;
+      guessTargets.value = {};
+      drawing.clearStrokes();
+      localPlayerCard.value = undefined;
+      for (const [playerId, player] of players.value) {
+        player.currentCard = cards[playerId];
+        player.drawing = undefined;
+        if (playerId === localPlayerId.value) {
+          localPlayerCard.value = cards[playerId];
+        }
+      }
+    }
+
+    function resetRound() {
+      currentRound.value = 0;
+      for (const p of players.value.values()) p.score = 0;
+      drawingHistory.value = [];
+      totalGuessesMade.value = 0;
+    }
+
+    function startGuessing(startTime?: number | null, targets?: Record<string, string>) {
+      gamePhase.value = "guessing";
+      guessingStartTime.value = startTime ?? Date.now();
+      guessTargets.value = targets ?? {};
+      readyCount.value = 0;
+      totalPlayers.value = players.value.size;
+    }
+
+    function endGame() {
+      gamePhase.value = "final_results";
+      readyCount.value = 0;
+      totalPlayers.value = players.value.size;
+    }
+
+    function setReadyStatus(ready: number, total: number) {
+      readyCount.value = ready;
+      totalPlayers.value = total;
+    }
+
+    function setRoundResults(results: RoundResult[]) {
+      lastRoundResults.value = results;
+    }
+
+    /**
+     * Snapshot the round's drawings into the gallery and fold its correct-guess
+     * count into the running total. Called on round_complete while players still
+     * hold this round's `.drawing` (startRound clears them on the next round).
+     */
+    function captureRoundDrawings(round: number) {
+      for (const player of players.value.values()) {
+        if (player.drawing) {
+          drawingHistory.value.push({
+            round,
+            playerId: player.id,
+            name: player.name,
+            color: player.color ?? getAvatarColor(player.id),
+            drawing: player.drawing,
+          });
+        }
+      }
+      for (const result of lastRoundResults.value) {
+        totalGuessesMade.value += result.correctGuesses;
+      }
+    }
+
+    function setRoundHighlights(highlights: RoundHighlights | null) {
+      lastHighlights.value = highlights;
+    }
+
+    function updateScores(scores: Record<string, number>) {
+      for (const [playerId, score] of Object.entries(scores)) {
+        const player = players.value.get(playerId);
+        if (player) {
+          player.score = score;
+        }
+      }
+    }
+
+    function getFinalScores() {
+      return playersList.value
+        .map((p) => ({ playerId: p.id, playerName: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score);
+    }
+
+    function getWinner() {
+      return getFinalScores()[0];
+    }
+
+    // --- Actions: room settings ---
+    function setDefaultLocale(nextLocale: string) {
+      defaultLocale.value = nextLocale;
+    }
+
+    function setCustomCategoryIds(nextCategoryIds: number[] | null) {
+      customCategoryIds.value = nextCategoryIds ? [...nextCategoryIds] : null;
+    }
+
+    function setPrivacy(isPrivate: boolean) {
+      isPrivateRoom.value = isPrivate;
+    }
+
+    function applySettingsUpdate(
+      settings: Pick<
+        ServerEventOf<"settings_update">,
+        "difficulty" | "rounds" | "drawingTimeLimit" | "guessingTimeLimit"
+      >,
+    ) {
+      if (settings.difficulty) difficulty.value = settings.difficulty;
+      if (settings.rounds !== null && settings.rounds !== undefined) maxRounds.value = settings.rounds;
+      if (settings.drawingTimeLimit !== null && settings.drawingTimeLimit !== undefined) {
+        drawingTimeLimit.value = settings.drawingTimeLimit;
+      }
+      if (settings.guessingTimeLimit !== null && settings.guessingTimeLimit !== undefined) {
+        guessingTimeLimit.value = settings.guessingTimeLimit;
+      }
+    }
+
+    function applyRoomState(roomState: ServerEventOf<"room_state">) {
+      setPlayers(roomState.players);
+      hostId.value = roomState.hostId ?? null;
+      categories.value = roomState.categories ?? [];
+      gamePhase.value = normalizeGamePhase(roomState.gamePhase);
+      applySettingsUpdate({
+        difficulty: roomState.difficulty,
+        rounds: roomState.maxRounds,
+        drawingTimeLimit: roomState.drawingTimeLimit,
+        guessingTimeLimit: roomState.guessingTimeLimit,
+      });
+      roundStartTime.value = roomState.roundStartTime ?? undefined;
+      guessingStartTime.value = roomState.guessingStartTime ?? undefined;
+      guessTargets.value = roomState.guessTargets ?? {};
+      if (roomState.padVisibility !== undefined) drawing.setRoomPadVisible(roomState.padVisibility);
+      if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
+      customCategoryIds.value = roomState.customCategoryIds ?? null;
+      if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
+    }
+
+    // --- Actions: drawing (delegated to useDrawingStore; proxied here for backward compat) ---
+    function setPlayerDrawing(playerId: string, playerDrawing: string) {
+      const player = players.value.get(playerId);
+      if (player) {
+        player.drawing = playerDrawing;
+      }
+    }
+
+    // --- Reset ---
+    function reset() {
+      roomCode.value = "";
+      players.value.clear();
+      kickVotes.value.clear();
+      hostId.value = null;
+      clearPendingLocalPlayer();
+      currentRound.value = 0;
+      maxRounds.value = GAME_SETTINGS.rounds.DEFAULT;
+      difficulty.value = GAME_SETTINGS.difficulty.DEFAULT;
+      gamePhase.value = "lobby";
+      roundStartTime.value = undefined;
+      guessingStartTime.value = undefined;
+      drawingTimeLimit.value = GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT;
+      guessingTimeLimit.value = GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT;
+      guessTargets.value = {};
+      drawing.clearStrokes();
+      localPlayerCard.value = undefined;
+      isSpectatorMode.value = false;
+      lastRoundResults.value = [];
+      lastHighlights.value = null;
+      drawingHistory.value = [];
+      totalGuessesMade.value = 0;
+      categories.value = [];
+      readyCount.value = 0;
+      totalPlayers.value = 0;
+      drawing.setLocalPadVisible(true);
+      drawing.setRoomPadVisible(true);
+      defaultLocale.value = "en";
+      customCategoryIds.value = null;
+      localPlayerLocale.value = getBrowserLocale();
+      isPrivateRoom.value = false;
+    }
+
+    return {
+      // State
+      roomCode,
+      localPlayerId,
+      localPlayerName,
+      pendingLocalPlayerId,
+      pendingLocalPlayerName,
+      players,
+      hostId,
+      currentRound,
+      maxRounds,
+      difficulty,
+      gamePhase,
+      roundStartTime,
+      guessingStartTime,
+      drawingTimeLimit,
+      guessingTimeLimit,
+      // Drawing state (refs from useDrawingStore — auto-unwrapped by Pinia)
+      currentStrokes,
+      localPadVisible,
+      roomPadVisible,
+      localPlayerCard,
+      isSpectatorMode,
+      lastRoundResults,
+      lastHighlights,
+      drawingHistory,
+      totalGuessesMade,
+      categories,
+      guessTargets,
+      readyCount,
+      totalPlayers,
+      defaultLocale,
+      customCategoryIds,
+      localPlayerLocale,
+      localPlayerColor,
+      kickVotes,
+      isPrivateRoom,
+
+      // Computed
+      localPlayer,
+      playersList,
+      canStartGame,
+      isHost,
+
+      // Actions
+      setLocalPlayer,
+      setSpectatorMode,
+      setPendingLocalPlayer,
+      clearPendingLocalPlayer,
+      confirmPendingLocalPlayer,
+      setLocalPlayerLocale,
+      setLocalPlayerColor,
+      setRoomCode,
+      setRoomCodeAndSave,
+      setLocalPlayerAndSave,
+      addPlayer,
+      setPlayers,
+      removePlayer,
+      clearPlayers,
+      setHost,
+      startKickVote,
+      updateKickVote,
+      removeKickVote,
+      startGame,
+      startRound,
+      resetRound,
+      startGuessing,
+      endGame,
+      setReadyStatus,
+      setRoundResults,
+      captureRoundDrawings,
+      setRoundHighlights,
+      updateScores,
+      getFinalScores,
+      getWinner,
+      setDefaultLocale,
+      setCustomCategoryIds,
+      setPrivacy,
+      applySettingsUpdate,
+      applyRoomState,
+      // Drawing actions proxied from useDrawingStore
+      addStroke: drawing.addStroke,
+      clearStrokes: drawing.clearStrokes,
+      setPlayerDrawing,
+      setRoomPadVisible: drawing.setRoomPadVisible,
+      setLocalPadVisible: drawing.setLocalPadVisible,
+      reset,
+    };
+  },
+  {
+    persist: {
+      key: STORAGE_KEYS.GAME_STATE,
+      pick: [
+        "localPlayerId",
+        "localPlayerName",
+        "localPlayerLocale",
+        "localPlayerColor",
+        "roomCode",
+        "currentRound",
+        "maxRounds",
+        "difficulty",
+        "gamePhase",
+        "roundStartTime",
+        "guessingStartTime",
+        "drawingTimeLimit",
+        "guessingTimeLimit",
+        "guessTargets",
+        "defaultLocale",
+        "customCategoryIds",
+      ],
+    },
+  },
+);

@@ -1,0 +1,77 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+set dotenv-load := true
+
+# List available recipes.
+default:
+    @just --list
+
+# ── Dev ───────────────────────────────────────────────────────────────────────
+
+# Start the backend dev server.
+[group('dev')]
+dev:
+    uv run uvicorn app.main:app --port 8000
+
+# ── Test ──────────────────────────────────────────────────────────────────────
+
+# Run backend tests.
+[group('test')]
+test:
+    uv run pytest -x --tb=short
+
+# Run backend tests with coverage enabled.
+[group('test')]
+test-cov:
+    uv run pytest -x --tb=short --cov --cov-report=term-missing --cov-report=html
+
+# ── Check & Format ────────────────────────────────────────────────────────────
+
+# Format the backend.
+[group('format')]
+format:
+    uv run ruff format .
+
+# Run backend checks.
+[group('check')]
+check:
+    uv run ruff format --check && uv run ruff check . && uv run ty check .
+
+# Export backend-owned contract artifacts.
+[group('contracts')]
+generate-contracts:
+    uv run python -m scripts.generate_contracts
+
+# ── Database ──────────────────────────────────────────────────────────────────
+
+# Run all pending migrations.
+[group('db')]
+migrate:
+    uv run alembic upgrade head
+
+# Create a new auto-generated migration.
+[group('db')]
+migrate-new name:
+    uv run alembic revision --autogenerate -m "{{ name }}"
+
+# Seed the database with card deck data.
+[group('db')]
+seed:
+    uv run python -m scripts.seed_data
+
+# Fill missing seed translations using Argos Translate.
+[group('db')]
+translate-seed:
+    uv run python -m scripts.auto_translate_seed_data
+
+# Auto-translate missing seed entries, then seed the database.
+[group('db')]
+seed-auto:
+    just translate-seed
+    just seed
+
+# ── Install ───────────────────────────────────────────────────────────────────
+
+# Install backend dependencies.
+[group('install')]
+install:
+    uv sync --group dev

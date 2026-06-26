@@ -1,0 +1,27 @@
+{
+  "properties": {
+    "type": {
+      "const": "submit_guess",
+      "title": "Type",
+      "type": "string"
+    },
+    "targetPlayerId": {
+      "title": "Targetplayerid",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    },
+    "guesses": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Guesses",
+      "type": "array"
+    }
+  },
+  "required": ["playerId", "targetPlayerId", "type"],
+  "title": "SubmitGuessEvent",
+  "type": "object"
+}

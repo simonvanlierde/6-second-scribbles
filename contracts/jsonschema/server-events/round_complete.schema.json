@@ -1,0 +1,142 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "round_complete",
+      "title": "Type",
+      "type": "string"
+    },
+    "results": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "playerId": {
+            "title": "Playerid",
+            "type": "string"
+          },
+          "targetPlayerId": {
+            "title": "Targetplayerid",
+            "type": "string"
+          },
+          "correctGuesses": {
+            "title": "Correctguesses",
+            "type": "integer"
+          },
+          "totalItems": {
+            "title": "Totalitems",
+            "type": "integer"
+          },
+          "pointsEarned": {
+            "title": "Pointsearned",
+            "type": "integer"
+          }
+        },
+        "required": ["correctGuesses", "playerId", "pointsEarned", "targetPlayerId", "totalItems"],
+        "title": "RoundResultItem",
+        "type": "object"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "scores": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Scores",
+      "type": "object"
+    },
+    "highlights": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "bestGuesser": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "playerId": {
+                      "title": "Playerid",
+                      "type": "string"
+                    },
+                    "detail": {
+                      "default": "",
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["playerId"],
+                  "title": "RoundHighlight",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "speedDemon": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "playerId": {
+                      "title": "Playerid",
+                      "type": "string"
+                    },
+                    "detail": {
+                      "default": "",
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["playerId"],
+                  "title": "RoundHighlight",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "wildestMiss": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "playerId": {
+                      "title": "Playerid",
+                      "type": "string"
+                    },
+                    "detail": {
+                      "default": "",
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["playerId"],
+                  "title": "RoundHighlight",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "title": "RoundHighlights",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": ["results", "scores", "type"],
+  "title": "RoundCompleteServerEvent",
+  "type": "object"
+}

@@ -1,0 +1,91 @@
+{
+  "properties": {
+    "type": {
+      "const": "start_round",
+      "title": "Type",
+      "type": "string"
+    },
+    "round": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Round"
+    },
+    "cards": {
+      "additionalProperties": {
+        "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Categoryid"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "itemIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemids"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "alternatives": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Alternatives"
+          }
+        },
+        "required": ["category", "items"],
+        "title": "PlayerCardPayload",
+        "type": "object"
+      },
+      "title": "Cards",
+      "type": "object"
+    }
+  },
+  "required": ["cards", "type"],
+  "title": "StartRoundEvent",
+  "type": "object"
+}

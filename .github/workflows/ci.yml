@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      contracts: ${{ steps.filter.outputs.contracts }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+            contracts:
+              - 'contracts/**'
+              - 'backend/app/rooms/protocol.py'
+              - 'backend/app/*/schemas.py'
+              - 'backend/scripts/generate_contracts.py'
+              - 'frontend/scripts/generate-contracts.mjs'
+              - 'scripts/check-contracts.mjs'
+              - 'package.json'
+              - 'frontend/package.json'
+              - 'pnpm-lock.yaml'
+              - 'justfile'
+              - 'backend/justfile'
+              - 'frontend/justfile'
+
+  root-checks:
+    name: Root checks (gitleaks, cspell, biome)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache cspell results
+        uses: actions/cache@v4
+        with:
+          path: .cspellcache
+          key: ${{ runner.os }}-cspell-${{ hashFiles('.cspell.yml', 'package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-cspell-
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run root checks
+        run: pnpm run check
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Frontend checks (composite)
+        uses: ./.github/actions/frontend-check
+
+  backend:
+    name: Backend checks + unit tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Backend checks + unit tests (composite)
+        uses: ./.github/actions/backend-check
+        with:
+          run-tests-mode: 'unit'
+
+  contracts:
+    name: Contract generation checks
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.contracts == 'true'
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install root/frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
+
+      - name: Check generated contracts
+        run: pnpm run contracts:check && pnpm --dir frontend run type-check

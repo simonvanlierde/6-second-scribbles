@@ -1,0 +1,49 @@
+# spell-checker: ignore coveragerc, htmlcov
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+.uv-cache/
+.python-version
+
+# Test / coverage
+tests/
+.pytest_cache/
+.coverage
+.coverage.*
+.coveragerc
+htmlcov/
+
+# Linting / type-checking caches
+.ruff_cache/
+.mypy_cache/
+
+# Secrets — use environment variables or secrets at runtime
+.env
+.env.*
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI / tooling config not needed at runtime
+README.md
+justfile
+
+# Local generated / scratch files
+scripts/.seed_translation_hash
+scripts/seed_data _bk copy.yaml
+
+# Translation cache 
+**/.translation_cache.json

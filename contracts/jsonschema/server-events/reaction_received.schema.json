@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "reaction_received",
+      "title": "Type",
+      "type": "string"
+    },
+    "drawingId": {
+      "title": "Drawingid",
+      "type": "string"
+    },
+    "reactionKey": {
+      "title": "Reactionkey",
+      "type": "string"
+    },
+    "senderId": {
+      "title": "Senderid",
+      "type": "string"
+    }
+  },
+  "required": ["drawingId", "reactionKey", "senderId", "type"],
+  "title": "ReactionReceivedServerEvent",
+  "type": "object"
+}

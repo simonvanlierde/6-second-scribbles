@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "const": "room_custom_categories_update",
+      "title": "Type",
+      "type": "string"
+    },
+    "categoryIds": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Categoryids"
+    }
+  },
+  "title": "RoomCustomCategoriesUpdateServerEvent",
+  "type": "object",
+  "required": ["type"]
+}

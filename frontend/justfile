@@ -1,0 +1,70 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# List available recipes.
+default:
+    @just --list
+
+# ── Dev ───────────────────────────────────────────────────────────────────────
+
+# Start the frontend dev server.
+[group('dev')]
+dev:
+    pnpm run dev
+
+# ── Test ──────────────────────────────────────────────────────────────────────
+
+# Run unit tests.
+[group('test')]
+test:
+    pnpm run test:unit
+
+# Run e2e tests.
+[group('test')]
+test-e2e:
+    pnpm run test:e2e
+
+# Run e2e tests in the Playwright UI.
+[group('test')]
+test-e2e-ui:
+    pnpm run test:e2e:ui
+
+# Start the local dev stack for Playwright e2e against the real backend.
+[group('test')]
+e2e-dev:
+    docker compose --project-directory .. -f ../compose.yml -f ../compose.override.yml down --remove-orphans
+    docker compose --project-directory .. -f ../compose.yml -f ../compose.override.yml up -d database cache
+    docker compose --project-directory .. -f ../compose.yml -f ../compose.override.yml run --rm --build database-migrations
+    sh -c 'cd ../backend && uv run uvicorn app.main:app --host localhost --port 8000 & backend_pid=$$!; trap "kill $$backend_pid" EXIT INT TERM; until curl -sf http://localhost:8000/api/health >/dev/null; do sleep 1; done; pnpm run dev -- --host localhost --port 3001'
+
+# ── Check & Format ────────────────────────────────────────────────────────────
+
+# Run all checks (lint, type-check).
+[group('check')]
+check:
+    pnpm run lint
+    pnpm run type-check
+
+# Format the frontend codebase.
+[group('format')]
+format:
+    pnpm run format
+
+# Generate frontend-owned artifacts from the tracked contracts directory.
+[group('contracts')]
+generate-contracts:
+    pnpm run contracts:generate
+    pnpm exec biome check --write src/generated/protocol.ts src/generated/api.ts
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+
+# Build the frontend for production.
+[group('build')]
+build:
+    pnpm run build
+
+# ── Install ───────────────────────────────────────────────────────────────────
+
+# Install frontend dependencies.
+[group('install')]
+install:
+    pnpm install

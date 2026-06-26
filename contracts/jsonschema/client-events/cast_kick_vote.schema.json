@@ -1,0 +1,16 @@
+{
+  "properties": {
+    "type": {
+      "const": "cast_kick_vote",
+      "title": "Type",
+      "type": "string"
+    },
+    "targetPlayerId": {
+      "title": "Targetplayerid",
+      "type": "string"
+    }
+  },
+  "required": ["targetPlayerId", "type"],
+  "title": "CastKickVoteEvent",
+  "type": "object"
+}

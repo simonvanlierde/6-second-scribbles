@@ -1,0 +1,126 @@
+---
+version: "0.2"
+language: en
+dictionaries:
+  - cpp-compound-words
+  - docker
+  - filetypes
+  - npm
+  - python
+  - software-tools
+  - softwareTerms
+
+# Include hidden files
+enableGlobDot: true
+
+# Exclude files in .gitignore
+useGitignore: true
+ignorePaths:
+  - ".git"
+  - "*-lock.*"
+  - "*.sarif"
+  - ".vscode/**"
+  - ".cspell.yml"
+  - "backend/alembic/versions/**"
+  - "backend/scripts/seed_data.yaml"
+  - "backend/translation/.translation_cache.json"
+  - "contracts/openapi.json"
+  - "contracts/room-events.json"
+  - "contracts/jsonschema/**"
+  - "docs/superpowers/**"
+  - "frontend/src/locales/**"
+  - "frontend/src/generated/**"
+
+ignoreWords:
+  # Software terms
+  - vueuse
+
+words:
+  # Names
+  - Culley
+  - Lange
+  - Lierde
+
+  # Software terms
+  - argostranslate
+  - argosmodel
+  - ACMR
+  - Caddyfile
+  - cloudflared
+  - dedup
+  - dorny
+  - geolocation
+  - healthz
+  - htmlcov
+  - Isguest
+  - justfile
+  - kalam
+  - nosniff
+  - opencc
+  - persistedstate
+  - postit
+  - selectinload
+  - uppercased
+  - usefixtures
+  - whereclause
+  - zstd
+
+  # Language names
+  - Deutsch
+  - Español
+  - Français
+  - Italiano
+  - Nederlands
+  - Polski
+  - Português
+
+  # Category names and aliases
+  - agujereadora
+  - aeroplane
+  - básquet
+  - bistró
+  - brócoli
+  - brécol
+  - bróquil
+  - caesar
+  - catarina
+  - chamallow
+  - champiñón
+  - chupachús
+  - cleopatra
+  - columbus
+  - desarmador
+  - duendecillo
+  - edison
+  - einstein
+  - florecita
+  - gatito
+  - gelato
+  - gandhi
+  - gominola
+  - gominolas
+  - gomitas
+  - jitomate
+  - lufa
+  - mariposita
+  - mozart
+  - osito
+  - papalote
+  - picasso
+  - piruleta
+  - philips
+  - resbaladilla
+  - rubik
+  - shakespeare
+  - tofe
+  - vaquita
+  - yoyo
+
+import:
+  - "@cspell/dict-es-es/cspell-ext.json"
+  - "@cspell/dict-fr-fr/cspell-ext.json"
+
+# Multilingual category data
+overrides:
+  - filename: "{backend/scripts/seed_data*.{py,yaml},backend/tests/test_{auto_translate_seed_data,seed_data,services}.py}"
+    language: "en,es,fr"
