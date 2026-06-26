@@ -181,6 +181,9 @@ function toggleRoomPadVisibility() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  /* Reserve space on the right so the room code clears the globally-fixed
+     settings gear (App.vue, position: fixed; top/right: 12px; z-index: 50). */
+  padding-right: calc(var(--space-4) + 52px);
   margin-bottom: 24px;
   flex-wrap: wrap;
 }

@@ -77,8 +77,10 @@ onMounted(async () => {
 }
 .app-settings-btn {
   position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
+  /* Match the page gutter (~20px) so the gear sits in line with other UI
+     rather than crowding the viewport edges. */
+  top: max(20px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
   z-index: 50;
 }
 </style>
