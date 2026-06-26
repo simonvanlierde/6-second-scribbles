@@ -11,6 +11,7 @@ import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
+import HdToggle from "@/components/ui/HdToggle.vue";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
@@ -38,6 +39,17 @@ const localPadVisible = computed({
 const roomCode = computed(() => route.params.roomCode as string);
 const playerCount = computed(() => store.playersList.length);
 const canStart = computed(() => store.canStartGame && store.isHost);
+
+const isPrivateRoom = computed({
+  get: () => store.isPrivateRoom,
+  set: (value: boolean) => store.setPrivacy(value),
+});
+
+function togglePrivacy() {
+  if (store.isHost) {
+    send({ type: "privacy_changed", isPrivate: isPrivateRoom.value });
+  }
+}
 
 function leaveRoom() {
   disconnect();
@@ -115,7 +127,16 @@ function toggleRoomPadVisibility() {
 
     <div class="lobby-grid">
       <HdCard class="lobby-main">
-        <h2 class="lobby-main__title">{{ t('lobby.players', { count: playerCount }) }}</h2>
+        <div class="lobby-main__head">
+          <h2 class="lobby-main__title">{{ t('lobby.players', { count: playerCount }) }}</h2>
+          <HdToggle
+            v-if="store.isHost"
+            v-model="isPrivateRoom"
+            :label="t('settings.privateRoom')"
+            :help="t('settings.privateRoomHelp')"
+            @change="togglePrivacy"
+          />
+        </div>
         <PlayerListPanel />
 
         <div class="lobby-main__settings"><GameSettingsPanel /></div>
@@ -137,20 +158,167 @@ function toggleRoomPadVisibility() {
       <HdCard v-if="store.isHost || store.roomPadVisible" class="lobby-drawpad">
         <div class="lobby-drawpad__head">
           <h3 class="lobby-drawpad__title">{{ t('lobby.doodleTitle') }}</h3>
-        </div>
 
-        <div v-if="store.isHost" class="lobby-drawpad__actions">
-          <HdButton variant="secondary" @click="handleClear">{{ t('lobby.clearForAll') }}</HdButton>
-          <HdButton variant="secondary" @click="toggleRoomPadVisibility">
-            {{ store.roomPadVisible ? t('lobby.hideForAll') : t('lobby.showForAll') }}
-          </HdButton>
-          <HdButton v-if="store.roomPadVisible" variant="success" @click="toggleDrawpad">
-            {{ localPadVisible ? t('lobby.hideMyPad') : t('lobby.showMyPad') }}
-          </HdButton>
+          <div v-if="store.isHost" class="lobby-drawpad__controls">
+            <!-- Everyone: host controls that affect all players -->
+            <div class="ctrl-group">
+              <span class="ctrl-group__badge" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </span>
+              <HdIconButton variant="ghost" :label="t('lobby.clearForAll')" @click="handleClear">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
+                </svg>
+              </HdIconButton>
+              <HdIconButton
+                variant="ghost"
+                :label="store.roomPadVisible ? t('lobby.hideForAll') : t('lobby.showForAll')"
+                @click="toggleRoomPadVisibility"
+              >
+                <svg
+                  v-if="store.roomPadVisible"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.4 13.4 0 0 1-1.67 2.68" />
+                  <path d="M6.61 6.61A13.5 13.5 0 0 0 2 11s3.5 7 10 7a9.7 9.7 0 0 0 5.39-1.61" />
+                  <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+                  <path d="M2 2l20 20" />
+                </svg>
+                <svg
+                  v-else
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </HdIconButton>
+            </div>
+
+            <!-- You: the host's own pad visibility -->
+            <div v-if="store.roomPadVisible" class="ctrl-group">
+              <span class="ctrl-group__badge" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </span>
+              <HdIconButton
+                variant="ghost"
+                :label="localPadVisible ? t('lobby.hideMyPad') : t('lobby.showMyPad')"
+                @click="toggleDrawpad"
+              >
+                <svg
+                  v-if="localPadVisible"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.4 13.4 0 0 1-1.67 2.68" />
+                  <path d="M6.61 6.61A13.5 13.5 0 0 0 2 11s3.5 7 10 7a9.7 9.7 0 0 0 5.39-1.61" />
+                  <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+                  <path d="M2 2l20 20" />
+                </svg>
+                <svg
+                  v-else
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </HdIconButton>
+            </div>
+          </div>
+
+          <!-- Non-host: just toggle their own pad -->
+          <HdIconButton
+            v-else
+            variant="ghost"
+            :label="localPadVisible ? t('lobby.hideMyPad') : t('lobby.showMyPad')"
+            @click="toggleDrawpad"
+          >
+            <svg
+              v-if="localPadVisible"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.4 13.4 0 0 1-1.67 2.68" />
+              <path d="M6.61 6.61A13.5 13.5 0 0 0 2 11s3.5 7 10 7a9.7 9.7 0 0 0 5.39-1.61" />
+              <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+              <path d="M2 2l20 20" />
+            </svg>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </HdIconButton>
         </div>
-        <HdButton v-else variant="success" @click="toggleDrawpad">
-          {{ localPadVisible ? t('lobby.hideMyPad') : t('lobby.showMyPad') }}
-        </HdButton>
 
         <div v-if="store.roomPadVisible && localPadVisible" class="drawpad-canvas"><SharedDrawpad /></div>
       </HdCard>
@@ -215,7 +383,9 @@ function toggleRoomPadVisibility() {
 }
 .lobby-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  /* Settings only needs enough room for its content; give the rest to the
+     drawpad so it isn't squeezed by wasted horizontal space. */
+  grid-template-columns: minmax(300px, 500px) 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -228,6 +398,13 @@ function toggleRoomPadVisibility() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.lobby-main__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .lobby-main__title {
   font-family: var(--font-display);
@@ -252,23 +429,48 @@ function toggleRoomPadVisibility() {
   flex-direction: column;
   gap: 12px;
 }
+.lobby-drawpad__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 .lobby-drawpad__title {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-heading-md);
   margin: 0;
 }
-.lobby-drawpad__actions {
+.lobby-drawpad__controls {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
-.drawpad-canvas :global(.mini-canvas) {
-  height: 320px;
+/* Each cluster is led by a badge that labels its scope: people = everyone,
+   single person = just you. */
+.ctrl-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px 2px 4px;
+  border: 1.5px solid var(--color-ink);
+  border-radius: var(--r-pill);
+  background: var(--color-card);
+  box-shadow: var(--shadow-pill);
 }
-@media (max-width: 768px) {
-  .drawpad-canvas :global(.mini-canvas) {
-    height: 220px;
-  }
+.ctrl-group__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--color-ink-muted);
+}
+.ctrl-group__badge svg {
+  width: 17px;
+  height: 17px;
 }
 </style>

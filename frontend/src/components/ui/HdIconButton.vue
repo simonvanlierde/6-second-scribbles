@@ -3,11 +3,14 @@ type Variant = "default" | "ghost";
 
 interface Props {
   label: string;
+  // Optional hover tooltip; falls back to `label` when omitted.
+  title?: string;
   variant?: Variant;
   disabled?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  title: undefined,
   variant: "default",
   disabled: false,
 });
@@ -21,6 +24,7 @@ defineEmits<{ click: [MouseEvent] }>();
     class="hd-icon-btn"
     :class="`hd-icon-btn--${props.variant}`"
     :aria-label="props.label"
+    :title="props.title ?? props.label"
     :disabled="props.disabled"
     @click="$emit('click', $event)"
   >

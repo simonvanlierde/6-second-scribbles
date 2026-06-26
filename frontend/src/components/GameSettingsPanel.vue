@@ -8,7 +8,6 @@ import HdSegmented from "@/components/ui/HdSegmented.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
 import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
-import { i18n } from "@/i18n";
 import type { Difficulty } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
@@ -21,13 +20,8 @@ const difficulty = ref<Difficulty>(store.difficulty);
 const rounds = ref<number>(store.maxRounds);
 const drawingTimeLimit = ref<number>(store.drawingTimeLimit);
 const guessingTimeLimit = ref<number>(store.guessingTimeLimit);
-const roundsError = ref<string | null>(null);
 const settingsFlash = ref(false);
 const advancedOpen = ref(false);
-const isPrivateRoom = computed({
-  get: () => store.isPrivateRoom,
-  set: (value: boolean) => store.setPrivacy(value),
-});
 
 const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard"];
 const difficultyOptions = computed(() => DIFFICULTIES.map((d) => ({ value: d, label: t(`settings.${d}`) })));
@@ -39,7 +33,7 @@ const { start: startFlash } = useTimeoutFn(() => {
 }, UI_TIMINGS.SETTINGS_FLASH_MS);
 
 function broadcastSettings() {
-  if (store.isHost && !roundsError.value) {
+  if (store.isHost) {
     send({
       type: "settings_update",
       difficulty: difficulty.value,
@@ -70,30 +64,12 @@ watch(
   { immediate: true },
 );
 
-function togglePrivacy() {
-  if (store.isHost) {
-    send({ type: "privacy_changed", isPrivate: isPrivateRoom.value });
-  }
-}
-
 function setDifficulty(d: string) {
   difficulty.value = d as Difficulty;
 }
 
 watch(rounds, (val) => {
-  if (!Number.isFinite(val)) {
-    roundsError.value = i18n.global.t("settings.enterValidNumber");
-    return;
-  }
-  if (val < GAME_SETTINGS.rounds.MIN || val > GAME_SETTINGS.rounds.MAX) {
-    roundsError.value = i18n.global.t("settings.mustBeBetween", {
-      min: GAME_SETTINGS.rounds.MIN,
-      max: GAME_SETTINGS.rounds.MAX,
-    });
-  } else {
-    roundsError.value = null;
-    store.maxRounds = Math.floor(val);
-  }
+  if (Number.isFinite(val)) store.maxRounds = val;
 });
 
 watch(drawingTimeLimit, (val) => {
@@ -135,8 +111,39 @@ watch(
     <div class="settings-chips">
       <span class="chip chip--accent">{{ $t(`settings.${difficulty}`) }}</span>
       <span class="chip">{{ rounds }} {{ $t("settings.rounds") }}</span>
-      <span class="chip">✏️ {{ drawingTimeLimit }}s</span>
-      <span class="chip">💬 {{ guessingTimeLimit }}s</span>
+      <span class="chip">
+        <svg
+          class="label-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+        {{ drawingTimeLimit }}s
+      </span>
+      <span class="chip">
+        <svg
+          class="label-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"
+          />
+        </svg>
+        {{ guessingTimeLimit }}s
+      </span>
     </div>
   </div>
 
@@ -162,7 +169,6 @@ watch(
           :min="GAME_SETTINGS.rounds.MIN"
           :max="GAME_SETTINGS.rounds.MAX"
         />
-        <p v-if="roundsError" class="field__error">{{ roundsError }}</p>
       </div>
     </div>
 
@@ -189,7 +195,22 @@ watch(
       <div v-if="advancedOpen" class="advanced">
         <div class="advanced__times">
           <div class="field">
-            <label class="field__label">✏️ {{ $t("settings.drawingTime") }}</label>
+            <label class="field__label">
+              <svg
+                class="label-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+              {{ $t("settings.drawingTime") }}
+            </label>
             <StepperInput
               v-model="drawingTimeLimit"
               :label="$t('settings.drawingTime')"
@@ -201,27 +222,33 @@ watch(
           </div>
 
           <div class="field">
-            <label class="field__label">💬 {{ $t("settings.guessingTime") }}</label>
+            <label class="field__label">
+              <svg
+                class="label-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"
+                />
+              </svg>
+              {{ $t("settings.guessingTime") }}
+            </label>
             <StepperInput
               v-model="guessingTimeLimit"
               :label="$t('settings.guessingTime')"
               :min="GAME_SETTINGS.guessingTimeLimitSeconds.MIN"
               :max="GAME_SETTINGS.guessingTimeLimitSeconds.MAX"
               :step="10"
-              suffix="s"
+              suffix=""
             />
           </div>
         </div>
-
-        <!-- Private room toggle -->
-        <label class="toggle">
-          <input v-model="isPrivateRoom" type="checkbox" class="toggle__input" @change="togglePrivacy">
-          <span class="toggle__track" aria-hidden="true" />
-          <span class="toggle__text">
-            {{ $t("settings.privateRoom") }}
-            <span class="toggle__help">{{ $t("settings.privateRoomHelp") }}</span>
-          </span>
-        </label>
       </div>
     </Transition>
   </div>
@@ -277,16 +304,19 @@ watch(
   gap: var(--space-2);
 }
 .field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: var(--text-label-md);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-ink-muted);
 }
-.field__error {
-  margin: 2px 0 0;
-  font-size: var(--text-label-sm);
-  color: var(--color-marker-red);
+.label-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .advanced-toggle {
@@ -321,65 +351,6 @@ watch(
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-3);
-}
-
-.toggle {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  cursor: pointer;
-}
-.toggle__input {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-}
-.toggle__track {
-  position: relative;
-  display: block;
-  flex-shrink: 0;
-  width: 40px;
-  height: 20px;
-  margin-top: 2px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--color-ink) 28%, transparent);
-  transition: background var(--motion-fast) var(--ease-out);
-}
-.toggle__track::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--color-card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform var(--motion-fast) var(--ease-spring);
-}
-.toggle__input:checked + .toggle__track {
-  background: var(--color-marker-red);
-}
-.toggle__input:checked + .toggle__track::after {
-  transform: translateX(20px);
-}
-.toggle__input:focus-visible + .toggle__track {
-  outline: 3px solid var(--color-ring);
-  outline-offset: 2px;
-}
-.toggle__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--color-ink);
-}
-.toggle__help {
-  font-size: var(--text-label-sm);
-  font-weight: 400;
-  color: var(--color-ink-muted);
 }
 
 .settings-flash {

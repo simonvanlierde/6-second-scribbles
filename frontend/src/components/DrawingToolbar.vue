@@ -11,11 +11,13 @@ withDefaults(
     palette?: readonly string[];
     sizes?: readonly number[];
     showUndo?: boolean;
+    compact?: boolean;
   }>(),
   {
     palette: () => DRAW_PALETTE,
     sizes: () => BRUSH_SIZES,
     showUndo: true,
+    compact: false,
   },
 );
 
@@ -30,7 +32,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <div class="toolbar">
+  <div class="toolbar" :class="{ 'toolbar--compact': compact }">
     <div class="toolbar__group" role="group" :aria-label="t('drawing.color')">
       <button
         v-for="color in palette"
@@ -60,7 +62,7 @@ const { t } = useI18n();
       </button>
     </div>
     <div class="toolbar__group toolbar__group--end">
-      <HdIconButton v-if="showUndo" :label="t('drawing.undo')" @click="$emit('undo')">
+      <HdIconButton v-if="showUndo" class="toolbar__icon-btn" :label="t('drawing.undo')" @click="$emit('undo')">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -74,7 +76,7 @@ const { t } = useI18n();
           <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
         </svg>
       </HdIconButton>
-      <HdIconButton :label="t('drawing.clear')" @click="$emit('clear')">
+      <HdIconButton class="toolbar__icon-btn" :label="t('drawing.clear')" @click="$emit('clear')">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -150,5 +152,20 @@ const { t } = useI18n();
   display: inline-block;
   background: var(--color-ink);
   border-radius: 50%;
+}
+
+/* Compact variant for the lobby's smaller doodle pad — keeps colors + sizes +
+   clear on a single row in the narrower card. */
+.toolbar--compact {
+  gap: var(--space-2);
+}
+.toolbar--compact .toolbar__group {
+  gap: var(--space-1);
+}
+.toolbar--compact .swatch,
+.toolbar--compact .brush,
+.toolbar--compact .toolbar__icon-btn {
+  width: 38px;
+  height: 38px;
 }
 </style>
