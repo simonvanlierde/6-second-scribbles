@@ -426,7 +426,7 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
         assert round_complete[0]["type"] == ROUND_COMPLETE
         assert round_complete[0]["highlights"] == round_complete[1]["highlights"]
 
-        highlights = round_complete[0]["highlights"]
+        highlights = cast("dict[str, dict[str, object]]", round_complete[0]["highlights"])
         assert highlights is not None
         # Both players submitted non-empty guesses, so a speed demon is always present.
         assert highlights["speedDemon"]["playerId"] == PLAYER_1
