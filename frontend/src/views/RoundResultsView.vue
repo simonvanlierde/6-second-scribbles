@@ -12,6 +12,7 @@ import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
+import { useSound } from "@/composables/useSound";
 import { GAME_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
@@ -20,6 +21,7 @@ const store = useGameStore();
 const router = useRouter();
 const { disconnect } = useGameConnection();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
+const { play } = useSound();
 
 const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
 const leaveDialogOpen = ref(false);
@@ -71,6 +73,7 @@ function showLeaveDialog() {
 }
 
 onMounted(() => {
+  play("reveal");
   countdownInterval = window.setInterval(() => {
     countdown.value--;
     if (countdown.value <= 0) {
