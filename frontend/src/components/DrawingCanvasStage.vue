@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Theme-aware canvas backdrop shared by the in-game and lobby drawpads: a faint
+// Theme-aware canvas backdrop shared by the in-game and lobby drawing pads: a faint
 // dot grid on the card surface, with the <canvas> passed in via slot so each
 // consumer keeps its own template ref + useDrawingCanvas wiring.
 </script>
