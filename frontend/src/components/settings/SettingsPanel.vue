@@ -363,30 +363,6 @@ function handleThemeBlur(e: FocusEvent) {
           </button>
         </div>
       </section>
-
-      <!-- About -->
-      <section class="settings-section settings-about">
-        <h3 class="settings-section__title">{{ t("settings.about") }}</h3>
-        <p class="settings-about__text">
-          <i18n-t keypath="home.footerText" tag="span">
-            <template #original>
-              <a href="https://gamelygames.com/products/six-second-scribbles" target="_blank" rel="noopener">
-                Six Second Scribbles
-              </a>
-            </template>
-            <template #inspiration>
-              <a href="https://github.com/OliverCulleyDeLange/6ss" target="_blank" rel="noopener">
-                Oliver Culley de Lange's solo version
-              </a>
-            </template>
-            <template #source>
-              <a href="https://github.com/simonvanlierde/6-second-scribbles" target="_blank" rel="noopener">
-                Source on GitHub
-              </a>
-            </template>
-          </i18n-t>
-        </p>
-      </section>
     </div>
   </dialog>
 </template>
@@ -622,16 +598,5 @@ function handleThemeBlur(e: FocusEvent) {
 .ctrl__option--disabled {
   opacity: 0.38;
   cursor: default;
-}
-
-/* ─── About ─── */
-.settings-about__text {
-  font-size: var(--text-label-md);
-  color: var(--color-ink-muted);
-  line-height: 1.5;
-}
-.settings-about__text a {
-  color: var(--color-ballpoint-blue);
-  text-decoration: underline;
 }
 </style>
