@@ -19,7 +19,9 @@
     "countdownIn": "in {count}s",
     "unavailable": "Unavailable",
     "connecting": "Connecting...",
-    "copyRoomCode": "Click to copy room code"
+    "copyRoomCode": "Click to copy room code",
+    "soundMute": "Mute sound",
+    "soundUnmute": "Unmute sound"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -125,13 +127,15 @@
     "waitingForRound": "Esperando a que empiece la ronda..."
   },
   "drawing": {
-    "finish": "✓ Finish",
-    "waiting": "⏳ Waiting…",
+    "finish": "Finish",
+    "waiting": "Waiting…",
     "timerRoundProgress": "Round {current} / {total}",
     "color": "Color",
     "size": "Size",
-    "clear": "🧹 Clear",
-    "loadingCategory": "Loading..."
+    "clear": "Clear",
+    "loadingCategory": "Loading...",
+    "hint": "Tap an item once you've drawn it.",
+    "undo": "Undo"
   },
   "guessing": {
     "guessPlayerDrawing": "Guess {name}'s drawing",
@@ -146,7 +150,8 @@
     "noGuessesTitle": "No guesses entered",
     "noGuessesMessage": "You haven't entered any guesses. Submit anyway?",
     "submitAnyway": "Submit anyway",
-    "goBack": "Go back"
+    "goBack": "Go back",
+    "hint": "Type a guess and a new box appears. Up to 10."
   },
   "roundResults": {
     "title": "Round {round} Results",
