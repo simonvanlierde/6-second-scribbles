@@ -149,6 +149,11 @@ export function useDrawingCanvas() {
     strokes.value = [];
   }
 
+  function undo() {
+    if (strokes.value.length === 0) return;
+    replaceStrokes(strokes.value.slice(0, -1));
+  }
+
   function resize() {
     if (!canvasRef.value || !ctx.value) return;
 
@@ -229,6 +234,7 @@ export function useDrawingCanvas() {
     setColor,
     setWidth,
     clear,
+    undo,
     drawStroke,
     replaceStrokes,
     setStrokeProgressCallback,
