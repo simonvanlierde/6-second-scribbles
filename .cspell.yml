@@ -18,6 +18,7 @@ useGitignore: true
 ignorePaths:
   - ".git"
   - "*-lock.*"
+  - "*.sarif"
   - ".vscode/**"
   - "backend/alembic/versions/**"
   - "backend/scripts/seed_data.yaml"
