@@ -8,7 +8,19 @@ import { getAvatarInitial } from "@/composables/useAvatar";
 import { useSound } from "@/composables/useSound";
 import { useGameStore } from "@/stores/game";
 
-defineProps<{ timeLeft: number }>();
+withDefaults(
+  defineProps<{
+    /** Countdown shown in the timer; ignored in "final" mode. */
+    timeLeft?: number;
+    /** "game" shows the timer + round/score; "final" shows a title + status chip. */
+    variant?: "game" | "final";
+    /** Title shown in "final" mode (e.g. "Game over"). */
+    title?: string;
+    /** Status chip text shown in "final" mode (e.g. a result summary). */
+    status?: string;
+  }>(),
+  { timeLeft: 0, variant: "game", title: "", status: "" },
+);
 defineEmits<{ leave: [] }>();
 
 const store = useGameStore();
@@ -61,30 +73,52 @@ const initial = computed(() => getAvatarInitial(store.localPlayerName || "?"));
       </HdIconButton>
     </div>
 
-    <div class="game-header__timer"><HdTimer :seconds="timeLeft" /></div>
+    <template v-if="variant === 'final'">
+      <h1 class="game-header__title">
+        <svg
+          class="game-header__flag"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 22V4s1.5-1 5-1 5 2 8.5 2 3.5-1 3.5-1v11s-1 1-3.5 1-5-2-8.5-2-5 1-5 1" />
+        </svg>
+        {{ title }}
+      </h1>
+      <div class="game-header__meta"><span v-if="status" class="game-header__status">{{ status }}</span></div>
+      <HdAvatar class="game-header__avatar" :initial="initial" :color="store.localPlayerColor" size="sm" />
+    </template>
 
-    <div class="game-header__meta">
-      <span class="game-header__round">
-        {{ $t("common.roundProgress", { current: store.currentRound, total: store.maxRounds }) }}
-        <span v-if="store.readyCount > 0" class="game-header__ready">
-          · {{ store.readyCount }}/{{ store.totalPlayers }}
-          <svg
-            class="game-header__check"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+    <template v-else>
+      <div class="game-header__timer"><HdTimer :seconds="timeLeft" /></div>
+
+      <div class="game-header__meta">
+        <span class="game-header__round">
+          {{ $t("common.roundProgress", { current: store.currentRound, total: store.maxRounds }) }}
+          <span v-if="store.readyCount > 0" class="game-header__ready">
+            · {{ store.readyCount }}/{{ store.totalPlayers }}
+            <svg
+              class="game-header__check"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
         </span>
-      </span>
-      <span class="game-header__score">{{ $t("common.pointsShort", { count: score }) }}</span>
-    </div>
-    <HdAvatar class="game-header__avatar" :initial="initial" :color="store.localPlayerColor" size="sm" />
+        <span class="game-header__score">{{ $t("common.pointsShort", { count: score }) }}</span>
+      </div>
+      <HdAvatar class="game-header__avatar" :initial="initial" :color="store.localPlayerColor" size="sm" />
+    </template>
   </header>
 </template>
 
@@ -109,6 +143,27 @@ const initial = computed(() => getAvatarInitial(store.localPlayerName || "?"));
 }
 .game-header__timer {
   flex-shrink: 0;
+}
+.game-header__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-md);
+  white-space: nowrap;
+}
+.game-header__flag {
+  width: 22px;
+  height: 22px;
+}
+.game-header__status {
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
 }
 .game-header__meta {
   display: flex;

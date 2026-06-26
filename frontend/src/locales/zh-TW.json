@@ -21,7 +21,8 @@
     "connecting": "Connecting...",
     "copyRoomCode": "Click to copy room code",
     "soundMute": "Mute sound",
-    "soundUnmute": "Unmute sound"
+    "soundUnmute": "Unmute sound",
+    "and": "and"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -259,25 +260,25 @@
     "joinRoom": "Join room",
     "connecting": "Connecting..."
   },
-  "results": {
-    "gameOver": "🏆 遊戲結束！",
-    "finalScores": "最終分數",
-    "you": "(你)",
-    "winner": "Winner",
-    "winners": "Winners",
-    "tiedAtPoints": "Tied at {score} points",
-    "points": "{score} points",
-    "and": "and",
-    "tiedForRank": "並列第 {rank} 名",
-    "pts": "{score} 分",
-    "playersReady": "{count} / {total} 位玩家已就緒",
-    "playAgain": "🔄 再玩一次",
-    "readyForNext": "✓ 已準備好下一局",
-    "readyWaiting": "✓ 已準備好！等待房主開始新遊戲...",
-    "leaveRoom": "🚪 離開房間",
-    "gameStatistics": "遊戲統計",
-    "totalRounds": "總回合數",
-    "players": "玩家",
-    "difficulty": "難度"
+  "finalResults": {
+    "gameOver": "Game over",
+    "champion": "Champion",
+    "champions": "Champions",
+    "standings": "Final standings",
+    "gameStats": "Game stats",
+    "statRounds": "Rounds",
+    "statPlayers": "Players",
+    "statDifficulty": "Difficulty",
+    "statDrawings": "Drawings",
+    "statGuesses": "Correct guesses",
+    "allDrawings": "All drawings",
+    "downloadDrawing": "Download {name}’s drawing",
+    "roundTag": "R{round}",
+    "playAgain": "Play again",
+    "readyForNext": "Ready for next game",
+    "readyWaiting": "Ready — waiting for host…",
+    "backHome": "Back home",
+    "tiedAt": "Tied at {score} pts",
+    "playersReady": "{count} / {total} players ready"
   }
 }

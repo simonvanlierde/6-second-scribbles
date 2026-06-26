@@ -13,6 +13,7 @@
   --color-marker-red: light-dark(#f36161, #f06a6a);
   --color-ballpoint-blue: light-dark(#2d5da1, #7ba4e6);
   --color-highlighter-yellow: light-dark(#fff9c4, #ffe066);
+  --color-amber: light-dark(#ffd27a, #f0b84e);
   --color-meadow-green: light-dark(#b5e6b5, #9cdb9c);
 
   /* Avatar palette — decorative only, same in both modes */

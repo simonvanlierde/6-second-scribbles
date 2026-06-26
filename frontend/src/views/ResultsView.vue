@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
+import GameHeader from "@/components/game/GameHeader.vue";
+import AllDrawingsGallery from "@/components/results/AllDrawingsGallery.vue";
+import WinnerCard from "@/components/results/WinnerCard.vue";
+import HdAvatar from "@/components/ui/HdAvatar.vue";
+import HdButton from "@/components/ui/HdButton.vue";
+import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
+import HdPill from "@/components/ui/HdPill.vue";
+import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useRoomLeave } from "@/composables/useRoomLeave";
+import { useSound } from "@/composables/useSound";
 import { GAME_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
@@ -13,6 +22,8 @@ const store = useGameStore();
 const router = useRouter();
 const { send, disconnect } = useGameConnection();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
+const { play } = useSound();
+
 const isReady = ref(false);
 const autoRestartTimeout = ref<number | null>(null);
 const leaveDialogOpen = ref(false);
@@ -21,12 +32,7 @@ const finalScores = computed(() => store.getFinalScores());
 
 const rankedScores = computed(() => {
   const scores = finalScores.value;
-  const ranked: Array<
-    (typeof scores)[number] & {
-      rank: number;
-      isTied: boolean;
-    }
-  > = [];
+  const ranked: Array<(typeof scores)[number] & { rank: number; isTied: boolean }> = [];
 
   let index = 0;
   while (index < scores.length) {
@@ -49,28 +55,20 @@ const rankedScores = computed(() => {
 });
 
 const winners = computed(() => rankedScores.value.filter((player) => player.rank === 1));
-const winnerHeading = computed(() => i18n.global.t(winners.value.length > 1 ? "results.winners" : "results.winner"));
+const winnerIsTie = computed(() => winners.value.length > 1);
 const winnerNames = computed(() => formatNames(winners.value.map((player) => player.playerName)));
-const winnerScoreText = computed(() =>
-  winners.value.length > 1
-    ? i18n.global.t("results.tiedAtPoints", { score: winners.value[0]?.score ?? 0 })
-    : i18n.global.t("results.points", { score: winners.value[0]?.score ?? 0 }),
-);
+const winnerScore = computed(() => winners.value[0]?.score ?? 0);
+const winnerInitial = computed(() => getAvatarInitial(winners.value[0]?.playerName ?? "?"));
+const winnerColor = computed(() => avatarColorFor(winners.value[0]?.playerId ?? ""));
+
+function avatarColorFor(playerId: string): string {
+  return store.players.get(playerId)?.color ?? getAvatarColor(playerId);
+}
 
 function formatNames(names: string[]) {
   if (names.length <= 1) return names[0] || i18n.global.t("common.unknown");
-  if (names.length === 2) return `${names[0]} ${i18n.global.t("results.and")} ${names[1]}`;
+  if (names.length === 2) return `${names[0]} ${i18n.global.t("common.and")} ${names[1]}`;
   return names.join(", ");
-}
-
-function formatOrdinal(rank: number) {
-  const remainder100 = rank % 100;
-  if (remainder100 >= 11 && remainder100 <= 13) return `${rank}th`;
-  const remainder10 = rank % 10;
-  if (remainder10 === 1) return `${rank}st`;
-  if (remainder10 === 2) return `${rank}nd`;
-  if (remainder10 === 3) return `${rank}rd`;
-  return `${rank}th`;
 }
 
 watch(
@@ -126,118 +124,94 @@ function showLeaveDialog() {
   leaveDialogOpen.value = true;
 }
 
+onMounted(() => {
+  play("winner");
+});
+
 onUnmounted(() => {
   clearAutoRestartTimeout();
 });
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center p-5">
-    <div class="max-w-[1200px] w-full">
-      <h1>{{ $t('results.gameOver') }}</h1>
+  <div class="final-results">
+    <GameHeader
+      variant="final"
+      :title="$t('finalResults.gameOver')"
+      :status="$t('finalResults.playersReady', { count: store.readyCount, total: store.totalPlayers })"
+      @leave="showLeaveDialog"
+    />
 
-      <div class="mb-8 rounded-xl bg-gradient-to-br from-primary to-secondary p-8 text-center text-white shadow-lg">
-        <div class="mb-4 animate-bounce text-6xl">🎉</div>
-        <h2 class="my-2 text-3xl">{{ winnerHeading }}: {{ winnerNames }}</h2>
-        <p class="m-0 text-2xl font-bold">{{ winnerScoreText }}</p>
-      </div>
+    <div class="final-results__body">
+      <WinnerCard
+        :name="winnerNames"
+        :initial="winnerInitial"
+        :color="winnerColor"
+        :score="winnerScore"
+        :is-tie="winnerIsTie"
+      />
 
-      <div class="mb-8 rounded-xl bg-white p-8 shadow-lg">
-        <h2>{{ $t('results.finalScores') }}</h2>
-        <div class="my-6">
-          <div
-            v-for="player in rankedScores"
-            :key="player.playerId"
-            class="my-2 flex items-center justify-between gap-4 rounded-lg bg-surface p-4 text-[1.125rem] transition-transform hover:translate-x-1"
-            :class="{
-              winner: player.rank === 1,
-              tied: player.isTied,
-              '!bg-gradient-to-br !from-[#ffd89b] !to-[#19547b] !text-white !text-2xl !font-bold': player.rank === 1,
-              '!border-2 !border-[#3498db] !bg-[#e3f2fd]': player.playerId === store.localPlayerId && player.rank !== 1,
-            }"
-          >
+      <div class="final-results__columns">
+        <section class="final-results__col">
+          <h2 class="final-results__heading">{{ $t("finalResults.standings") }}</h2>
+          <HdCard class="final-standings">
             <div
-              class="rank flex h-10 w-10 items-center justify-center rounded-full bg-gray-300 text-lg font-bold"
-              :class="[
-                player.rank === 1 && '!bg-white text-[#ffd700]',
-                player.isTied && player.rank !== 1 && '!bg-orange-400 !text-white',
-              ]"
+              v-for="player in rankedScores"
+              :key="player.playerId"
+              class="final-standings__row"
+              :class="{ 'final-standings__row--you': player.playerId === store.localPlayerId }"
             >
-              {{ player.rank }}
+              <span class="final-standings__rank">{{ player.rank }}</span>
+              <HdAvatar
+                :initial="getAvatarInitial(player.playerName)"
+                :color="avatarColorFor(player.playerId)"
+                size="sm"
+              />
+              <span class="final-standings__name">{{ player.playerName }}</span>
+              <HdPill v-if="player.playerId === store.localPlayerId" class="final-standings__tag">
+                {{ $t("common.you") }}
+              </HdPill>
+              <span class="final-standings__score">{{ $t("common.pointsShort", { count: player.score }) }}</span>
             </div>
-            <div class="flex flex-1 items-center gap-2">
-              <span class="text-lg">{{ player.playerName }}</span>
-              <span
-                v-if="player.playerId === store.localPlayerId"
-                class="rounded bg-gray-200 px-2 py-1 text-xs text-gray-600"
-              >
-                {{ $t('results.you') }}
-              </span>
-              <span v-if="player.isTied" class="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                {{ $t('results.tiedForRank', { rank: formatOrdinal(player.rank) }) }}
-              </span>
-            </div>
-            <div class="text-xl font-bold text-slate-800">{{ $t('results.pts', { score: player.score }) }}</div>
-          </div>
-        </div>
+          </HdCard>
 
-        <div class="my-6 text-center">
-          <p class="m-0 rounded bg-gray-50 p-3 text-lg font-semibold text-slate-700">
-            {{ $t('results.playersReady', { count: store.readyCount, total: store.totalPlayers }) }}
-          </p>
-        </div>
+          <HdCard variant="postit" class="final-stats">
+            <h3 class="final-stats__title">{{ $t("finalResults.gameStats") }}</h3>
+            <dl class="final-stats__grid">
+              <div class="final-stats__item">
+                <dt>{{ $t("finalResults.statRounds") }}</dt>
+                <dd>{{ store.maxRounds }}</dd>
+              </div>
+              <div class="final-stats__item">
+                <dt>{{ $t("finalResults.statPlayers") }}</dt>
+                <dd>{{ store.playersList.length }}</dd>
+              </div>
+              <div class="final-stats__item">
+                <dt>{{ $t("finalResults.statDifficulty") }}</dt>
+                <dd class="final-stats__difficulty">{{ store.difficulty }}</dd>
+              </div>
+              <div class="final-stats__item">
+                <dt>{{ $t("finalResults.statDrawings") }}</dt>
+                <dd>{{ store.drawingHistory.length }}</dd>
+              </div>
+              <div class="final-stats__item">
+                <dt>{{ $t("finalResults.statGuesses") }}</dt>
+                <dd>{{ store.totalGuessesMade }}</dd>
+              </div>
+            </dl>
+          </HdCard>
+        </section>
 
-        <div
-          class="mt-8 flex flex-wrap items-center justify-center gap-4 max-[768px]:flex-col max-[768px]:[&_button]:w-full"
-        >
-          <button
-            v-if="store.isHost"
-            type="button"
-            class="cursor-pointer rounded-md border-0 bg-primary py-3.5 px-6 text-base font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_4px_12px_rgba(102,126,234,0.4)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="playAgain"
-          >
-            {{ $t('results.playAgain') }}
-          </button>
-          <button
-            v-else-if="!isReady"
-            type="button"
-            class="cursor-pointer rounded-md border-0 bg-primary py-3.5 px-6 text-base font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_4px_12px_rgba(102,126,234,0.4)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="playAgain"
-          >
-            {{ $t('results.readyForNext') }}
-          </button>
-          <div
-            v-else
-            class="max-w-[400px] flex-1 rounded border-2 border-green-200 bg-green-100 px-6 py-3 text-center text-base font-medium text-green-900"
-          >
-            {{ $t('results.readyWaiting') }}
-          </div>
-          <button
-            type="button"
-            class="cursor-pointer rounded-md border-0 bg-success py-3.5 px-6 text-base font-semibold text-white transition-all hover:bg-success-dark"
-            @click="showLeaveDialog"
-          >
-            {{ $t('results.leaveRoom') }}
-          </button>
-        </div>
+        <section class="final-results__col"><AllDrawingsGallery :drawings="store.drawingHistory" /></section>
       </div>
 
-      <div class="mt-8 rounded-xl bg-white p-8 shadow-lg">
-        <h3 class="mt-0 mb-6 text-center">{{ $t('results.gameStatistics') }}</h3>
-        <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))">
-          <div class="rounded-lg bg-gray-50 p-4 text-center">
-            <div class="mb-2 text-sm text-gray-600">{{ $t('results.totalRounds') }}</div>
-            <div class="text-2xl font-bold text-slate-800">{{ store.maxRounds }}</div>
-          </div>
-          <div class="rounded-lg bg-gray-50 p-4 text-center">
-            <div class="mb-2 text-sm text-gray-600">{{ $t('results.players') }}</div>
-            <div class="text-2xl font-bold text-slate-800">{{ store.playersList.length }}</div>
-          </div>
-          <div class="rounded-lg bg-gray-50 p-4 text-center">
-            <div class="mb-2 text-sm text-gray-600">{{ $t('results.difficulty') }}</div>
-            <div class="text-2xl font-bold text-slate-800 capitalize">{{ store.difficulty }}</div>
-          </div>
-        </div>
+      <div class="final-cta">
+        <HdButton class="final-cta__again" variant="primary" @click="playAgain">
+          {{ store.isHost ? $t("finalResults.playAgain") : isReady ? $t("finalResults.readyWaiting") : $t("finalResults.readyForNext") }}
+        </HdButton>
+        <HdButton class="final-cta__home" variant="success" @click="showLeaveDialog">
+          {{ $t("finalResults.backHome") }}
+        </HdButton>
       </div>
     </div>
 
@@ -252,3 +226,127 @@ onUnmounted(() => {
     />
   </div>
 </template>
+
+<style scoped>
+.final-results {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-paper);
+}
+.final-results__body {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.final-results__columns {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+.final-results__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.final-results__heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-heading-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+.final-standings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.final-standings__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-pill);
+}
+.final-standings__row--you {
+  background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
+}
+.final-standings__rank {
+  min-width: 1.25rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-marker-red);
+}
+.final-standings__name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+.final-standings__tag {
+  font-size: var(--text-label-sm);
+}
+.final-standings__score {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.final-stats__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-sm);
+}
+.final-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.final-stats__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.final-stats__item dt {
+  font-family: var(--font-body);
+  font-size: var(--text-label-sm);
+  opacity: 0.75;
+}
+.final-stats__item dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-sm);
+}
+.final-stats__difficulty {
+  text-transform: capitalize;
+}
+.final-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+@media (max-width: 768px) {
+  .final-results__body {
+    padding: var(--space-4);
+    gap: var(--space-6);
+  }
+  .final-results__columns {
+    grid-template-columns: 1fr;
+  }
+  .final-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>

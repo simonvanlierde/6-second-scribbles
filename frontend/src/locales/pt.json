@@ -21,7 +21,8 @@
     "connecting": "Connecting...",
     "copyRoomCode": "Click to copy room code",
     "soundMute": "Mute sound",
-    "soundUnmute": "Unmute sound"
+    "soundUnmute": "Unmute sound",
+    "and": "and"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -259,25 +260,25 @@
     "joinRoom": "Join room",
     "connecting": "Connecting..."
   },
-  "results": {
-    "gameOver": "🏆 Fim de jogo!",
-    "finalScores": "Pontuações finais",
-    "you": "(Você)",
-    "winner": "Winner",
-    "winners": "Winners",
-    "tiedAtPoints": "Tied at {score} points",
-    "points": "{score} points",
-    "and": "and",
-    "tiedForRank": "Empatado em {rank}",
-    "pts": "{score} pts",
-    "playersReady": "{count} / {total} jogadores prontos",
-    "playAgain": "🔄 Jogar novamente",
-    "readyForNext": "✓ Pronto para o próximo jogo",
-    "readyWaiting": "✓ Pronto! Esperando o anfitrião iniciar um novo jogo...",
-    "leaveRoom": "🚪 Sair da sala",
-    "gameStatistics": "Estatísticas da partida",
-    "totalRounds": "Total de rodadas",
-    "players": "Jogadores",
-    "difficulty": "Dificuldade"
+  "finalResults": {
+    "gameOver": "Game over",
+    "champion": "Champion",
+    "champions": "Champions",
+    "standings": "Final standings",
+    "gameStats": "Game stats",
+    "statRounds": "Rounds",
+    "statPlayers": "Players",
+    "statDifficulty": "Difficulty",
+    "statDrawings": "Drawings",
+    "statGuesses": "Correct guesses",
+    "allDrawings": "All drawings",
+    "downloadDrawing": "Download {name}’s drawing",
+    "roundTag": "R{round}",
+    "playAgain": "Play again",
+    "readyForNext": "Ready for next game",
+    "readyWaiting": "Ready — waiting for host…",
+    "backHome": "Back home",
+    "tiedAt": "Tied at {score} pts",
+    "playersReady": "{count} / {total} players ready"
   }
 }
