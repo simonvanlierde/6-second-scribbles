@@ -65,6 +65,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class RoomCapacityError(Exception):
+    """Raised when the global room cap is reached and a new room cannot be created."""
+
+
 @dataclass
 class PlayerInfo:
     """Information about a player in a game room."""
@@ -547,8 +551,15 @@ class RoomManager:
         await room_lifecycle.run_cleanup(self)
 
     def get_or_create_room(self, room_id: str) -> GameRoom:
-        """Get an existing room or create a new one."""
+        """Get an existing room or create a new one.
+
+        Raises ``RoomCapacityError`` when a *new* room would exceed the global
+        cap. Existing rooms are always returned.
+        """
         if room_id not in self.rooms:
+            if len(self.rooms) >= settings.max_total_rooms:
+                msg = f"Global room cap reached (maximum {settings.max_total_rooms} rooms)"
+                raise RoomCapacityError(msg)
             room = GameRoom(room_id)
             self.rooms[room_id] = room
             room.scheduler.start_idle_check()

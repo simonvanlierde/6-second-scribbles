@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from fastapi import WebSocket
+    from fastapi import Request, WebSocket
 
     from app.rooms.session import RoomWebSocketSession
     from tests.support import TestWebSocket
@@ -212,7 +212,8 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
     monkeypatch.setattr(room_router.secrets, "choice", lambda _chars: next(choice_values))
     monkeypatch.setattr(room_router, "select_category_sets", AsyncMock(return_value=SELECTED_RESULT))
 
-    created = await room_router.create_room()
+    fake_request = SimpleNamespace(headers={}, client=None)
+    created = await room_router.create_room(cast("Request", fake_request))
     monkeypatch.setattr(room_router.room_manager, "get_room", Mock(return_value=fake_room))
     existing_status = room_router.get_room_status(room_id="ROOM01")
     monkeypatch.setattr(room_router.room_manager, "get_room", Mock(return_value=None))

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import ValidationError
 
+from app.core.config import settings
 from app.rooms.actions import (
     dispatch_event,
     handle_disconnect,
@@ -45,6 +47,8 @@ class RoomWebSocketSession:
         self.websocket = websocket
         self.player_id: str | None = None
         self.current_user = current_user
+        self._draw_window_start: float = 0.0
+        self._draw_count: int = 0
 
     def resolve_join_locale(self, preferred_locale: LanguageCode | None) -> LanguageCode:
         """Choose the effective locale for this websocket player."""
@@ -60,12 +64,29 @@ class RoomWebSocketSession:
 
         while True:
             payload = await self.websocket.receive_text()
+            # Reject oversized frames before any JSON parsing/validation work.
+            if len(payload) > settings.ws_max_message_bytes:
+                await self.send_error("protocol_error", "payload_too_large", "Message too large.")
+                continue
             await self.handle(payload)
+
+    def _draw_allowed(self) -> bool:
+        """Return whether another draw event fits the per-connection rate window."""
+        now = time.monotonic()
+        if now - self._draw_window_start >= settings.ws_draw_window_seconds:
+            self._draw_window_start = now
+            self._draw_count = 0
+        self._draw_count += 1
+        return self._draw_count <= settings.ws_draw_messages_per_window
 
     async def handle(self, payload: object) -> None:
         """Parse one inbound message and dispatch it."""
         try:
             event = parse_client_event(payload)
+            # Throttle only high-frequency draw events; silently drop the excess
+            # so a legitimate fast drawer is never disconnected.
+            if event.type in {"draw_stroke", "draw_stroke_partial"} and not self._draw_allowed():
+                return
             if event.type != JOIN_EVENT_TYPE and self.player_id:
                 self.room.update_player_activity(self.player_id)
             await dispatch_event(self, event)

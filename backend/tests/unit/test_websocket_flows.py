@@ -6,6 +6,7 @@ from __future__ import annotations
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, cast
 
+from app.core.config import settings
 from app.core.types import GamePhase
 from tests.constants import (
     ALICE,
@@ -34,6 +35,7 @@ from tests.constants import (
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
+    import pytest
     from fastapi.testclient import TestClient
     from starlette.testclient import WebSocketTestSession
 
@@ -428,6 +430,26 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
         assert highlights is not None
         # Both players submitted non-empty guesses, so a speed demon is always present.
         assert highlights["speedDemon"]["playerId"] == PLAYER_1
+
+
+def test_oversized_payload_rejected_without_closing(
+    test_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An oversized inbound frame is rejected with an error; the socket stays open."""
+    protocol_error = "protocol_error"
+    payload_too_large = "payload_too_large"
+    monkeypatch.setattr(settings, "ws_max_message_bytes", 10)
+    with joined_players(test_client, "BIG01", [JoinedPlayer(PLAYER_1, ALICE)]) as (ws1,):
+        ws1.send_text("x" * 50)
+        first = receive_json(ws1)
+        assert first["type"] == protocol_error
+        assert first["error"] == payload_too_large
+
+        # Connection is still alive: a second oversized frame is rejected the same way.
+        ws1.send_text("y" * 50)
+        second = receive_json(ws1)
+        assert second["error"] == payload_too_large
 
 
 def test_reaction_send_broadcasts_to_all_players(test_client: TestClient) -> None:

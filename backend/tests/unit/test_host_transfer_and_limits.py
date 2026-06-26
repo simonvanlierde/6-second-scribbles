@@ -7,10 +7,14 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import WebSocketDisconnect
 
-from app.rooms.manager import GameRoom, PlayerInfo, room_manager
+from app.core.config import settings
+from app.rooms.manager import GameRoom, PlayerInfo, RoomCapacityError, room_manager
 from tests.constants import FULL, JOIN_ERROR, ROOM_FULL
 from tests.support import as_websocket
+
+WS_TRY_AGAIN_LATER = 1013
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -147,6 +151,41 @@ class TestWebSocketRoomFull:
             assert response["type"] == JOIN_ERROR
             assert response["error"] == ROOM_FULL
             assert FULL in response["message"].lower()
+
+
+class TestGlobalRoomCap:
+    """Test suite for the global total-room cap."""
+
+    def test_creating_room_past_cap_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """get_or_create_room raises once the global cap is reached."""
+        monkeypatch.setattr(settings, "max_total_rooms", 1)
+
+        room_manager.get_or_create_room("ROOM_ONE")
+
+        with pytest.raises(RoomCapacityError):
+            room_manager.get_or_create_room("ROOM_TWO")
+
+    def test_existing_room_still_returned_at_cap(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A room that already exists is returned even when the cap is reached."""
+        monkeypatch.setattr(settings, "max_total_rooms", 1)
+
+        first = room_manager.get_or_create_room("ROOM_ONE")
+        again = room_manager.get_or_create_room("ROOM_ONE")
+
+        assert first is again
+
+    def test_websocket_closes_when_at_capacity(
+        self,
+        test_client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A websocket connecting to a new room at capacity is closed with 1013."""
+        monkeypatch.setattr(settings, "max_total_rooms", 0)
+
+        with pytest.raises(WebSocketDisconnect) as exc_info, test_client.websocket_connect("/ws/NEWROOM") as ws:
+            ws.receive_text()
+
+        assert exc_info.value.code == WS_TRY_AGAIN_LATER
 
 
 class TestGhostPlayerPrevention:

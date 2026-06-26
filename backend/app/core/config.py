@@ -94,6 +94,14 @@ class Settings(BaseSettings):
     game_complete_delay_seconds: int = 5
     kick_vote_timeout_seconds: int = 60
 
+    # Abuse / overload protection
+    max_total_rooms: int = 500
+    ws_max_message_bytes: int = 64 * 1024
+    ws_draw_messages_per_window: int = 60
+    ws_draw_window_seconds: int = 1
+    room_creation_rate_limit: int = 10
+    room_creation_rate_window_seconds: int = 60
+
     @model_validator(mode="after")
     def _prod_safety_checks(self) -> Self:
         # Apply environment-specific cookie security defaults.

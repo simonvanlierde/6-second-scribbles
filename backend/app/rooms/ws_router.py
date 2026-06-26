@@ -9,7 +9,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.auth.service import get_user_by_session
 from app.core.config import settings
 from app.core.database import get_session_maker
-from app.rooms.manager import room_manager
+from app.rooms.manager import RoomCapacityError, room_manager
 from app.rooms.session import RoomWebSocketSession
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,13 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
     await websocket.accept()
     logger.info("[WebSocket] Connection accepted for room %s", room_id)
 
-    room = room_manager.get_or_create_room(room_id)
+    try:
+        room = room_manager.get_or_create_room(room_id)
+    except RoomCapacityError:
+        logger.warning("[WebSocket] Room %s rejected: server at capacity", room_id)
+        await websocket.close(code=1013, reason="Server at capacity")
+        return
+
     session_maker = get_session_maker()
     session_id = websocket.cookies.get(settings.session_cookie_name)
     async with session_maker() as db:
