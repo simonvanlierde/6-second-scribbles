@@ -162,6 +162,24 @@ export const ServerEventSchema = z.union([
           .strict(),
       ),
       scores: z.record(z.string(), z.number().int()),
+      highlights: z
+        .union([
+          z
+            .object({
+              bestGuesser: z
+                .union([z.object({ playerId: z.string(), detail: z.string().default("") }).strict(), z.null()])
+                .default(null),
+              speedDemon: z
+                .union([z.object({ playerId: z.string(), detail: z.string().default("") }).strict(), z.null()])
+                .default(null),
+              wildestMiss: z
+                .union([z.object({ playerId: z.string(), detail: z.string().default("") }).strict(), z.null()])
+                .default(null),
+            })
+            .strict(),
+          z.null(),
+        ])
+        .default(null),
     })
     .strict(),
   z
@@ -169,6 +187,14 @@ export const ServerEventSchema = z.union([
       type: z.literal("game_complete"),
       finalScores: z.record(z.string(), z.number().int()),
       winner: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("reaction_received"),
+      drawingId: z.string(),
+      reactionKey: z.string(),
+      senderId: z.string(),
     })
     .strict(),
   z.object({
@@ -225,6 +251,7 @@ export const serverEventTypes = [
   "player_left",
   "player_ready_error",
   "protocol_error",
+  "reaction_received",
   "ready_status",
   "restart_game",
   "room_custom_categories_update",
@@ -253,6 +280,7 @@ export const serverEventGroups = {
   drawing: ["draw_stroke", "draw_stroke_partial", "drawpad_clear", "pad_visibility"],
   moderation: ["kick_error", "kick_vote_expired", "kick_vote_started", "kick_vote_updated", "player_kicked"],
   errors: ["permission_error", "player_ready_error", "protocol_error", "submit_guess_error"],
+  results: ["reaction_received"],
 } as const satisfies Record<string, readonly ServerEventType[]>;
 export const serverEventSummaries = {
   default_locale_update: "Room default locale updated.",
@@ -274,6 +302,7 @@ export const serverEventSummaries = {
   player_left: "A player left the room.",
   player_ready_error: "Player-ready validation failed.",
   protocol_error: "Malformed or invalid websocket payload.",
+  reaction_received: "A drawing reaction broadcast to the room.",
   ready_status: "Current ready-player counts.",
   restart_game: "Game restart broadcast.",
   room_custom_categories_update: "Room-level private category selection changed.",
@@ -365,6 +394,11 @@ export const ClientEventSchema = z.union([
   z.object({ type: z.literal("initiate_kick"), targetPlayerId: z.string() }),
   z.object({ type: z.literal("cast_kick_vote"), targetPlayerId: z.string() }),
   z.object({ type: z.literal("request_game_state"), playerId: z.union([z.string(), z.null()]).default(null) }),
+  z.object({
+    type: z.literal("reaction_send"),
+    drawingId: z.string(),
+    reactionKey: z.enum(["laugh", "shock", "art", "mind-blown", "think"]),
+  }),
 ]);
 export type ClientEvent = z.infer<typeof ClientEventSchema>;
 export type ClientEventType = ClientEvent["type"];
@@ -383,6 +417,7 @@ export const clientEventTypes = [
   "pad_visibility",
   "player_ready",
   "privacy_changed",
+  "reaction_send",
   "request_game_state",
   "restart_game",
   "room_custom_categories_update",
@@ -409,6 +444,7 @@ export const clientEventGroups = {
   roomSettings: ["default_locale_update", "privacy_changed", "room_custom_categories_update"],
   drawing: ["draw_stroke", "draw_stroke_partial", "drawpad_clear", "pad_visibility"],
   moderation: ["cast_kick_vote", "initiate_kick"],
+  results: ["reaction_send"],
 } as const satisfies Record<string, readonly ClientEventType[]>;
 export const clientEventSummaries = {
   cast_kick_vote: "Cast a vote in an active kick vote.",
@@ -423,6 +459,7 @@ export const clientEventSummaries = {
   pad_visibility: "Show or hide the shared drawpad.",
   player_ready: "Mark the current player as ready.",
   privacy_changed: "Change the room privacy setting.",
+  reaction_send: "Send a reaction to a drawing during round results.",
   request_game_state: "Request the latest room snapshot.",
   restart_game: "Restart the game from the lobby state.",
   room_custom_categories_update: "Override the host's private category selection for this room.",

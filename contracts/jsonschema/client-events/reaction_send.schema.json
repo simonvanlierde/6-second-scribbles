@@ -1,0 +1,20 @@
+{
+  "properties": {
+    "type": {
+      "const": "reaction_send",
+      "title": "Type",
+      "type": "string"
+    },
+    "drawingId": {
+      "title": "Drawingid",
+      "type": "string"
+    },
+    "reactionKey": {
+      "enum": ["laugh", "shock", "art", "mind-blown", "think"],
+      "type": "string"
+    }
+  },
+  "required": ["drawingId", "reactionKey", "type"],
+  "title": "ReactionSendEvent",
+  "type": "object"
+}

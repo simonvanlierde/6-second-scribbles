@@ -13,6 +13,7 @@
       "pad_visibility": "#/$defs/PadVisibilityEvent",
       "player_ready": "#/$defs/PlayerReadyEvent",
       "privacy_changed": "#/$defs/PrivacyChangedEvent",
+      "reaction_send": "#/$defs/ReactionSendEvent",
       "request_game_state": "#/$defs/RequestGameStateEvent",
       "restart_game": "#/$defs/RestartGameEvent",
       "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateEvent",
@@ -595,6 +596,26 @@
       },
       "required": ["type"],
       "title": "RequestGameStateEvent",
+      "type": "object"
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "reaction_send",
+          "title": "Type",
+          "type": "string"
+        },
+        "drawingId": {
+          "title": "Drawingid",
+          "type": "string"
+        },
+        "reactionKey": {
+          "enum": ["laugh", "shock", "art", "mind-blown", "think"],
+          "type": "string"
+        }
+      },
+      "required": ["drawingId", "reactionKey", "type"],
+      "title": "ReactionSendEvent",
       "type": "object"
     }
   ]

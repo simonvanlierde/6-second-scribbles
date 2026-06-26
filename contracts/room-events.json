@@ -83,6 +83,10 @@
     "initiate_kick": {
       "group": "moderation",
       "summary": "Start a kick vote for a target player."
+    },
+    "reaction_send": {
+      "group": "results",
+      "summary": "Send a reaction to a drawing during round results."
     }
   },
   "server": {
@@ -201,6 +205,10 @@
     "host_changed": {
       "group": "gameFlow",
       "summary": "Host ownership changed."
+    },
+    "reaction_received": {
+      "group": "results",
+      "summary": "A drawing reaction broadcast to the room."
     }
   }
 }

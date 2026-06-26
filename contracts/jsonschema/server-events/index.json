@@ -20,6 +20,7 @@
   "player_kicked": "player_kicked.schema.json",
   "round_complete": "round_complete.schema.json",
   "game_complete": "game_complete.schema.json",
+  "reaction_received": "reaction_received.schema.json",
   "start_game": "start_game.schema.json",
   "start_guessing": "start_guessing.schema.json",
   "restart_game": "restart_game.schema.json",

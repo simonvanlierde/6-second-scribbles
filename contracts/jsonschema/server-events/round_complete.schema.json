@@ -44,6 +44,96 @@
       },
       "title": "Scores",
       "type": "object"
+    },
+    "highlights": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "bestGuesser": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "playerId": {
+                      "title": "Playerid",
+                      "type": "string"
+                    },
+                    "detail": {
+                      "default": "",
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["playerId"],
+                  "title": "RoundHighlight",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "speedDemon": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "playerId": {
+                      "title": "Playerid",
+                      "type": "string"
+                    },
+                    "detail": {
+                      "default": "",
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["playerId"],
+                  "title": "RoundHighlight",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "wildestMiss": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "playerId": {
+                      "title": "Playerid",
+                      "type": "string"
+                    },
+                    "detail": {
+                      "default": "",
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["playerId"],
+                  "title": "RoundHighlight",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "title": "RoundHighlights",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": ["results", "scores", "type"],

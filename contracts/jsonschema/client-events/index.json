@@ -19,5 +19,6 @@
   "privacy_changed": "privacy_changed.schema.json",
   "initiate_kick": "initiate_kick.schema.json",
   "cast_kick_vote": "cast_kick_vote.schema.json",
-  "request_game_state": "request_game_state.schema.json"
+  "request_game_state": "request_game_state.schema.json",
+  "reaction_send": "reaction_send.schema.json"
 }
