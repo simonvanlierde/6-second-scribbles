@@ -2,15 +2,24 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
+import GameHeader from "@/components/game/GameHeader.vue";
+import HdAvatar from "@/components/ui/HdAvatar.vue";
+import HdButton from "@/components/ui/HdButton.vue";
+import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
+import HdInput from "@/components/ui/HdInput.vue";
+import HdPill from "@/components/ui/HdPill.vue";
+import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
 import { useRoomLeave } from "@/composables/useRoomLeave";
+import { useSound } from "@/composables/useSound";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const router = useRouter();
 const { send, disconnect } = useGameConnection();
+const { play } = useSound();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 
 function leaveRoom() {
@@ -30,7 +39,6 @@ const assignedTargetPlayerId = computed(() => store.guessTargets[store.localPlay
 const assignedTargetPlayer = computed(() =>
   assignedTargetPlayerId.value ? store.playersList.find((p) => p.id === assignedTargetPlayerId.value) || null : null,
 );
-const currentScore = computed(() => store.localPlayer?.score || 0);
 const brokenImages = ref<Set<string>>(new Set());
 
 const { timeLeft } = useGameTimer({
@@ -38,6 +46,11 @@ const { timeLeft } = useGameTimer({
   duration: () => store.guessingTimeLimit,
   onExpire: () => autoSubmitGuesses(),
 });
+
+function avatarColorFor(playerId: string): string {
+  const player = store.playersList.find((p) => p.id === playerId);
+  return player?.color ?? getAvatarColor(playerId);
+}
 
 onMounted(() => {
   submittedPlayers.value = [];
@@ -78,6 +91,7 @@ function autoSubmitGuesses() {
 }
 
 function submitGuessesForPlayer(targetPlayerId: string) {
+  play("click");
   const guesses = (playerGuesses.value[targetPlayerId] || []).filter((g) => g.trim() !== "");
   if (guesses.length === 0) {
     emptyGuessDialogTarget.value = targetPlayerId;
@@ -127,93 +141,40 @@ function confirmLeave() {
 </script>
 
 <template>
-  <div class="flex h-dvh w-full flex-col overflow-hidden bg-gradient-to-br from-primary to-secondary">
-    <!-- Header -->
-    <header
-      class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-white/10 bg-black/25 px-5 py-3 backdrop-blur-[8px] max-[480px]:gap-1.5 max-[480px]:px-2.5 max-[768px]:gap-2 max-[768px]:px-3.5 max-[768px]:py-2"
-    >
-      <div class="flex items-center">
-        <button
-          type="button"
-          class="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-white/[0.22] bg-white/[0.07] px-3 py-1.5 text-[0.8125rem] font-medium text-white/60 transition-all hover:border-white/60 hover:bg-white/[0.18] hover:text-white max-[480px]:px-2.5 max-[480px]:py-1.5 max-[480px]:text-[0.75rem]"
-          @click="showLeaveDialog"
-        >
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          {{ $t("common.leave") }}
-        </button>
-      </div>
+  <div class="guessing-phase">
+    <GameHeader :time-left="timeLeft" @leave="showLeaveDialog" />
 
-      <div
-        class="min-w-[4.5rem] rounded-[var(--radius-md)] px-4 py-1.5 text-center text-[2rem] font-extrabold leading-[1.2] text-white transition-colors max-[480px]:px-2.5 max-[480px]:text-[1.25rem] max-[480px]:py-[0.2rem] max-[768px]:min-w-12 max-[768px]:px-3 max-[768px]:py-1 max-[768px]:text-2xl"
-        :class="timeLeft <= 10 ? 'animate-timer-pulse bg-[rgba(231,76,60,0.9)]' : 'bg-[rgba(52,152,219,0.85)]'"
-      >
-        {{ timeLeft }}
-      </div>
-
-      <div class="flex flex-col items-end gap-0.5 justify-self-end">
-        <span class="whitespace-nowrap text-sm font-semibold text-white/95">
-          {{ $t("common.roundProgress", { current: store.currentRound, total: store.maxRounds }) }}
-          <span v-if="store.readyCount > 0" class="font-medium text-white/55">
-            · {{ store.readyCount }}/{{ store.totalPlayers }}
-            ✓</span
-          >
-        </span>
-        <span class="whitespace-nowrap text-[0.8125rem] font-medium text-white/70">
-          {{ $t("common.pointsShort", { count: currentScore }) }}
-        </span>
-      </div>
-    </header>
-
-    <!-- Main content -->
-    <div
-      class="flex min-h-0 flex-1 flex-row gap-5 overflow-hidden p-5 max-[768px]:flex-col max-[768px]:gap-3 max-[768px]:p-3"
-    >
+    <div class="guessing-phase__body">
       <template v-if="assignedTargetPlayer">
-        <!-- Drawing panel -->
-        <div
-          class="flex min-h-0 min-w-0 [flex:1.2] flex-col overflow-hidden rounded-[var(--radius-xl)] bg-white p-5 shadow-[var(--shadow-lg)] max-[768px]:flex-none max-[768px]:p-3.5"
-        >
-          <h2 class="mb-3.5 mt-0 shrink-0 border-b-2 border-primary pb-2 text-lg font-bold text-ink-dark">
+        <!-- Drawing frame -->
+        <HdCard class="drawing-frame">
+          <h2 class="drawing-frame__title">
+            <HdAvatar
+              :initial="getAvatarInitial(assignedTargetPlayer.name)"
+              :color="avatarColorFor(assignedTargetPlayer.id)"
+              size="sm"
+            />
             {{ $t("guessing.guessPlayerDrawing", { name: assignedTargetPlayer.name }) }}
           </h2>
-          <div
-            class="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[var(--radius-md)] border-[1.5px] border-[#e2e8f0] bg-surface max-[768px]:h-[min(155px,26dvh)] max-[768px]:flex-none"
-          >
+          <div class="drawing-frame__stage">
             <img
               v-if="assignedTargetPlayer.drawing && !brokenImages.has(assignedTargetPlayer.id)"
               :src="assignedTargetPlayer.drawing"
               :alt="$t('guessing.playerDrawingAlt')"
-              class="max-h-full max-w-full object-contain"
+              class="drawing-frame__img"
               @error="handleImageError(assignedTargetPlayer.id)"
             >
-            <p v-else-if="brokenImages.has(assignedTargetPlayer.id)" class="italic text-ink-muted">
+            <p v-else-if="brokenImages.has(assignedTargetPlayer.id)" class="drawing-frame__placeholder">
               {{ $t("guessing.drawingFailed") }}
             </p>
-            <p v-else class="italic text-ink-muted">{{ $t("guessing.waitingForDrawing") }}</p>
+            <p v-else class="drawing-frame__placeholder">{{ $t("guessing.waitingForDrawing") }}</p>
           </div>
-        </div>
+        </HdCard>
 
-        <!-- Guessing panel -->
-        <div class="flex min-h-0 min-w-0 flex-1 flex-col max-[768px]:overflow-y-auto">
-          <div
-            v-if="submittedPlayers.includes(assignedTargetPlayer.id)"
-            class="flex w-full items-center gap-2.5 self-start rounded-[var(--radius-md)] border border-[#c3e6cb] bg-[#d4edda] px-5 py-4 text-base font-semibold text-[#155724]"
-          >
+        <!-- Guess panel -->
+        <div class="guess-panel">
+          <HdCard v-if="submittedPlayers.includes(assignedTargetPlayer.id)" variant="postit" class="guess-submitted">
             <svg
-              width="20"
-              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -225,45 +186,44 @@ function confirmLeave() {
               <polyline points="20 6 9 17 4 12" />
             </svg>
             {{ $t("guessing.submittedWaiting") }}
-          </div>
-          <div v-else class="flex flex-col gap-3.5 rounded-[var(--radius-xl)] bg-white p-5 shadow-[var(--shadow-lg)]">
-            <h3
-              class="m-0 flex shrink-0 items-center gap-2 text-[0.9375rem] font-semibold tracking-[0.04em] text-ink-muted uppercase"
-            >
-              {{ $t("guessing.yourGuesses") }}
-              <span
-                class="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[0.8125rem] font-bold normal-case tracking-normal text-primary"
+          </HdCard>
+
+          <template v-else>
+            <HdCard class="guess-card">
+              <div class="guess-card__header">
+                <h3 class="guess-card__title">{{ $t("guessing.yourGuesses") }}</h3>
+                <HdPill variant="info">
+                  {{ guessesFor(assignedTargetPlayer.id).filter((g) => g.trim()).length }}
+                  / 10
+                </HdPill>
+              </div>
+              <div class="guess-card__grid">
+                <HdInput
+                  v-for="(_, idx) in guessesFor(assignedTargetPlayer.id)"
+                  :key="idx"
+                  v-model="guessesFor(assignedTargetPlayer.id)[idx]"
+                  class="guess-input"
+                  :placeholder="$t('guessing.guessNumber', { number: idx + 1 })"
+                  :aria-label="$t('guessing.guessNumber', { number: idx + 1 })"
+                  @input="onGuessInput(assignedTargetPlayer.id, idx)"
+                  @keydown="handleGuessKeydown(assignedTargetPlayer.id, idx, $event)"
+                />
+              </div>
+              <HdButton
+                variant="primary"
+                class="guess-card__submit"
+                @click="submitGuessesForPlayer(assignedTargetPlayer.id)"
               >
-                {{ guessesFor(assignedTargetPlayer.id).filter(g => g.trim()).length }}
-                / 10
-              </span>
-            </h3>
-            <div class="grid grid-cols-2 gap-2 max-[768px]:grid-cols-1">
-              <input
-                v-for="(_, idx) in guessesFor(assignedTargetPlayer.id)"
-                :key="idx"
-                v-model="guessesFor(assignedTargetPlayer.id)[idx]"
-                type="text"
-                :placeholder="$t('guessing.guessNumber', { number: idx + 1 })"
-                enterkeyhint="next"
-                class="guess-input rounded-[var(--radius-md)] border-[1.5px] border-[#e2e8f0] px-3 py-2.5 text-[0.9375rem] text-ink-dark transition-[border-color] focus:border-primary focus:shadow-[0_0_0_3px_rgba(102,126,234,0.25)] focus:outline-none"
-                @input="onGuessInput(assignedTargetPlayer.id, idx)"
-                @keydown="handleGuessKeydown(assignedTargetPlayer.id, idx, $event)"
-              >
-            </div>
-            <button
-              type="button"
-              class="shrink-0 cursor-pointer rounded-[var(--radius-md)] border-none bg-gradient-to-br from-primary to-secondary p-3 text-base font-bold text-white transition-all hover:-translate-y-px hover:brightness-[1.08]"
-              @click="submitGuessesForPlayer(assignedTargetPlayer.id)"
-            >
-              {{ $t("guessing.submitGuesses") }}
-            </button>
-          </div>
+                {{ $t("guessing.submitGuesses") }}
+              </HdButton>
+            </HdCard>
+            <HdCard variant="postit" class="guess-hint">{{ $t("guessing.hint") }}</HdCard>
+          </template>
         </div>
       </template>
 
-      <div v-else class="flex w-full items-center justify-center text-[1.0625rem] text-white/80">
-        <p class="italic text-ink-muted">{{ $t("guessing.waitingForAssignedDrawing") }}</p>
+      <div v-else class="guessing-phase__waiting">
+        <p>{{ $t("guessing.waitingForAssignedDrawing") }}</p>
       </div>
     </div>
 
@@ -289,3 +249,133 @@ function confirmLeave() {
     />
   </div>
 </template>
+
+<style scoped>
+.guessing-phase {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.guessing-phase__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow: hidden;
+}
+
+/* Drawing frame */
+.drawing-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1.2;
+  min-width: 0;
+  min-height: 0;
+}
+.drawing-frame__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2.5px solid var(--color-marker-red);
+  font-size: var(--text-heading-sm);
+}
+.drawing-frame__stage {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--r-input);
+  background: var(--color-paper);
+}
+.drawing-frame__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.drawing-frame__placeholder {
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+/* Guess panel */
+.guess-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+.guess-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.guess-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.guess-card__title {
+  margin: 0;
+  font-size: var(--text-heading-sm);
+}
+.guess-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.guess-card__submit {
+  width: 100%;
+}
+.guess-submitted {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+.guess-submitted svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.guess-hint {
+  font-size: var(--text-label-md);
+}
+.guessing-phase__waiting {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+@media (max-width: 768px) {
+  .guessing-phase__body {
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    overflow-y: auto;
+  }
+  .drawing-frame {
+    flex: none;
+  }
+  .drawing-frame__stage {
+    height: min(155px, 26dvh);
+  }
+  .guess-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
