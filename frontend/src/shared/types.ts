@@ -80,3 +80,12 @@ export type DrawStroke = {
   width: number;
   points: Array<{ x: number; y: number }>;
 };
+
+/** A single drawing captured for the end-of-game gallery (one per player per round). */
+export interface GalleryDrawing {
+  round: number;
+  playerId: string;
+  name: string;
+  color: string;
+  drawing: string; // Base64 data URL
+}

@@ -155,6 +155,9 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
       store.setRoundResults(message.results);
       store.setRoundHighlights(message.highlights ?? null);
       store.updateScores(message.scores);
+      // Snapshot this round's drawings for the end-of-game gallery before the
+      // next start_round clears them. currentRound still names the finished round.
+      store.captureRoundDrawings(store.currentRound);
       store.gamePhase = "round_results";
       store.readyCount = 0;
       store.totalPlayers = store.playersList.length;

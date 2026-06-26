@@ -5,7 +5,7 @@ import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/u
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { normalizeGamePhase } from "@/shared/gamePhase";
-import type { Card, Difficulty, KickVote, Player, RoundHighlights, RoundResult } from "@/shared/types";
+import type { Card, Difficulty, GalleryDrawing, KickVote, Player, RoundHighlights, RoundResult } from "@/shared/types";
 import { useDrawingStore } from "./drawing";
 
 function getBrowserLocale(): string {
@@ -50,6 +50,10 @@ export const useGameStore = defineStore(
     const localPlayerCard = ref<Card | undefined>();
     const lastRoundResults = ref<RoundResult[]>([]);
     const lastHighlights = ref<RoundHighlights | null>(null);
+    // Session-only accumulators for the end-of-game gallery + stats. Not persisted
+    // (base64 PNGs are large) — rebuilt round-by-round as each round completes.
+    const drawingHistory = ref<GalleryDrawing[]>([]);
+    const totalGuessesMade = ref<number>(0);
     const readyCount = ref<number>(0);
     const totalPlayers = ref<number>(0);
 
@@ -194,6 +198,8 @@ export const useGameStore = defineStore(
       currentRound.value = 0;
       gamePhase.value = "lobby";
       for (const p of players.value.values()) p.score = 0;
+      drawingHistory.value = [];
+      totalGuessesMade.value = 0;
     }
 
     function startRound(roundNumber: number, cards: Record<string, Card>) {
@@ -217,6 +223,8 @@ export const useGameStore = defineStore(
     function resetRound() {
       currentRound.value = 0;
       for (const p of players.value.values()) p.score = 0;
+      drawingHistory.value = [];
+      totalGuessesMade.value = 0;
     }
 
     function startGuessing(startTime?: number | null, targets?: Record<string, string>) {
@@ -240,6 +248,28 @@ export const useGameStore = defineStore(
 
     function setRoundResults(results: RoundResult[]) {
       lastRoundResults.value = results;
+    }
+
+    /**
+     * Snapshot the round's drawings into the gallery and fold its correct-guess
+     * count into the running total. Called on round_complete while players still
+     * hold this round's `.drawing` (startRound clears them on the next round).
+     */
+    function captureRoundDrawings(round: number) {
+      for (const player of players.value.values()) {
+        if (player.drawing) {
+          drawingHistory.value.push({
+            round,
+            playerId: player.id,
+            name: player.name,
+            color: player.color ?? getAvatarColor(player.id),
+            drawing: player.drawing,
+          });
+        }
+      }
+      for (const result of lastRoundResults.value) {
+        totalGuessesMade.value += result.correctGuesses;
+      }
     }
 
     function setRoundHighlights(highlights: RoundHighlights | null) {
@@ -343,6 +373,8 @@ export const useGameStore = defineStore(
       isSpectatorMode.value = false;
       lastRoundResults.value = [];
       lastHighlights.value = null;
+      drawingHistory.value = [];
+      totalGuessesMade.value = 0;
       categories.value = [];
       readyCount.value = 0;
       totalPlayers.value = 0;
@@ -379,6 +411,8 @@ export const useGameStore = defineStore(
       isSpectatorMode,
       lastRoundResults,
       lastHighlights,
+      drawingHistory,
+      totalGuessesMade,
       categories,
       guessTargets,
       readyCount,
@@ -422,6 +456,7 @@ export const useGameStore = defineStore(
       endGame,
       setReadyStatus,
       setRoundResults,
+      captureRoundDrawings,
       setRoundHighlights,
       updateScores,
       getFinalScores,

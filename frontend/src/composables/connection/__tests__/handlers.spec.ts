@@ -93,6 +93,35 @@ describe("connection handlers translations", () => {
     expect(reactions.countsFor("p2").laugh).toBe(0);
   });
 
+  it("captures the round's drawings on round_complete, surviving the next start_round", () => {
+    store.setPlayers([
+      { id: "p1", name: "Alice" },
+      { id: "p2", name: "Bob" },
+    ]);
+    store.localPlayerId = "p3"; // neither drawer is local, so drawings are accepted as-is
+    store.currentRound = 1;
+    store.setPlayerDrawing("p1", "data:image/png;base64,A1");
+    store.setPlayerDrawing("p2", "data:image/png;base64,B1");
+
+    handleGameFlowEvent(
+      {
+        type: "round_complete",
+        results: [{ playerId: "p1", targetPlayerId: "p2", correctGuesses: 2, totalItems: 3, pointsEarned: 20 }],
+        scores: { p1: 20, p2: 0 },
+        highlights: null,
+      },
+      ctx,
+    );
+
+    expect(store.drawingHistory).toHaveLength(2);
+    expect(store.drawingHistory.map((d) => d.round)).toEqual([1, 1]);
+    expect(store.totalGuessesMade).toBe(2);
+
+    // The next round nulls player.drawing — the captured history must persist.
+    handleGameFlowEvent({ type: "start_round", round: 2, cards: { p1: { category: "X", items: ["a"] } } }, ctx);
+    expect(store.drawingHistory).toHaveLength(2);
+  });
+
   it("records a received reaction and ignores unknown reaction keys", () => {
     const reactions = useReactions();
     reactions.clear();

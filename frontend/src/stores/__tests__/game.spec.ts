@@ -307,6 +307,78 @@ describe("getWinner", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Drawing history (end-of-game gallery)
+// ---------------------------------------------------------------------------
+
+describe("captureRoundDrawings", () => {
+  it("snapshots one entry per player that submitted a drawing", () => {
+    const store = useGameStore();
+    store.setPlayers([
+      { id: "p1", name: "Alice" },
+      { id: "p2", name: "Bob" },
+      { id: "p3", name: "Carol" },
+    ]);
+    store.setPlayerDrawing("p1", "data:image/png;base64,AAA");
+    store.setPlayerDrawing("p2", "data:image/png;base64,BBB");
+    // p3 never drew.
+
+    store.captureRoundDrawings(1);
+
+    expect(store.drawingHistory).toHaveLength(2);
+    expect(store.drawingHistory.map((d) => d.playerId)).toEqual(["p1", "p2"]);
+    expect(store.drawingHistory[0]).toMatchObject({ round: 1, name: "Alice", drawing: "data:image/png;base64,AAA" });
+    expect(store.drawingHistory[0]?.color).toBeTruthy();
+  });
+
+  it("accumulates across rounds with the correct round number", () => {
+    const store = useGameStore();
+    store.setPlayers([{ id: "p1", name: "Alice" }]);
+    store.setPlayerDrawing("p1", "data:image/png;base64,R1");
+    store.captureRoundDrawings(1);
+    store.setPlayerDrawing("p1", "data:image/png;base64,R2");
+    store.captureRoundDrawings(2);
+
+    expect(store.drawingHistory.map((d) => d.round)).toEqual([1, 2]);
+    expect(store.drawingHistory.map((d) => d.drawing)).toEqual([
+      "data:image/png;base64,R1",
+      "data:image/png;base64,R2",
+    ]);
+  });
+
+  it("folds the round's correct guesses into totalGuessesMade", () => {
+    const store = useGameStore();
+    store.setPlayers([{ id: "p1", name: "Alice" }]);
+    store.setRoundResults([
+      { playerId: "p1", targetPlayerId: "p2", correctGuesses: 3, totalItems: 5, pointsEarned: 30 },
+      { playerId: "p2", targetPlayerId: "p1", correctGuesses: 2, totalItems: 5, pointsEarned: 20 },
+    ]);
+    store.captureRoundDrawings(1);
+
+    expect(store.totalGuessesMade).toBe(5);
+  });
+
+  it("is cleared by resetRound and reset", () => {
+    const store = useGameStore();
+    store.setPlayers([{ id: "p1", name: "Alice" }]);
+    store.setPlayerDrawing("p1", "data:image/png;base64,AAA");
+    store.setRoundResults([
+      { playerId: "p1", targetPlayerId: "p2", correctGuesses: 1, totalItems: 2, pointsEarned: 10 },
+    ]);
+    store.captureRoundDrawings(1);
+
+    store.resetRound();
+    expect(store.drawingHistory).toHaveLength(0);
+    expect(store.totalGuessesMade).toBe(0);
+
+    store.setPlayerDrawing("p1", "data:image/png;base64,BBB");
+    store.captureRoundDrawings(2);
+    store.reset();
+    expect(store.drawingHistory).toHaveLength(0);
+    expect(store.totalGuessesMade).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Kick votes
 // ---------------------------------------------------------------------------
 
