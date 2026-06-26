@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { useTimeoutFn, watchDebounced } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
-import LocaleSelector from "@/components/LocaleSelector.vue";
+import { useI18n } from "vue-i18n";
+
 import StepperInput from "@/components/StepperInput.vue";
+import HdSegmented from "@/components/ui/HdSegmented.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
 import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
-import { formatLocaleLabel } from "@/shared/locales";
 import type { Difficulty } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
+const { t } = useI18n();
 const store = useGameStore();
 const { send } = useGameConnection();
 const { fetchLocaleAvailability, localeOptions } = useLocaleAvailability();
@@ -28,6 +30,7 @@ const isPrivateRoom = computed({
 });
 
 const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard"];
+const difficultyOptions = computed(() => DIFFICULTIES.map((d) => ({ value: d, label: t(`settings.${d}`) })));
 
 void fetchLocaleAvailability();
 
@@ -47,20 +50,22 @@ function broadcastSettings() {
   }
 }
 
-function changeDefaultLocale(newLocale: string) {
-  if (store.isHost) {
-    send({ type: "default_locale_update", locale: newLocale });
-  }
-}
-
+// The room's content language follows the host automatically — no visible
+// control. Prefer the host's own locale; fall back to the current room locale,
+// then to any locale that actually has playable cards.
 watch(
-  localeOptions,
-  (options) => {
-    if (!store.isHost) return;
-    const selected = options.find((option) => option.code === store.defaultLocale);
-    if (selected?.enabled) return;
-    const fallback = options.find((option) => option.enabled);
-    if (fallback) changeDefaultLocale(fallback.code);
+  [localeOptions, () => store.defaultLocale, () => store.localPlayerLocale, () => store.isHost],
+  ([options]) => {
+    if (!store.isHost || options.length === 0) return;
+    const isEnabled = (code: string) => options.find((option) => option.code === code)?.enabled ?? false;
+    const desired = isEnabled(store.localPlayerLocale)
+      ? store.localPlayerLocale
+      : isEnabled(store.defaultLocale)
+        ? store.defaultLocale
+        : options.find((option) => option.enabled)?.code;
+    if (desired && desired !== store.defaultLocale) {
+      send({ type: "default_locale_update", locale: desired });
+    }
   },
   { immediate: true },
 );
@@ -71,8 +76,8 @@ function togglePrivacy() {
   }
 }
 
-function setDifficulty(d: Difficulty) {
-  difficulty.value = d;
+function setDifficulty(d: string) {
+  difficulty.value = d as Difficulty;
 }
 
 watch(rounds, (val) => {
@@ -122,116 +127,49 @@ watch(
     startFlash();
   },
 );
-
-const difficultyChipClass: Record<Difficulty, string> = {
-  easy: "border-green-500 text-green-800 bg-green-50",
-  medium: "border-primary text-primary-dark bg-indigo-50",
-  hard: "border-red-500 text-red-700 bg-red-50",
-};
 </script>
 
 <template>
   <!-- Non-host: read-only settings chips -->
-  <div
-    v-if="!store.isHost"
-    class="my-4 rounded-md border border-slate-200 bg-surface px-4 py-3.5"
-    :class="{ 'settings-flash': settingsFlash }"
-  >
-    <div class="flex flex-wrap items-center gap-2">
-      <span
-        class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.8125rem] font-medium text-ink-dark capitalize"
-      >
-        {{ `🌐 ${formatLocaleLabel(store.defaultLocale)}` }}
-      </span>
-      <span
-        class="rounded-full border px-2.5 py-1 text-[0.8125rem] font-medium capitalize"
-        :class="difficultyChipClass[difficulty]"
-      >
-        {{ $t(`settings.${difficulty}`) }}
-      </span>
-      <span
-        class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.8125rem] font-medium text-ink-dark capitalize"
-      >
-        {{ rounds }}
-        {{ $t("settings.rounds") }}
-      </span>
-      <span
-        class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.8125rem] font-medium text-ink-dark capitalize"
-      >
-        ✏️ {{ drawingTimeLimit }}s
-      </span>
-      <span
-        class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.8125rem] font-medium text-ink-dark capitalize"
-      >
-        💬 {{ guessingTimeLimit }}s
-      </span>
+  <div v-if="!store.isHost" class="settings settings--readonly" :class="{ 'settings-flash': settingsFlash }">
+    <div class="settings-chips">
+      <span class="chip chip--accent">{{ $t(`settings.${difficulty}`) }}</span>
+      <span class="chip">{{ rounds }} {{ $t("settings.rounds") }}</span>
+      <span class="chip">✏️ {{ drawingTimeLimit }}s</span>
+      <span class="chip">💬 {{ guessingTimeLimit }}s</span>
     </div>
   </div>
 
   <!-- Host: editable settings -->
-  <div v-else class="my-4 flex flex-col gap-4">
-    <!-- Language -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
-        🌐 {{ $t("settings.roomLanguage") }}
-      </label>
-      <LocaleSelector
-        id="room-default-locale"
-        :model-value="store.defaultLocale"
-        :options="localeOptions"
-        compact
-        @update:model-value="changeDefaultLocale"
-      />
-      <p class="m-0 text-[0.8125rem] leading-snug text-ink-muted">{{ $t("settings.fallbackHelp") }}</p>
-    </div>
+  <div v-else class="settings">
+    <!-- Difficulty + rounds sit side by side, stacking when space is tight -->
+    <div class="settings__row">
+      <div class="field">
+        <label class="field__label">{{ $t("settings.difficulty") }}</label>
+        <HdSegmented
+          :model-value="difficulty"
+          :options="difficultyOptions"
+          :aria-label="$t('settings.difficulty')"
+          @update:model-value="setDifficulty"
+        />
+      </div>
 
-    <!-- Difficulty -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
-        {{ $t("settings.difficulty") }}
-      </label>
-      <div class="flex gap-1.5" role="group" :aria-label="$t('settings.difficulty')">
-        <button
-          v-for="d in DIFFICULTIES"
-          :key="d"
-          type="button"
-          class="flex-1 cursor-pointer rounded-full border-[1.5px] border-slate-200 bg-white px-2 py-1.5 text-sm font-medium text-[#555] capitalize transition-all"
-          :class="
-            difficulty === d
-              ? '!border-transparent !font-semibold !text-white bg-gradient-to-br !from-primary !to-secondary'
-              : 'hover:border-primary hover:text-primary'
-          "
-          @click="setDifficulty(d)"
-        >
-          {{ $t(`settings.${d}`) }}
-        </button>
+      <div class="field">
+        <label class="field__label">{{ $t("settings.rounds") }}</label>
+        <StepperInput
+          v-model="rounds"
+          :label="$t('settings.rounds')"
+          :min="GAME_SETTINGS.rounds.MIN"
+          :max="GAME_SETTINGS.rounds.MAX"
+        />
+        <p v-if="roundsError" class="field__error">{{ roundsError }}</p>
       </div>
     </div>
 
-    <!-- Rounds -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
-        {{ $t("settings.rounds") }}
-      </label>
-      <StepperInput
-        v-model="rounds"
-        :label="$t('settings.rounds')"
-        :min="GAME_SETTINGS.rounds.MIN"
-        :max="GAME_SETTINGS.rounds.MAX"
-      />
-      <p v-if="roundsError" class="mt-0.5 text-[0.8125rem] text-danger">{{ roundsError }}</p>
-    </div>
-
     <!-- Advanced settings -->
-    <button
-      type="button"
-      class="flex cursor-pointer items-center gap-1.5 border-0 bg-transparent py-1 text-sm font-semibold text-primary"
-      :aria-expanded="advancedOpen"
-      @click="advancedOpen = !advancedOpen"
-    >
+    <button type="button" class="advanced-toggle" :aria-expanded="advancedOpen" @click="advancedOpen = !advancedOpen">
       <svg
-        class="transition-transform duration-200"
-        :class="{ 'rotate-180': advancedOpen }"
+        :class="{ 'is-open': advancedOpen }"
         width="14"
         height="14"
         viewBox="0 0 24 24"
@@ -248,62 +186,202 @@ const difficultyChipClass: Record<Difficulty, string> = {
     </button>
 
     <Transition name="collapse">
-      <div v-if="advancedOpen" class="flex flex-col gap-3.5 rounded-md border border-slate-200 bg-surface p-3.5">
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
-            ✏️ {{ $t("settings.drawingTime") }}
-          </label>
-          <StepperInput
-            v-model="drawingTimeLimit"
-            :label="$t('settings.drawingTime')"
-            :min="GAME_SETTINGS.drawingTimeLimitSeconds.MIN"
-            :max="GAME_SETTINGS.drawingTimeLimitSeconds.MAX"
-            :step="10"
-            suffix="s"
-          />
+      <div v-if="advancedOpen" class="advanced">
+        <div class="advanced__times">
+          <div class="field">
+            <label class="field__label">✏️ {{ $t("settings.drawingTime") }}</label>
+            <StepperInput
+              v-model="drawingTimeLimit"
+              :label="$t('settings.drawingTime')"
+              :min="GAME_SETTINGS.drawingTimeLimitSeconds.MIN"
+              :max="GAME_SETTINGS.drawingTimeLimitSeconds.MAX"
+              :step="10"
+              suffix="s"
+            />
+          </div>
+
+          <div class="field">
+            <label class="field__label">💬 {{ $t("settings.guessingTime") }}</label>
+            <StepperInput
+              v-model="guessingTimeLimit"
+              :label="$t('settings.guessingTime')"
+              :min="GAME_SETTINGS.guessingTimeLimitSeconds.MIN"
+              :max="GAME_SETTINGS.guessingTimeLimitSeconds.MAX"
+              :step="10"
+              suffix="s"
+            />
+          </div>
         </div>
 
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[0.8125rem] font-semibold tracking-wider text-ink-muted uppercase">
-            💬 {{ $t("settings.guessingTime") }}
-          </label>
-          <StepperInput
-            v-model="guessingTimeLimit"
-            :label="$t('settings.guessingTime')"
-            :min="GAME_SETTINGS.guessingTimeLimitSeconds.MIN"
-            :max="GAME_SETTINGS.guessingTimeLimitSeconds.MAX"
-            :step="10"
-            suffix="s"
-          />
-        </div>
+        <!-- Private room toggle -->
+        <label class="toggle">
+          <input v-model="isPrivateRoom" type="checkbox" class="toggle__input" @change="togglePrivacy">
+          <span class="toggle__track" aria-hidden="true" />
+          <span class="toggle__text">
+            {{ $t("settings.privateRoom") }}
+            <span class="toggle__help">{{ $t("settings.privateRoomHelp") }}</span>
+          </span>
+        </label>
       </div>
     </Transition>
-
-    <!-- Private room toggle -->
-    <div class="pt-1">
-      <label class="flex cursor-pointer items-start gap-3">
-        <span class="relative mt-0.5 flex-shrink-0">
-          <input
-            v-model="isPrivateRoom"
-            type="checkbox"
-            class="peer absolute h-0 w-0 opacity-0"
-            @change="togglePrivacy"
-          >
-          <span
-            class="block h-5 w-10 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary relative after:absolute after:top-[0.2rem] after:left-[0.2rem] after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-[0_1px_3px_rgba(0,0,0,0.2)] after:transition-transform peer-checked:after:translate-x-[1.1rem]"
-            aria-hidden="true"
-          />
-        </span>
-        <span class="flex flex-col gap-0.5 text-[0.9375rem] font-medium text-ink-dark">
-          {{ $t("settings.privateRoom") }}
-          <span class="text-xs font-normal text-ink-muted"> {{ $t("settings.privateRoomHelp") }} </span>
-        </span>
-      </label>
-    </div>
   </div>
 </template>
 
 <style scoped>
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+}
+.settings--readonly {
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px dashed var(--color-ink);
+  border-radius: var(--r-card);
+}
+.settings__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  font-size: var(--text-label-sm);
+  border: 1.5px solid var(--color-ink);
+  border-radius: var(--r-pill);
+  background: var(--color-card);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-pill);
+  text-transform: capitalize;
+}
+.chip--accent {
+  background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.field__label {
+  font-size: var(--text-label-md);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.field__error {
+  margin: 2px 0 0;
+  font-size: var(--text-label-sm);
+  color: var(--color-marker-red);
+}
+
+.advanced-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  font-weight: 600;
+  color: var(--color-marker-red);
+  cursor: pointer;
+}
+.advanced-toggle svg {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.advanced-toggle svg.is-open {
+  transform: rotate(180deg);
+}
+.advanced {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border: 1.5px dashed var(--color-ink);
+  border-radius: var(--r-card);
+}
+.advanced__times {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+.toggle__input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.toggle__track {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: 40px;
+  height: 20px;
+  margin-top: 2px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--color-ink) 28%, transparent);
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform var(--motion-fast) var(--ease-spring);
+}
+.toggle__input:checked + .toggle__track {
+  background: var(--color-marker-red);
+}
+.toggle__input:checked + .toggle__track::after {
+  transform: translateX(20px);
+}
+.toggle__input:focus-visible + .toggle__track {
+  outline: 3px solid var(--color-ring);
+  outline-offset: 2px;
+}
+.toggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.toggle__help {
+  font-size: var(--text-label-sm);
+  font-weight: 400;
+  color: var(--color-ink-muted);
+}
+
 .settings-flash {
   animation: flash-bg 0.9s ease-in-out;
 }
@@ -318,15 +396,15 @@ const difficultyChipClass: Record<Difficulty, string> = {
     background-color: transparent;
   }
 }
-.collapse-enter-active,
-.collapse-leave-active {
-  transition: all var(--motion-base) var(--ease-out);
-  overflow: hidden;
-}
 @media (prefers-reduced-motion: reduce) {
   .settings-flash {
     animation: none;
   }
+}
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all var(--motion-base) var(--ease-out);
+  overflow: hidden;
 }
 .collapse-enter-from,
 .collapse-leave-to {
@@ -335,7 +413,7 @@ const difficultyChipClass: Record<Difficulty, string> = {
 }
 .collapse-enter-to,
 .collapse-leave-from {
-  max-height: 400px;
+  max-height: 600px;
   opacity: 1;
 }
 </style>
