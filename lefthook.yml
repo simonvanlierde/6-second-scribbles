@@ -20,21 +20,33 @@ pre-commit:
       run: uv run --project backend ruff check --fix {staged_files}
       stage_fixed: true
 
+# A fast confidence gate scoped to what's being pushed. The comprehensive
+# full-repo scans (spelling, security, contract regen + type-check) run in CI.
 pre-push:
   parallel: true
   files: git diff --name-only --diff-filter=ACMR HEAD @{push} 2>/dev/null || git ls-files
   commands:
-    check-root:
-      run: just check-root
-    check-frontend:
-      glob:
-        - "frontend/**"
-      run: just check-frontend
-    check-backend:
-      glob:
-        - "backend/**"
+    # Lint/format changed files; nested biome.json (root:false) applies per dir.
+    biome:
+      glob: "**/*.{js,cjs,mjs,ts,tsx,vue,json,jsonc,yml,yaml,toml}"
+      run: pnpm exec biome check --no-errors-on-unmatched {files}
+    # Spell-check only the changed files (full-repo scan lives in CI).
+    spelling:
+      run: pnpm exec cspell lint --config .cspell.yml --cache --cache-strategy content --no-must-find-files {files}
+    markdown:
+      glob: "**/README.md"
+      run: pnpm exec markdownlint-cli2 {files}
+    # Type-check needs the whole project (incremental: ~0.5s warm).
+    frontend-types:
+      glob: "frontend/**"
+      run: pnpm --dir frontend run type-check
+    # Python lint + types (no biome equivalent for Python).
+    backend:
+      glob: "backend/**"
       run: just check-backend
-    check-contracts:
+    # Contract reproducibility only; generated-type compilation is covered by
+    # frontend-types above (and the CI contracts job re-runs the full check).
+    contracts:
       glob:
         - "contracts/**"
         - "backend/app/rooms/protocol.py"
@@ -48,4 +60,4 @@ pre-push:
         - "justfile"
         - "backend/justfile"
         - "frontend/justfile"
-      run: just check-contracts
+      run: pnpm run contracts:check
