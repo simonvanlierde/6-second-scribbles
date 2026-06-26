@@ -309,10 +309,10 @@ const difficultyChipClass: Record<Difficulty, string> = {
 }
 @keyframes flash-bg {
   0% {
-    background-color: rgba(102, 51, 153, 0.08);
+    background-color: color-mix(in srgb, var(--color-highlighter-yellow) 40%, transparent);
   }
   50% {
-    background-color: rgba(102, 51, 153, 0.18);
+    background-color: color-mix(in srgb, var(--color-highlighter-yellow) 80%, transparent);
   }
   100% {
     background-color: transparent;
@@ -320,8 +320,13 @@ const difficultyChipClass: Record<Difficulty, string> = {
 }
 .collapse-enter-active,
 .collapse-leave-active {
-  transition: all 0.22s ease;
+  transition: all var(--motion-base) var(--ease-out);
   overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-flash {
+    animation: none;
+  }
 }
 .collapse-enter-from,
 .collapse-leave-to {

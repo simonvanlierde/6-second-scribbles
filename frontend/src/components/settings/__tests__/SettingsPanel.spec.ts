@@ -44,13 +44,11 @@ describe("SettingsPanel", () => {
     expect((input?.element as HTMLInputElement).value).toBe("Simon");
   });
 
-  it("renders three theme options in the theme dropdown", () => {
+  it("renders three theme options in the appearance segmented control", () => {
     const w = mountPanel();
-    // Locale + theme are both .ctrl__dropdown listboxes; the locale one is
-    // the scrollable variant, so the theme dropdown is the non-scroll one.
-    const themeDropdown = w.findAll(".ctrl__dropdown").find((d) => !d.classes().includes("ctrl__dropdown--scroll"));
-    expect(themeDropdown).toBeTruthy();
-    expect(themeDropdown?.findAll(".ctrl__option")).toHaveLength(3);
+    const seg = w.find(".seg");
+    expect(seg.exists()).toBe(true);
+    expect(seg.findAll(".seg__btn")).toHaveLength(3);
   });
 
   it("reveals an avatar color picker with 6 swatches when the avatar is clicked", async () => {
@@ -63,10 +61,10 @@ describe("SettingsPanel", () => {
     expect(picker.findAll("button")).toHaveLength(6);
   });
 
-  it("renders a sound toggle button", () => {
+  it("renders a sound toggle", () => {
     const w = mountPanel();
-    // The sound control is the only button exposing aria-pressed state.
-    const soundBtn = w.find("button[aria-pressed]");
-    expect(soundBtn.exists()).toBe(true);
+    const soundToggle = w.find(".switch__input");
+    expect(soundToggle.exists()).toBe(true);
+    expect((soundToggle.element as HTMLInputElement).type).toBe("checkbox");
   });
 });
