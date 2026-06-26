@@ -102,7 +102,7 @@ Self-hosted via `@fontsource/kalam` + `@fontsource/patrick-hand`. `font-display:
 
 ### 4.6 Iconography
 
-- **Library**: Lucide (already in project — keep). 1.75 px stroke, 20 px default size.
+- **Icons**: hand-authored inline SVGs (Lucide-style paths), ~1.75–2 px stroke, 20 px default size. No icon-package dependency — icons live inline in components / `HdIconButton`.
 - **Hard rule**: zero emoji in structural UI. Emoji are reserved for **player reactions only** (the 5 reaction icons during round results).
 - Icons are wrapped in a hand-drawn chip when used as a control (rotation + offset shadow); naked when inline.
 
@@ -318,9 +318,9 @@ Replace the current ad-hoc `@theme` block in `assets/main.css` with a tokens lay
 |Package|Purpose|
 |---|---|
 |`@fontsource/kalam`, `@fontsource/patrick-hand`|Self-hosted display + body fonts|
-|`@vueuse/motion`|Spring physics for press, stagger reveals (alternative: Motion One)|
 |`howler`|Ambient sound playback|
-|`html-to-image`|Drawing PNG export from canvas data|
+
+`@vueuse/motion` and `html-to-image` were on the original candidate list but dropped in Sprint 5: all motion ships as CSS transitions driven by `--motion-*` tokens (self-guarding under `prefers-reduced-motion`), and PNG export uses the native canvas `toDataURL` directly — neither library was needed.
 
 No framework changes. Vue 3, Vite, Pinia, Tailwind, vue-i18n, FastAPI, SQLAlchemy, PostgreSQL, Redis, WebSockets all stay.
 
@@ -348,11 +348,13 @@ No framework changes. Vue 3, Vite, Pinia, Tailwind, vue-i18n, FastAPI, SQLAlchem
 - Lobby rebuild including room-code chip, avatar player list, inline settings, gear icon.
 - Migrate existing `ToastContainer` and `ConfirmDialog` callers to `HdToast` / `HdDialog`; delete the old files.
 
-### Sprint 2 — Drawing + Guessing
+### Sprint 2 — Drawing + Guessing *(shipped)*
 
 - Rebuild `DrawingPhase` with new dark header, sidebar, dot-grid canvas, redesigned tool row.
 - Rebuild `GuessingPhase` with new layout (no reactions).
 - Add ambient sound layer (round start, last-10s tick, button click); wire toggle.
+
+The dark header was extracted into a shared `components/game/GameHeader.vue` (leave, sound toggle, `HdTimer`, round/score/avatar) — reuse it for the Sprint 3/4 in-game headers. Category items use manual tap-to-strike check-off; the global settings gear is retained (overlays the dark header) rather than re-homed into it.
 
 ### Sprint 3 — Round Results
 
@@ -369,6 +371,7 @@ No framework changes. Vue 3, Vite, Pinia, Tailwind, vue-i18n, FastAPI, SQLAlchem
 
 - Reduced-motion + dark-mode audit on every screen.
 - Accessibility pass (focus order, ARIA labels, contrast).
+- - Ensure locales in frontend/src/locales are complete and correct.
 - Visual QA at 375 / 768 / 1024 / 1440 px.
 - Performance: bundle-size impact of fonts + sound + motion lib; lazy-load where possible.
 
@@ -414,5 +417,5 @@ Worth flagging now so we don't accidentally design ourselves out of them:
 None blocking. Items to revisit during implementation:
 
 - Final highlights logic. Working definitions: **best guesser** = highest `correctGuesses / totalItems` ratio for the round; **speed demon** = first player to submit a non-empty guess set; **wildest miss** = guess with the highest string-distance from any item in the category, OR (simpler) the player with the most reactions on their drawing if reactions are tracked. Decide during Sprint 3.
-- Whether to ship a small set of pre-recorded sound samples or commission them.
+- ~~Whether to ship a small set of pre-recorded sound samples or commission them.~~ Resolved (Sprint 2): shipped small self-generated OGG tones for round-start / tick / click; reveal / winner to be added in Sprints 3–4.
 - Avatar colour assignment — round-robin vs. user-pickable in Sprint 1; can defer the picker to a later sprint.
