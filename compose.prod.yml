@@ -13,11 +13,30 @@ services:
     depends_on:
       database-migrations:
         condition: service_completed_successfully
+    # Hard resource caps so a traffic/abuse spike gets OOM-killed and restarted
+    # instead of taking down the host. Tune to the target machine.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1g
+
+  cache:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
 
   database:
     restart: unless-stopped
     env_file:
       - backend/.env.prod
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
 
   database-migrations:
     build:
@@ -37,6 +56,11 @@ services:
         condition: service_healthy
     ports:
       - "80:80"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128m
 
   cloudflared:
     image: cloudflare/cloudflared:latest
