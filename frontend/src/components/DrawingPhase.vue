@@ -18,7 +18,7 @@ import { useGameStore } from "@/stores/game";
 
 // Fixed pen palette — drawing colours must be theme-independent so the exported
 // PNG looks the same for every viewer regardless of light/dark mode.
-const PALETTE = ["#2d2d2d", "#ff4d4d", "#2d5da1", "#2e9e5b", "#ff8c42"] as const;
+const PALETTE = ["#2d2d2d", "#ffffff", "#ff4d4d", "#2d5da1", "#2e9e5b", "#ff8c42"] as const;
 const BRUSH_SIZES = [3, 6, 10] as const;
 
 const store = useGameStore();
@@ -198,6 +198,7 @@ function confirmLeave() {
               @click="canvas.setColor(color)"
             />
           </div>
+          <span class="toolbar__divider" aria-hidden="true" />
           <div class="toolbar__group" role="group" :aria-label="$t('drawing.size')">
             <button
               v-for="size in BRUSH_SIZES"
@@ -384,6 +385,13 @@ function confirmLeave() {
 .toolbar__group--end {
   margin-left: auto;
   gap: var(--space-1);
+}
+.toolbar__divider {
+  align-self: stretch;
+  width: 2px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--color-ink) 18%, transparent);
+  border-radius: var(--r-pill);
 }
 .swatch {
   width: 44px;
