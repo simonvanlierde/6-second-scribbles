@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
+import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
 import GameHeader from "@/components/game/GameHeader.vue";
 import HdButton from "@/components/ui/HdButton.vue";
@@ -189,7 +190,7 @@ function confirmLeave() {
           @clear="canvas.clear()"
         />
 
-        <div class="canvas-stage"><canvas ref="canvasElement" class="canvas-stage__canvas" /></div>
+        <DrawingCanvasStage class="drawing-phase__stage"><canvas ref="canvasElement" /></DrawingCanvasStage>
 
         <HdButton
           variant="success"
@@ -314,25 +315,9 @@ function confirmLeave() {
   min-height: 0;
   gap: var(--space-3);
 }
-.canvas-stage {
-  position: relative;
+.drawing-phase__stage {
   flex: 1;
   min-height: 0;
-  border: 2.5px solid var(--color-ink);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-card);
-  background-color: var(--color-card);
-  /* Faint 20px dot grid for paper feel. */
-  background-image: radial-gradient(color-mix(in srgb, var(--color-ink) 16%, transparent) 1px, transparent 1px);
-  background-size: 20px 20px;
-  overflow: hidden;
-}
-.canvas-stage__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-  cursor: crosshair;
 }
 
 @media (max-width: 768px) {

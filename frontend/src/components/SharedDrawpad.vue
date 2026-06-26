@@ -4,23 +4,24 @@
       <DrawingToolbar
         :current-color="color"
         :current-width="width"
+        :show-undo="false"
+        compact
         @select-color="color = $event"
         @select-size="width = $event"
-        @undo="canvas.undo()"
         @clear="clearLocal"
       />
     </div>
-    <canvas
-      ref="canvasEl"
-      class="mini-canvas h-[200px] w-full cursor-crosshair touch-none rounded border border-gray-300 bg-white max-[768px]:h-[180px] max-[480px]:h-[150px]"
-    />
-    <p class="mt-2 text-center text-sm text-gray-500 max-[768px]:text-xs">{{ $t("lobby.drawTogetherWhileWaiting") }}</p>
+    <DrawingCanvasStage class="shared-drawpad__stage"><canvas ref="canvasEl" /></DrawingCanvasStage>
+    <p class="mt-2 text-center text-sm text-ink-muted max-[768px]:text-xs">
+      {{ $t("lobby.drawTogetherWhileWaiting") }}
+    </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue";
 
+import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
@@ -91,3 +92,19 @@ onUnmounted(() => {
   if (rafId) cancelAnimationFrame(rafId);
 });
 </script>
+
+<style scoped>
+.shared-drawpad__stage {
+  height: 320px;
+}
+@media (max-width: 768px) {
+  .shared-drawpad__stage {
+    height: 220px;
+  }
+}
+@media (max-width: 480px) {
+  .shared-drawpad__stage {
+    height: 180px;
+  }
+}
+</style>
