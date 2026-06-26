@@ -6,7 +6,6 @@ import HdDialog from "@/components/ui/HdDialog.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { i18n } from "@/i18n";
-import { formatLocaleLabel } from "@/shared/locales";
 import type { Player } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
@@ -76,14 +75,6 @@ function colorFor(player: Player): string {
 
 <template>
   <div>
-    <div
-      v-if="!store.isHost"
-      class="my-4 flex items-center gap-2 rounded border border-gray-300 bg-gray-50 p-3 text-[0.95rem]"
-    >
-      <span class="font-semibold text-gray-600">🌐 {{ $t("settings.roomLanguage") }}:</span>
-      <span class="font-medium text-gray-800">{{ formatLocaleLabel(store.defaultLocale) }}</span>
-    </div>
-
     <ul class="my-4 list-none p-0">
       <li
         v-for="player in store.playersList"
