@@ -62,7 +62,6 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-    logger.info("Running migrations in offline mode on database: %s", settings.database_url)
     with context.begin_transaction():
         context.run_migrations()
 
@@ -91,7 +90,6 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    logger.info("Running migrations in online mode on database: %s", settings.database_url)
     asyncio.run(run_async_migrations())
 
 
