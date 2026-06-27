@@ -2,10 +2,10 @@
 
 import os
 from enum import StrEnum
-from typing import TYPE_CHECKING, Literal  # Needed for runtime  validation of Pydantic Settings
+from typing import TYPE_CHECKING, Annotated, Literal  # Needed for runtime  validation of Pydantic Settings
 
-from pydantic import SecretStr, computed_field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr, computed_field, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 if TYPE_CHECKING:
     from typing import Self
@@ -79,8 +79,18 @@ class Settings(BaseSettings):
     # Network configuration
     server_host: str = "127.0.0.1"
     server_port: int = 8000
-    # Allowed origins are validated below in _prod_safety_checks
-    allowed_origins: list[str] | None = None
+    # Allowed origins are validated below in _prod_safety_checks.
+    # NoDecode keeps pydantic-settings from JSON-parsing the env value so the
+    # validator below can accept a plain comma-separated string (e.g. in .env.prod).
+    allowed_origins: Annotated[list[str] | None, NoDecode] = None
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _split_allowed_origins(cls, value: object) -> object:
+        """Allow ALLOWED_ORIGINS to be a comma-separated string in env files."""
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
     # Game configuration
     max_players: int = 10
