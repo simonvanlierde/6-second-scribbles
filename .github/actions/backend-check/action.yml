@@ -41,13 +41,13 @@ runs:
       if: ${{ inputs.run-tests-mode == 'unit' }}
       shell: bash
       working-directory: backend
-      run: uv run pytest tests/unit -x --tb=short
+      run: uv run pytest tests/unit -x --tb=short --cov --cov-report=xml --cov-fail-under=0
 
     - name: Run backend full tests
       if: ${{ inputs.run-tests-mode == 'all' }}
       shell: bash
       working-directory: backend
-      run: uv run pytest tests -x --tb=short
+      run: uv run pytest tests -x --tb=short --cov --cov-report=xml --cov-fail-under=0
 
 inputs:
   run-tests-mode:

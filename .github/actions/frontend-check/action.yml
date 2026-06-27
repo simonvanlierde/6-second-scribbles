@@ -23,7 +23,15 @@ runs:
     - name: Run frontend unit tests (optional)
       if: ${{ inputs.run-tests == 'true' }}
       shell: bash
-      run: pnpm --dir frontend run test:unit
+      # Generate coverage for Codecov without gating CI on vitest's local
+      # thresholds (Codecov owns coverage tracking); mirrors the backend's
+      # --cov-fail-under=0.
+      run: >-
+        pnpm --dir frontend exec vitest run --coverage
+        --coverage.thresholds.lines=0
+        --coverage.thresholds.functions=0
+        --coverage.thresholds.branches=0
+        --coverage.thresholds.statements=0
 
 inputs:
   node-version:

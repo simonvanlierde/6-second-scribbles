@@ -96,6 +96,15 @@ jobs:
 
       - name: Frontend checks (composite)
         uses: ./.github/actions/frontend-check
+        with:
+          run-tests: 'true'
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./frontend/coverage/lcov.info
+          flags: frontend
 
   backend:
     name: Backend checks + unit tests
@@ -111,6 +120,13 @@ jobs:
         uses: ./.github/actions/backend-check
         with:
           run-tests-mode: 'unit'
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./backend/coverage.xml
+          flags: backend-unit
 
   contracts:
     name: Contract generation checks
