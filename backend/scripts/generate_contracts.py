@@ -42,7 +42,6 @@ REF_KEY = "$ref"
 ONE_OF_KEY = "oneOf"
 ANY_OF_KEY = "anyOf"
 DEFS_PREFIX = "#/$defs/"
-type JsonScalar = str | int | float | bool | None
 type JsonValue = Any
 type JsonObject = dict[str, Any]
 

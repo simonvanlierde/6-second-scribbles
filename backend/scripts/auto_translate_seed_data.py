@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 from app.categories.models import normalize_locale_code
+from app.core.logging import configure_logging
 from translation import TranslationService
 
 if TYPE_CHECKING:
@@ -35,18 +36,10 @@ PROMPTS_KEY = "prompts"
 SYSTEM_CATEGORIES_KEY = "system_categories"
 
 
-def configure_logging() -> None:
-    """Configure simple CLI logging for translation runs."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-
-
 def normalize_text(text: str) -> str:
     """Normalize text for comparison: lowercase, strip, remove accents."""
     lowered = text.lower().strip()
     return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
-
-
-configure_logging()
 
 
 def _is_blank(value: object) -> bool:
@@ -82,28 +75,6 @@ def _ensure_translation_entry(translations: list[dict[str, Any]], locale: str) -
     created: dict[str, Any] = {"locale": locale}
     translations.append(created)
     return created
-
-
-def _count_prompt_strings(prompt: dict[str, Any], *, normalized_source: str, normalized_targets: list[str]) -> int:
-    translations = list(prompt.get("translations", []))
-    indexed = _translations_by_locale(translations)
-    source_translation = indexed.get(normalized_source)
-    if source_translation is None or _is_blank(source_translation.get("label")):
-        return 0
-
-    source_aliases = [str(alias) for alias in (source_translation.get("aliases") or []) if not _is_blank(alias)]
-    return (1 + len(source_aliases)) * len(normalized_targets)
-
-
-def _count_category_strings(category: dict[str, Any], *, normalized_source: str, normalized_targets: list[str]) -> int:
-    translations = list(category.get("translations", []))
-    indexed = _translations_by_locale(translations)
-    source_translation = indexed.get(normalized_source)
-    if source_translation is None or _is_blank(source_translation.get("name")):
-        return 0
-
-    source_description = source_translation.get("description")
-    return (1 + (1 if not _is_blank(source_description) else 0)) * len(normalized_targets)
 
 
 def _dedupe_translated_aliases(aliases: list[str]) -> list[str]:
@@ -219,15 +190,7 @@ def apply_auto_translations(
     service.prefetch_pairs(normalized_source, normalized_targets)
     prompts = list(seed_data.get(PROMPTS_KEY, []))
     categories = list(seed_data.get(SYSTEM_CATEGORIES_KEY, []))
-    total_strings_to_estimate = sum(
-        _count_prompt_strings(prompt, normalized_source=normalized_source, normalized_targets=normalized_targets)
-        for prompt in prompts
-    ) + sum(
-        _count_category_strings(category, normalized_source=normalized_source, normalized_targets=normalized_targets)
-        for category in categories
-    )
-
-    logger.info("Starting translation of ~%d strings...", total_strings_to_estimate)
+    logger.info("Translating %d prompts and %d categories...", len(prompts), len(categories))
 
     # Translate prompts
     for prompt in prompts:
@@ -337,7 +300,7 @@ def _handle_cache_commands(args: argparse.Namespace, service: TranslationService
 
 def main() -> None:
     """Main entry point for auto-translation script."""
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    configure_logging()
     args = parse_args()
 
     seed_file: Path = args.seed_file
@@ -376,9 +339,9 @@ def main() -> None:
         elapsed_bench = time.time() - start_bench
         total_prompts = len(list(seed_data.get(PROMPTS_KEY, [])))
         estimated_total = elapsed_bench * (total_prompts / 50)
-        logger.info("Benchmark: 50 prompts took %.1f}s", elapsed_bench)
+        logger.info("Benchmark: 50 prompts took %.1fs", elapsed_bench)
         logger.info(
-            "Estimated total time for %d prompts: %.1f}s (%.1fm)",
+            "Estimated total time for %d prompts: %.1fs (%.1fm)",
             total_prompts,
             estimated_total,
             estimated_total / 60,
