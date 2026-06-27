@@ -20591,7 +20591,7 @@ system_categories:
   - bowling
   - boxing
 - id: jobs
-  difficulty: easy
+  difficulty: medium
   default_locale: en
   translations:
   - locale: en
@@ -20747,7 +20747,7 @@ system_categories:
   - school
   - fire-station
 - id: actions
-  difficulty: easy
+  difficulty: medium
   default_locale: en
   translations:
   - locale: en
@@ -20862,7 +20862,7 @@ system_categories:
   - worm
   - caterpillar
 - id: emotions
-  difficulty: easy
+  difficulty: medium
   default_locale: en
   translations:
   - locale: en
@@ -21057,7 +21057,7 @@ system_categories:
   - frog
   - snake
 - id: fantasy
-  difficulty: easy
+  difficulty: medium
   default_locale: en
   translations:
   - locale: en
@@ -21291,7 +21291,7 @@ system_categories:
   - cucumber
   - mushroom
 - id: places
-  difficulty: easy
+  difficulty: medium
   default_locale: en
   translations:
   - locale: en

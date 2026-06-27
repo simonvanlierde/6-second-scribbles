@@ -18,7 +18,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2.0"
+          cpus: "1.0"
           memory: 1g
 
   cache:
@@ -54,8 +54,14 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    # Bind to loopback only: the Cloudflare tunnel reaches the frontend over the
+    # internal Docker network (service name `frontend`), so the host port does not
+    # need to be on 0.0.0.0. Docker publishes ports by editing iptables directly,
+    # bypassing the host firewall, so a 0.0.0.0 bind would expose the app on the
+    # LAN/WAN and let clients reach the backend /api proxy without going through
+    # Cloudflare. Loopback keeps the tunnel as the only external ingress.
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     deploy:
       resources:
         limits:
@@ -63,7 +69,10 @@ services:
           memory: 128m
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    # Pinned by digest for reproducible, supply-chain-safe deploys instead of the
+    # mutable `latest` tag. Resolved from cloudflare/cloudflared:latest on 2026-06-27.
+    # To bump: `docker buildx imagetools inspect cloudflare/cloudflared:latest`.
+    image: cloudflare/cloudflared@sha256:6d91c121b803126f7a5344005d17a9324788fc09d305b6e2560ec6040a7ae283
     restart: unless-stopped
     depends_on:
       frontend:
@@ -73,4 +82,3 @@ services:
     command: [ "tunnel", "--no-autoupdate", "run" ]
     profiles:
       - tunnel
-    pull_policy: always

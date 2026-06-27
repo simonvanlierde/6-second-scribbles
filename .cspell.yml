@@ -49,9 +49,11 @@ words:
   - cloudflared
   - dedup
   - dorny
+  - duinlab
   - geolocation
   - healthz
   - htmlcov
+  - imagetools
   - Isguest
   - justfile
   - kalam

@@ -8,8 +8,10 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 
 from app.categories import service as category_service
+from app.categories.schemas import CategorySelectionResponse, SelectedCategorySet
 from app.core.config import settings
 from app.core.types import GamePhase
+from app.rooms import manager as manager_module
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.protocol import WebSocketMessage
@@ -303,6 +305,66 @@ class TestGameRoom:
         assert broadcast_call is not None
         assert broadcast_call.args[0].type == ROOM_STATE
         persist_mock.assert_awaited_once()
+
+    async def test_start_round_reuses_categories_when_fewer_than_players(
+        self,
+        make_ws: Callable[..., TestWebSocket],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Rounds must start even when fewer categories are available than players."""
+        room = GameRoom(ROOM_NO_CATEGORIES)
+        for player_id, player_name in (
+            (PLAYER_ONE_ID, PLAYER_ONE_NAME),
+            (PLAYER_TWO_ID, PLAYER_TWO_NAME),
+            (PLAYER_THREE_ID, PLAYER_THREE_NAME),
+        ):
+            room.players[player_id] = PlayerInfo(
+                id=player_id,
+                name=player_name,
+                websocket=as_websocket(make_ws()),
+            )
+        monkeypatch.setattr(room, "broadcast", AsyncMock())
+        monkeypatch.setattr(room, "persist", AsyncMock())
+
+        class _FakeSession:
+            async def __aenter__(self) -> object:
+                return object()
+
+            async def __aexit__(self, *args: object) -> None:
+                return None
+
+        monkeypatch.setattr(manager_module, "get_session_maker", lambda: _FakeSession)
+
+        # Only two categories available for three players.
+        selections = [
+            SelectedCategorySet(
+                category_id=cid,
+                category_name=name,
+                item_ids=[cid],
+                items=[name],
+                alternatives={name: []},
+            )
+            for cid, name in ((143, "Sports Equipment"), (144, "Weather Phenomena"))
+        ]
+        monkeypatch.setattr(
+            category_service,
+            "select_category_sets",
+            AsyncMock(return_value=CategorySelectionResponse(difficulty=MEDIUM, selections=selections)),
+        )
+        monkeypatch.setattr(
+            category_service,
+            "get_localized_category_set",
+            AsyncMock(
+                side_effect=lambda _db, *, category_id, **_kwargs: next(
+                    s for s in selections if s.category_id == category_id
+                )
+            ),
+        )
+
+        await room.start_round_with_server_cards()
+
+        assert room.metadata.game_phase == GamePhase.DRAWING
+        assert set(room.metadata.player_assignments.keys()) == {PLAYER_ONE_ID, PLAYER_TWO_ID, PLAYER_THREE_ID}
 
     async def test_initiate_kick_vote_broadcasts_modeled_payload(
         self,

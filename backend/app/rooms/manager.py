@@ -189,11 +189,15 @@ class GameRoom:
             )
 
         selected_sets = response.selections
+        if not selected_sets:
+            raise HTTPException(status_code=404, detail="No categories available for round")
+
         assignments: dict[str, PlayerPromptAssignmentState] = {}
 
         async with session_maker() as db:
             for index, player_id in enumerate(player_ids):
-                selected_category = selected_sets[index]
+                # Reuse categories when fewer are available than there are players.
+                selected_category = selected_sets[index % len(selected_sets)]
                 localized_category = await category_service.get_localized_category_set(
                     db,
                     category_id=selected_category.category_id,
