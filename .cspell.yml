@@ -49,6 +49,7 @@ words:
   - cloudflared
   - dedup
   - dorny
+  - duinlab
   - geolocation
   - healthz
   - htmlcov

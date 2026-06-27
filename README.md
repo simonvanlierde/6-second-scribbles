@@ -2,7 +2,11 @@
 
 6 Second Scribbles is a real-time, multiplayer drawing-and-guessing game. One player races through a list of prompts while everyone else guesses what's being drawn, and rooms move through lobby, round, and results states over WebSockets.
 
-> **Work in progress** — the full game loop works and is covered by tests, but there's no hosted demo yet and the UI is mid-redesign.
+A live demo is hosted at [6ss.duinlab.nl](https://6ss.duinlab.nl).
+
+| The drawer's view | What the guessers see |
+| --- | --- |
+| ![Drawer working through a themed prompt list](docs/screenshots/desktop-drawing.png) | ![Guesser racing to name each doodle](docs/screenshots/desktop-guessing.png) |
 
 ## Stack
 
@@ -25,7 +29,6 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 
 ### Planned
 
-- A public hosted demo (it currently runs locally only)
 - Finishing the UI and design-system redesign (home and lobby done so far)
 
 ## Running locally
