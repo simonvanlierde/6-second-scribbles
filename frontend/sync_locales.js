@@ -20,8 +20,11 @@ const targets = [
   "zh-TW.json",
 ];
 
+const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 function deepMerge(target, source) {
   for (const key of Object.keys(source)) {
+    if (DANGEROUS_KEYS.has(key)) continue;
     if (!(key in target)) continue;
     if (
       source[key] instanceof Object &&
