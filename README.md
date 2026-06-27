@@ -27,9 +27,6 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 - Generated client/server contracts
 - Unit, integration, and end-to-end tests
 
-### Planned
-
-- Finishing the UI and design-system redesign (home and lobby done so far)
 
 ## Running locally
 
