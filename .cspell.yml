@@ -53,6 +53,7 @@ words:
   - geolocation
   - healthz
   - htmlcov
+  - imagetools
   - Isguest
   - justfile
   - kalam
