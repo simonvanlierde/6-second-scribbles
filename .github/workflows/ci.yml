@@ -26,11 +26,11 @@ jobs:
       contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Detect changed paths
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             frontend:
@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -69,7 +69,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache cspell results
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cspellcache
           key: ${{ runner.os }}-cspell-${{ hashFiles('.cspell.yml', 'package.json', 'pnpm-lock.yaml') }}
@@ -92,7 +92,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Frontend checks (composite)
         uses: ./.github/actions/frontend-check
@@ -105,7 +105,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Backend checks + unit tests (composite)
         uses: ./.github/actions/backend-check
@@ -120,13 +120,13 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node + pnpm
         uses: ./.github/actions/setup-node-pnpm
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v8.2.0
 
       - name: Install root/frontend deps
         run: pnpm install --frozen-lockfile
