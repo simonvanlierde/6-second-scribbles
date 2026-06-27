@@ -59,8 +59,6 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
       target: dev
     depends_on:
       backend:

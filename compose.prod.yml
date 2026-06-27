@@ -47,13 +47,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
       target: prod
     restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
     # Bind to loopback only: the Cloudflare tunnel reaches the frontend over the
     # internal Docker network (service name `frontend`), so the host port does not
     # need to be on 0.0.0.0. Docker publishes ports by editing iptables directly,
