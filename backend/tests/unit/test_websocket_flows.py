@@ -384,6 +384,80 @@ def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> No
         assert join_response["error"] == GAME_IN_PROGRESS
 
 
+def test_existing_participant_can_rejoin_active_round(test_client: TestClient) -> None:
+    """A round participant who refreshes mid-drawing can reconnect, unlike a new player.
+
+    The host (PLAYER_1) stays connected throughout, mirroring a real refresh where
+    only one client drops.
+    """
+    room_id = "REJOIN_MID_ROUND"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as ws_host:
+        receive_json(ws_host)  # initial room_state
+        assert join_player(ws_host, PLAYER_1, ALICE)["type"] == PLAYER_JOINED
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as ws_guest:
+            receive_json(ws_guest)  # initial room_state
+            join_player(ws_guest, PLAYER_2, BOB)
+
+            send_json(ws_host, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 60})
+            send_json(
+                ws_host,
+                {
+                    "type": START_ROUND,
+                    "round": 1,
+                    "cards": {
+                        PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
+                        PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
+                    },
+                },
+            )
+        # ws_guest is now disconnected (the refresh); the host remains connected.
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as ws_rejoin:
+            initial_state = receive_json(ws_rejoin)
+            assert initial_state["type"] == ROOM_STATE
+            assert initial_state["gamePhase"] == GamePhase.DRAWING.value
+
+            rejoin_response = join_player(ws_rejoin, PLAYER_2, BOB)
+            assert rejoin_response["type"] == PLAYER_JOINED
+            assert rejoin_response["playerId"] == PLAYER_2
+
+            # The post-rejoin snapshot must carry this player's own card so the
+            # drawing prompt is restored from the server, not from client storage.
+            send_json(ws_rejoin, {"type": "request_game_state", "playerId": PLAYER_2})
+            snapshot = receive_json(ws_rejoin)
+            assert snapshot["type"] == ROOM_STATE
+            assert snapshot["card"]["items"] == ["pizza", "burger"]
+            assert snapshot["totalPlayers"] == 2
+
+
+def test_reconnecting_host_keeps_role(test_client: TestClient) -> None:
+    """A host who refreshes (disconnect + rejoin) reclaims the host role.
+
+    The guest stays connected throughout, so the host-transfer grace window is
+    what protects the role until the host's rejoin cancels the pending transfer.
+    """
+    room_id = "HOST_REJOIN"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as ws_guest:
+        receive_json(ws_guest)  # initial room_state
+        with test_client.websocket_connect(f"/ws/{room_id}") as ws_host:
+            receive_json(ws_host)  # initial room_state
+            assert join_player(ws_host, PLAYER_1, ALICE)["type"] == PLAYER_JOINED  # first joiner => host
+            join_player(ws_guest, PLAYER_2, BOB)
+        # ws_host is now disconnected (the host's refresh); the guest stays.
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as ws_host_again:
+            receive_json(ws_host_again)  # initial room_state
+            join_player(ws_host_again, PLAYER_1, ALICE)
+            # The snapshot must still name PLAYER_1 as host (the pending transfer
+            # was cancelled when the host reconnected).
+            send_json(ws_host_again, {"type": "request_game_state", "playerId": PLAYER_1})
+            snapshot = next(msg for msg in (receive_json(ws_host_again) for _ in range(5)) if msg["type"] == ROOM_STATE)
+            assert snapshot["hostId"] == PLAYER_1
+
+
 def test_round_complete_includes_highlights(test_client: TestClient) -> None:
     """The round-complete payload carries computed highlights, broadcast identically."""
     with joined_players(
