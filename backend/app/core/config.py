@@ -1,7 +1,6 @@
 """Application configuration via pydantic-settings."""
 
 import os
-from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Literal  # Needed for runtime  validation of Pydantic Settings
 
 from pydantic import SecretStr, computed_field, field_validator, model_validator
@@ -13,22 +12,7 @@ if TYPE_CHECKING:
 # ENV=dev loads .env.dev, ENV=prod loads .env.prod, etc.
 # If the resolved file does not exist, pydantic-settings ignores it silently.
 _ENV_STR = os.getenv("ENV", "dev").lower()
-
-
-class ENV(StrEnum):
-    """Environment enum for selecting configuration profiles.
-
-    The value corresponds to the suffix of the .env file to load.
-    """
-
-    DEV = "dev"
-    PROD = "prod"
-
-
-try:
-    CURRENT_ENV = ENV(_ENV_STR)
-except ValueError:
-    CURRENT_ENV = ENV.DEV
+IS_PROD = _ENV_STR == "prod"  # noqa: PLR2004 # only prod vs. non-prod is distinguished
 
 
 class Settings(BaseSettings):
@@ -117,7 +101,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _prod_safety_checks(self) -> Self:
         # Apply environment-specific cookie security defaults.
-        if CURRENT_ENV == ENV.DEV:
+        if not IS_PROD:
             # Local development often runs over plain HTTP, so avoid browser
             # warnings by keeping the cookie first-party unless explicitly
             # overridden in the environment.
