@@ -487,10 +487,11 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
         receive_json(ws1)
         receive_json(ws2)
         send_json(ws2, {"type": "player_ready", "playerId": PLAYER_2})
-        # Drain the ready + start_guessing broadcasts for both clients.
-        for _ in range(4):
+        # The second ready triggers two broadcasts per client: the ready_status
+        # update and the start_guessing transition.
+        for _ in range(2):
             receive_json(ws1)
-        for _ in range(4):
+        for _ in range(2):
             receive_json(ws2)
 
         send_json(ws1, {"type": "submit_guess", "playerId": PLAYER_1, "targetPlayerId": PLAYER_2, "guesses": ["x"]})
