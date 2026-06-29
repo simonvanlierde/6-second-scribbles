@@ -1,4 +1,5 @@
 """Tests for game room management functionality."""
+# cspell: ignore rejoiner
 
 import json
 import time
