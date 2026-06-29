@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
 from app.rooms import rounds
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
     HostRestoredEvent,
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
         DrawStrokePartialEvent,
         InitiateKickEvent,
         JoinEvent,
+        LeaveEvent,
         PadVisibilityEvent,
         PlayerReadyEvent,
         PrivacyChangedEvent,
@@ -70,7 +72,11 @@ async def broadcast_and_persist(session: RoomWebSocketSession, event: WebSocketM
 
 async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
     """Handle a join event for one websocket session."""
-    if session.room.metadata.game_phase in (GamePhase.DRAWING, GamePhase.GUESSING):
+    # Block brand-new players mid-round, but always let an existing participant
+    # reconnect (e.g. after a page refresh). A participant is identified by
+    # having been dealt a card for the current round.
+    is_rejoining_participant = event.player_id in session.room.metadata.player_assignments
+    if session.room.metadata.game_phase in (GamePhase.DRAWING, GamePhase.GUESSING) and not is_rejoining_participant:
         await send_ws_message(
             session.websocket,
             JoinErrorEvent(
@@ -91,11 +97,15 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         )
     except ValueError as exc:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
+        if str(exc) == IDENTITY_CONFLICT_ERROR:
+            error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use by another account."
+        else:
+            error, message = "room_full", str(exc)
         await send_ws_message(
             session.websocket,
-            JoinErrorEvent(error="room_full", message=str(exc)),
+            JoinErrorEvent(error=error, message=message),
         )
-        await session.websocket.close(code=1008, reason=str(exc))
+        await session.websocket.close(code=1008, reason=message)
         return
 
     session.player_id = event.player_id
@@ -168,11 +178,7 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     ready_status = session.room.mark_player_ready(event.player_id)
     await broadcast_and_persist(session, ready_status)
 
-    if (
-        session.room.metadata.game_phase == GamePhase.DRAWING
-        and len(session.room.metadata.ready_players) >= len(session.room.players)
-        and len(session.room.players) > 0
-    ):
+    if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
         session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
         await broadcast_and_persist(
             session,
@@ -221,6 +227,9 @@ async def handle_restart_game(session: RoomWebSocketSession, event: RestartGameE
     if not await require_host(session, "restart the game"):
         return
     session.room.reset_game()
+    # Players who dropped during the finished game and never returned are cleared
+    # as we go back to the lobby (they were kept through final results).
+    await session.room.prune_disconnected()
     await broadcast_and_persist(session, event)
 
 
@@ -303,11 +312,18 @@ async def handle_cast_kick_vote(session: RoomWebSocketSession, event: CastKickVo
 async def handle_request_game_state(session: RoomWebSocketSession, event: RequestGameStateEvent) -> None:
     """Handle a request-game-state event."""
     del event
-    await send_ws_message(session.websocket, session.room.room_state_event())
+    await send_ws_message(session.websocket, session.room.room_state_event(for_player_id=session.player_id))
 
 
 async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEvent | DrawStrokePartialEvent) -> None:
-    """Handle a draw-stroke event (broadcast as-is)."""
+    """Handle a draw-stroke event (broadcast as-is).
+
+    A completed stroke carries a full `drawing` PNG; retain the latest one per
+    player so reconnecting clients can recover it via room_state.
+    """
+    drawing = (event.model_extra or {}).get("drawing")
+    if session.player_id and isinstance(drawing, str):
+        session.room.round_drawings[session.player_id] = drawing
     await session.room.broadcast(event)
 
 
@@ -325,7 +341,25 @@ async def handle_reaction_send(session: RoomWebSocketSession, event: ReactionSen
 
 
 async def handle_disconnect(session: RoomWebSocketSession) -> None:
-    """Remove the session player from the room and broadcast departure."""
+    """Handle a dropped socket.
+
+    Mark the player reconnecting (mid-game) or remove them (lobby); an explicit
+    leave goes through handle_leave instead.
+    """
+    if not session.player_id:
+        return
+    # On reconnect (e.g. a page refresh) a newer socket may already have re-added
+    # this player. If the room's player is now bound to a different websocket,
+    # this is the stale connection tearing down — leave the live one intact.
+    current = session.room.players.get(session.player_id)
+    if current is not None and current.websocket is not session.websocket:
+        return
+    await session.room.disconnect_player(session.player_id)
+
+
+async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None:
+    """Handle an explicit, intentional leave — remove the player right away."""
+    del event
     if not session.player_id:
         return
     await session.room.remove_player(session.player_id)
@@ -337,6 +371,7 @@ async def handle_disconnect(session: RoomWebSocketSession) -> None:
 # server-originated echoes that require no server-side action.
 _HANDLERS: dict[str, _Handler] = {
     "join": handle_join,
+    "leave": handle_leave,
     "start_game": handle_start_game,
     "start_round": handle_start_round,
     "player_ready": handle_player_ready,

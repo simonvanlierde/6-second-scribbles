@@ -37,9 +37,11 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import lifecycle as room_lifecycle
 from app.rooms.protocol import (
+    GalleryDrawingPayload,
     PlayerCardPayload,
     PlayerLeftEvent,
     PlayerListItem,
+    PlayerPresenceEvent,
     PlayerSnapshot,
     ReadyStatusEvent,
     RoomStateEvent,
@@ -78,6 +80,7 @@ class PlayerInfo:
     websocket: WebSocket
     last_activity: float = field(default_factory=time.time)
     color: str | None = None
+    connected: bool = True
 
 
 @dataclass(frozen=True)
@@ -103,11 +106,19 @@ class GameRoom:
         self.pending_host_transfer: asyncio.Task[object] | None = None
         self._scoring_lock = asyncio.Lock()
         self.last_host_id: str | None = None  # Track last host for reconnection
+        self.last_host_user_id: str | None = None  # Authenticated owner of last host, for reclaim checks
         self.created_at = time.time()
         self.last_activity = time.time()
         self.emptied_at: float | None = None  # When room became empty
         self.is_hibernated = False
         self.active_kick_votes: dict[str, KickVote] = {}  # target_player_id -> KickVote
+        # Latest drawing PNG (data URL) per player for the current round. Kept in
+        # memory only (deliberately not in the Redis-persisted RoomState) so
+        # reconnecting players can recover drawings without bloating persistence.
+        self.round_drawings: dict[str, str] = {}
+        # Completed drawings for every scored round, for the end-of-game gallery.
+        # In-memory only (like round_drawings); rehydrated to clients via room_state.
+        self.drawing_history: list[GalleryDrawingPayload] = []
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -116,10 +127,30 @@ class GameRoom:
 
     async def _score_and_broadcast_round_locked(self) -> None:
         """Inner scoring logic, must be called under self._scoring_lock."""
+        # Idempotent: scoring can be triggered from several places (all-submitted,
+        # disconnect/remove, the scoring timeout). If two land close together the
+        # lock serializes them; bail on the second so the round is not scored twice.
+        if self.metadata.game_phase != GamePhase.GUESSING:
+            return
         await self.scheduler.cancel_scoring_timeout()
         session_maker = get_session_maker()
         async with session_maker() as db:
             round_complete_event = await rounds.score_round(self, db)
+
+        # Snapshot this round's drawings into the end-of-game gallery before the
+        # next round clears round_drawings, so reconnecting clients can recover it.
+        for player_id, drawing in self.round_drawings.items():
+            player = self.players.get(player_id)
+            self.drawing_history.append(
+                GalleryDrawingPayload(
+                    round=self.metadata.current_round,
+                    playerId=player_id,
+                    name=player.name if player else "",
+                    color=player.color if player else None,
+                    drawing=drawing,
+                ),
+            )
+
         await self.broadcast(round_complete_event)
 
         logger.info(
@@ -221,6 +252,8 @@ class GameRoom:
             idle_players = []
 
             for player_id, player in self.players.items():
+                if not player.connected:
+                    continue  # already dropped; kept as a 'reconnecting' presence
                 idle_time = now - player.last_activity
                 if idle_time > settings.idle_timeout_seconds:
                     logger.info(
@@ -267,28 +300,78 @@ class GameRoom:
             player_info_factory=PlayerInfo,
         )
 
+    def _new_host_transfer_task(self, old_host_id: str) -> asyncio.Task[object]:
+        """Create the delayed host-transfer task (shared by remove/disconnect paths)."""
+        return create_logged_task(
+            self._delayed_host_transfer(old_host_id),
+            name=f"host_transfer_{self.room_id}",
+        )
+
+    def _restart_host_transfer(self, old_host_id: str) -> None:
+        """Cancel any pending host transfer and start a fresh grace window."""
+        if self.pending_host_transfer:
+            self.pending_host_transfer.cancel()
+        self.pending_host_transfer = self._new_host_transfer_task(old_host_id)
+
+    def _maybe_auto_score(self) -> None:
+        """Score the round now if every connected player with a target has submitted.
+
+        A player leaving/disconnecting mid-guessing is no longer "expected" to
+        submit, so the remaining connected players may now all be done. The check
+        is computed live (it ignores departed players) so scoring can trigger
+        without waiting for the timeout and without a stale counter.
+        """
+        if self.metadata.game_phase == GamePhase.GUESSING and rounds.all_expected_guesses_submitted(self):
+            create_logged_task(self.score_and_broadcast_round(), name=f"auto_score_{self.room_id}")
+
     async def remove_player(self, player_id: str) -> None:
         """Remove a player from the room."""
         await player_lifecycle.remove_player(
             self,
             player_id,
             host_transfer_delay_ms=settings.host_transfer_delay_ms,
-            schedule_host_transfer=lambda disconnected_host_id: create_logged_task(
-                self._delayed_host_transfer(disconnected_host_id),
-                name=f"host_transfer_{self.room_id}",
-            ),
+            schedule_host_transfer=self._new_host_transfer_task,
         )
-        # If a player disconnects during guessing without having submitted, adjust
-        # the expected count so scoring can trigger without waiting for the timeout.
-        if self.metadata.game_phase == GamePhase.GUESSING and player_id not in self.metadata.submitted_players:
-            self.metadata.player_count_for_scoring = max(0, self.metadata.player_count_for_scoring - 1)
-            expected = self.metadata.player_count_for_scoring
-            submitted = len(self.metadata.submitted_players)
-            if expected > 0 and submitted >= expected:
-                create_logged_task(
-                    self.score_and_broadcast_round(),
-                    name=f"auto_score_{self.room_id}",
-                )
+        self._maybe_auto_score()
+
+    async def disconnect_player(self, player_id: str) -> None:
+        """Handle a socket drop.
+
+        In the lobby, remove the player outright; during a game keep them as a
+        'reconnecting' presence so peers can keep playing.
+        """
+        player = self.players.get(player_id)
+        if player is None:
+            return
+
+        if self.metadata.game_phase == GamePhase.LOBBY:
+            await self.remove_player(player_id)
+            await self.broadcast(PlayerLeftEvent(playerId=player_id))
+            await self.persist()
+            return
+
+        if not player.connected:
+            return  # already marked (e.g. by a failed broadcast send)
+        player.connected = False
+        await self.broadcast(PlayerPresenceEvent(playerId=player_id, connected=False))
+
+        # Host migration: keep the existing grace so a quick refresh keeps the role.
+        if player_id == self.host_id and any(p.connected for p in self.players.values()):
+            self._restart_host_transfer(player_id)
+
+        # A now-disconnected non-submitter no longer blocks scoring.
+        self._maybe_auto_score()
+
+        # If nobody is connected anymore, mark the room for hibernation/TTL cleanup.
+        if self.is_empty():
+            self.emptied_at = time.time()
+        await self.persist()
+
+    async def prune_disconnected(self) -> None:
+        """Remove all disconnected players (called at game start / restart)."""
+        for player_id in [pid for pid, p in self.players.items() if not p.connected]:
+            await self.remove_player(player_id)
+            await self.broadcast(PlayerLeftEvent(playerId=player_id))
 
     async def _delayed_host_transfer(self, old_host_id: str) -> None:
         """Transfer host after a delay, allowing for reconnection."""
@@ -306,24 +389,36 @@ class GameRoom:
         """Return whether the given player currently owns the room."""
         return player_lifecycle.is_host(self, player_id)
 
-    def room_state_event(self) -> RoomStateEvent:
-        """Build the canonical websocket room-state snapshot."""
+    def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
+        """Build the canonical websocket room-state snapshot.
+
+        When ``for_player_id`` is given and that player has a card for the active
+        round, include it so a reconnecting client can restore its prompt.
+        """
+        assignment = self.metadata.player_assignments.get(for_player_id) if for_player_id else None
+        card = PlayerCardPayload.model_validate(assignment.model_dump()) if assignment else None
         return RoomStateEvent.model_validate(
             {
                 "players": [
-                    PlayerSnapshot(id=player.id, name=player.name, color=player.color)
-                    for player in self.players.values()
+                    PlayerSnapshot(id=player.id, name=player.name, color=player.color, connected=player.connected)
+                    for player in self._ordered_players()
                 ],
                 "hostId": self.host_id,
                 "categories": self.metadata.categories,
                 "gamePhase": self.metadata.game_phase,
                 "difficulty": self.metadata.difficulty,
+                "currentRound": self.metadata.current_round,
                 "maxRounds": self.metadata.max_rounds,
                 "roundStartTime": self.metadata.round_start_time,
                 "guessingStartTime": self.metadata.guessing_start_time,
                 "drawingTimeLimit": self.metadata.drawing_time_limit,
                 "guessingTimeLimit": self.metadata.guessing_time_limit,
                 "guessTargets": self.metadata.guess_targets,
+                "drawings": self.round_drawings,
+                "drawingHistory": self.drawing_history,
+                "card": card,
+                "readyCount": len(self.metadata.ready_players),
+                "totalPlayers": len(self.players),
                 "padVisibility": self.metadata.pad_visibility,
                 "isPrivate": self.metadata.is_private,
                 "defaultLocale": self.metadata.default_locale,
@@ -381,32 +476,25 @@ class GameRoom:
             await self.score_and_broadcast_round()
 
     async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
-        """Broadcast a message to all players in the room."""
-        disconnected_players = []
-
+        """Broadcast a message to all connected players in the room."""
+        failed_player_ids: list[str] = []
         for player_id, player in self.players.items():
-            if exclude and player_id == exclude:
+            if (exclude and player_id == exclude) or not player.connected:
                 continue
             try:
                 await send_ws_message(player.websocket, message)
             except Exception:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-                disconnected_players.append(player_id)
+                failed_player_ids.append(player_id)
 
-        if not disconnected_players:
-            return
-
-        # Remove all failed players first, then notify remaining players once per removal.
-        # Using a direct send loop (not broadcast) avoids re-entrant cleanup if further
-        # sends fail during the departure notifications.
-        for player_id in disconnected_players:
-            await self.remove_player(player_id)
-
-        for player_id in disconnected_players:
-            departure = PlayerLeftEvent(playerId=player_id)
-            for player in self.players.values():
-                with contextlib.suppress(Exception):
-                    await send_ws_message(player.websocket, departure)
+        # A failed send means the socket is gone, but its receive loop may never
+        # raise (a half-open connection can block reads until an OS timeout).
+        # Proactively run the same teardown so peers are notified and
+        # host/scoring/cleanup proceed. disconnect_player is idempotent, so a
+        # later receive-loop disconnect for the same socket is a no-op. Scheduled
+        # (not awaited) to avoid re-entering broadcast mid-iteration.
+        for player_id in failed_player_ids:
+            create_logged_task(self.disconnect_player(player_id), name=f"disconnect_{self.room_id}")
 
     async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""
@@ -418,9 +506,16 @@ class GameRoom:
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
                 await self.remove_player(player_id)
 
+    def _ordered_players(self) -> list[PlayerInfo]:
+        """Players in stable seat order (insertion order for any without a seat)."""
+        seats = self.metadata.player_seats
+        return sorted(self.players.values(), key=lambda p: seats.get(p.id, len(seats)))
+
     def get_player_list(self) -> list[PlayerListItem]:
-        """Get the list of all players in the room."""
-        return [PlayerListItem(id=p.id, name=p.name, color=p.color) for p in self.players.values()]
+        """Get the list of all players in the room, in stable seat order."""
+        return [
+            PlayerListItem(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
+        ]
 
     async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> KickVoteResult:
         """Initiate a vote to kick a player.
@@ -465,8 +560,12 @@ class GameRoom:
     # ------------------------------------------------------------------ #
 
     def is_empty(self) -> bool:
-        """Check if the room is empty."""
-        return len(self.players) == 0
+        """Whether the room has no connected players.
+
+        A room holding only disconnected ("reconnecting") players counts as empty
+        so the hibernation/TTL cleanup can reclaim it if nobody returns.
+        """
+        return not any(player.connected for player in self.players.values())
 
     def should_hibernate(self) -> bool:
         """Check if room should be hibernated (empty for < hibernation timeout)."""

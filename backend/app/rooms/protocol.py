@@ -71,7 +71,11 @@ class StartGameEvent(GameSettingsEventModel):
 
 
 class PlayerCardPayload(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    # populate_by_name lets this accept snake_case field names as well as the
+    # camelCase aliases, so building a card from a snake_case model_dump (e.g.
+    # PlayerPromptAssignmentState on reconnect) keeps categoryId/itemIds instead
+    # of silently dropping them.
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     category_id: int | None = Field(default=None, alias="categoryId")
     category: str
@@ -115,6 +119,12 @@ class RestartGameEvent(ClientEventModel):
 
 class HeartbeatEvent(ClientEventModel):
     type: Literal["heartbeat"]
+
+
+class LeaveEvent(ClientEventModel):
+    """An explicit, intentional leave — remove the player immediately."""
+
+    type: Literal["leave"]
 
 
 class SettingsUpdateEvent(GameSettingsEventModel):
@@ -192,6 +202,7 @@ ClientEvent = Annotated[
     | SubmitGuessEvent
     | RestartGameEvent
     | HeartbeatEvent
+    | LeaveEvent
     | SettingsUpdateEvent
     | DefaultLocaleUpdateEvent
     | RoomCustomCategoriesUpdateEvent
@@ -246,6 +257,7 @@ class PlayerSnapshot(BaseModel):
     id: str
     name: str
     color: str | None = None
+    connected: bool = True
     categories: list[str] = Field(default_factory=list)
 
 
@@ -255,6 +267,19 @@ class PlayerListItem(BaseModel):
     id: str
     name: str
     color: str | None = None
+    connected: bool = True
+
+
+class GalleryDrawingPayload(BaseModel):
+    """One completed drawing retained for the end-of-game gallery."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    round: int
+    player_id: str = Field(alias="playerId")
+    name: str
+    color: str | None = None
+    drawing: str
 
 
 class RoomStateEvent(ServerEventModel):
@@ -264,12 +289,21 @@ class RoomStateEvent(ServerEventModel):
     categories: list[str] = Field(default_factory=list)
     game_phase: GamePhase = Field(alias="gamePhase")
     difficulty: Difficulty
+    current_round: int = Field(default=0, alias="currentRound")
     max_rounds: int = Field(alias="maxRounds")
     round_start_time: int | None = Field(default=None, alias="roundStartTime")
     guessing_start_time: int | None = Field(default=None, alias="guessingStartTime")
     drawing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
     guessing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
     guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
+    drawings: dict[str, str] = Field(default_factory=dict)
+    drawing_history: list[GalleryDrawingPayload] = Field(default_factory=list, alias="drawingHistory")
+    # The requesting player's own card, so a mid-round reconnect can restore the
+    # prompt without relying on client-side persistence. None outside a round or
+    # for connections that have not joined yet.
+    card: PlayerCardPayload | None = None
+    ready_count: int = Field(default=0, alias="readyCount")
+    total_players: int = Field(default=0, alias="totalPlayers")
     pad_visibility: bool = Field(alias="padVisibility")
     is_private: bool = Field(alias="isPrivate")
     default_locale: LanguageCode = Field(alias="defaultLocale")
@@ -349,6 +383,13 @@ class RoomCustomCategoriesUpdateServerEvent(ServerEventModel):
 
 class PlayerLeftEvent(ServerPlayerEventModel):
     type: Literal["player_left"] = "player_left"
+
+
+class PlayerPresenceEvent(ServerPlayerEventModel):
+    """A player's connection status changed (disconnected/reconnecting or back)."""
+
+    type: Literal["player_presence"] = "player_presence"
+    connected: bool
 
 
 class KickVoteStartedEvent(ServerTargetPlayerEventModel):
@@ -456,6 +497,7 @@ ServerEvent = Annotated[
     | DefaultLocaleUpdateServerEvent
     | RoomCustomCategoriesUpdateServerEvent
     | PlayerLeftEvent
+    | PlayerPresenceEvent
     | KickVoteStartedEvent
     | KickVoteUpdatedEvent
     | KickVoteExpiredEvent
@@ -490,6 +532,7 @@ ERROR_EVENT_MODELS: dict[ErrorEventType, type[ServerErrorEvent]] = {
 CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "heartbeat": {"group": "connection", "summary": "Keep the websocket session alive."},
     "join": {"group": "connection", "summary": "Join a room with the local player identity."},
+    "leave": {"group": "connection", "summary": "Explicitly leave the room (immediate removal)."},
     "request_game_state": {"group": "connection", "summary": "Request the latest room snapshot."},
     "game_complete": {"group": "gameFlow", "summary": "Signal that the game is complete."},
     "player_ready": {"group": "gameFlow", "summary": "Mark the current player as ready."},
@@ -520,6 +563,7 @@ SERVER_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "join_error": {"group": "connection", "summary": "Join failed but the connection remained valid."},
     "player_joined": {"group": "connection", "summary": "A player joined the room."},
     "player_left": {"group": "connection", "summary": "A player left the room."},
+    "player_presence": {"group": "connection", "summary": "A player's connection status changed."},
     "room_state": {"group": "connection", "summary": "Current room snapshot."},
     "game_complete": {"group": "gameFlow", "summary": "Game completion results broadcast."},
     "ready_status": {"group": "gameFlow", "summary": "Current ready-player counts."},

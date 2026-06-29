@@ -94,13 +94,15 @@ class Settings(BaseSettings):
 
     # Game configuration
     max_players: int = 10
-    host_transfer_delay_ms: int = 1000
+    # Grace period before transferring host after a disconnect. Must comfortably
+    # exceed a page refresh round-trip so a reconnecting host keeps the role.
+    host_transfer_delay_ms: int = 5000
     idle_timeout_seconds: int = 180
     room_ttl_seconds: int = 300
     room_hibernation_delay_seconds: int = 60
     game_start_delay_seconds: int = 1
     drawing_to_guessing_buffer_seconds: int = 2
-    round_results_countdown_seconds: int = 5
+    round_results_countdown_seconds: int = 15
     game_complete_delay_seconds: int = 5
     kick_vote_timeout_seconds: int = 60
 
