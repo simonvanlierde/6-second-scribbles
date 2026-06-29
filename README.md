@@ -31,6 +31,11 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 - Locale-aware prompt categories and guess matching
 - Generated client/server contracts
 - Unit, integration, and end-to-end tests
+  
+### Todo
+
+- Full mobile support (currently desktop-first)
+- Improved handling mid-game user disconnects
 
 ## Running locally
 
