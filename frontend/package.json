@@ -1,6 +1,6 @@
 {
   "name": "six-second-scribbles-multiplayer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Multiplayer web implementation of Six Second Scribbles party drawing game",
   "private": true,
   "type": "module",
