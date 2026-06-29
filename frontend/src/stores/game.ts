@@ -33,6 +33,10 @@ export const useGameStore = defineStore(
 
     // --- Room & players ---
     const roomCode = ref<string>("");
+    // True once the server's authoritative room_state has been applied for the
+    // current connection. Gates game views so we never render stale, non-synced
+    // state after a reload/reconnect.
+    const hydrated = ref<boolean>(false);
     const players = ref<Map<string, Player>>(new Map());
     const hostId = ref<string | null>(null);
     const kickVotes = ref<Map<string, KickVote>>(new Map());
@@ -124,14 +128,14 @@ export const useGameStore = defineStore(
 
     function addPlayer(id: string, name: string) {
       if (!players.value.has(id)) {
-        players.value.set(id, { id, name, score: 0 });
+        players.value.set(id, { id, name, score: 0, connected: true });
       }
       if (players.value.size === 1 && !hostId.value) {
         hostId.value = id;
       }
     }
 
-    function setPlayers(nextPlayers: Array<{ id: string; name: string; color?: string | null }>) {
+    function setPlayers(nextPlayers: Array<{ id: string; name: string; color?: string | null; connected?: boolean }>) {
       const next = new Map<string, Player>();
       for (const incoming of nextPlayers) {
         const existing = players.value.get(incoming.id);
@@ -142,6 +146,7 @@ export const useGameStore = defineStore(
           color: incoming.color ?? existing?.color ?? null,
           currentCard: existing?.currentCard,
           drawing: existing?.drawing,
+          connected: incoming.connected ?? existing?.connected ?? true,
         });
       }
       players.value = next;
@@ -329,6 +334,7 @@ export const useGameStore = defineStore(
       hostId.value = roomState.hostId ?? null;
       categories.value = roomState.categories ?? [];
       gamePhase.value = normalizeGamePhase(roomState.gamePhase);
+      if (roomState.currentRound !== undefined) currentRound.value = roomState.currentRound;
       applySettingsUpdate({
         difficulty: roomState.difficulty,
         rounds: roomState.maxRounds,
@@ -338,10 +344,37 @@ export const useGameStore = defineStore(
       roundStartTime.value = roomState.roundStartTime ?? undefined;
       guessingStartTime.value = roomState.guessingStartTime ?? undefined;
       guessTargets.value = roomState.guessTargets ?? {};
+      for (const [playerId, playerDrawing] of Object.entries(roomState.drawings ?? {})) {
+        setPlayerDrawing(playerId, playerDrawing);
+      }
+      // Server is authoritative for the round prompt and progress counters, so a
+      // mid-round reconnect rehydrates them here rather than from localStorage.
+      if (roomState.card) localPlayerCard.value = roomState.card;
+      if (roomState.readyCount !== undefined) readyCount.value = roomState.readyCount;
+      if (roomState.totalPlayers !== undefined) totalPlayers.value = roomState.totalPlayers;
+      // Rebuild the end-of-game gallery from the server only when we don't already
+      // have it (a freshly reconnected client that missed the round_complete
+      // events). A fully-connected client builds it incrementally instead.
+      if (drawingHistory.value.length === 0 && roomState.drawingHistory?.length) {
+        drawingHistory.value = roomState.drawingHistory.map((entry) => ({
+          round: entry.round,
+          playerId: entry.playerId,
+          name: entry.name,
+          color: entry.color ?? getAvatarColor(entry.playerId),
+          drawing: entry.drawing,
+        }));
+      }
       if (roomState.padVisibility !== undefined) drawing.setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
       customCategoryIds.value = roomState.customCategoryIds ?? null;
       if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
+      // Only treat a snapshot that reflects our own membership (i.e. the one sent
+      // after our join completes) as authoritative hydration. A spectator has no
+      // membership, so any snapshot hydrates them. This avoids clearing the
+      // reconnect gate on the pre-join connect-time snapshot that omits us.
+      if (isSpectatorMode.value || roomState.players.some((p) => p.id === localPlayerId.value)) {
+        hydrated.value = true;
+      }
     }
 
     // --- Actions: drawing (delegated to useDrawingStore; proxied here for backward compat) ---
@@ -352,9 +385,17 @@ export const useGameStore = defineStore(
       }
     }
 
+    function setPlayerConnected(playerId: string, connected: boolean) {
+      const player = players.value.get(playerId);
+      if (player) {
+        player.connected = connected;
+      }
+    }
+
     // --- Reset ---
     function reset() {
       roomCode.value = "";
+      hydrated.value = false;
       players.value.clear();
       kickVotes.value.clear();
       hostId.value = null;
@@ -389,6 +430,7 @@ export const useGameStore = defineStore(
     return {
       // State
       roomCode,
+      hydrated,
       localPlayerId,
       localPlayerName,
       pendingLocalPlayerId,
@@ -470,6 +512,7 @@ export const useGameStore = defineStore(
       addStroke: drawing.addStroke,
       clearStrokes: drawing.clearStrokes,
       setPlayerDrawing,
+      setPlayerConnected,
       setRoomPadVisible: drawing.setRoomPadVisible,
       setLocalPadVisible: drawing.setLocalPadVisible,
       reset,
@@ -478,24 +521,11 @@ export const useGameStore = defineStore(
   {
     persist: {
       key: STORAGE_KEYS.GAME_STATE,
-      pick: [
-        "localPlayerId",
-        "localPlayerName",
-        "localPlayerLocale",
-        "localPlayerColor",
-        "roomCode",
-        "currentRound",
-        "maxRounds",
-        "difficulty",
-        "gamePhase",
-        "roundStartTime",
-        "guessingStartTime",
-        "drawingTimeLimit",
-        "guessingTimeLimit",
-        "guessTargets",
-        "defaultLocale",
-        "customCategoryIds",
-      ],
+      // Persist identity + which room we intend to rejoin ONLY. All shared game
+      // state (phase, round, timers, guess targets, settings) is server-owned and
+      // rehydrated from room_state on (re)connect — persisting it would let a
+      // reloaded client render stale, un-synced state. See `hydrated`.
+      pick: ["localPlayerId", "localPlayerName", "localPlayerLocale", "localPlayerColor", "roomCode", "defaultLocale"],
     },
   },
 );

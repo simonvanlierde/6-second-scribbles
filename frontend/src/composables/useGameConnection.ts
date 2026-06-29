@@ -22,8 +22,23 @@ const isObserverConnection = ref(false);
 let heartbeatInterval: number | null = null;
 let stateRefreshInterval: number | null = null;
 
+// Auto-reconnect state. The client treats a dropped socket as recoverable and
+// re-runs the join handshake with exponential backoff, so transient drops and
+// server restarts self-heal without losing the player's place in the game.
+type ConnectionStatus = "disconnected" | "connecting" | "connected" | "reconnecting";
+const connectionStatus = ref<ConnectionStatus>("disconnected");
+let intentionalClose = false;
+let reconnectTimer: number | null = null;
+let reconnectAttempts = 0;
+let lastRoomCode: string | null = null;
+let lastConnectOptions: ConnectOptions = {};
+const MAX_RECONNECT_ATTEMPTS = 12;
+const RECONNECT_BASE_MS = 500;
+const RECONNECT_MAX_MS = 5000;
+
 type ConnectOptions = {
   observeOnly?: boolean;
+  isRetry?: boolean;
 };
 
 export function useGameConnection() {
@@ -48,6 +63,17 @@ export function useGameConnection() {
     }
 
     const observeOnly = options.observeOnly ?? false;
+    // A fresh (non-retry) connect resets the backoff and re-arms auto-reconnect.
+    if (!options.isRetry) reconnectAttempts = 0;
+    intentionalClose = false;
+    lastRoomCode = normalizedRoomCode;
+    lastConnectOptions = { observeOnly };
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    connectionStatus.value = options.isRetry ? "reconnecting" : "connecting";
+
     if (ws) {
       ws.close();
     }
@@ -62,6 +88,8 @@ export function useGameConnection() {
     socket.onopen = () => {
       if (ws !== socket) return;
       isConnected.value = true;
+      connectionStatus.value = "connected";
+      reconnectAttempts = 0;
       connectionError.value = null;
       lastJoinError.value = null;
 
@@ -113,14 +141,32 @@ export function useGameConnection() {
 
     socket.onclose = (event) => {
       if (import.meta.env.DEV) console.log("[WebSocket] Connection closed:", event.code, event.reason);
-      if (ws === socket) {
-        stopHeartbeat();
-        stopStateRefresh();
-        isConnected.value = false;
-        currentRoomCode.value = null;
-        isObserverConnection.value = false;
-        ws = null;
+      // Ignore the close of a socket we've already replaced (e.g. a fresh connect
+      // or an in-flight retry superseded this one).
+      if (ws !== socket) return;
+      stopHeartbeat();
+      stopStateRefresh();
+      isConnected.value = false;
+      currentRoomCode.value = null;
+      isObserverConnection.value = false;
+      ws = null;
+
+      // 1008 = server policy close (e.g. room full): retrying would loop, so stop.
+      const terminal = event.code === 1008;
+      const canReconnect =
+        !intentionalClose && !terminal && Boolean(lastRoomCode) && reconnectAttempts < MAX_RECONNECT_ATTEMPTS;
+      if (!canReconnect) {
+        connectionStatus.value = "disconnected";
+        return;
       }
+
+      connectionStatus.value = "reconnecting";
+      const delay = Math.min(RECONNECT_BASE_MS * 2 ** reconnectAttempts, RECONNECT_MAX_MS);
+      reconnectAttempts += 1;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null;
+        if (lastRoomCode) connect(lastRoomCode, { ...lastConnectOptions, isRetry: true });
+      }, delay);
     };
   }
 
@@ -146,6 +192,7 @@ export function useGameConnection() {
       case "room_state":
       case "player_joined":
       case "player_left":
+      case "player_presence":
       case "host_changed":
         handleConnectionEvent(message, ctx);
         break;
@@ -220,6 +267,19 @@ export function useGameConnection() {
   }
 
   function disconnect() {
+    // User-initiated leave: stop any pending auto-reconnect and stay closed.
+    intentionalClose = true;
+    reconnectAttempts = 0;
+    lastRoomCode = null;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    // Tell the server this is an intentional leave (immediate removal) rather
+    // than a drop (which would keep us as a "reconnecting" presence).
+    if (ws && ws.readyState === WebSocket.OPEN && !isObserverConnection.value) {
+      send({ type: "leave" });
+    }
     stopHeartbeat();
     stopStateRefresh();
     if (ws) {
@@ -227,6 +287,7 @@ export function useGameConnection() {
       ws = null;
     }
     isConnected.value = false;
+    connectionStatus.value = "disconnected";
     currentRoomCode.value = null;
     isObserverConnection.value = false;
     store.setSpectatorMode(false);
@@ -234,6 +295,7 @@ export function useGameConnection() {
 
   return {
     isConnected,
+    connectionStatus,
     connectionError,
     lastJoinError,
     currentRoomCode,

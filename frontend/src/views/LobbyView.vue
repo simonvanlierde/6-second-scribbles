@@ -2,7 +2,7 @@
 import { useClipboard } from "@vueuse/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 
 import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
 import PlayerListPanel from "@/components/PlayerListPanel.vue";
@@ -14,18 +14,19 @@ import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdToggle from "@/components/ui/HdToggle.vue";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_SETTINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const { t } = useI18n();
 const route = useRoute();
-const router = useRouter();
 const store = useGameStore();
-const { send, disconnect } = useGameConnection();
+const { send } = useGameConnection();
 const { showNotification } = useNotifications();
 const { copy } = useClipboard();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
+const { leaveRoom } = useLeaveRoom();
 
 const leaveDialogOpen = ref(false);
 
@@ -49,12 +50,6 @@ function togglePrivacy() {
   if (store.isHost) {
     send({ type: "privacy_changed", isPrivate: isPrivateRoom.value });
   }
-}
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  void router.push({ name: "home" });
 }
 
 function handleClear() {

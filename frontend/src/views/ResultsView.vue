@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
 
 import GameHeader from "@/components/game/GameHeader.vue";
 import AllDrawingsGallery from "@/components/results/AllDrawingsGallery.vue";
@@ -12,6 +11,7 @@ import HdDialog from "@/components/ui/HdDialog.vue";
 import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useSound } from "@/composables/useSound";
 import { GAME_TIMINGS } from "@/config/gameConfig";
@@ -19,10 +19,10 @@ import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
-const { send, disconnect } = useGameConnection();
+const { send } = useGameConnection();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const { play } = useSound();
+const { leaveRoom } = useLeaveRoom(() => clearAutoRestartTimeout());
 
 const isReady = ref(false);
 const autoRestartTimeout = ref<number | null>(null);
@@ -107,13 +107,6 @@ function playAgain() {
     isReady.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
   }
-}
-
-function leaveRoom() {
-  clearAutoRestartTimeout();
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
 }
 
 function showLeaveDialog() {

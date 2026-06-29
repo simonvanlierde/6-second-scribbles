@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
 
 import GameHeader from "@/components/game/GameHeader.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
@@ -12,21 +11,18 @@ import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useRoomLeave } from "@/composables/useRoomLeave";
+import { useRoundDraft } from "@/composables/useRoundDraft";
 import { useSound } from "@/composables/useSound";
+import { STORAGE_KEYS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
-const { send, disconnect } = useGameConnection();
+const { send } = useGameConnection();
 const { play } = useSound();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
+const { leaveRoom } = useLeaveRoom();
 
 const playerGuesses = ref<Record<string, string[]>>({});
 const submittedPlayers = ref<string[]>([]);
@@ -52,9 +48,20 @@ function avatarColorFor(playerId: string): string {
   return player?.color ?? getAvatarColor(playerId);
 }
 
+// Typed guesses are client-only until submitted, so they're drafted locally and
+// restored on reconnect — mirroring the drawing-phase stroke recovery.
+const draft = useRoundDraft<Record<string, string[]>>(STORAGE_KEYS.GUESSING_STATE, {
+  round: () => store.currentRound,
+  collect: () => playerGuesses.value,
+  apply: (data) => {
+    playerGuesses.value = data;
+  },
+  active: () => !allGuessesSubmitted.value,
+});
+
 onMounted(() => {
   submittedPlayers.value = [];
-  if (assignedTargetPlayerId.value) {
+  if (!draft.restore() && assignedTargetPlayerId.value) {
     playerGuesses.value[assignedTargetPlayerId.value] = [""];
   }
 });
@@ -120,6 +127,7 @@ function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
   if (assignedTargetPlayerId.value && submittedPlayers.value.includes(assignedTargetPlayerId.value)) {
     allGuessesSubmitted.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
+    draft.clear();
   }
 }
 
@@ -153,6 +161,7 @@ function confirmLeave() {
               :initial="getAvatarInitial(assignedTargetPlayer.name)"
               :color="avatarColorFor(assignedTargetPlayer.id)"
               size="sm"
+              :disconnected="!assignedTargetPlayer.connected"
             />
             {{ $t("guessing.guessPlayerDrawing", { name: assignedTargetPlayer.name }) }}
           </h2>

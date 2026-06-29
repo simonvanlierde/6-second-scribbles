@@ -7,9 +7,10 @@ interface Props {
   initial: string;
   color: string;
   size?: Size;
+  disconnected?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), { size: "md" });
+const props = withDefaults(defineProps<Props>(), { size: "md", disconnected: false });
 
 const rootRef = useTemplateRef<HTMLSpanElement>("root");
 
@@ -25,7 +26,14 @@ onUpdated(applyBackground);
 </script>
 
 <template>
-  <span ref="root" class="hd-avatar" :class="`hd-avatar--${props.size}`" aria-hidden="true"> {{ props.initial }} </span>
+  <span
+    ref="root"
+    class="hd-avatar"
+    :class="[`hd-avatar--${props.size}`, { 'hd-avatar--disconnected': props.disconnected }]"
+    aria-hidden="true"
+  >
+    {{ props.initial }}
+  </span>
 </template>
 
 <style scoped>
@@ -41,6 +49,10 @@ onUpdated(applyBackground);
   color: var(--color-ink-fixed);
   flex-shrink: 0;
   user-select: none;
+}
+.hd-avatar--disconnected {
+  filter: grayscale(1);
+  opacity: 0.45;
 }
 .hd-avatar--sm {
   width: 28px;

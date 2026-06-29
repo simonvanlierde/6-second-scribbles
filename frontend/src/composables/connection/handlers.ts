@@ -93,7 +93,14 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
       break;
 
     case "player_left":
-      store.removePlayer(message.playerId);
+      // Ignore a "left" for ourselves: it is a stale teardown from a previous
+      // socket during reconnect, and acting on it would wipe us from the room.
+      if (message.playerId !== store.localPlayerId) store.removePlayer(message.playerId);
+      break;
+
+    case "player_presence":
+      // A peer dropped or came back; keep them in the roster, just flag presence.
+      if (message.playerId !== store.localPlayerId) store.setPlayerConnected(message.playerId, message.connected);
       break;
 
     case "host_changed":
