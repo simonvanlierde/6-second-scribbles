@@ -14,7 +14,6 @@ import { useGameStore } from "@/stores/game";
 
 // Singleton WebSocket connection shared across all components
 let ws: WebSocket | null = null;
-const isConnected = ref(false);
 const connectionError = ref<string | null>(null);
 const lastJoinError = ref<{ error: string; message: string } | null>(null);
 const currentRoomCode = ref<string | null>(null);
@@ -87,7 +86,6 @@ export function useGameConnection() {
 
     socket.onopen = () => {
       if (ws !== socket) return;
-      isConnected.value = true;
       connectionStatus.value = "connected";
       reconnectAttempts = 0;
       connectionError.value = null;
@@ -136,7 +134,6 @@ export function useGameConnection() {
     socket.onerror = (error) => {
       console.error("[WebSocket] Connection error:", error);
       connectionError.value = "Connection error occurred";
-      isConnected.value = false;
     };
 
     socket.onclose = (event) => {
@@ -146,7 +143,6 @@ export function useGameConnection() {
       if (ws !== socket) return;
       stopHeartbeat();
       stopStateRefresh();
-      isConnected.value = false;
       currentRoomCode.value = null;
       isObserverConnection.value = false;
       ws = null;
@@ -286,7 +282,6 @@ export function useGameConnection() {
       ws.close();
       ws = null;
     }
-    isConnected.value = false;
     connectionStatus.value = "disconnected";
     currentRoomCode.value = null;
     isObserverConnection.value = false;
@@ -294,7 +289,6 @@ export function useGameConnection() {
   }
 
   return {
-    isConnected,
     connectionStatus,
     connectionError,
     lastJoinError,
