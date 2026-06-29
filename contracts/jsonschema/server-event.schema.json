@@ -18,6 +18,7 @@
       "player_joined": "#/$defs/PlayerJoinedEvent",
       "player_kicked": "#/$defs/PlayerKickedEvent",
       "player_left": "#/$defs/PlayerLeftEvent",
+      "player_presence": "#/$defs/PlayerPresenceEvent",
       "player_ready_error": "#/$defs/PlayerReadyErrorEvent",
       "protocol_error": "#/$defs/ProtocolErrorEvent",
       "reaction_received": "#/$defs/ReactionReceivedServerEvent",
@@ -67,6 +68,11 @@
                 "default": null,
                 "title": "Color"
               },
+              "connected": {
+                "default": true,
+                "title": "Connected",
+                "type": "boolean"
+              },
               "categories": {
                 "items": {
                   "type": "string"
@@ -110,6 +116,11 @@
         "difficulty": {
           "enum": ["easy", "medium", "hard"],
           "type": "string"
+        },
+        "currentRound": {
+          "default": 0,
+          "title": "Currentround",
+          "type": "integer"
         },
         "maxRounds": {
           "title": "Maxrounds",
@@ -169,6 +180,135 @@
           },
           "title": "Guesstargets",
           "type": "object"
+        },
+        "drawings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Drawings",
+          "type": "object"
+        },
+        "drawingHistory": {
+          "items": {
+            "additionalProperties": false,
+            "description": "One completed drawing retained for the end-of-game gallery.",
+            "properties": {
+              "round": {
+                "title": "Round",
+                "type": "integer"
+              },
+              "playerId": {
+                "title": "Playerid",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "color": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Color"
+              },
+              "drawing": {
+                "title": "Drawing",
+                "type": "string"
+              }
+            },
+            "required": ["drawing", "name", "playerId", "round"],
+            "title": "GalleryDrawingPayload",
+            "type": "object"
+          },
+          "title": "Drawinghistory",
+          "type": "array"
+        },
+        "card": {
+          "anyOf": [
+            {
+              "properties": {
+                "categoryId": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Categoryid"
+                },
+                "category": {
+                  "title": "Category",
+                  "type": "string"
+                },
+                "itemIds": {
+                  "anyOf": [
+                    {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Itemids"
+                },
+                "items": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Items",
+                  "type": "array"
+                },
+                "alternatives": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Alternatives"
+                }
+              },
+              "required": ["category", "items"],
+              "title": "PlayerCardPayload",
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "readyCount": {
+          "default": 0,
+          "title": "Readycount",
+          "type": "integer"
+        },
+        "totalPlayers": {
+          "default": 0,
+          "title": "Totalplayers",
+          "type": "integer"
         },
         "padVisibility": {
           "title": "Padvisibility",
@@ -250,6 +390,11 @@
                 ],
                 "default": null,
                 "title": "Color"
+              },
+              "connected": {
+                "default": true,
+                "title": "Connected",
+                "type": "boolean"
               }
             },
             "required": ["id", "name"],
@@ -653,6 +798,28 @@
       },
       "required": ["playerId", "type"],
       "title": "PlayerLeftEvent",
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "description": "A player's connection status changed (disconnected/reconnecting or back).",
+      "properties": {
+        "type": {
+          "const": "player_presence",
+          "title": "Type",
+          "type": "string"
+        },
+        "playerId": {
+          "title": "Playerid",
+          "type": "string"
+        },
+        "connected": {
+          "title": "Connected",
+          "type": "boolean"
+        }
+      },
+      "required": ["connected", "playerId", "type"],
+      "title": "PlayerPresenceEvent",
       "type": "object"
     },
     {

@@ -16,6 +16,7 @@ export const ServerEventSchema = z.union([
             id: z.string(),
             name: z.string(),
             color: z.union([z.string(), z.null()]).default(null),
+            connected: z.boolean().default(true),
             categories: z.array(z.string()).optional(),
           })
           .strict(),
@@ -26,12 +27,42 @@ export const ServerEventSchema = z.union([
         .enum(["lobby", "drawing", "guessing", "round_results", "final_results"])
         .describe("Valid room lifecycle phases for game flow state."),
       difficulty: z.enum(["easy", "medium", "hard"]),
+      currentRound: z.number().int().default(0),
       maxRounds: z.number().int(),
       roundStartTime: z.union([z.number().int(), z.null()]).default(null),
       guessingStartTime: z.union([z.number().int(), z.null()]).default(null),
       drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
       guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
       guessTargets: z.record(z.string(), z.string()).optional(),
+      drawings: z.record(z.string(), z.string()).optional(),
+      drawingHistory: z
+        .array(
+          z
+            .object({
+              round: z.number().int(),
+              playerId: z.string(),
+              name: z.string(),
+              color: z.union([z.string(), z.null()]).default(null),
+              drawing: z.string(),
+            })
+            .strict()
+            .describe("One completed drawing retained for the end-of-game gallery."),
+        )
+        .optional(),
+      card: z
+        .union([
+          z.object({
+            categoryId: z.union([z.number().int(), z.null()]).default(null),
+            category: z.string(),
+            itemIds: z.union([z.array(z.number().int()), z.null()]).default(null),
+            items: z.array(z.string()),
+            alternatives: z.union([z.record(z.string(), z.array(z.string())), z.null()]).default(null),
+          }),
+          z.null(),
+        ])
+        .default(null),
+      readyCount: z.number().int().default(0),
+      totalPlayers: z.number().int().default(0),
       padVisibility: z.boolean(),
       isPrivate: z.boolean(),
       defaultLocale: z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/),
@@ -44,7 +75,14 @@ export const ServerEventSchema = z.union([
       playerId: z.string(),
       name: z.string(),
       players: z.array(
-        z.object({ id: z.string(), name: z.string(), color: z.union([z.string(), z.null()]).default(null) }).strict(),
+        z
+          .object({
+            id: z.string(),
+            name: z.string(),
+            color: z.union([z.string(), z.null()]).default(null),
+            connected: z.boolean().default(true),
+          })
+          .strict(),
       ),
       isHost: z.boolean(),
     })
@@ -124,6 +162,10 @@ export const ServerEventSchema = z.union([
     })
     .strict(),
   z.object({ type: z.literal("player_left"), playerId: z.string() }).strict(),
+  z
+    .object({ type: z.literal("player_presence"), playerId: z.string(), connected: z.boolean() })
+    .strict()
+    .describe("A player's connection status changed (disconnected/reconnecting or back)."),
   z
     .object({
       type: z.literal("kick_vote_started"),
@@ -249,6 +291,7 @@ export const serverEventTypes = [
   "player_joined",
   "player_kicked",
   "player_left",
+  "player_presence",
   "player_ready_error",
   "protocol_error",
   "reaction_received",
@@ -264,7 +307,7 @@ export const serverEventTypes = [
   "submit_guess_error",
 ] as const satisfies readonly ServerEventType[];
 export const serverEventGroups = {
-  connection: ["host_restored", "join_error", "player_joined", "player_left", "room_state"],
+  connection: ["host_restored", "join_error", "player_joined", "player_left", "player_presence", "room_state"],
   gameFlow: [
     "game_complete",
     "host_changed",
@@ -300,6 +343,7 @@ export const serverEventSummaries = {
   player_joined: "A player joined the room.",
   player_kicked: "A player was kicked from the room.",
   player_left: "A player left the room.",
+  player_presence: "A player's connection status changed.",
   player_ready_error: "Player-ready validation failed.",
   protocol_error: "Malformed or invalid websocket payload.",
   reaction_received: "A drawing reaction broadcast to the room.",
@@ -364,6 +408,7 @@ export const ClientEventSchema = z.union([
   }),
   z.object({ type: z.literal("restart_game") }),
   z.object({ type: z.literal("heartbeat") }),
+  z.object({ type: z.literal("leave") }).describe("An explicit, intentional leave — remove the player immediately."),
   z.object({
     type: z.literal("settings_update"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
@@ -414,6 +459,7 @@ export const clientEventTypes = [
   "heartbeat",
   "initiate_kick",
   "join",
+  "leave",
   "pad_visibility",
   "player_ready",
   "privacy_changed",
@@ -429,7 +475,7 @@ export const clientEventTypes = [
   "submit_guess",
 ] as const satisfies readonly ClientEventType[];
 export const clientEventGroups = {
-  connection: ["heartbeat", "join", "request_game_state"],
+  connection: ["heartbeat", "join", "leave", "request_game_state"],
   gameFlow: [
     "game_complete",
     "player_ready",
@@ -456,6 +502,7 @@ export const clientEventSummaries = {
   heartbeat: "Keep the websocket session alive.",
   initiate_kick: "Start a kick vote for a target player.",
   join: "Join a room with the local player identity.",
+  leave: "Explicitly leave the room (immediate removal).",
   pad_visibility: "Show or hide the shared drawpad.",
   player_ready: "Mark the current player as ready.",
   privacy_changed: "Change the room privacy setting.",

@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "description": "A player's connection status changed (disconnected/reconnecting or back).",
+  "properties": {
+    "type": {
+      "const": "player_presence",
+      "title": "Type",
+      "type": "string"
+    },
+    "playerId": {
+      "title": "Playerid",
+      "type": "string"
+    },
+    "connected": {
+      "title": "Connected",
+      "type": "boolean"
+    }
+  },
+  "required": ["connected", "playerId", "type"],
+  "title": "PlayerPresenceEvent",
+  "type": "object"
+}

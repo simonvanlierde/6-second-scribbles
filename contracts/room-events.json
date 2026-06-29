@@ -8,6 +8,10 @@
       "group": "connection",
       "summary": "Join a room with the local player identity."
     },
+    "leave": {
+      "group": "connection",
+      "summary": "Explicitly leave the room (immediate removal)."
+    },
     "request_game_state": {
       "group": "connection",
       "summary": "Request the latest room snapshot."
@@ -105,6 +109,10 @@
     "player_left": {
       "group": "connection",
       "summary": "A player left the room."
+    },
+    "player_presence": {
+      "group": "connection",
+      "summary": "A player's connection status changed."
     },
     "room_state": {
       "group": "connection",

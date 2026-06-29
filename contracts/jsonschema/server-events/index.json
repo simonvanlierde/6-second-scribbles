@@ -14,6 +14,7 @@
   "default_locale_update": "default_locale_update.schema.json",
   "room_custom_categories_update": "room_custom_categories_update.schema.json",
   "player_left": "player_left.schema.json",
+  "player_presence": "player_presence.schema.json",
   "kick_vote_started": "kick_vote_started.schema.json",
   "kick_vote_updated": "kick_vote_updated.schema.json",
   "kick_vote_expired": "kick_vote_expired.schema.json",

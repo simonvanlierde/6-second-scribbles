@@ -37,6 +37,11 @@
             ],
             "default": null,
             "title": "Color"
+          },
+          "connected": {
+            "default": true,
+            "title": "Connected",
+            "type": "boolean"
           }
         },
         "required": ["id", "name"],

@@ -10,6 +10,7 @@
       "heartbeat": "#/$defs/HeartbeatEvent",
       "initiate_kick": "#/$defs/InitiateKickEvent",
       "join": "#/$defs/JoinEvent",
+      "leave": "#/$defs/LeaveEvent",
       "pad_visibility": "#/$defs/PadVisibilityEvent",
       "player_ready": "#/$defs/PlayerReadyEvent",
       "privacy_changed": "#/$defs/PrivacyChangedEvent",
@@ -342,6 +343,19 @@
       },
       "required": ["type"],
       "title": "HeartbeatEvent",
+      "type": "object"
+    },
+    {
+      "description": "An explicit, intentional leave \u2014 remove the player immediately.",
+      "properties": {
+        "type": {
+          "const": "leave",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": ["type"],
+      "title": "LeaveEvent",
       "type": "object"
     },
     {
