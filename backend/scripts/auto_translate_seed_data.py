@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import logging
 import time
 import unicodedata
@@ -246,11 +245,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--overwrite-existing", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--benchmark", action="store_true", help="Sample 50 prompts and extrapolate total time")
     parser.add_argument("--force", action="store_true", help="Skip hash check and re-translate even if unchanged")
     parser.add_argument("--reset-cache", action="store_true", help="Clear translation cache before running")
     parser.add_argument("--show-cache-stats", action="store_true", help="Show cache statistics and exit")
-    parser.add_argument("--inspect-cache", action="store_true", help="Dump entire cache to JSON and exit (debug only)")
     args = parser.parse_args()
 
     # Handle comma-separated locales for convenience
@@ -290,11 +287,6 @@ def _handle_cache_commands(args: argparse.Namespace, service: TranslationService
         logger.info("Cache stats: %s", service.cache_stats())
         return True
 
-    if args.inspect_cache:
-        logger.info("Dumping translation cache...")
-        logger.info(json.dumps(service.cache.cache, indent=2, ensure_ascii=False))
-        return True
-
     return False
 
 
@@ -324,29 +316,6 @@ def main() -> None:
         if not isinstance(seed_data, dict):
             msg = "Expected seed YAML root to be a mapping."
             raise TypeError(msg)
-
-    if not handled and args.benchmark and seed_data is not None:
-        logger.info("Running benchmark on sample of 50 prompts...")
-        sample_data: dict[str, Any] = {"prompts": list(seed_data.get(PROMPTS_KEY, []))[:50]}
-        start_bench = time.time()
-        apply_auto_translations(
-            sample_data,
-            source_locale=str(args.source_locale),
-            target_locales=list(args.target_locales),
-            service=service,
-            overwrite_existing=bool(args.overwrite_existing),
-        )
-        elapsed_bench = time.time() - start_bench
-        total_prompts = len(list(seed_data.get(PROMPTS_KEY, [])))
-        estimated_total = elapsed_bench * (total_prompts / 50)
-        logger.info("Benchmark: 50 prompts took %.1fs", elapsed_bench)
-        logger.info(
-            "Estimated total time for %d prompts: %.1fs (%.1fm)",
-            total_prompts,
-            estimated_total,
-            estimated_total / 60,
-        )
-        handled = True
 
     if not handled and seed_data is not None:
         stats = apply_auto_translations(
