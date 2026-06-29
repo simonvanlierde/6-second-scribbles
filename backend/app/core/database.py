@@ -26,24 +26,21 @@ class _DatabaseState:
 _state = _DatabaseState()
 
 
-def _create_engine() -> AsyncEngine:
-    return create_async_engine(
-        settings.database_url,
-        echo=False,
-        future=True,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-    )
-
-
 def _get_engine() -> AsyncEngine:
     if _state.engine is None:
-        _state.engine = _create_engine()
+        _state.engine = create_async_engine(
+            settings.database_url,
+            echo=False,
+            future=True,
+            pool_pre_ping=True,
+            pool_size=10,
+            max_overflow=20,
+        )
     return _state.engine
 
 
-def _get_session_maker() -> async_sessionmaker[AsyncSession]:
+def get_session_maker() -> async_sessionmaker[AsyncSession]:
+    """Return the shared async session factory."""
     if _state.session_maker is None:
         _state.session_maker = async_sessionmaker(
             bind=_get_engine(),
@@ -53,18 +50,12 @@ def _get_session_maker() -> async_sessionmaker[AsyncSession]:
     return _state.session_maker
 
 
-def get_session_maker() -> async_sessionmaker[AsyncSession]:
-    """Return the shared async session factory."""
-    return _get_session_maker()
-
-
 async def get_async_session() -> AsyncGenerator[AsyncSession]:
     """Yield an async database session for FastAPI dependencies."""
-    async with _get_session_maker()() as session:
+    async with get_session_maker()() as session:
         yield session
 
 
-get_db = get_async_session
 AsyncSessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 

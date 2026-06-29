@@ -180,7 +180,7 @@ class RoomTaskScheduler:
                 "[GameRoom %s] Scoring timeout: %s/%s players submitted. Scoring now.",
                 self._room.room_id,
                 len(self._room.metadata.submitted_players),
-                self._room.metadata.player_count_for_scoring,
+                len(rounds.expected_guessers(self._room)),
             )
             await self._room.score_and_broadcast_round()
         except asyncio.CancelledError:

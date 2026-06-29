@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
 
 import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
@@ -11,7 +10,9 @@ import HdDialog from "@/components/ui/HdDialog.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useRoomLeave } from "@/composables/useRoomLeave";
+import { useRoundDraft } from "@/composables/useRoundDraft";
 import { useSound } from "@/composables/useSound";
 import { BRUSH_SIZES, DRAW_PALETTE } from "@/config/drawing";
 import { STORAGE_KEYS } from "@/config/gameConfig";
@@ -19,17 +20,11 @@ import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
-const { send, disconnect } = useGameConnection();
+const { send } = useGameConnection();
 const { play } = useSound();
 const canvas = useDrawingCanvas();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
+const { leaveRoom } = useLeaveRoom();
 
 const canvasElement = ref<HTMLCanvasElement | null>(null);
 const hasSubmittedDrawing = ref(false);
@@ -50,6 +45,23 @@ watch(timeLeft, (left) => {
   if (left > 0 && left <= 10) play("tick");
 });
 
+// In-progress strokes are the one piece of drawing state the server doesn't hold
+// until submit, so they're drafted locally and restored on reconnect. The card
+// is restored from the authoritative room_state snapshot (see applyRoomState);
+// the saved copy here is only a pre-snapshot fallback.
+const draft = useRoundDraft<{ localPlayerCard: typeof store.localPlayerCard; strokes: typeof canvas.strokes.value }>(
+  STORAGE_KEYS.DRAWING_STATE,
+  {
+    round: () => store.currentRound,
+    collect: () => ({ localPlayerCard: store.localPlayerCard, strokes: canvas.strokes.value }),
+    apply: (data) => {
+      if (!store.localPlayerCard && data.localPlayerCard) store.localPlayerCard = data.localPlayerCard;
+      if (data.strokes) canvas.replaceStrokes(data.strokes);
+    },
+    active: () => !hasSubmittedDrawing.value,
+  },
+);
+
 onMounted(() => {
   play("roundStart");
   canvas.setColor(DRAW_PALETTE[0]);
@@ -57,53 +69,41 @@ onMounted(() => {
 
   if (canvasElement.value) {
     canvas.initCanvas(canvasElement.value);
-
-    if (!store.localPlayerCard) {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEYS.DRAWING_STATE);
-        if (saved) {
-          const parsed = JSON.parse(saved) as {
-            localPlayerCard?: typeof store.localPlayerCard;
-            strokes?: typeof canvas.strokes.value;
-          };
-          store.localPlayerCard = parsed.localPlayerCard;
-          canvas.replaceStrokes(parsed.strokes ?? []);
-        }
-      } catch {
-        localStorage.removeItem(STORAGE_KEYS.DRAWING_STATE);
-      }
-    }
+    draft.restore();
   }
 });
 
 onUnmounted(() => {
-  try {
-    localStorage.setItem(
-      STORAGE_KEYS.DRAWING_STATE,
-      JSON.stringify({
-        localPlayerCard: store.localPlayerCard,
-        strokes: canvas.strokes.value,
-      }),
-    );
-  } catch {
-    /* localStorage unavailable */
-  }
   canvas.cleanup();
 });
 
 function endDrawingPhase() {
-  if (store.gamePhase !== "drawing" || hasSubmittedDrawing.value) return;
+  if (hasSubmittedDrawing.value) return;
   hasSubmittedDrawing.value = true;
-  stopTimer();
+  // Keep the timer running: it shows the shared round countdown, which still
+  // ticks for everyone else after this player submits early.
 
   const drawing = canvas.canvasRef.value?.toDataURL("image/png");
   if (drawing) {
     send({ type: "draw_stroke", playerId: store.localPlayerId, drawing });
+    // Keep our own copy too — the receive handler skips own-player strokes, so
+    // without this the end-of-game gallery would miss this player's drawing.
+    store.setPlayerDrawing(store.localPlayerId, drawing);
   }
 
   send({ type: "player_ready", playerId: store.localPlayerId });
-  localStorage.removeItem(STORAGE_KEYS.DRAWING_STATE);
+  draft.clear();
 }
+
+// Safety net for the race where `start_guessing` arrives before this client's
+// local timer fires: submit the drawing while the canvas is still mounted.
+// `hasSubmittedDrawing` keeps Finish / timer / this watcher to a single send.
+watch(
+  () => store.gamePhase,
+  (phase) => {
+    if (phase === "guessing") endDrawingPhase();
+  },
+);
 
 function finishDrawing() {
   play("click");

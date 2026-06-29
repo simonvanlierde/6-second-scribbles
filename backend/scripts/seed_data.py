@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
-configure_logging()
 logger = logging.getLogger(__name__)
 
 SEED_DATA_PATH = Path(__file__).parent / "seed_data.yaml"
@@ -40,14 +39,6 @@ CLEAR_FLAG = "--clear"
 SEEDED_USERS_KEY = "seeded_users"
 SYSTEM_CATEGORIES_KEY = "system_categories"
 PROMPTS_KEY = "prompts"
-
-
-def _iter_prompts(seed_data: dict[str, Any]) -> list[dict[str, Any]]:
-    return seed_data.get(PROMPTS_KEY, [])
-
-
-def _iter_system_categories(seed_data: dict[str, Any]) -> list[dict[str, Any]]:
-    return seed_data.get(SYSTEM_CATEGORIES_KEY, [])
 
 
 def _build_prompt_translations(translations: list[dict[str, Any]]) -> dict[str, object]:
@@ -152,14 +143,14 @@ async def seed_database() -> None:
             await session.execute(delete(Prompt))
 
             # 1. Seed Prompt Library
-            prompts = _iter_prompts(SEED_DATA)
+            prompts = SEED_DATA.get(PROMPTS_KEY, [])
             await _seed_prompt_library(session, prompts)
             logger.info("Populated Prompt Library with %d entries.", len(prompts))
 
             # 2. Seed Categories
             total_categories = 0
             total_links = 0
-            for cat_data in _iter_system_categories(SEED_DATA):
+            for cat_data in SEED_DATA.get(SYSTEM_CATEGORIES_KEY, []):
                 _, created_links = await _create_category(
                     session,
                     id_name=str(cat_data["id"]),

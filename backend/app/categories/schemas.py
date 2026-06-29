@@ -35,16 +35,6 @@ class CategoryListItem(BaseModel):
     locale: LanguageCode | None
 
 
-class CategoryResponse(BaseModel):
-    """Localized category detail payload."""
-
-    id: int
-    name: str
-    difficulty: Difficulty
-    locale: LanguageCode | None
-    items: list[str]
-
-
 class SelectedCategorySet(BaseModel):
     """One selected localized category set for game setup."""
 

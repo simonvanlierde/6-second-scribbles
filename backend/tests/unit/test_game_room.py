@@ -1,10 +1,12 @@
 """Tests for game room management functionality."""
+# cspell: ignore rejoiner
 
 import json
 import time
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from fastapi import HTTPException
 
 from app.categories import service as category_service
@@ -12,7 +14,8 @@ from app.categories.schemas import CategorySelectionResponse, SelectedCategorySe
 from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms import manager as manager_module
-from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR
+from app.rooms import rounds
+from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.protocol import WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
@@ -37,8 +40,6 @@ from tests.support import as_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    import pytest
 
     from tests.support import TestWebSocket
 
@@ -125,6 +126,70 @@ class TestGameRoom:
 
         assert game_room.host_id is None
         assert len(game_room.players) == 0
+
+    async def test_player_id_cannot_be_claimed_by_another_user(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+    ) -> None:
+        """A player_id bound to one user rejects a join from a different user."""
+        ws_alice, ws_mallory = make_ws(), make_ws()
+        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws_alice), user_id="user-alice")
+
+        with pytest.raises(ValueError, match="identity_conflict"):
+            await game_room.add_player(PLAYER_ONE_ID, "Mallory", as_websocket(ws_mallory), user_id="user-mallory")
+
+        # Alice keeps her seat, host role, and live socket — no takeover occurred.
+        assert game_room.host_id == PLAYER_ONE_ID
+        assert game_room.players[PLAYER_ONE_ID].websocket is as_websocket(ws_alice)
+
+    async def test_same_user_can_rejoin_own_player_id(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+    ) -> None:
+        """The legitimate owner reconnecting with the same player_id is not blocked."""
+        ws1, ws2 = make_ws(), make_ws()
+        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1), user_id="user-alice")
+
+        # Same user, same player_id, new socket (e.g. a page refresh): must succeed
+        # and retain the host role.
+        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws2), user_id="user-alice")
+
+        assert game_room.host_id == PLAYER_ONE_ID
+        assert game_room.players[PLAYER_ONE_ID].websocket is as_websocket(ws2)
+
+    async def test_different_user_cannot_seize_host_after_owner_leaves(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Reusing a departed host's freed player_id must not grant the host role."""
+        ws_alice, ws_bob, ws_mallory = make_ws(), make_ws(), make_ws()
+        monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 0)
+
+        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws_alice), user_id="user-alice")
+        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws_bob), user_id="user-bob")
+
+        # Host leaves explicitly; a transfer is pending and host_id still lingers.
+        await game_room.remove_player(PLAYER_ONE_ID)
+        assert game_room.pending_host_transfer is not None
+
+        # Mallory grabs the freed player_id under a different account. She joins as a
+        # plain player and must not inherit the lingering host role.
+        _player, is_reconnecting_host = await game_room.add_player(
+            PLAYER_ONE_ID,
+            "Mallory",
+            as_websocket(ws_mallory),
+            user_id="user-mallory",
+        )
+        assert is_reconnecting_host is False
+        assert game_room.host_id != PLAYER_ONE_ID
+
+        # The pending transfer promotes the genuine remaining player, not Mallory.
+        await game_room.pending_host_transfer
+        assert game_room.host_id == PLAYER_TWO_ID
 
     async def test_update_player_activity(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test updating player's last activity timestamp."""
@@ -247,8 +312,10 @@ class TestGameRoom:
         message = cast("WebSocketMessage", {"type": "test"})
         await game_room.broadcast(message)
 
-        # Player 2 should be removed due to error
-        assert PLAYER_TWO_ID not in game_room.players
+        # A failed send marks the player disconnected (kept as a reconnecting
+        # presence) rather than removing them; the receive loop will finalize it.
+        assert PLAYER_TWO_ID in game_room.players
+        assert game_room.players[PLAYER_TWO_ID].connected is False
         assert PLAYER_ONE_ID in game_room.players
 
     async def test_room_marked_empty_after_all_disconnect(
@@ -617,3 +684,213 @@ class TestRoomTaskScheduler:
         tasks = _scheduler_tasks(scheduler)
         assert tasks["_guessing_start_task"] is None
         assert tasks["_idle_check_task"] is not None
+
+
+class TestRobustGuessScoring:
+    """Scoring must stay correct across mid-guessing disconnects/reconnects."""
+
+    async def test_start_guessing_is_idempotent(self, room_with_players: GameRoom) -> None:
+        """A second start_guessing (e.g. late scheduler fire) must not reassign targets."""
+        room_with_players.start_guessing()
+        original_targets = dict(room_with_players.metadata.guess_targets)
+
+        room_with_players.start_guessing()
+
+        assert room_with_players.metadata.guess_targets == original_targets
+
+    async def test_host_submit_alone_does_not_score(self, room_with_players: GameRoom) -> None:
+        """With both players connected, one submission is not all submissions (bug a)."""
+        room_with_players.start_guessing()
+        targets = room_with_players.metadata.guess_targets
+
+        scored = rounds.record_guess_submission(
+            room_with_players,
+            player_id=PLAYER_ONE_ID,
+            target_player_id=targets[PLAYER_ONE_ID],
+            guesses=["cat"],
+        )
+
+        assert scored is False
+        assert not rounds.all_expected_guesses_submitted(room_with_players)
+
+    async def test_both_submit_scores(self, room_with_players: GameRoom) -> None:
+        """The second of two connected players submitting triggers scoring (bug b)."""
+        room_with_players.start_guessing()
+        targets = room_with_players.metadata.guess_targets
+        rounds.record_guess_submission(
+            room_with_players,
+            player_id=PLAYER_ONE_ID,
+            target_player_id=targets[PLAYER_ONE_ID],
+            guesses=["cat"],
+        )
+
+        scored = rounds.record_guess_submission(
+            room_with_players,
+            player_id=PLAYER_TWO_ID,
+            target_player_id=targets[PLAYER_TWO_ID],
+            guesses=["dog"],
+        )
+
+        assert scored is True
+
+    async def test_departed_non_submitter_is_not_expected(self, room_with_players: GameRoom) -> None:
+        """If the only non-submitter leaves, the remaining submissions count as complete."""
+        room_with_players.start_guessing()
+        targets = room_with_players.metadata.guess_targets
+        rounds.record_guess_submission(
+            room_with_players,
+            player_id=PLAYER_ONE_ID,
+            target_player_id=targets[PLAYER_ONE_ID],
+            guesses=["cat"],
+        )
+
+        # player-2 disconnects without submitting -> no longer expected.
+        room_with_players.players.pop(PLAYER_TWO_ID)
+
+        assert rounds.all_expected_guesses_submitted(room_with_players)
+
+
+class TestPresence:
+    """Disconnect keeps players as a 'reconnecting' presence during a game."""
+
+    async def test_disconnect_marks_reconnecting_during_game(self, room_with_players: GameRoom) -> None:
+        """A mid-game drop marks the player disconnected but keeps them in the room."""
+        room_with_players.metadata.game_phase = GamePhase.DRAWING
+
+        await room_with_players.disconnect_player(PLAYER_ONE_ID)
+
+        assert PLAYER_ONE_ID in room_with_players.players
+        assert room_with_players.players[PLAYER_ONE_ID].connected is False
+
+    async def test_disconnect_removes_in_lobby(self, room_with_players: GameRoom) -> None:
+        """A drop in the lobby removes the player outright."""
+        # room_with_players is in the default LOBBY phase.
+        await room_with_players.disconnect_player(PLAYER_TWO_ID)
+
+        assert PLAYER_TWO_ID not in room_with_players.players
+
+    async def test_scoring_excludes_disconnected_player(self, room_with_players: GameRoom) -> None:
+        """A disconnected player isn't expected to submit, so others complete the round."""
+        room_with_players.start_guessing()
+        targets = room_with_players.metadata.guess_targets
+        room_with_players.players[PLAYER_TWO_ID].connected = False
+
+        scored = rounds.record_guess_submission(
+            room_with_players,
+            player_id=PLAYER_ONE_ID,
+            target_player_id=targets[PLAYER_ONE_ID],
+            guesses=["cat"],
+        )
+
+        # player-2 is disconnected and therefore not expected, so player-1 alone completes.
+        assert scored is True
+
+    async def test_prune_disconnected_removes_only_disconnected(self, room_with_players: GameRoom) -> None:
+        """Pruning drops disconnected players and keeps connected ones."""
+        room_with_players.players[PLAYER_TWO_ID].connected = False
+
+        await room_with_players.prune_disconnected()
+
+        assert PLAYER_ONE_ID in room_with_players.players
+        assert PLAYER_TWO_ID not in room_with_players.players
+
+
+class TestReviewRegressions:
+    """Regression tests for the presence/reconnection code-review fixes."""
+
+    @staticmethod
+    def _card(category_id: int) -> PlayerPromptAssignmentState:
+        return PlayerPromptAssignmentState(
+            category_id=category_id,
+            category="Animals",
+            item_ids=[1, 2],
+            items=["cat", "dog"],
+        )
+
+    async def test_remove_player_clears_participant_state(self, room_with_players: GameRoom) -> None:
+        """A removed player is forgotten as a participant so they cannot rejoin the round (F1)."""
+        room_with_players.start_round(
+            round_number=1,
+            cards={PLAYER_ONE_ID: self._card(1), PLAYER_TWO_ID: self._card(2)},
+        )
+        assert PLAYER_TWO_ID in room_with_players.metadata.player_assignments
+
+        await room_with_players.remove_player(PLAYER_TWO_ID)
+
+        # The rejoin gate keys on player_assignments; clearing it blocks a re-join.
+        assert PLAYER_TWO_ID not in room_with_players.metadata.player_assignments
+        assert PLAYER_TWO_ID not in room_with_players.metadata.player_seats
+
+    async def test_required_votes_ignores_disconnected_players(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+    ) -> None:
+        """A disconnected player must not inflate the kick-vote threshold (F2)."""
+        for pid, name in (
+            (PLAYER_ONE_ID, PLAYER_ONE_NAME),
+            (PLAYER_TWO_ID, PLAYER_TWO_NAME),
+            (PLAYER_THREE_ID, PLAYER_THREE_NAME),
+            (PLAYER_FOUR_ID, PLAYER_FOUR_NAME),
+        ):
+            await game_room.add_player(pid, name, as_websocket(make_ws()))
+
+        required_all_connected = get_required_votes(game_room, target_is_host=False)
+        game_room.players[PLAYER_FOUR_ID].connected = False
+        required_one_disconnected = get_required_votes(game_room, target_is_host=False)
+
+        assert required_all_connected == 3  # 4 players -> eligible 3 -> ceil 2/3 + 1
+        assert required_one_disconnected == 2  # 3 connected -> eligible 2 -> reachable
+
+    async def test_scoring_is_idempotent_outside_guessing(self, room_with_players: GameRoom) -> None:
+        """A second scoring trigger after the round already scored is a no-op (F3)."""
+        room_with_players.start_guessing()
+        room_with_players.metadata.game_phase = GamePhase.ROUND_RESULTS
+        room_with_players.metadata.player_scores = {PLAYER_ONE_ID: 50, PLAYER_TWO_ID: 10}
+
+        # Phase is no longer GUESSING, so the locked scorer must bail before re-scoring
+        # (and before touching the database).
+        await room_with_players.score_and_broadcast_round()
+
+        assert room_with_players.metadata.player_scores == {PLAYER_ONE_ID: 50, PLAYER_TWO_ID: 10}
+
+    async def test_all_connected_players_ready_ignores_disconnected(self, room_with_players: GameRoom) -> None:
+        """Early drawing->guessing fires once every *connected* player is ready (F5)."""
+        room_with_players.metadata.game_phase = GamePhase.DRAWING
+        room_with_players.players[PLAYER_TWO_ID].connected = False
+        room_with_players.mark_player_ready(PLAYER_ONE_ID)
+
+        assert rounds.all_connected_players_ready(room_with_players) is True
+
+    async def test_room_state_card_keeps_ids_for_rejoiner(self, room_with_players: GameRoom) -> None:
+        """The reconnect snapshot's card must keep categoryId/itemIds, not drop them (F6)."""
+        room_with_players.start_round(
+            round_number=1,
+            cards={PLAYER_ONE_ID: self._card(7), PLAYER_TWO_ID: self._card(8)},
+        )
+
+        state = room_with_players.room_state_event(for_player_id=PLAYER_ONE_ID)
+
+        assert state.card is not None
+        assert state.card.category_id == 7
+        assert state.card.item_ids == [1, 2]
+
+    async def test_start_guessing_excludes_disconnected_from_targets(
+        self,
+        game_room: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+    ) -> None:
+        """A disconnected player is not assigned a drawing to guess (F7)."""
+        for pid, name in (
+            (PLAYER_ONE_ID, PLAYER_ONE_NAME),
+            (PLAYER_TWO_ID, PLAYER_TWO_NAME),
+            (PLAYER_THREE_ID, PLAYER_THREE_NAME),
+        ):
+            await game_room.add_player(pid, name, as_websocket(make_ws()))
+        game_room.players[PLAYER_THREE_ID].connected = False
+
+        game_room.start_guessing()
+
+        assert PLAYER_THREE_ID not in game_room.metadata.guess_targets
+        assert PLAYER_ONE_ID in game_room.metadata.guess_targets
+        assert PLAYER_TWO_ID in game_room.metadata.guess_targets

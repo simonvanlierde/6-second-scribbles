@@ -10,12 +10,12 @@ import sys
 
 import structlog
 
-from app.core.config import CURRENT_ENV, ENV
+from app.core.config import IS_PROD
 
 
 def configure_logging() -> None:
     """Configure structlog + stdlib logging for the current environment."""
-    is_prod = CURRENT_ENV == ENV.PROD
+    is_prod = IS_PROD
 
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,

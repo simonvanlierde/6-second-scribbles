@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute } from "vue-router";
 
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
@@ -14,8 +13,7 @@ import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const authStore = useAuthStore();
-const { connect, isConnected } = useGameConnection();
-const route = useRoute();
+const { connectionStatus } = useGameConnection();
 const { t } = useI18n();
 const { isOpen: settingsOpen, open: openSettings } = useSettingsPanel();
 
@@ -37,11 +35,8 @@ onMounted(async () => {
   if (authStore.currentUser?.displayName && !store.localPlayerName) {
     store.localPlayerName = authStore.currentUser.displayName;
   }
-
-  const routeRoomCode = typeof route.params.roomCode === "string" ? route.params.roomCode : "";
-  if (store.roomCode && store.localPlayerId && !isConnected.value && routeRoomCode === store.roomCode) {
-    connect(store.roomCode);
-  }
+  // The websocket (re)connect is owned by RoomView, which only mounts once the
+  // room route is resolved — avoiding the route-not-ready race this used to hit.
 });
 </script>
 
@@ -65,6 +60,14 @@ onMounted(async () => {
     </HdIconButton>
 
     <RouterView />
+    <!-- Non-blocking reconnect banner: shown when an established session drops and
+         is auto-recovering, so the game view stays mounted (canvas/state intact). -->
+    <Transition name="reconnect-banner">
+      <div v-if="connectionStatus === 'reconnecting' && store.hydrated" class="reconnect-banner" role="status">
+        <span class="reconnect-banner__spinner" aria-hidden="true" />
+        {{ t("common.reconnecting") }}
+      </div>
+    </Transition>
     <HdToast />
     <SettingsPanel v-model:open="settingsOpen" />
   </div>
@@ -82,5 +85,43 @@ onMounted(async () => {
   top: max(20px, env(safe-area-inset-top));
   right: max(20px, env(safe-area-inset-right));
   z-index: 50;
+}
+.reconnect-banner {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-display);
+  font-size: var(--text-label-md);
+  box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 25%));
+}
+.reconnect-banner__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--color-paper) 35%, transparent);
+  border-top-color: var(--color-paper);
+  border-radius: var(--r-pill);
+  animation: reconnect-spin 0.8s linear infinite;
+}
+@keyframes reconnect-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.reconnect-banner-enter-active,
+.reconnect-banner-leave-active {
+  transition: opacity 0.2s ease;
+}
+.reconnect-banner-enter-from,
+.reconnect-banner-leave-to {
+  opacity: 0;
 }
 </style>

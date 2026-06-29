@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from typing import TYPE_CHECKING
 
 from alembic import context
-from sqlalchemy import pool
+from sqlalchemy import make_url, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import app.core.models  # noqa: F401 # model imports are needed for alembic to register models with Base.metadata
@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 config = context.config
 
 # Set the sqlalchemy.url from our database configuration
-logger.info("Performing migrations on database: %s", settings.database_url)
+_safe_url = make_url(settings.database_url).render_as_string(hide_password=True)
+logger.info("Performing migrations on database: %s", _safe_url)
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # Interpret the config file for Python logging.
@@ -62,7 +63,6 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-    logger.info("Running migrations in offline mode on database: %s", settings.database_url)
     with context.begin_transaction():
         context.run_migrations()
 
@@ -91,7 +91,6 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    logger.info("Running migrations in online mode on database: %s", settings.database_url)
     asyncio.run(run_async_migrations())
 
 

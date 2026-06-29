@@ -1,0 +1,13 @@
+{
+  "description": "An explicit, intentional leave \u2014 remove the player immediately.",
+  "properties": {
+    "type": {
+      "const": "leave",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": ["type"],
+  "title": "LeaveEvent",
+  "type": "object"
+}

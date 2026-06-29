@@ -9,6 +9,10 @@ services:
     restart: unless-stopped
     env_file:
       - backend/.env.prod
+    # Select the production config profile (Secure cookies + strict CORS checks).
+    # Set explicitly here so it holds even if .env.prod omits it.
+    environment:
+      ENV: prod
     # Require database migrations to complete before the backend starts.
     depends_on:
       database-migrations:
@@ -44,16 +48,13 @@ services:
     restart: "no"
     env_file:
       - backend/.env.prod
+    environment:
+      ENV: prod
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
       target: prod
     restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
     # Bind to loopback only: the Cloudflare tunnel reaches the frontend over the
     # internal Docker network (service name `frontend`), so the host port does not
     # need to be on 0.0.0.0. Docker publishes ports by editing iptables directly,

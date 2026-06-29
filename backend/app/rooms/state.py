@@ -57,8 +57,10 @@ class RoomMetadataState(BaseModel):
     guess_targets: dict[str, str] = Field(default_factory=dict)
     guess_submissions: list[GuessSubmissionState] = Field(default_factory=list)
     submitted_players: set[str] = Field(default_factory=set)
-    player_count_for_scoring: int = 0
     player_scores: dict[str, int] = Field(default_factory=dict)
+    # Stable display order: each player keeps the seat assigned on first join,
+    # so a reconnect doesn't shuffle them to the end of the roster.
+    player_seats: dict[str, int] = Field(default_factory=dict)
 
 
 class RoomState(BaseModel):

@@ -32,24 +32,6 @@ logger = logging.getLogger(__name__)
 POINTS_PER_CORRECT_GUESS = 10
 
 
-def _build_round_result_item(
-    *,
-    player_id: str,
-    target_player_id: str,
-    correct_guesses: int,
-    total_items: int,
-    points_earned: int,
-) -> RoundResultItem:
-    """Build a typed round result item."""
-    return RoundResultItem(
-        playerId=player_id,
-        targetPlayerId=target_player_id,
-        correctGuesses=correct_guesses,
-        totalItems=total_items,
-        pointsEarned=points_earned,
-    )
-
-
 def configure_game(
     room: GameRoom,
     *,
@@ -72,6 +54,8 @@ def configure_game(
     room.metadata.submitted_players = set()
     room.metadata.player_scores = dict.fromkeys(room.players, 0)
     room.metadata.ready_players.clear()
+    room.round_drawings.clear()
+    room.drawing_history.clear()
 
 
 def start_round(
@@ -88,9 +72,9 @@ def start_round(
     room.metadata.current_round = round_number or (room.metadata.current_round + 1)
     room.metadata.player_assignments = cards or {}
     room.metadata.guess_targets = {}
+    room.round_drawings.clear()
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
-    room.metadata.player_count_for_scoring = len(room.players)
     for player_id in room.players:
         room.metadata.player_scores.setdefault(player_id, 0)
     room.metadata.ready_players.clear()
@@ -98,23 +82,67 @@ def start_round(
 
 
 def start_guessing(room: GameRoom) -> int:
-    """Transition into the guessing phase and return the scoring timeout."""
+    """Transition into the guessing phase and return the scoring timeout.
+
+    Idempotent: if the room is already guessing (e.g. the fallback scheduler
+    fires after an early all-ready transition), do not re-assign guess targets
+    or reset counters — doing so would invalidate in-flight submissions.
+    """
+    if room.metadata.game_phase == GamePhase.GUESSING:
+        return room.metadata.guessing_time_limit or 60
     room.metadata.guessing_start_time = int(time.time() * 1000)
     room.metadata.game_phase = GamePhase.GUESSING
-    room.metadata.guess_targets = assign_guess_targets(list(room.players))
-    room.metadata.player_count_for_scoring = len(room.players)
+    # Only connected players take part in guessing; a disconnected player should
+    # not be assigned a (possibly blank) drawing to guess, nor be expected to submit.
+    room.metadata.guess_targets = assign_guess_targets(
+        [player_id for player_id, player in room.players.items() if player.connected],
+    )
     room.metadata.ready_players.clear()
     return room.metadata.guessing_time_limit or 60
 
 
-def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
-    """Transition into guessing and return the broadcast event."""
-    start_guessing(room)
+def expected_guessers(room: GameRoom) -> list[str]:
+    """Connected players who have a target this round (i.e. are expected to submit)."""
+    return [
+        player_id
+        for player_id, player in room.players.items()
+        if player.connected and player_id in room.metadata.guess_targets
+    ]
+
+
+def all_expected_guesses_submitted(room: GameRoom) -> bool:
+    """Whether every currently-connected player with a target has submitted.
+
+    Computed live from current membership rather than a mutable counter, so it
+    stays correct across mid-guessing disconnects and reconnects.
+    """
+    expected = expected_guessers(room)
+    return bool(expected) and all(player_id in room.metadata.submitted_players for player_id in expected)
+
+
+def all_connected_players_ready(room: GameRoom) -> bool:
+    """Whether every connected player has marked ready (and at least one is connected).
+
+    Used for the early drawing->guessing transition; computed over connected
+    players so a mid-drawing disconnect does not stall the room.
+    """
+    connected = [player_id for player_id, player in room.players.items() if player.connected]
+    return bool(connected) and all(player_id in room.metadata.ready_players for player_id in connected)
+
+
+def guessing_event_payload(room: GameRoom) -> StartGuessingEvent:
+    """Build the start-guessing broadcast event from current metadata."""
     return StartGuessingEvent(
         type="start_guessing",
         guessing_start_time=room.metadata.guessing_start_time,
         guessTargets=dict(room.metadata.guess_targets),
     )
+
+
+def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
+    """Transition into guessing and return the broadcast event."""
+    start_guessing(room)
+    return guessing_event_payload(room)
 
 
 def reset_game(room: GameRoom) -> None:
@@ -129,6 +157,8 @@ def reset_game(room: GameRoom) -> None:
     room.metadata.round_start_time = None
     room.metadata.guessing_start_time = None
     room.metadata.game_phase = GamePhase.LOBBY
+    room.round_drawings.clear()
+    room.drawing_history.clear()
 
 
 def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
@@ -161,15 +191,13 @@ def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id:
     )
     room.metadata.guess_submissions.append(submission)
     room.metadata.submitted_players.add(player_id)
-    submitted = len(room.metadata.submitted_players)
-    expected = room.metadata.player_count_for_scoring
     logger.info(
-        "[Server] Guess submitted by %s: %s/%s players submitted",
+        "[Server] Guess submitted by %s: %s/%s connected players submitted",
         player_id,
-        submitted,
-        expected,
+        len(room.metadata.submitted_players),
+        len(expected_guessers(room)),
     )
-    return expected > 0 and submitted >= expected
+    return all_expected_guesses_submitted(room)
 
 
 def assign_guess_targets(player_ids: list[str]) -> dict[str, str]:
@@ -301,12 +329,12 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             round_points[target_player_id] += points_earned
 
         results.append(
-            _build_round_result_item(
-                player_id=player_id,
-                target_player_id=target_player_id,
-                correct_guesses=correct_count,
-                total_items=len(scoring_targets.targets),
-                points_earned=points_earned,
+            RoundResultItem(
+                playerId=player_id,
+                targetPlayerId=target_player_id,
+                correctGuesses=correct_count,
+                totalItems=len(scoring_targets.targets),
+                pointsEarned=points_earned,
             ),
         )
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
@@ -15,6 +15,7 @@ from app.rooms.actions import (
 )
 from app.rooms.protocol import (
     JOIN_EVENT_TYPE,
+    ErrorEventType,
     make_error_event,
     parse_client_event,
     send_ws_message,
@@ -28,15 +29,6 @@ if TYPE_CHECKING:
     from app.users.models import User
 
 logger = logging.getLogger(__name__)
-
-type ErrorEventType = Literal[
-    "protocol_error",
-    "permission_error",
-    "player_ready_error",
-    "submit_guess_error",
-    "join_error",
-    "kick_error",
-]
 
 
 class RoomWebSocketSession:

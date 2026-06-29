@@ -267,22 +267,18 @@ def test_auto_translate_helpers_cover_locale_and_cache_commands() -> None:
     assert AUTO_TRANSLATE_MODULE._dedupe_translated_aliases([" Café ", "cafe", "Chat"]) == ["café", "chat"]  # noqa: SLF001
 
     assert AUTO_TRANSLATE_MODULE._handle_cache_commands(  # noqa: SLF001
-        argparse.Namespace(reset_cache=True, show_cache_stats=False, inspect_cache=False),
+        argparse.Namespace(reset_cache=True, show_cache_stats=False),
         cast("TranslationService", service),
     )
     assert service.cache.reset.called
 
     assert AUTO_TRANSLATE_MODULE._handle_cache_commands(  # noqa: SLF001
-        argparse.Namespace(reset_cache=False, show_cache_stats=True, inspect_cache=False),
-        cast("TranslationService", service),
-    )
-    assert AUTO_TRANSLATE_MODULE._handle_cache_commands(  # noqa: SLF001
-        argparse.Namespace(reset_cache=False, show_cache_stats=False, inspect_cache=True),
+        argparse.Namespace(reset_cache=False, show_cache_stats=True),
         cast("TranslationService", service),
     )
     assert (
         AUTO_TRANSLATE_MODULE._handle_cache_commands(  # noqa: SLF001
-            argparse.Namespace(reset_cache=False, show_cache_stats=False, inspect_cache=False),
+            argparse.Namespace(reset_cache=False, show_cache_stats=False),
             cast("TranslationService", service),
         )
         is False
@@ -317,22 +313,20 @@ def test_auto_translate_parse_args_and_hash_helpers(tmp_path: Path, monkeypatch:
     assert AUTO_TRANSLATE_MODULE._read_last_hash() == file_hash  # noqa: SLF001
 
 
-def test_auto_translate_main_handles_missing_file_and_benchmark(
+def test_auto_translate_main_handles_missing_file_and_runs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The CLI reports missing files and supports benchmark mode."""
+    """The CLI reports missing files and translates a changed seed file."""
     missing_args = argparse.Namespace(
         seed_file=tmp_path / "missing.yaml",
         source_locale="en",
         target_locales=["fr"],
         overwrite_existing=False,
         dry_run=False,
-        benchmark=False,
         force=False,
         reset_cache=False,
         show_cache_stats=False,
-        inspect_cache=False,
     )
     monkeypatch.setattr(AUTO_TRANSLATE_MODULE, "parse_args", lambda: missing_args)
 
@@ -341,17 +335,15 @@ def test_auto_translate_main_handles_missing_file_and_benchmark(
 
     seed_file = tmp_path / "seed.yaml"
     seed_file.write_text("prompts:\n  - id: cat\nsystem_categories: []\n", encoding="utf-8")
-    benchmark_args = argparse.Namespace(
+    run_args = argparse.Namespace(
         seed_file=seed_file,
         source_locale="en",
         target_locales=["fr"],
         overwrite_existing=False,
         dry_run=False,
-        benchmark=True,
         force=True,
         reset_cache=False,
         show_cache_stats=False,
-        inspect_cache=False,
     )
     service = SimpleNamespace(cache=SimpleNamespace(reset=Mock()), cache_stats=Mock(return_value="stats"))
     apply_auto = Mock(
@@ -363,7 +355,7 @@ def test_auto_translate_main_handles_missing_file_and_benchmark(
             "skipped_missing_source": 0,
         }
     )
-    monkeypatch.setattr(AUTO_TRANSLATE_MODULE, "parse_args", lambda: benchmark_args)
+    monkeypatch.setattr(AUTO_TRANSLATE_MODULE, "parse_args", lambda: run_args)
     monkeypatch.setattr(AUTO_TRANSLATE_MODULE, "TranslationService", lambda: service)
     monkeypatch.setattr(AUTO_TRANSLATE_MODULE, "apply_auto_translations", apply_auto)
 
@@ -383,11 +375,9 @@ def test_auto_translate_main_skips_on_unchanged_hash(tmp_path: Path, monkeypatch
         target_locales=["fr"],
         overwrite_existing=False,
         dry_run=False,
-        benchmark=False,
         force=False,
         reset_cache=False,
         show_cache_stats=False,
-        inspect_cache=False,
     )
 
     monkeypatch.setattr(AUTO_TRANSLATE_MODULE, "parse_args", lambda: args)
@@ -413,11 +403,9 @@ def test_auto_translate_main_updates_seed_file_and_hash(tmp_path: Path, monkeypa
         target_locales=["fr"],
         overwrite_existing=False,
         dry_run=False,
-        benchmark=False,
         force=False,
         reset_cache=False,
         show_cache_stats=False,
-        inspect_cache=False,
     )
     writes: list[str] = []
 

@@ -56,7 +56,7 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
 
     if is_host_kicking and not target_is_host:
         await kick_player(room, target_player_id, "Kicked by host")
-        return KickVoteResult(success=True, immediate=True, reason="Host kicked player")
+        return KickVoteResult(success=True)
 
     if target_is_host:
         return KickVoteResult(success=False, error=HOST_CANNOT_BE_VOTE_KICKED_ERROR)
@@ -92,7 +92,7 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
         room.players[initiator_id].name,
     )
 
-    return KickVoteResult(success=True, immediate=False, vote_id=target_player_id)
+    return KickVoteResult(success=True, vote_id=target_player_id)
 
 
 async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -> KickVoteResult:
@@ -149,7 +149,9 @@ async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -
 
 def get_required_votes(room: GameRoom, *, target_is_host: bool) -> int:
     """Calculate required votes to kick a player."""
-    total_players = len(room.players)
+    # Only connected players can actually cast a vote; counting disconnected
+    # ("reconnecting") players would inflate the threshold past what is reachable.
+    total_players = sum(1 for player in room.players.values() if player.connected)
 
     if target_is_host:
         return total_players - 1

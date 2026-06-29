@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { useRouter } from "vue-router";
 
 import GameHeader from "@/components/game/GameHeader.vue";
 import DrawingRevealGrid from "@/components/results/DrawingRevealGrid.vue";
@@ -10,7 +9,7 @@ import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
 import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
-import { useGameConnection } from "@/composables/useGameConnection";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useSound } from "@/composables/useSound";
 import { GAME_TIMINGS } from "@/config/gameConfig";
@@ -18,10 +17,9 @@ import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
-const { disconnect } = useGameConnection();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const { play } = useSound();
+const { leaveRoom } = useLeaveRoom();
 
 const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
 const leaveDialogOpen = ref(false);
@@ -32,7 +30,9 @@ function avatarColorFor(playerId: string): string {
 }
 
 const currentScores = computed(() =>
-  store.playersList.map((p) => ({ id: p.id, name: p.name, score: p.score })).sort((a, b) => b.score - a.score),
+  store.playersList
+    .map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected }))
+    .sort((a, b) => b.score - a.score),
 );
 
 const resultsByPlayer = computed(() => {
@@ -57,12 +57,6 @@ const resultsByPlayer = computed(() => {
 });
 
 const isLastRound = computed(() => store.currentRound >= store.maxRounds);
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
 
 function showLeaveDialog() {
   if (!shouldConfirm.value) {
@@ -111,7 +105,12 @@ onUnmounted(() => {
           <div class="performance">
             <HdCard v-for="player in store.playersList" :key="player.id" class="performance__card">
               <div class="performance__head">
-                <HdAvatar :initial="getAvatarInitial(player.name)" :color="avatarColorFor(player.id)" size="sm" />
+                <HdAvatar
+                  :initial="getAvatarInitial(player.name)"
+                  :color="avatarColorFor(player.id)"
+                  size="sm"
+                  :disconnected="!player.connected"
+                />
                 <span class="performance__name">{{ player.name }}</span>
               </div>
               <ul v-if="resultsByPlayer[player.id]" class="performance__list">
@@ -138,7 +137,12 @@ onUnmounted(() => {
               :class="{ 'standings__row--you': player.id === store.localPlayerId }"
             >
               <span class="standings__rank">{{ index + 1 }}</span>
-              <HdAvatar :initial="getAvatarInitial(player.name)" :color="avatarColorFor(player.id)" size="sm" />
+              <HdAvatar
+                :initial="getAvatarInitial(player.name)"
+                :color="avatarColorFor(player.id)"
+                size="sm"
+                :disconnected="!player.connected"
+              />
               <span class="standings__name">{{ player.name }}</span>
               <HdPill v-if="player.id === store.localPlayerId" class="standings__you">{{ $t("common.you") }}</HdPill>
               <span class="standings__score">{{ $t("common.pointsShort", { count: player.score }) }}</span>

@@ -82,8 +82,19 @@ function colorFor(player: Player): string {
         class="my-2 flex items-center justify-between gap-3 rounded bg-gray-50 p-3"
       >
         <div class="flex flex-1 items-center gap-2">
-          <HdAvatar :initial="getAvatarInitial(player.name)" :color="colorFor(player)" size="sm" />
-          <span class="font-medium">{{ player.name }}</span>
+          <HdAvatar
+            :initial="getAvatarInitial(player.name)"
+            :color="colorFor(player)"
+            size="sm"
+            :disconnected="!player.connected"
+          />
+          <span class="font-medium" :class="{ 'text-gray-400': !player.connected }">{{ player.name }}</span>
+          <span
+            v-if="!player.connected"
+            class="rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-500"
+          >
+            {{ $t("common.reconnecting") }}
+          </span>
           <span v-if="player.id === store.localPlayerId" class="rounded bg-gray-200 px-2 py-1 text-sm text-gray-600">
             ({{ $t("common.you") }})
           </span>

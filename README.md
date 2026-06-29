@@ -1,5 +1,10 @@
 # 6 Second Scribbles
 
+[![CI](https://github.com/simonvanlierde/6-second-scribbles/actions/workflows/ci.yml/badge.svg)](https://github.com/simonvanlierde/6-second-scribbles/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/simonvanlierde/6-second-scribbles/branch/main/graph/badge.svg)](https://codecov.io/gh/simonvanlierde/6-second-scribbles)
+[![6ss.duinlab.nl](https://img.shields.io/website?url=https%3A%2F%2F6ss.duinlab.nl&up_message=online&down_message=offline)](https://6ss.duinlab.nl)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 6 Second Scribbles is a real-time, multiplayer drawing-and-guessing game. One player races through a list of prompts while everyone else guesses what's being drawn, and rooms move through lobby, round, and results states over WebSockets.
 
 A live demo is hosted at [6ss.duinlab.nl](https://6ss.duinlab.nl).
@@ -26,7 +31,11 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 - Locale-aware prompt categories and guess matching
 - Generated client/server contracts
 - Unit, integration, and end-to-end tests
+  
+### Todo
 
+- Full mobile support (currently desktop-first)
+- Improved handling mid-game user disconnects
 
 ## Running locally
 
@@ -47,4 +56,4 @@ Inspired by *Six Second Scribbles* by Hazel Reynolds, published by [Gamely Games
 
 ## License
 
-Code is released under the MIT License. The original *Six Second Scribbles* game concept, brand, and card content remain the property of their respective owners.
+Code is released under the [MIT License](LICENSE). The original *Six Second Scribbles* game concept, brand, and card content remain the property of their respective owners.

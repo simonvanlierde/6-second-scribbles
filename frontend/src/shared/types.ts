@@ -27,6 +27,7 @@ export interface Player {
   color?: string | null;
   currentCard?: Card;
   drawing?: string; // Base64 data URL of canvas drawing
+  connected: boolean; // false while disconnected/"reconnecting"
 }
 
 export interface GameState {
