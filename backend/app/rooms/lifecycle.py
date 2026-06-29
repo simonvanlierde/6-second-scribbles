@@ -73,13 +73,6 @@ def get_age_seconds(room: GameRoom) -> float:
     return time.time() - room.created_at
 
 
-def get_empty_duration_seconds(room: GameRoom) -> float | None:
-    """Get how long room has been empty, or None if it is active."""
-    if room.emptied_at is None:
-        return None
-    return time.time() - room.emptied_at
-
-
 async def hibernate(room: GameRoom) -> None:
     """Put an empty room into hibernation mode."""
     if room.is_hibernated or not room.is_empty():

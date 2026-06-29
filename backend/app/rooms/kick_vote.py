@@ -56,7 +56,7 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
 
     if is_host_kicking and not target_is_host:
         await kick_player(room, target_player_id, "Kicked by host")
-        return KickVoteResult(success=True, immediate=True, reason="Host kicked player")
+        return KickVoteResult(success=True)
 
     if target_is_host:
         return KickVoteResult(success=False, error=HOST_CANNOT_BE_VOTE_KICKED_ERROR)
@@ -92,7 +92,7 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
         room.players[initiator_id].name,
     )
 
-    return KickVoteResult(success=True, immediate=False, vote_id=target_player_id)
+    return KickVoteResult(success=True, vote_id=target_player_id)
 
 
 async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -> KickVoteResult:

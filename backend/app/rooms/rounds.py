@@ -32,24 +32,6 @@ logger = logging.getLogger(__name__)
 POINTS_PER_CORRECT_GUESS = 10
 
 
-def _build_round_result_item(
-    *,
-    player_id: str,
-    target_player_id: str,
-    correct_guesses: int,
-    total_items: int,
-    points_earned: int,
-) -> RoundResultItem:
-    """Build a typed round result item."""
-    return RoundResultItem(
-        playerId=player_id,
-        targetPlayerId=target_player_id,
-        correctGuesses=correct_guesses,
-        totalItems=total_items,
-        pointsEarned=points_earned,
-    )
-
-
 def configure_game(
     room: GameRoom,
     *,
@@ -148,14 +130,19 @@ def all_connected_players_ready(room: GameRoom) -> bool:
     return bool(connected) and all(player_id in room.metadata.ready_players for player_id in connected)
 
 
-def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
-    """Transition into guessing and return the broadcast event."""
-    start_guessing(room)
+def guessing_event_payload(room: GameRoom) -> StartGuessingEvent:
+    """Build the start-guessing broadcast event from current metadata."""
     return StartGuessingEvent(
         type="start_guessing",
         guessing_start_time=room.metadata.guessing_start_time,
         guessTargets=dict(room.metadata.guess_targets),
     )
+
+
+def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
+    """Transition into guessing and return the broadcast event."""
+    start_guessing(room)
+    return guessing_event_payload(room)
 
 
 def reset_game(room: GameRoom) -> None:
@@ -342,12 +329,12 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             round_points[target_player_id] += points_earned
 
         results.append(
-            _build_round_result_item(
-                player_id=player_id,
-                target_player_id=target_player_id,
-                correct_guesses=correct_count,
-                total_items=len(scoring_targets.targets),
-                points_earned=points_earned,
+            RoundResultItem(
+                playerId=player_id,
+                targetPlayerId=target_player_id,
+                correctGuesses=correct_count,
+                totalItems=len(scoring_targets.targets),
+                pointsEarned=points_earned,
             ),
         )
 

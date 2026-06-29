@@ -434,12 +434,6 @@ class GameRoom:
         """Return the authenticated user id associated with a player connection, if any."""
         return self.metadata.player_user_ids.get(player_id)
 
-    def get_host_owner_user_id(self) -> str | None:
-        """Return the current host's authenticated user id, if the host has one."""
-        if self.host_id is None:
-            return None
-        return self.get_player_user_id(self.host_id)
-
     def start_round(self, *, round_number: int | None, cards: dict[str, PlayerPromptAssignmentState] | None) -> int:
         """Transition the room into a new drawing round and return the start timestamp."""
         self.scheduler.cancel_round_tasks()
@@ -522,10 +516,6 @@ class GameRoom:
         """Cast a vote to kick a player."""
         return await kick_vote.cast_kick_vote(self, voter_id, target_player_id)
 
-    def _get_required_votes(self, *, target_is_host: bool) -> int:
-        """Calculate required votes to kick a player."""
-        return kick_vote.get_required_votes(self, target_is_host=target_is_host)
-
     async def kick_player(self, player_id: str, reason: str = "Kicked") -> None:
         """Kick a player from the room."""
         await kick_vote.kick_player(self, player_id, reason)
@@ -568,14 +558,6 @@ class GameRoom:
     def should_be_removed(self) -> bool:
         """Check if room should be permanently removed."""
         return room_lifecycle.should_be_removed(self)
-
-    def get_age_seconds(self) -> float:
-        """Get room age in seconds."""
-        return room_lifecycle.get_age_seconds(self)
-
-    def get_empty_duration_seconds(self) -> float | None:
-        """Get how long room has been empty, or None if not empty."""
-        return room_lifecycle.get_empty_duration_seconds(self)
 
     async def hibernate(self) -> None:
         """Put room into hibernation mode."""

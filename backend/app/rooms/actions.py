@@ -180,14 +180,7 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
 
     if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
         session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
-        await broadcast_and_persist(
-            session,
-            StartGuessingEvent(
-                type="start_guessing",
-                guessing_start_time=session.room.metadata.guessing_start_time,
-                guessTargets=dict(session.room.metadata.guess_targets),
-            ),
-        )
+        await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
 
 
 async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuessingEvent) -> None:
@@ -196,14 +189,7 @@ async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuess
     if not await require_host(session, "start guessing"):
         return
     session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
-    await broadcast_and_persist(
-        session,
-        StartGuessingEvent(
-            type="start_guessing",
-            guessing_start_time=session.room.metadata.guessing_start_time,
-            guessTargets=dict(session.room.metadata.guess_targets),
-        ),
-    )
+    await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
 
 
 async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessEvent) -> None:
