@@ -428,7 +428,8 @@ def test_existing_participant_can_rejoin_active_round(test_client: TestClient) -
             send_json(ws_rejoin, {"type": "request_game_state", "playerId": PLAYER_2})
             snapshot = receive_json(ws_rejoin)
             assert snapshot["type"] == ROOM_STATE
-            assert snapshot["card"]["items"] == ["pizza", "burger"]
+            card = cast("dict[str, object]", snapshot["card"])
+            assert card["items"] == ["pizza", "burger"]
             assert snapshot["totalPlayers"] == 2
 
 
