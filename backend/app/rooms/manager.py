@@ -477,24 +477,18 @@ class GameRoom:
 
     async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
         """Broadcast a message to all connected players in the room."""
-        failed_player_ids: list[str] = []
         for player_id, player in self.players.items():
             if (exclude and player_id == exclude) or not player.connected:
                 continue
             try:
                 await send_ws_message(player.websocket, message)
             except Exception:
+                # A failed send on a still-"connected" socket means we missed the
+                # close. Mark them disconnected so we stop trying; the websocket's
+                # receive loop will raise next and run disconnect_player, which
+                # broadcasts presence and handles host/scoring/cleanup.
                 logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-                failed_player_ids.append(player_id)
-
-        # A failed send means the socket is gone, but its receive loop may never
-        # raise (a half-open connection can block reads until an OS timeout).
-        # Proactively run the same teardown so peers are notified and
-        # host/scoring/cleanup proceed. disconnect_player is idempotent, so a
-        # later receive-loop disconnect for the same socket is a no-op. Scheduled
-        # (not awaited) to avoid re-entering broadcast mid-iteration.
-        for player_id in failed_player_ids:
-            create_logged_task(self.disconnect_player(player_id), name=f"disconnect_{self.room_id}")
+                player.connected = False
 
     async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""
