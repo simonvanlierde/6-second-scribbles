@@ -31,14 +31,9 @@ export function useRoundDraft<T>(key: string, options: RoundDraftOptions<T>) {
   }
 
   function restore(): boolean {
-    let saved: string | null = null;
     try {
-      saved = localStorage.getItem(key);
-    } catch {
-      return false;
-    }
-    if (!saved) return false;
-    try {
+      const saved = localStorage.getItem(key);
+      if (!saved) return false;
       const parsed = JSON.parse(saved) as { round?: number; data?: T };
       if (parsed.round !== options.round() || parsed.data === undefined) {
         localStorage.removeItem(key);
@@ -47,7 +42,7 @@ export function useRoundDraft<T>(key: string, options: RoundDraftOptions<T>) {
       options.apply(parsed.data);
       return true;
     } catch {
-      localStorage.removeItem(key);
+      clear();
       return false;
     }
   }
