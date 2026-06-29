@@ -23,7 +23,7 @@ import logging
 import os
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from app.core.logging import configure_logging
 from app.main import application
@@ -31,6 +31,8 @@ from app.rooms.protocol import CLIENT_EVENT_ADAPTER, CONTRACT_EVENT_CATALOG, SER
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from pydantic import TypeAdapter
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -44,13 +46,6 @@ ANY_OF_KEY = "anyOf"
 DEFS_PREFIX = "#/$defs/"
 type JsonValue = Any
 type JsonObject = dict[str, Any]
-
-
-class SchemaAdapter(Protocol):
-    """Minimal interface needed from Pydantic type adapters."""
-
-    def json_schema(self, *, by_alias: bool, mode: str) -> JsonObject:
-        """Return the adapter's JSON schema."""
 
 
 def _required_fields(props: JsonObject, required_values: JsonValue) -> set[str]:
@@ -113,7 +108,7 @@ def prepare(schema: JsonObject) -> JsonObject:
     return cast("JsonObject", _normalize_schema(inlined))
 
 
-def generate_schema(adapter: SchemaAdapter, *, mode: str) -> JsonObject:
+def generate_schema(adapter: TypeAdapter[Any], *, mode: Literal["validation", "serialization"]) -> JsonObject:
     """Generate one normalized schema from a Pydantic adapter."""
     raw_schema = adapter.json_schema(by_alias=True, mode=mode)
     return prepare(raw_schema)
@@ -208,8 +203,8 @@ def main() -> None:
     out_dir = CONTRACTS_ROOT / "jsonschema"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    server_schema = generate_schema(cast("SchemaAdapter", SERVER_EVENT_ADAPTER), mode="serialization")
-    client_schema = generate_schema(cast("SchemaAdapter", CLIENT_EVENT_ADAPTER), mode="validation")
+    server_schema = generate_schema(SERVER_EVENT_ADAPTER, mode="serialization")
+    client_schema = generate_schema(CLIENT_EVENT_ADAPTER, mode="validation")
     server_event_schemas, server_index = split_union_schema(server_schema)
     client_event_schemas, client_index = split_union_schema(client_schema)
     assert_catalog_matches_index(client_index, CONTRACT_EVENT_CATALOG["client"], "client")
