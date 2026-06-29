@@ -1,12 +1,18 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 
 import { useGameStore } from "@/stores/game";
 import RoomView from "@/views/RoomView.vue";
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({ params: { roomCode: "ROOM1" } }),
+}));
+
+const connectMock = vi.fn();
+vi.mock("@/composables/useGameConnection", () => ({
+  useGameConnection: () => ({ connect: connectMock, connectionStatus: ref("disconnected") }),
 }));
 
 vi.mock("@/views/RoomAccessView.vue", () => ({ default: { template: "<div>guest</div>" } }));

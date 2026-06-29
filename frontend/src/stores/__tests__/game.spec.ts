@@ -458,3 +458,33 @@ describe("reset", () => {
     expect(store.difficulty).toBe(GAME_SETTINGS.difficulty.DEFAULT);
   });
 });
+
+describe("player presence", () => {
+  it("defaults players to connected and keeps a disconnected player in the roster", () => {
+    const store = useGameStore();
+    store.setPlayers([
+      { id: "p1", name: "Alice" },
+      { id: "p2", name: "Bob" },
+    ]);
+    expect(store.players.get("p1")?.connected).toBe(true);
+
+    store.setPlayerConnected("p2", false);
+    expect(store.players.get("p2")?.connected).toBe(false);
+    expect(store.playersList).toHaveLength(2);
+
+    store.setPlayerConnected("p2", true);
+    expect(store.players.get("p2")?.connected).toBe(true);
+  });
+
+  it("preserves connection state across a setPlayers refresh that omits it", () => {
+    const store = useGameStore();
+    store.setPlayers([{ id: "p1", name: "Alice" }]);
+    store.setPlayerConnected("p1", false);
+
+    store.setPlayers([{ id: "p1", name: "Alice" }]);
+    expect(store.players.get("p1")?.connected).toBe(false);
+
+    store.setPlayers([{ id: "p1", name: "Alice", connected: true }]);
+    expect(store.players.get("p1")?.connected).toBe(true);
+  });
+});
