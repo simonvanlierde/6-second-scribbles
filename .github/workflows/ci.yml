@@ -125,7 +125,7 @@ jobs:
           --coverage.thresholds.statements=0
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./frontend/coverage/lcov.info
@@ -147,7 +147,7 @@ jobs:
           run-tests-mode: 'unit'
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./backend/coverage.xml
@@ -170,7 +170,7 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Setup just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Install root/frontend deps
         run: pnpm install --frozen-lockfile
@@ -190,7 +190,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Backend full tests (composite)
         uses: ./.github/actions/backend-check
@@ -198,7 +198,7 @@ jobs:
           run-tests-mode: 'all'
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./backend/coverage.xml
