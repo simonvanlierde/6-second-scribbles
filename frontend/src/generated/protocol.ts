@@ -17,12 +17,10 @@ export const ServerEventSchema = z.union([
             name: z.string(),
             color: z.union([z.string(), z.null()]).default(null),
             connected: z.boolean().default(true),
-            categories: z.array(z.string()).optional(),
           })
           .strict(),
       ),
       hostId: z.union([z.string(), z.null()]).default(null),
-      categories: z.array(z.string()).optional(),
       gamePhase: z
         .enum(["lobby", "drawing", "guessing", "round_results", "final_results"])
         .describe("Valid room lifecycle phases for game flow state."),

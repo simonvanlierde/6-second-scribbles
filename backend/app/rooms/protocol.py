@@ -258,7 +258,6 @@ class PlayerSnapshot(BaseModel):
     name: str
     color: str | None = None
     connected: bool = True
-    categories: list[str] = Field(default_factory=list)
 
 
 class PlayerListItem(BaseModel):
@@ -286,7 +285,6 @@ class RoomStateEvent(ServerEventModel):
     type: Literal["room_state"] = "room_state"
     players: list[PlayerSnapshot]
     host_id: str | None = Field(default=None, alias="hostId")
-    categories: list[str] = Field(default_factory=list)
     game_phase: GamePhase = Field(alias="gamePhase")
     difficulty: Difficulty
     current_round: int = Field(default=0, alias="currentRound")

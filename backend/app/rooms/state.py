@@ -37,7 +37,6 @@ class RoomMetadataState(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    categories: list[str] = Field(default_factory=list)
     game_phase: GamePhase = GamePhase.LOBBY
     round_start_time: int | None = None
     guessing_start_time: int | None = None

@@ -134,96 +134,6 @@
         "title": "GamePhase",
         "type": "string"
       },
-      "GuessMatchDetailResult": {
-        "additionalProperties": false,
-        "description": "Detailed scoring information for a matched guess.",
-        "properties": {
-          "guess": {
-            "title": "Guess",
-            "type": "string"
-          },
-          "matched_item": {
-            "title": "Matched Item",
-            "type": "string"
-          },
-          "method": {
-            "$ref": "#/components/schemas/MatchMethod"
-          },
-          "similarity": {
-            "title": "Similarity",
-            "type": "number"
-          }
-        },
-        "required": ["guess", "matched_item", "similarity", "method"],
-        "title": "GuessMatchDetailResult",
-        "type": "object"
-      },
-      "GuessScoreRequest": {
-        "description": "Request body for scoring player guesses.",
-        "properties": {
-          "alternatives": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "title": "Alternatives",
-            "type": "object"
-          },
-          "correct_answers": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Correct Answers",
-            "type": "array"
-          },
-          "guesses": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Guesses",
-            "type": "array"
-          }
-        },
-        "required": ["guesses", "correct_answers"],
-        "title": "GuessScoreRequest",
-        "type": "object"
-      },
-      "GuessScoreResponse": {
-        "description": "Response body for scoring player guesses.",
-        "properties": {
-          "matches": {
-            "items": {
-              "$ref": "#/components/schemas/GuessMatchDetailResult"
-            },
-            "title": "Matches",
-            "type": "array"
-          },
-          "percentage": {
-            "title": "Percentage",
-            "type": "number"
-          },
-          "score": {
-            "title": "Score",
-            "type": "integer"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          },
-          "unmatched_answers": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Unmatched Answers",
-            "type": "array"
-          }
-        },
-        "required": ["score", "total", "percentage", "matches", "unmatched_answers"],
-        "title": "GuessScoreResponse",
-        "type": "object"
-      },
       "GuestAuthRequest": {
         "description": "Optional request body for guest session bootstrap.",
         "properties": {
@@ -306,10 +216,6 @@
         "required": ["username", "password"],
         "title": "LoginRequest",
         "type": "object"
-      },
-      "MatchMethod": {
-        "enum": ["exact", "fuzzy", "alternative", "none"],
-        "type": "string"
       },
       "QuickPlayResponse": {
         "description": "Response for quick-play: a joinable room, existing or freshly created.",
@@ -1175,46 +1081,6 @@
         },
         "summary": "Room Status",
         "tags": ["rooms"]
-      }
-    },
-    "/api/score/guesses": {
-      "post": {
-        "description": "Score player guesses using fuzzy matching.",
-        "operationId": "score_guesses_api_score_guesses_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GuessScoreRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GuessScoreResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Score Guesses",
-        "tags": ["categories"]
       }
     },
     "/api/stats": {

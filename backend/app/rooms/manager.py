@@ -404,7 +404,6 @@ class GameRoom:
                     for player in self._ordered_players()
                 ],
                 "hostId": self.host_id,
-                "categories": self.metadata.categories,
                 "gamePhase": self.metadata.game_phase,
                 "difficulty": self.metadata.difficulty,
                 "currentRound": self.metadata.current_round,

@@ -5,25 +5,6 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.core.types import Difficulty, LanguageCode
-from app.scoring import GuessMatchDetailResult
-
-
-class GuessScoreRequest(BaseModel):
-    """Request body for scoring player guesses."""
-
-    guesses: list[str]
-    correct_answers: list[str]
-    alternatives: dict[str, list[str]] = Field(default_factory=dict)
-
-
-class GuessScoreResponse(BaseModel):
-    """Response body for scoring player guesses."""
-
-    score: int
-    total: int
-    percentage: float
-    matches: list[GuessMatchDetailResult]
-    unmatched_answers: list[str]
 
 
 class CategoryListItem(BaseModel):

@@ -19,7 +19,7 @@ from app.rooms.protocol import (
     StartGuessingEvent,
 )
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from app.scoring import GuessTarget, guess_matcher
+from app.scoring import GuessTarget, guess_matcher, normalize_text
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -281,7 +281,7 @@ def _collect_miss_candidates(
 ) -> None:
     """Append (player_id, guess, distance) for each guess that matched no target."""
     for guess in guesses:
-        if guess in matched_guesses or not guess_matcher.normalize(guess):
+        if guess in matched_guesses or not normalize_text(guess):
             continue
         nearest = max((guess_matcher.fuzzy_match(guess, t.label)[1] for t in targets), default=0.0)
         miss_candidates.append((player_id, guess, 100.0 - nearest))

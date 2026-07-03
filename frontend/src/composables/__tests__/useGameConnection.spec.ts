@@ -111,7 +111,6 @@ describe("client message handlers", () => {
         { id: "p2", name: "Bob" },
       ],
       hostId: "p1",
-      categories: [],
       gamePhase: "lobby",
       difficulty: "medium",
       maxRounds: 5,

@@ -92,7 +92,7 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
         room.players[initiator_id].name,
     )
 
-    return KickVoteResult(success=True, vote_id=target_player_id)
+    return KickVoteResult(success=True)
 
 
 async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -> KickVoteResult:
@@ -137,14 +137,8 @@ async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -
 
     if current_votes >= required_votes:
         await kick_player(room, target_player_id, "Kicked by vote")
-        return KickVoteResult(success=True, vote_passed=True)
 
-    return KickVoteResult(
-        success=True,
-        vote_passed=False,
-        current_votes=current_votes,
-        required_votes=required_votes,
-    )
+    return KickVoteResult(success=True)
 
 
 def get_required_votes(room: GameRoom, *, target_is_host: bool) -> int:

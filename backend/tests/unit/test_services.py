@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
 from app.categories import service as category_service
-from app.categories.schemas import GuessScoreRequest
 from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms import actions as websocket_action_service
@@ -22,7 +21,7 @@ from app.rooms.manager import GameRoom, RoomManager, room_manager
 from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateEvent
 from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from tests.constants import ALTERNATIVE, ROOM_42, ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
+from tests.constants import ROOM_42, ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,23 +31,6 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from tests.support import TestWebSocket
-
-
-class TestCategoryService:
-    """Focused tests for CategoryService methods."""
-
-    def test_score_guess_request_maps_match_details(self) -> None:
-        """Score guesses using the expected match method."""
-        response = category_service.score_guess_request(
-            GuessScoreRequest(
-                guesses=["colour"],
-                correct_answers=["color"],
-                alternatives={"color": ["colour"]},
-            )
-        )
-
-        assert response.score == 1
-        assert response.matches[0].method == ALTERNATIVE
 
 
 class TestRoomService:

@@ -97,25 +97,16 @@ def _generate_variants(normalized: str) -> frozenset[str]:
 class GuessMatcher:
     """Handles fuzzy matching of player guesses against correct answers."""
 
-    EXACT_MATCH_THRESHOLD = 100
     FUZZY_MATCH_THRESHOLD = 85
-
-    def normalize(self, text: str) -> str:
-        """Normalize text for comparison."""
-        return normalize_text(text)
-
-    def generate_variants(self, word: str) -> frozenset[str]:
-        """Generate common variants of a word (cached at module level)."""
-        return _generate_variants(self.normalize(word))
 
     def exact_match(self, guess: str, target: str) -> bool:
         """Check if guess exactly matches target."""
-        return bool(self.generate_variants(guess) & self.generate_variants(target))
+        return bool(_generate_variants(normalize_text(guess)) & _generate_variants(normalize_text(target)))
 
     def fuzzy_match(self, guess: str, target: str) -> tuple[bool, float]:
         """Check if guess fuzzy matches target."""
-        guess_norm = self.normalize(guess)
-        target_norm = self.normalize(target)
+        guess_norm = normalize_text(guess)
+        target_norm = normalize_text(target)
 
         if self.exact_match(guess, target):
             return True, 100.0
@@ -132,7 +123,7 @@ class GuessMatcher:
         alternatives: list[str] | None = None,
     ) -> GuessMatchResult:
         """Match a guess against a list of correct answers."""
-        if not self.normalize(guess):
+        if not normalize_text(guess):
             return GuessMatchResult(matched=False, matched_item=None, similarity=0.0, method="none")
 
         for answer in correct_answers:
@@ -159,42 +150,6 @@ class GuessMatcher:
             return GuessMatchResult(matched=True, matched_item=best_item, similarity=best_score, method="fuzzy")
 
         return GuessMatchResult(matched=False, matched_item=None, similarity=best_score, method="none")
-
-    def score_guesses(
-        self,
-        guesses: list[str],
-        correct_answers: list[str],
-        alternatives_map: dict[str, list[str]] | None = None,
-    ) -> ScoreGuessesResult:
-        """Score a list of guesses against correct answers."""
-        all_alternatives = [alt for alts in (alternatives_map or {}).values() for alt in alts]
-
-        matched_answers: set[str] = set()
-        match_details: list[GuessMatchDetailResult] = []
-
-        for guess in guesses:
-            result = self.match_guess(guess, correct_answers, all_alternatives)
-
-            if result.matched and result.matched_item is not None and result.matched_item not in matched_answers:
-                matched_answers.add(result.matched_item)
-                match_details.append(
-                    GuessMatchDetailResult(
-                        guess=guess,
-                        matched_item=result.matched_item,
-                        similarity=result.similarity,
-                        method=result.method,
-                    ),
-                )
-
-        unmatched = [ans for ans in correct_answers if ans not in matched_answers]
-
-        return ScoreGuessesResult(
-            score=len(matched_answers),
-            total=len(correct_answers),
-            percentage=(len(matched_answers) / len(correct_answers) * 100) if correct_answers else 0,
-            matches=match_details,
-            unmatched_answers=unmatched,
-        )
 
     def score_guesses_against_targets(
         self,

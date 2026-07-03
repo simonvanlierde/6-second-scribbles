@@ -22,6 +22,7 @@ from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
     HOST_ONE,
     KICK_VOTE_STARTED,
+    KICK_VOTE_UPDATED,
     MEDIUM,
     PLAYER_FOUR_ID,
     PLAYER_FOUR_NAME,
@@ -448,7 +449,6 @@ class TestGameRoom:
         result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
 
         assert result.success
-        assert result.vote_id == PLAYER_THREE_ID
         messages = [json.loads(message) for message in ws1.sent_texts]
         assert messages[-1]["type"] == KICK_VOTE_STARTED
         assert messages[-1]["targetPlayerId"] == PLAYER_THREE_ID
@@ -458,12 +458,12 @@ class TestGameRoom:
         assert messages[-1]["requiredVotes"] == 2
         assert EXPIRES_AT in messages[-1]
 
-    async def test_cast_kick_vote_returns_typed_progress_result(
+    async def test_cast_kick_vote_broadcasts_progress(
         self,
         game_room: GameRoom,
         make_ws: Callable[..., TestWebSocket],
     ) -> None:
-        """Test kick-vote progress returns a typed result object."""
+        """Test a non-final kick vote broadcasts the updated tally."""
         ws1, ws2, ws3, ws4 = make_ws(), make_ws(), make_ws(), make_ws()
 
         await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
@@ -477,9 +477,11 @@ class TestGameRoom:
         vote_result = await game_room.cast_kick_vote(PLAYER_THREE_ID, PLAYER_FOUR_ID)
 
         assert vote_result.success
-        assert not vote_result.vote_passed
-        assert vote_result.current_votes == 2
-        assert vote_result.required_votes == 3
+        update = [json.loads(m) for m in ws1.sent_texts if json.loads(m)["type"] == KICK_VOTE_UPDATED][-1]
+        assert update["targetPlayerId"] == PLAYER_FOUR_ID
+        assert update["currentVotes"] == 2
+        assert update["requiredVotes"] == 3
+        assert PLAYER_FOUR_ID in game_room.players
 
     async def test_players_cannot_vote_kick_the_host(
         self,

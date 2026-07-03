@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from translation.argos_provider import ArgosTranslationProvider
 from translation.cache import PersistentTranslationCache
 from translation.opencc_converter import LocaleConverter, OpenCCLocaleConverter
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +17,12 @@ class TranslationService:
     def __init__(
         self,
         provider_class: type | None = None,
-        cache_path: Path | None = None,
         locale_converter: LocaleConverter | None = None,
     ) -> None:
-        """Initialize service with optional provider and cache path overrides."""
+        """Initialize service with optional provider and converter overrides (for tests)."""
         self.provider = (provider_class or ArgosTranslationProvider)()
         self.locale_converter = locale_converter or OpenCCLocaleConverter()
-        self.cache = PersistentTranslationCache(cache_path) if cache_path else PersistentTranslationCache()
+        self.cache = PersistentTranslationCache()
 
     def translate(self, from_locale: str, to_locale: str, text: str) -> str:
         """Translate text, consulting the persistent cache before the provider."""

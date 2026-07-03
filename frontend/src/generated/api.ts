@@ -76,47 +76,6 @@ export const GamePhaseSchema = z
   .describe("Valid room lifecycle phases for game flow state.");
 export type GamePhase = z.infer<typeof GamePhaseSchema>;
 
-export const GuessMatchDetailResultSchema = z
-  .object({
-    guess: z.string(),
-    matched_item: z.string(),
-    method: z.enum(["exact", "fuzzy", "alternative", "none"]),
-    similarity: z.number(),
-  })
-  .strict()
-  .describe("Detailed scoring information for a matched guess.");
-export type GuessMatchDetailResult = z.infer<typeof GuessMatchDetailResultSchema>;
-
-export const GuessScoreRequestSchema = z
-  .object({
-    alternatives: z.record(z.string(), z.array(z.string())).optional(),
-    correct_answers: z.array(z.string()),
-    guesses: z.array(z.string()),
-  })
-  .describe("Request body for scoring player guesses.");
-export type GuessScoreRequest = z.infer<typeof GuessScoreRequestSchema>;
-
-export const GuessScoreResponseSchema = z
-  .object({
-    matches: z.array(
-      z
-        .object({
-          guess: z.string(),
-          matched_item: z.string(),
-          method: z.enum(["exact", "fuzzy", "alternative", "none"]),
-          similarity: z.number(),
-        })
-        .strict()
-        .describe("Detailed scoring information for a matched guess."),
-    ),
-    percentage: z.number(),
-    score: z.number().int(),
-    total: z.number().int(),
-    unmatched_answers: z.array(z.string()),
-  })
-  .describe("Response body for scoring player guesses.");
-export type GuessScoreResponse = z.infer<typeof GuessScoreResponseSchema>;
-
 export const GuestAuthRequestSchema = z
   .object({ displayName: z.union([z.string(), z.null()]).optional(), preferredLocale: z.string().default("en") })
   .describe("Optional request body for guest session bootstrap.");
@@ -160,9 +119,6 @@ export const LoginRequestSchema = z
   })
   .describe("Request body for username/password login.");
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
-
-export const MatchMethodSchema = z.enum(["exact", "fuzzy", "alternative", "none"]);
-export type MatchMethod = z.infer<typeof MatchMethodSchema>;
 
 export const QuickPlayResponseSchema = z
   .object({ kind: z.enum(["existing", "created"]), room_code: z.string() })
@@ -263,15 +219,11 @@ export const apiSchemaNames = [
   "CreateRoomResponse",
   "Difficulty",
   "GamePhase",
-  "GuessMatchDetailResult",
-  "GuessScoreRequest",
-  "GuessScoreResponse",
   "GuestAuthRequest",
   "HTTPValidationError",
   "LanguageCode",
   "LocaleAvailabilityItem",
   "LoginRequest",
-  "MatchMethod",
   "QuickPlayResponse",
   "RandomRoomResponse",
   "RegisterRequest",
