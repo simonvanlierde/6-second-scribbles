@@ -1,12 +1,20 @@
-import { defineStore, storeToRefs } from "pinia";
+import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { normalizeGamePhase } from "@/shared/gamePhase";
-import type { Card, Difficulty, GalleryDrawing, KickVote, Player, RoundHighlights, RoundResult } from "@/shared/types";
-import { useDrawingStore } from "./drawing";
+import type {
+  Card,
+  Difficulty,
+  DrawStroke,
+  GalleryDrawing,
+  KickVote,
+  Player,
+  RoundHighlights,
+  RoundResult,
+} from "@/shared/types";
 
 function getBrowserLocale(): string {
   if (typeof navigator === "undefined" || !navigator.language) {
@@ -19,8 +27,26 @@ function getBrowserLocale(): string {
 export const useGameStore = defineStore(
   "game",
   () => {
-    const drawing = useDrawingStore();
-    const { currentStrokes, localPadVisible, roomPadVisible } = storeToRefs(drawing);
+    // --- Drawing ---
+    const currentStrokes = ref<DrawStroke[]>([]);
+    const localPadVisible = ref<boolean>(true);
+    const roomPadVisible = ref<boolean>(true);
+
+    function addStroke(stroke: DrawStroke) {
+      currentStrokes.value.push(stroke);
+    }
+
+    function clearStrokes() {
+      currentStrokes.value = [];
+    }
+
+    function setRoomPadVisible(visible: boolean) {
+      roomPadVisible.value = visible;
+    }
+
+    function setLocalPadVisible(visible: boolean) {
+      localPadVisible.value = visible;
+    }
 
     // --- Player identity ---
     const localPlayerId = ref<string>("");
@@ -65,7 +91,6 @@ export const useGameStore = defineStore(
     const defaultLocale = ref<string>("en");
     const customCategoryIds = ref<number[] | null>(null);
     const isPrivateRoom = ref<boolean>(false);
-    const categories = ref<string[]>([]);
 
     // --- Computed ---
     const localPlayer = computed(() => players.value.get(localPlayerId.value));
@@ -116,16 +141,6 @@ export const useGameStore = defineStore(
       roomCode.value = code;
     }
 
-    /** @deprecated Use setRoomCode — persistence is now automatic */
-    function setRoomCodeAndSave(code: string) {
-      setRoomCode(code);
-    }
-
-    /** @deprecated Use setLocalPlayer — persistence is now automatic */
-    function setLocalPlayerAndSave(id: string, name: string) {
-      setLocalPlayer(id, name);
-    }
-
     function addPlayer(id: string, name: string) {
       if (!players.value.has(id)) {
         players.value.set(id, { id, name, score: 0, connected: true });
@@ -162,10 +177,6 @@ export const useGameStore = defineStore(
         next.delete(id);
         players.value = next;
       }
-    }
-
-    function clearPlayers() {
-      players.value.clear();
     }
 
     function setHost(id: string | null) {
@@ -214,7 +225,7 @@ export const useGameStore = defineStore(
       totalPlayers.value = players.value.size;
       guessingStartTime.value = undefined;
       guessTargets.value = {};
-      drawing.clearStrokes();
+      clearStrokes();
       localPlayerCard.value = undefined;
       for (const [playerId, player] of players.value) {
         player.currentCard = cards[playerId];
@@ -332,7 +343,6 @@ export const useGameStore = defineStore(
     function applyRoomState(roomState: ServerEventOf<"room_state">) {
       setPlayers(roomState.players);
       hostId.value = roomState.hostId ?? null;
-      categories.value = roomState.categories ?? [];
       gamePhase.value = normalizeGamePhase(roomState.gamePhase);
       if (roomState.currentRound !== undefined) currentRound.value = roomState.currentRound;
       applySettingsUpdate({
@@ -364,7 +374,7 @@ export const useGameStore = defineStore(
           drawing: entry.drawing,
         }));
       }
-      if (roomState.padVisibility !== undefined) drawing.setRoomPadVisible(roomState.padVisibility);
+      if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
       customCategoryIds.value = roomState.customCategoryIds ?? null;
       if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
@@ -377,7 +387,7 @@ export const useGameStore = defineStore(
       }
     }
 
-    // --- Actions: drawing (delegated to useDrawingStore; proxied here for backward compat) ---
+    // --- Actions: drawing ---
     function setPlayerDrawing(playerId: string, playerDrawing: string) {
       const player = players.value.get(playerId);
       if (player) {
@@ -409,18 +419,17 @@ export const useGameStore = defineStore(
       drawingTimeLimit.value = GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT;
       guessingTimeLimit.value = GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT;
       guessTargets.value = {};
-      drawing.clearStrokes();
+      clearStrokes();
       localPlayerCard.value = undefined;
       isSpectatorMode.value = false;
       lastRoundResults.value = [];
       lastHighlights.value = null;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
-      categories.value = [];
       readyCount.value = 0;
       totalPlayers.value = 0;
-      drawing.setLocalPadVisible(true);
-      drawing.setRoomPadVisible(true);
+      setLocalPadVisible(true);
+      setRoomPadVisible(true);
       defaultLocale.value = "en";
       customCategoryIds.value = null;
       localPlayerLocale.value = getBrowserLocale();
@@ -445,7 +454,7 @@ export const useGameStore = defineStore(
       guessingStartTime,
       drawingTimeLimit,
       guessingTimeLimit,
-      // Drawing state (refs from useDrawingStore — auto-unwrapped by Pinia)
+      // Drawing state
       currentStrokes,
       localPadVisible,
       roomPadVisible,
@@ -455,7 +464,6 @@ export const useGameStore = defineStore(
       lastHighlights,
       drawingHistory,
       totalGuessesMade,
-      categories,
       guessTargets,
       readyCount,
       totalPlayers,
@@ -481,12 +489,9 @@ export const useGameStore = defineStore(
       setLocalPlayerLocale,
       setLocalPlayerColor,
       setRoomCode,
-      setRoomCodeAndSave,
-      setLocalPlayerAndSave,
       addPlayer,
       setPlayers,
       removePlayer,
-      clearPlayers,
       setHost,
       startKickVote,
       updateKickVote,
@@ -508,13 +513,13 @@ export const useGameStore = defineStore(
       setPrivacy,
       applySettingsUpdate,
       applyRoomState,
-      // Drawing actions proxied from useDrawingStore
-      addStroke: drawing.addStroke,
-      clearStrokes: drawing.clearStrokes,
+      // Drawing actions
+      addStroke,
+      clearStrokes,
       setPlayerDrawing,
       setPlayerConnected,
-      setRoomPadVisible: drawing.setRoomPadVisible,
-      setLocalPadVisible: drawing.setLocalPadVisible,
+      setRoomPadVisible,
+      setLocalPadVisible,
       reset,
     };
   },
@@ -525,7 +530,15 @@ export const useGameStore = defineStore(
       // state (phase, round, timers, guess targets, settings) is server-owned and
       // rehydrated from room_state on (re)connect — persisting it would let a
       // reloaded client render stale, un-synced state. See `hydrated`.
-      pick: ["localPlayerId", "localPlayerName", "localPlayerLocale", "localPlayerColor", "roomCode", "defaultLocale"],
+      pick: [
+        "localPlayerId",
+        "localPlayerName",
+        "localPlayerLocale",
+        "localPlayerColor",
+        "roomCode",
+        "defaultLocale",
+        "localPadVisible",
+      ],
     },
   },
 );

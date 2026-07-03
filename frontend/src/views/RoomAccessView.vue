@@ -115,14 +115,14 @@ function connectToRoom(observeOnly = false) {
 
   isSubmitting.value = true;
   store.localPlayerName = name;
-  store.setRoomCodeAndSave(roomCode.value);
+  store.setRoomCode(roomCode.value);
 
   if (observeOnly) {
     store.setSpectatorMode(true);
     connect(roomCode.value, { observeOnly: true });
   } else {
     store.setSpectatorMode(false);
-    store.setLocalPlayerAndSave(getOrCreatePlayerId(), name);
+    store.setLocalPlayer(getOrCreatePlayerId(), name);
     connect(roomCode.value);
   }
 
