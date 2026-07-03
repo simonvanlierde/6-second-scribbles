@@ -24,35 +24,35 @@
   "dependencies": {
     "@fontsource/kalam": "^5.2.8",
     "@fontsource/patrick-hand": "^5.2.8",
-    "@vueuse/core": "^14.2.1",
+    "@vueuse/core": "^14.3.0",
     "howler": "^2.2.4",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "vue": "^3.5.32",
-    "vue-i18n": "^11.3.2",
-    "vue-router": "^5.0.4",
-    "zod": "^4.3.6"
+    "vue-i18n": "^11.4.6",
+    "vue-router": "^5.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.12",
+    "@biomejs/biome": "^2.5.2",
     "@pinia/testing": "^1.0.3",
-    "@playwright/test": "^1.59.1",
-    "@tailwindcss/vite": "^4.2.2",
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/vite": "^4.3.2",
     "@tsconfig/node24": "^24.0.4",
     "@types/howler": "^2.2.12",
     "@types/jsdom": "^28.0.1",
-    "@types/node": "^25.6.0",
+    "@types/node": "^26.1.0",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vitejs/plugin-vue-jsx": "^5.1.5",
     "@vitest/coverage-v8": "^4.1.4",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
-    "jsdom": "^29.0.2",
+    "jsdom": "^29.1.1",
     "json-schema-to-zod": "^2.8.1",
-    "tailwindcss": "^4.2.2",
+    "tailwindcss": "^4.3.2",
     "typescript": "~6.0.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.4",
-    "vue-tsc": "^3.2.6"
+    "vue-tsc": "^3.3.6"
   }
 }
