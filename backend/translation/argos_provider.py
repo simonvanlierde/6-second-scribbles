@@ -11,6 +11,15 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
+def _base_code(locale: str) -> str:
+    """Reduce a region-tagged app locale to the base ISO 639 code Argos uses.
+
+    Argos packages are keyed by base codes ('pt', 'es'), not region-tagged
+    locales ('pt-BR'), so matching the full locale never found a package.
+    """
+    return locale.split("-", 1)[0].lower()
+
+
 class ArgosTranslationProvider:
     """Wrapper around Argos Translate with package management."""
 
@@ -30,33 +39,38 @@ class ArgosTranslationProvider:
 
     def _ensure_pair(self, from_locale: str, to_locale: str) -> None:
         """Ensure translation model for language pair is available."""
-        if (from_locale, to_locale) in self.installed_pairs:
+        from_code, to_code = _base_code(from_locale), _base_code(to_locale)
+        if (from_code, to_code) in self.installed_pairs:
             return
         try:
-            translation = self.argos_translate.get_translation_from_codes(from_locale, to_locale)
+            translation = self.argos_translate.get_translation_from_codes(from_code, to_code)
         except AttributeError:
             translation = None
 
         if translation is not None:
-            self.installed_pairs.add((from_locale, to_locale))
+            self.installed_pairs.add((from_code, to_code))
             return
 
-        matching = [pkg for pkg in self.available_packages if pkg.from_code == from_locale and pkg.to_code == to_locale]
+        matching = [pkg for pkg in self.available_packages if pkg.from_code == from_code and pkg.to_code == to_code]
         if not matching:
-            msg = f"No Argos package available for {from_locale} -> {to_locale}."
+            msg = f"No Argos package available for {from_code} -> {to_code}."
             raise RuntimeError(msg)
 
-        logger.info("Installing Argos package %s -> %s", from_locale, to_locale)
+        logger.info("Installing Argos package %s -> %s", from_code, to_code)
         download_path = matching[0].download()
         self.argos_package.install_from_path(download_path)
-        self.installed_pairs.add((from_locale, to_locale))
+        self.installed_pairs.add((from_code, to_code))
 
     def translate(self, from_locale: str, to_locale: str, text: str) -> str:
         """Translate text from one locale to another."""
-        if from_locale == to_locale:
+        from_code, to_code = _base_code(from_locale), _base_code(to_locale)
+        if from_code == to_code:
             return text
         self._ensure_pair(from_locale, to_locale)
-        translation = self.argos_translate.get_translation_from_codes(from_locale, to_locale)
+        translation = self.argos_translate.get_translation_from_codes(from_code, to_code)
+        if translation is None:
+            msg = f"No Argos translation available for {from_code} -> {to_code}."
+            raise RuntimeError(msg)
         result = translation.translate(text)
         return result.strip() if result else text
 
