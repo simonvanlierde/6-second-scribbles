@@ -66,10 +66,8 @@ function voteToKick(targetPlayerId: string) {
 }
 
 function colorFor(player: Player): string {
-  // Prefer server-supplied colour; fall back to a deterministic one derived
-  // from the player id (keeps the UI stable for older rooms without server colours).
-  const serverColor = (player as Player & { color?: string }).color;
-  return serverColor ?? getAvatarColor(player.id);
+  // Prefer server-supplied colour; fall back to a deterministic per-id one.
+  return player.color ?? getAvatarColor(player.id);
 }
 </script>
 

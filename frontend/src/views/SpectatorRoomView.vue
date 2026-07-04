@@ -1,39 +1,22 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRouter } from "vue-router";
 
-import { useGameConnection } from "@/composables/useGameConnection";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { i18n } from "@/i18n";
-import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
-const { connect, disconnect } = useGameConnection();
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
-
-function joinNextGame() {
-  if (!store.roomCode || !store.localPlayerName.trim()) return;
-  store.setSpectatorMode(false);
-  store.setLocalPlayer(getOrCreatePlayerId(), store.localPlayerName.trim());
-  connect(store.roomCode);
-}
+const { leaveRoom } = useLeaveRoom();
 
 const drawings = computed(() => store.playersList.filter((player) => player.drawing));
+// RoomView only renders this view outside the lobby, so no lobby label is needed.
 const phaseLabel = computed(() => {
   if (store.gamePhase === "drawing") return i18n.global.t("spectator.drawingRound");
   if (store.gamePhase === "guessing") return i18n.global.t("spectator.guessingRound");
-  if (store.gamePhase === "lobby") return i18n.global.t("spectator.roomBackInLobby");
   if (store.gamePhase === "round_results") return i18n.global.t("spectator.roundResults");
   if (store.gamePhase === "final_results") return i18n.global.t("spectator.finalResults");
   return i18n.global.t("spectator.watchingRoom");
 });
-const canJoinNow = computed(() => store.gamePhase === "lobby" && store.localPlayerName.trim().length > 0);
 </script>
 
 <template>
@@ -49,19 +32,9 @@ const canJoinNow = computed(() => store.gamePhase === "lobby" && store.localPlay
           {{ $t("common.roomCode", { code: store.roomCode }) }}
         </p>
         <h1 class="m-0">{{ phaseLabel }}</h1>
-        <p class="m-0 mt-2 text-white/80">
-          {{ canJoinNow ? $t("spectator.joinableAgain") : $t("spectator.watchingLive") }}
-        </p>
+        <p class="m-0 mt-2 text-white/80">{{ $t("spectator.watchingLive") }}</p>
       </div>
       <div class="flex flex-wrap justify-end gap-3">
-        <button
-          v-if="canJoinNow"
-          type="button"
-          class="cursor-pointer rounded-xl border-0 bg-gradient-to-br from-[#ffd166] to-[#ff8e72] px-4 py-3.5 font-extrabold text-[#1e1e1e]"
-          @click="joinNextGame"
-        >
-          {{ $t("spectator.joinNextGame") }}
-        </button>
         <button
           type="button"
           class="leave-btn cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
@@ -120,7 +93,6 @@ const canJoinNow = computed(() => store.gamePhase === "lobby" && store.localPlay
     >
       <h2 class="m-0">{{ $t("spectator.roundStatus") }}</h2>
       <p v-if="store.gamePhase === 'guessing'" class="p-3 text-white/85">{{ $t("spectator.guessingInProgress") }}</p>
-      <p v-else-if="store.gamePhase === 'lobby'" class="p-3 text-white/85">{{ $t("spectator.lobbyAgain") }}</p>
       <p v-else class="p-3 text-white/85">{{ $t("spectator.betweenRounds") }}</p>
     </section>
   </div>

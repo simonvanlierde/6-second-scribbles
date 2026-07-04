@@ -10,7 +10,6 @@ const availability = ref<Record<string, LocaleAvailability>>({});
 const isLoading = ref(false);
 const loadError = ref<string | null>(null);
 const hasLoaded = ref(false);
-let loaded = false;
 
 function normalizeLocale(locale: string): string {
   const [language, region] = locale.trim().replace("_", "-").split("-");
@@ -32,7 +31,7 @@ function getDisabledReason(item: LocaleAvailability | undefined): string {
 }
 
 async function fetchLocaleAvailability(force = false): Promise<void> {
-  if (loaded && !force) {
+  if (hasLoaded.value && !force) {
     return;
   }
 
@@ -48,7 +47,6 @@ async function fetchLocaleAvailability(force = false): Promise<void> {
       normalized[normalizeLocale(item.locale)] = item;
     }
     availability.value = normalized;
-    loaded = true;
     hasLoaded.value = true;
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : i18n.global.t("localeSelector.failedToLoad");

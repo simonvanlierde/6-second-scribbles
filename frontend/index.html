@@ -5,6 +5,14 @@
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Six Second Scribbles - Multiplayer Drawing Party Game</title>
+    <!-- Apply the saved theme before first paint to avoid a flash of the wrong
+         theme. Mirrors STORAGE_KEY/values in src/composables/useTheme.ts. -->
+    <script>
+    try {
+      const t = localStorage.getItem("ds:theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch {}
+    </script>
   </head>
   <body>
     <div id="app"></div>

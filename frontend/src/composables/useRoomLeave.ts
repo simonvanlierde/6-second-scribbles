@@ -10,16 +10,10 @@ type LeaveDialogConfig = {
   cancelLabel: string;
 };
 
-type LeaveContext = {
-  spectator?: boolean;
-};
-
-export function useRoomLeave(context: LeaveContext = {}) {
+export function useRoomLeave() {
   const store = useGameStore();
-  const spectator = context.spectator ?? false;
 
   const shouldConfirm = computed(() => {
-    if (spectator) return false;
     if (store.gamePhase === "drawing" || store.gamePhase === "guessing") return true;
     return store.isHost && store.playersList.length > 1;
   });

@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
 import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
@@ -30,7 +30,7 @@ import type { DrawStroke } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
 const canvas = useDrawingCanvas();
-const canvasEl = ref<HTMLCanvasElement | null>(null);
+const canvasEl = useTemplateRef<HTMLCanvasElement>("canvasEl");
 const store = useGameStore();
 const { send } = useGameConnection();
 
