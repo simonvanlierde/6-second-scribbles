@@ -470,7 +470,9 @@ class GameRoom:
 
     async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
         """Broadcast a message to all connected players in the room."""
-        for player_id, player in self.players.items():
+        # Snapshot: send_ws_message awaits, and a concurrent remove/disconnect
+        # mutating self.players mid-iteration would raise "dict changed size".
+        for player_id, player in list(self.players.items()):
             if (exclude and player_id == exclude) or not player.connected:
                 continue
             try:
@@ -558,9 +560,9 @@ class GameRoom:
         """Check if room should be permanently removed."""
         return room_lifecycle.should_be_removed(self)
 
-    async def hibernate(self) -> None:
+    def hibernate(self) -> None:
         """Put room into hibernation mode."""
-        await room_lifecycle.hibernate(self)
+        room_lifecycle.hibernate(self)
 
 
 class RoomManager:

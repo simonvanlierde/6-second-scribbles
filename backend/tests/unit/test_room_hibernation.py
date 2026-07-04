@@ -68,7 +68,7 @@ class TestRoomHibernation:
 
         assert room.should_hibernate()
 
-        await room.hibernate()
+        room.hibernate()
         assert room.is_hibernated
 
     async def test_room_removed_after_5_minutes(self, make_ws: Callable[..., TestWebSocket]) -> None:
