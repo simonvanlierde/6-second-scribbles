@@ -11,7 +11,7 @@
     "check": "pnpm run check:biome && pnpm run check:spelling && pnpm run check:markdown",
     "check:biome": "biome check .",
     "check:spelling": "pnpm exec cspell lint . --config .cspell.yml --gitignore --cache --cache-strategy content",
-    "check:markdown": "pnpm exec markdownlint-cli2 **/README.md",
+    "check:markdown": "pnpm exec markdownlint-cli2 \"**/README.md\"",
     "contracts:generate": "just generate-contracts",
     "contracts:check": "node scripts/check-contracts.mjs",
     "format": "biome check . --write"

@@ -54,7 +54,6 @@ jobs:
               - 'frontend/justfile'
             root:
               - '.github/**'
-              - 'pyproject.toml'
               - 'justfile'
               - 'scripts/**'
 
