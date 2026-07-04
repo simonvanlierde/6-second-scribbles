@@ -68,16 +68,17 @@ function setDifficulty(d: string) {
   difficulty.value = d as Difficulty;
 }
 
-watch(rounds, (val) => {
-  if (Number.isFinite(val)) store.maxRounds = val;
-});
-
-watch(drawingTimeLimit, (val) => {
-  if (Number.isFinite(val)) store.drawingTimeLimit = val;
-});
-
-watch(guessingTimeLimit, (val) => {
-  if (Number.isFinite(val)) store.guessingTimeLimit = val;
+// Push the host's local edits into the store so other screens (lobby, header,
+// results) read them immediately. Guarded on isHost so an incoming
+// settings_update doesn't round-trip store -> ref -> store; difficulty is
+// included here too (it was previously the only setting that lagged the store
+// until the server echoed it back).
+watch([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], ([d, r, dl, gl]) => {
+  if (!store.isHost) return;
+  store.difficulty = d;
+  if (Number.isFinite(r)) store.maxRounds = r;
+  if (Number.isFinite(dl)) store.drawingTimeLimit = dl;
+  if (Number.isFinite(gl)) store.guessingTimeLimit = gl;
 });
 
 watchDebounced([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], broadcastSettings, {

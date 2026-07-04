@@ -52,7 +52,9 @@ export const useGameStore = defineStore(
     const localPlayerId = ref<string>("");
     const localPlayerName = ref<string>("");
     const localPlayerLocale = ref<string>(getBrowserLocale());
-    const localPlayerColor = ref<AvatarColor>(AVATAR_COLORS[0]);
+    // Null until chosen or derived: setLocalPlayer fills it with a deterministic
+    // per-id colour so fresh players don't all default to the same one.
+    const localPlayerColor = ref<AvatarColor | null>(null);
     const pendingLocalPlayerId = ref<string | null>(null);
     const pendingLocalPlayerName = ref<string | null>(null);
     const isSpectatorMode = ref<boolean>(false);
@@ -272,6 +274,9 @@ export const useGameStore = defineStore(
      * hold this round's `.drawing` (startRound clears them on the next round).
      */
     function captureRoundDrawings(round: number) {
+      // Idempotent: a resent/duplicate round_complete must not double-list
+      // drawings in the gallery or double-count guesses in the running total.
+      if (drawingHistory.value.some((entry) => entry.round === round)) return;
       for (const player of players.value.values()) {
         if (player.drawing) {
           drawingHistory.value.push({

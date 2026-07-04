@@ -114,7 +114,7 @@ onUnmounted(() => {
                 <span class="performance__name">{{ player.name }}</span>
               </div>
               <ul v-if="resultsByPlayer[player.id]" class="performance__list">
-                <li v-for="(result, index) in resultsByPlayer[player.id]" :key="index" class="performance__row">
+                <li v-for="result in resultsByPlayer[player.id]" :key="result.targetName" class="performance__row">
                   <span class="performance__target">
                     {{ $t("roundResults.guessedPlayersDrawing", { name: result.targetName }) }}
                   </span>

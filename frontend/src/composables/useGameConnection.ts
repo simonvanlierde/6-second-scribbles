@@ -118,6 +118,7 @@ export function useGameConnection() {
     };
 
     socket.onmessage = (event: MessageEvent) => {
+      if (ws !== socket) return; // ignore messages queued on a superseded socket
       try {
         const result = ServerEventSchema.safeParse(JSON.parse(event.data));
         if (!result.success) {

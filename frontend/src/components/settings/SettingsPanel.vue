@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdInput from "@/components/ui/HdInput.vue";
-import { getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { useSound } from "@/composables/useSound";
 import { type Theme, useTheme } from "@/composables/useTheme";
@@ -19,8 +19,8 @@ const store = useGameStore();
 const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
 const { focusNameOnOpen } = useSettingsPanel();
-const nameInputRef = ref<InstanceType<typeof HdInput> | null>(null);
-const dialogRef = ref<HTMLDialogElement | null>(null);
+const nameInputRef = useTemplateRef<InstanceType<typeof HdInput>>("nameInput");
+const dialogRef = useTemplateRef<HTMLDialogElement>("dialog");
 
 watch(
   open,
@@ -59,7 +59,7 @@ const playerLocale = computed({
   set: (v: string) => store.setLocalPlayerLocale(v),
 });
 const playerColor = computed({
-  get: () => store.localPlayerColor,
+  get: () => store.localPlayerColor ?? getAvatarColor(store.localPlayerId),
   set: (v) => store.setLocalPlayerColor(v),
 });
 const initial = computed(() => getAvatarInitial(playerName.value || "?"));
@@ -101,7 +101,7 @@ function selectTheme(value: Theme) {
 </script>
 
 <template>
-  <dialog ref="dialogRef" class="settings-dialog" @click.self="close" @close="close">
+  <dialog ref="dialog" class="settings-dialog" @click.self="close" @close="close">
     <header class="settings-dialog__header">
       <h2 class="settings-dialog__title">{{ t("settings.title") }}</h2>
       <HdIconButton label="Close" variant="ghost" data-testid="settings-close" @click="close">
@@ -148,7 +148,7 @@ function selectTheme(value: Theme) {
             </span>
           </button>
           <HdInput
-            ref="nameInputRef"
+            ref="nameInput"
             v-model="playerName"
             :aria-label="t('settings.yourName')"
             :placeholder="t('settings.namePlaceholder')"

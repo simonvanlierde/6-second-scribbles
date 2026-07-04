@@ -292,10 +292,14 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
       }
       break;
 
-    case "kick_vote_expired":
+    case "kick_vote_expired": {
+      // The event carries only the id, so resolve the display name from the store
+      // (falling back to a generic label rather than showing a raw player id).
+      const targetName = store.players.get(message.targetPlayerId)?.name ?? i18n.global.t("common.unknown");
       store.removeKickVote(message.targetPlayerId);
-      showNotification(i18n.global.t("moderation.kickVoteExpired", { name: message.targetPlayerId }));
+      showNotification(i18n.global.t("moderation.kickVoteExpired", { name: targetName }));
       break;
+    }
 
     case "kick_error":
       showNotification(message.error || i18n.global.t("moderation.kickRequestFailed"), "error");

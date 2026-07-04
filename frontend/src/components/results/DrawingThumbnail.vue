@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import { getAvatarInitial } from "@/composables/useAvatar";
 
-defineProps<{
+const props = defineProps<{
   drawing?: string;
   name: string;
   color: string;
@@ -12,6 +12,16 @@ defineProps<{
 }>();
 
 const broken = ref(false);
+
+// The instance is reused across rounds (keyed by player id), so clear a stale
+// error when a new drawing arrives — otherwise one failed load pins the
+// placeholder for the rest of the game.
+watch(
+  () => props.drawing,
+  () => {
+    broken.value = false;
+  },
+);
 </script>
 
 <template>

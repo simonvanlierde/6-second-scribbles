@@ -4,7 +4,7 @@ import { computed } from "vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdTimer from "@/components/ui/HdTimer.vue";
-import { getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useSound } from "@/composables/useSound";
 import { useGameStore } from "@/stores/game";
 
@@ -28,6 +28,7 @@ const { enabled: soundEnabled } = useSound();
 
 const score = computed(() => store.localPlayer?.score ?? 0);
 const initial = computed(() => getAvatarInitial(store.localPlayerName || "?"));
+const avatarColor = computed(() => store.localPlayerColor ?? getAvatarColor(store.localPlayerId));
 </script>
 
 <template>
@@ -90,7 +91,7 @@ const initial = computed(() => getAvatarInitial(store.localPlayerName || "?"));
         {{ title }}
       </h1>
       <div class="game-header__meta"><span v-if="status" class="game-header__status">{{ status }}</span></div>
-      <HdAvatar class="game-header__avatar" :initial="initial" :color="store.localPlayerColor" size="sm" />
+      <HdAvatar class="game-header__avatar" :initial="initial" :color="avatarColor" size="sm" />
     </template>
 
     <template v-else>
@@ -117,7 +118,7 @@ const initial = computed(() => getAvatarInitial(store.localPlayerName || "?"));
         </span>
         <span class="game-header__score">{{ $t("common.pointsShort", { count: score }) }}</span>
       </div>
-      <HdAvatar class="game-header__avatar" :initial="initial" :color="store.localPlayerColor" size="sm" />
+      <HdAvatar class="game-header__avatar" :initial="initial" :color="avatarColor" size="sm" />
     </template>
   </header>
 </template>

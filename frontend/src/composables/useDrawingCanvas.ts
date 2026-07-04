@@ -11,6 +11,9 @@ export function useDrawingCanvas() {
   const strokes = ref<DrawStroke[]>([]);
   const currentColor = ref("#000000");
   const currentWidth = ref(5);
+  // The stroke belongs to a single pointer; secondary pointers (multi-touch) are
+  // ignored so a second finger can't hijack or corrupt the in-progress stroke.
+  let activePointerId: number | null = null;
   let onStrokeProgress:
     | ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void)
     | null = null;
@@ -76,8 +79,11 @@ export function useDrawingCanvas() {
 
   function startDrawing(event: PointerEvent) {
     if (!ctx.value || !canvasRef.value) return;
+    // Already drawing with another pointer — ignore this secondary touch.
+    if (activePointerId !== null) return;
 
     // Capture the pointer so pointermove keeps firing even outside the canvas.
+    activePointerId = event.pointerId;
     canvasRef.value.setPointerCapture(event.pointerId);
 
     isDrawing.value = true;
@@ -87,6 +93,7 @@ export function useDrawingCanvas() {
 
   function draw(event: PointerEvent) {
     if (!isDrawing.value || !ctx.value) return;
+    if (event.pointerId !== activePointerId) return;
 
     const coords = getCoordinates(event);
     const prevCoords = currentStroke.value[currentStroke.value.length - 1];
@@ -114,10 +121,13 @@ export function useDrawingCanvas() {
     }
   }
 
-  function stopDrawing() {
+  function stopDrawing(event?: PointerEvent) {
+    // Only the pointer that started the stroke may end it.
+    if (event && event.pointerId !== activePointerId) return;
     if (!isDrawing.value) return;
 
     isDrawing.value = false;
+    activePointerId = null;
 
     if (currentStroke.value.length > 0) {
       strokes.value.push({

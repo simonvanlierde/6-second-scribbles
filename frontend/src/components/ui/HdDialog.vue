@@ -25,13 +25,21 @@ const dialogRef = ref<HTMLDialogElement | null>(null);
 const titleId = useId();
 const messageId = useId();
 
+// Native <dialog> fires a `close` event on ANY close, including our own
+// el.close(). Without this flag a programmatic close (confirm/backdrop) would
+// re-enter onClose and emit a spurious `cancel` alongside the real event.
+let programmaticClose = false;
+
 watch(
   open,
   (isOpen) => {
     const el = dialogRef.value;
     if (!el) return;
     if (isOpen && !el.open) el.showModal();
-    else if (!isOpen && el.open) el.close();
+    else if (!isOpen && el.open) {
+      programmaticClose = true;
+      el.close();
+    }
   },
   { flush: "post" },
 );
@@ -45,6 +53,16 @@ function onCancel(): void {
   open.value = false;
   emit("cancel");
 }
+
+// Only user-initiated closes (Esc key) should count as a cancel; the close
+// event from our own el.close() is swallowed via the programmaticClose flag.
+function onClose(): void {
+  if (programmaticClose) {
+    programmaticClose = false;
+    return;
+  }
+  onCancel();
+}
 </script>
 
 <template>
@@ -55,7 +73,7 @@ function onCancel(): void {
     :aria-labelledby="titleId"
     :aria-describedby="props.message ? messageId : undefined"
     @click.self="onCancel"
-    @close="onCancel"
+    @close="onClose"
   >
     <h2 :id="titleId" class="hd-dialog__title">{{ props.title }}</h2>
     <p v-if="props.message" :id="messageId" class="hd-dialog__message">{{ props.message }}</p>
