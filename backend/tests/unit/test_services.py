@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
@@ -16,6 +17,7 @@ from app.rooms import lifecycle as room_lifecycle_service
 from app.rooms import player_lifecycle as player_lifecycle_service
 from app.rooms import rounds as round_service
 from app.rooms import router as room_service
+from app.rooms import scheduler as scheduler_service
 from app.rooms import ws_router as websocket_service
 from app.rooms.manager import GameRoom, RoomManager, room_manager
 from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateEvent
@@ -57,13 +59,11 @@ class TestKickVoteService:
             "expired-player": kick_vote_service.KickVote(
                 target_player_id="expired-player",
                 target_player_name="Expired",
-                initiated_by="host-1",
                 expires_at=time.time() - 1,
             ),
             "active-player": kick_vote_service.KickVote(
                 target_player_id="active-player",
                 target_player_name="Active",
-                initiated_by="host-1",
                 expires_at=time.time() + 30,
             ),
         }
@@ -245,3 +245,49 @@ class TestWebSocketActionService:
         )
 
         assert session.error_calls == []
+
+
+class TestRegressionGuards:
+    """Focused regression tests for the review-round bug fixes."""
+
+    async def test_cancel_task_does_not_self_cancel(self) -> None:
+        """The scoring-timeout task triggering scoring cancels itself; must be a no-op (F1)."""
+        completed = False
+
+        async def worker() -> None:
+            nonlocal completed
+            await scheduler_service.cancel_task(asyncio.current_task())
+            completed = True
+
+        task = asyncio.create_task(worker())
+        await task
+
+        assert completed
+        assert not task.cancelled()
+
+    def test_duplicate_guess_submission_is_ignored(self) -> None:
+        """A second submission from the same player is dropped, not double-scored (F4)."""
+        room = GameRoom("ROOM-DUP")
+        room.metadata.guess_targets = {"p1": "p2"}
+
+        round_service.record_guess_submission(room, player_id="p1", target_player_id="p2", guesses=["cat"])
+        round_service.record_guess_submission(room, player_id="p1", target_player_id="p2", guesses=["cat"])
+
+        assert len(room.metadata.guess_submissions) == 1
+        assert room.metadata.submitted_players == {"p1"}
+
+    async def test_remove_player_clears_related_kick_votes(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """Leaving drops the vote against you and removes you from others' voter sets."""
+        host, voter, target = "host", "voter", "target"
+        room = GameRoom("ROOM-KVCLEAN")
+        for pid in (host, voter, target):
+            await room.add_player(pid, pid, cast("WebSocket", make_ws()))
+        room.active_kick_votes = {
+            target: kick_vote_service.KickVote(target_player_id=target, target_player_name=target, voters={voter}),
+            host: kick_vote_service.KickVote(target_player_id=host, target_player_name=host, voters={voter, target}),
+        }
+
+        await room.remove_player(target)
+
+        assert target not in room.active_kick_votes
+        assert target not in room.active_kick_votes[host].voters
