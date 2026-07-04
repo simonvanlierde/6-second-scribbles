@@ -31,13 +31,24 @@ export const useGameStore = defineStore(
     const currentStrokes = ref<DrawStroke[]>([]);
     const localPadVisible = ref<boolean>(true);
     const roomPadVisible = ref<boolean>(true);
+    // Index into currentStrokes of each remote player's in-progress stroke, so
+    // delta fragments append to the same stroke instead of creating a new entry
+    // per frame (the source of the old O(n^2) growth).
+    const partialStrokeIndex = new Map<string, number>();
 
-    function addStroke(stroke: DrawStroke) {
-      currentStrokes.value.push(stroke);
+    function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean) {
+      const idx = partialStrokeIndex.get(playerId);
+      if (isStart || idx === undefined || !currentStrokes.value[idx]) {
+        currentStrokes.value.push({ color: stroke.color, width: stroke.width, points: [...stroke.points] });
+        partialStrokeIndex.set(playerId, currentStrokes.value.length - 1);
+      } else {
+        currentStrokes.value[idx].points.push(...stroke.points);
+      }
     }
 
     function clearStrokes() {
       currentStrokes.value = [];
+      partialStrokeIndex.clear();
     }
 
     function setRoomPadVisible(visible: boolean) {
@@ -519,7 +530,7 @@ export const useGameStore = defineStore(
       applySettingsUpdate,
       applyRoomState,
       // Drawing actions
-      addStroke,
+      applyPartialStroke,
       clearStrokes,
       setPlayerDrawing,
       setPlayerConnected,

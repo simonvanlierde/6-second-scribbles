@@ -1300,7 +1300,6 @@
       "type": "object"
     },
     {
-      "additionalProperties": true,
       "properties": {
         "type": {
           "const": "draw_stroke_partial",
@@ -1318,6 +1317,55 @@
           ],
           "default": null,
           "title": "Playerid"
+        },
+        "stroke": {
+          "anyOf": [
+            {
+              "description": "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
+              "properties": {
+                "color": {
+                  "title": "Color",
+                  "type": "string"
+                },
+                "width": {
+                  "title": "Width",
+                  "type": "number"
+                },
+                "points": {
+                  "items": {
+                    "properties": {
+                      "x": {
+                        "title": "X",
+                        "type": "number"
+                      },
+                      "y": {
+                        "title": "Y",
+                        "type": "number"
+                      }
+                    },
+                    "required": ["x", "y"],
+                    "title": "StrokePoint",
+                    "type": "object"
+                  },
+                  "maxItems": 1000,
+                  "title": "Points",
+                  "type": "array"
+                }
+              },
+              "required": ["color", "width"],
+              "title": "StrokeDelta",
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "strokeStart": {
+          "default": false,
+          "title": "Strokestart",
+          "type": "boolean"
         }
       },
       "required": ["type"],

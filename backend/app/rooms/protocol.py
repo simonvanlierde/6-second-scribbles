@@ -151,8 +151,30 @@ class DrawStrokeEvent(DrawEventModel):
     type: Literal["draw_stroke"]
 
 
-class DrawStrokePartialEvent(DrawEventModel):
+class StrokePoint(BaseModel):
+    x: float
+    y: float
+
+
+class StrokeDelta(BaseModel):
+    """A stroke fragment: only the points added since the previous partial.
+
+    Sending deltas (rather than the whole growing point list every frame) keeps
+    an in-progress stroke's relayed payload O(new points) instead of O(n^2).
+    """
+
+    color: str
+    width: float
+    points: list[StrokePoint] = Field(default_factory=list, max_length=1000)
+
+
+class DrawStrokePartialEvent(ClientEventModel):
     type: Literal["draw_stroke_partial"]
+    player_id: str | None = Field(default=None, alias="playerId")
+    stroke: StrokeDelta | None = None
+    # True on the first fragment of a stroke so relayed clients begin a fresh
+    # stroke instead of appending the points to the previous one.
+    stroke_start: bool = Field(default=False, alias="strokeStart")
 
 
 class DrawpadClearEvent(ClientEventModel):

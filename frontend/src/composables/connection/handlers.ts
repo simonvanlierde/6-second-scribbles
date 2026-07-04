@@ -218,14 +218,25 @@ export function handleDrawingEvent(message: DrawingEvent, ctx: HandlerContext): 
 
   switch (message.type) {
     case "draw_stroke":
-    case "draw_stroke_partial":
+      // A completed stroke carries the full PNG for the shared/round drawing.
       if (typeof message.drawing === "string" && message.playerId && message.playerId !== store.localPlayerId) {
         store.setPlayerDrawing(message.playerId, message.drawing);
-        break;
       }
+      break;
 
-      if (message.stroke && message.playerId !== store.localPlayerId) {
-        store.addStroke(message.stroke);
+    case "draw_stroke_partial":
+      // An in-progress stroke arrives as delta fragments; append them to the
+      // sender's active stroke (a new stroke when strokeStart is set).
+      if (message.stroke && message.playerId && message.playerId !== store.localPlayerId) {
+        store.applyPartialStroke(
+          message.playerId,
+          {
+            color: message.stroke.color,
+            width: message.stroke.width,
+            points: message.stroke.points ?? [],
+          },
+          message.strokeStart ?? false,
+        );
       }
       break;
 

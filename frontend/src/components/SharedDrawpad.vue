@@ -26,7 +26,6 @@ import DrawingToolbar from "@/components/DrawingToolbar.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { BRUSH_SIZES, DRAW_PALETTE } from "@/config/drawing";
-import type { DrawStroke } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
 const canvas = useDrawingCanvas();
@@ -38,7 +37,14 @@ const color = ref<string>(DRAW_PALETTE[0]);
 const width = ref<number>(BRUSH_SIZES[1]);
 
 let rafId: number | null = null;
-let latestPartial: DrawStroke | null = null;
+// Delta points buffered since the last send; flushed once per animation frame so
+// the socket carries only new points, not the whole growing stroke.
+let pendingPoints: Array<{ x: number; y: number }> = [];
+let pendingMeta: { color: string; width: number } | null = null;
+let pendingStart = false;
+// How many points of each remote stroke we've already drawn, so a stroke that
+// grows via delta fragments is rendered incrementally.
+const drawnCounts = new Map<number, number>();
 
 function clearLocal() {
   canvas.clear();
@@ -48,23 +54,38 @@ function scheduleSend() {
   if (rafId !== null) return;
   rafId = requestAnimationFrame(() => {
     rafId = null;
-    if (latestPartial && store.localPlayerId) {
-      send({ type: "draw_stroke_partial", playerId: store.localPlayerId, stroke: latestPartial });
+    if (pendingPoints.length > 0 && pendingMeta && store.localPlayerId) {
+      send({
+        type: "draw_stroke_partial",
+        playerId: store.localPlayerId,
+        stroke: { color: pendingMeta.color, width: pendingMeta.width, points: pendingPoints },
+        strokeStart: pendingStart,
+      });
+      pendingPoints = [];
+      pendingStart = false;
     }
   });
 }
 
-// Draw incoming strokes from store
+// Render incoming remote strokes incrementally: for each stroke, draw only the
+// tail that hasn't been drawn yet.
 watch(
   () => store.currentStrokes,
   (strokes) => {
     if (strokes.length === 0) {
+      drawnCounts.clear();
       canvas.clear();
       return;
     }
-
-    const last = strokes[strokes.length - 1];
-    if (last) canvas.drawStroke(last);
+    for (let i = 0; i < strokes.length; i++) {
+      const stroke = strokes[i];
+      if (!stroke) continue;
+      const done = drawnCounts.get(i) ?? 0;
+      if (stroke.points.length > done) {
+        canvas.drawStroke(stroke, done);
+        drawnCounts.set(i, stroke.points.length);
+      }
+    }
   },
   { deep: true },
 );
@@ -79,10 +100,18 @@ onMounted(() => {
   canvas.setColor(color.value);
   canvas.setWidth(width.value);
 
-  for (const s of store.currentStrokes) canvas.drawStroke(s);
+  store.currentStrokes.forEach((stroke, i) => {
+    canvas.drawStroke(stroke);
+    drawnCounts.set(i, stroke.points.length);
+  });
 
-  canvas.setStrokeProgressCallback((partial) => {
-    latestPartial = partial;
+  canvas.setStrokeProgressCallback((delta) => {
+    if (delta.first) {
+      pendingPoints = [];
+      pendingStart = true;
+    }
+    pendingMeta = { color: delta.color, width: delta.width };
+    pendingPoints.push(...delta.points);
     scheduleSend();
   });
 });
