@@ -39,9 +39,7 @@ class KickVote:
 
     target_player_id: str
     target_player_name: str
-    initiated_by: str
     voters: set[str] = field(default_factory=set)
-    created_at: float = field(default_factory=time.time)
     expires_at: float = field(default_factory=lambda: time.time() + 60)
 
 
@@ -68,7 +66,6 @@ async def initiate_kick_vote(room: GameRoom, initiator_id: str, target_player_id
     vote = KickVote(
         target_player_id=target_player_id,
         target_player_name=target_player.name,
-        initiated_by=initiator_id,
         voters={initiator_id},
         expires_at=time.time() + settings.kick_vote_timeout_seconds,
     )
@@ -113,11 +110,18 @@ async def cast_kick_vote(room: GameRoom, voter_id: str, target_player_id: str) -
     if voter_id == target_player_id:
         return KickVoteResult(success=False, error=SELF_VOTE_KICK_ERROR)
 
+    # Re-check host immunity: the target may have been promoted to host after the
+    # vote started (host disconnect + transfer), and initiate() only guards the
+    # start. Without this a sitting host could be vote-kicked mid-vote.
+    if target_player_id == room.host_id:
+        return KickVoteResult(success=False, error=HOST_CANNOT_BE_VOTE_KICKED_ERROR)
+
     vote.voters.add(voter_id)
 
-    target_is_host = target_player_id == room.host_id
-    required_votes = get_required_votes(room, target_is_host=target_is_host)
-    current_votes = len(vote.voters)
+    required_votes = get_required_votes(room, target_is_host=False)
+    # Count only voters still connected, matching the connected-only denominator in
+    # get_required_votes; a departed/disconnected voter must not push the tally over.
+    current_votes = sum(1 for vid in vote.voters if vid in room.players and room.players[vid].connected)
 
     await room.broadcast(
         KickVoteUpdatedEvent(

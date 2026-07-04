@@ -169,6 +169,14 @@ async def remove_player(
     room.metadata.ready_players.discard(player_id)
     room.metadata.player_seats.pop(player_id, None)
 
+    # Drop any kick vote targeting the leaver (otherwise it lingers with its
+    # accumulated voters and would kick them the instant they rejoin) and remove
+    # them from every other vote's voter set so departed players can't count
+    # toward a threshold.
+    room.active_kick_votes.pop(player_id, None)
+    for vote in room.active_kick_votes.values():
+        vote.voters.discard(player_id)
+
     if room.is_empty():
         room.emptied_at = time.time()
         logger.info("[GameRoom %s] Room is now empty, marked for hibernation/cleanup", room.room_id)
@@ -218,7 +226,11 @@ async def delayed_host_transfer(room: GameRoom, old_host_id: str, *, host_transf
     except asyncio.CancelledError:
         logger.info("[GameRoom %s] Host transfer cancelled (host reconnected)", room.room_id)
     finally:
-        room.pending_host_transfer = None
+        # Only clear the field if it still points at *this* task. A cancelled
+        # transfer may have already been replaced by a newer one; nulling it
+        # unconditionally would orphan that replacement.
+        if room.pending_host_transfer is asyncio.current_task():
+            room.pending_host_transfer = None
 
 
 def update_player_activity(room: GameRoom, player_id: str) -> None:
