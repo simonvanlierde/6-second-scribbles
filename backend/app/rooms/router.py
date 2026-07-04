@@ -138,6 +138,10 @@ async def _reserve_new_room_code() -> str:
             try:
                 room = room_manager.get_or_create_room(code)
             except RoomCapacityError as exc:
+                # Release the just-reserved code so it doesn't linger for the full
+                # TTL with no room behind it (status would report exists=False
+                # while Redis still considers the code taken).
+                await r.delete(key)
                 raise HTTPException(
                     status_code=503,
                     detail="Server is at capacity. Please try again shortly.",

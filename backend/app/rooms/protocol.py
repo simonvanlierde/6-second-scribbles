@@ -110,7 +110,10 @@ class StartGuessingEvent(ClientEventModel):
 
 class SubmitGuessEvent(ClientPlayerEventModel, ClientTargetPlayerEventModel):
     type: Literal["submit_guess"]
-    guesses: list[str] = Field(default_factory=list)
+    # Bound the payload: scoring runs a synchronous O(guesses x targets) rapidfuzz
+    # loop on the event loop, so an unbounded list would let one submission stall
+    # every room on the worker. A round never has more than a handful of targets.
+    guesses: list[Annotated[str, Field(max_length=100)]] = Field(default_factory=list, max_length=50)
 
 
 class RestartGameEvent(ClientEventModel):
