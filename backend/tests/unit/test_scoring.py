@@ -1,5 +1,5 @@
 """Tests for fuzzy matching and scoring functionality."""
-# spell-checker: ignore elefant, girafe
+# spell-checker: ignore elefant, girafe, tigger
 
 import pytest
 
@@ -119,3 +119,18 @@ class TestGuessMatcher:
         assert not result.matched
         assert result.matched_item is None
         assert result.method == NONE
+
+    def test_match_guess_non_latin_script(self, matcher: GuessMatcher) -> None:
+        """Non-Latin answers must score (regression: ascii-ignore blanked them)."""
+        # Russian and CJK — previously normalized to "" and never matched.
+        cyrillic_cat = "кот"
+        cjk_cat = "猫"
+        assert normalize_text(cyrillic_cat.capitalize()) == cyrillic_cat
+        assert normalize_text(cjk_cat) == cjk_cat
+        assert matcher.match_guess(cyrillic_cat, [cyrillic_cat]).matched
+        assert matcher.match_guess(cjk_cat, [cjk_cat]).matched
+
+    def test_normalize_text_strips_accents(self) -> None:
+        """Accents are still stripped so café matches cafe."""
+        cafe = "cafe"
+        assert normalize_text("Café") == cafe

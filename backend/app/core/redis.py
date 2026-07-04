@@ -2,9 +2,11 @@
 
 # spell-checker: ignore setex
 import asyncio
+import hashlib
 import json
 import logging
 import secrets
+import sys
 
 import redis.asyncio as redis
 
@@ -147,20 +149,31 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
         return int(count), retry_after
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to increment rate limit %s for %s", bucket, identifier)
-        return 0, 0
+        # Fail closed: if Redis is unavailable we cannot count attempts, so treat
+        # the request as over-limit rather than silently disabling every throttle
+        # (login/register/room-creation) during the outage. Availability trade-off:
+        # a Redis blip 429s these endpoints, but Redis backs sessions/persistence
+        # too, so the app is already degraded.
+        return sys.maxsize, window_seconds
 
 
-def _cat_targets_key(category_id: int, locale: str) -> str:
-    """Generate a Redis key for localized scoring targets cache."""
-    return f"cat_targets:{category_id}:{locale}"
+def _cat_targets_key(category_id: int, locale: str, prompt_ids: list[int]) -> str:
+    """Generate a Redis key for localized scoring targets cache.
+
+    The prompt-id subset is part of the key: the same category+locale can be
+    requested with different prompt subsets, and each yields different targets.
+    Omitting it caused collisions where players were scored against the wrong words.
+    """
+    digest = hashlib.sha1(",".join(map(str, sorted(prompt_ids))).encode()).hexdigest()[:16]  # noqa: S324
+    return f"cat_targets:{category_id}:{locale}:{digest}"
 
 
-async def cache_localized_scoring_targets(category_id: int, locale: str, data: dict) -> None:
+async def cache_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int], data: dict) -> None:
     """Cache the localized scoring targets dictionary for 24 hours."""
     try:
         r = await get_redis()
         await r.setex(
-            _cat_targets_key(category_id, locale),
+            _cat_targets_key(category_id, locale, prompt_ids),
             settings.category_cache_ttl_seconds,
             json.dumps(data),
         )
@@ -168,11 +181,11 @@ async def cache_localized_scoring_targets(category_id: int, locale: str, data: d
         logger.exception("[Redis] Failed to cache scoring targets for %s locale %s", category_id, locale)
 
 
-async def get_cached_localized_scoring_targets(category_id: int, locale: str) -> dict | None:
+async def get_cached_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int]) -> dict | None:
     """Load cached localized scoring targets dictionary from Redis."""
     try:
         r = await get_redis()
-        data = await r.get(_cat_targets_key(category_id, locale))
+        data = await r.get(_cat_targets_key(category_id, locale, prompt_ids))
         return json.loads(data) if data else None
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load cached scoring targets for %s locale %s", category_id, locale)

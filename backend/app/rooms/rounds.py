@@ -172,6 +172,13 @@ def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
 
 def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id: str, guesses: list[str]) -> bool:
     """Store a guess submission and report whether scoring should begin immediately."""
+    if player_id in room.metadata.submitted_players:
+        # Ignore duplicate submissions: score_round credits points per stored
+        # submission, so appending a second one would double the guesser's (and
+        # drawer's) points for a single correct round.
+        logger.info("[GameRoom %s] Ignoring duplicate guess submission from %s", room.room_id, player_id)
+        return all_expected_guesses_submitted(room)
+
     assigned_target = room.metadata.guess_targets.get(player_id)
     if assigned_target != target_player_id:
         logger.warning(
@@ -351,11 +358,11 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
 
 def game_complete_event(room: GameRoom) -> GameCompleteServerEvent:
     """Build the final game-complete event and update the room phase."""
-    winner_id = (
-        max(room.metadata.player_scores, key=lambda pid: room.metadata.player_scores[pid])
-        if room.metadata.player_scores
-        else ""
-    )
+    # Highest score wins; ties break deterministically by seat order (earliest
+    # seat first) so the winner is stable rather than dependent on dict ordering.
+    scores = room.metadata.player_scores
+    seats = room.metadata.player_seats
+    winner_id = max(scores, key=lambda pid: (scores[pid], -seats.get(pid, len(seats)))) if scores else ""
     room.metadata.game_phase = GamePhase.FINAL_RESULTS
     return GameCompleteServerEvent(
         finalScores=dict(room.metadata.player_scores),

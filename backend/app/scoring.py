@@ -70,9 +70,16 @@ class GuessTarget:
 
 
 def normalize_text(text: str) -> str:
-    """Normalize text for comparison: lowercase, strip, remove accents."""
-    lowered = text.lower().strip()
-    return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
+    """Normalize text for comparison: casefold, strip, remove accents.
+
+    Strips combining marks (accents) so ``café`` matches ``cafe``, but preserves
+    the base characters of every script. The previous ``encode("ascii", "ignore")``
+    dropped all non-Latin text to an empty string, making Cyrillic/CJK/Greek/Arabic
+    answers permanently unscoreable.
+    """
+    decomposed = unicodedata.normalize("NFD", text.casefold().strip())
+    without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return unicodedata.normalize("NFC", without_marks)
 
 
 @functools.lru_cache(maxsize=1024)
