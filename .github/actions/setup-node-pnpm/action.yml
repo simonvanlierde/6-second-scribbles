@@ -20,4 +20,4 @@ inputs:
   node-version:
     description: 'Node.js version'
     required: false
-    default: '24'
+    default: '26'
