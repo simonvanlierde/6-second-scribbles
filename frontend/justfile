@@ -68,3 +68,8 @@ build:
 [group('install')]
 install:
     pnpm install
+
+# Bump dependencies to their latest versions.
+[group('install')]
+bump:
+    pnpm update --latest
