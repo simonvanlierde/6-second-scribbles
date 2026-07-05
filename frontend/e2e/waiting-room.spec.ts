@@ -1,8 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-async function createRoom(page: Parameters<typeof test>[0]["page"], playerName = "Test Player") {
+type E2EPage = Parameters<Parameters<typeof test>[1]>[0]["page"];
+
+// The name now lives in the Settings panel (opened from the gear), not on Home.
+async function setPlayerName(page: E2EPage, name: string) {
+  await page.getByRole("button", { name: /^settings$/i }).click();
+  const nameInput = page.getByPlaceholder(/pick a name/i);
+  await nameInput.fill(name);
+  await nameInput.press("Escape");
+  await expect(nameInput).toBeHidden();
+}
+
+async function createRoom(page: E2EPage, playerName = "Test Player") {
   await page.goto("/");
-  await page.locator("#player-name").fill(playerName);
+  await setPlayerName(page, playerName);
   await page.getByRole("button", { name: /create room/i }).click();
   await expect(page).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
 
@@ -25,12 +36,9 @@ test.describe("Waiting room", () => {
     const roomCode = await createRoom(hostPage);
 
     await page.goto("/");
-    await page.locator("#player-name").fill("Joiner");
-    const inputs = page.locator("input.code-input");
-    const typedCode = roomCode.toLowerCase();
-    for (let index = 0; index < typedCode.length; index += 1) {
-      await inputs.nth(index).fill(typedCode[index] ?? "");
-    }
+    await setPlayerName(page, "Joiner");
+    await page.locator("input.hd-input--code").fill(roomCode.toLowerCase());
+    await page.getByRole("button", { name: /join room/i }).click();
 
     await expect(page).toHaveURL(new RegExp(`/rooms/${roomCode}$`));
     await hostPage.close();
