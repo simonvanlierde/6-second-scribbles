@@ -26,8 +26,11 @@ def get_client_identifier(conn: HTTPConnection) -> str:
         # IP, so the last hop is what it saw. The leftmost is client-supplied and
         # spoofable — taking it would reintroduce the per-IP throttle bypass.
         forwarded_for = conn.headers.get("x-forwarded-for", "")
-        if forwarded_for:
-            return forwarded_for.rsplit(",", 1)[-1].strip()
+        # A trailing comma ("1.2.3.4,") yields an empty rightmost token; fall
+        # through to the peer IP rather than bucketing all such clients together.
+        client = forwarded_for.rsplit(",", 1)[-1].strip()
+        if client:
+            return client
     if conn.client and conn.client.host:
         return conn.client.host
     return "unknown"

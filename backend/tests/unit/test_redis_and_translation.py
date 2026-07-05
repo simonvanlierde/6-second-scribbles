@@ -62,11 +62,37 @@ class _FakeRedis:
         self.store[key] = str(next_value)
         return next_value
 
-    async def expire(self, key: str, ttl: int) -> None:
+    async def expire(self, key: str, ttl: int, *, nx: bool = False) -> bool:
+        if nx and key in self.expirations:
+            return False
         self.expirations[key] = ttl
+        return True
 
     async def ttl(self, key: str) -> int:
         return self.expirations.get(key, -1)
+
+    def pipeline(self, *, transaction: bool = True) -> _FakePipeline:
+        del transaction
+        return _FakePipeline(self)
+
+
+class _FakePipeline:
+    """Minimal MULTI/EXEC stand-in: queue commands, run them on execute()."""
+
+    def __init__(self, backend: _FakeRedis) -> None:
+        self._backend = backend
+        self._ops: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+    def incr(self, key: str) -> _FakePipeline:
+        self._ops.append(("incr", (key,), {}))
+        return self
+
+    def expire(self, key: str, ttl: int, *, nx: bool = False) -> _FakePipeline:
+        self._ops.append(("expire", (key, ttl), {"nx": nx}))
+        return self
+
+    async def execute(self) -> list[object]:
+        return [await getattr(self._backend, name)(*args, **kwargs) for name, args, kwargs in self._ops]
 
 
 class _MemoryCache:

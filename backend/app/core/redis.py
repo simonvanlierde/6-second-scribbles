@@ -147,11 +147,16 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
     try:
         r = await get_redis()
         key = _rate_limit_key(bucket, identifier)
-        # redis-py's async incr() is typed via the sync signature (returns int, not
-        # Awaitable[int]); cast so the await type-checks.
-        count = await cast("Awaitable[int]", r.incr(key))
-        if count == 1:
-            await r.expire(key, window_seconds)
+        # INCR + EXPIRE must be atomic: if the coroutine is cancelled (client
+        # disconnect/timeout) between a plain incr and a separate expire, the key
+        # would persist with no TTL and 429 that identifier forever. A MULTI/EXEC
+        # pipeline runs both as one unit; EXPIRE ... NX sets the window only when
+        # none exists, so it also self-heals any stray no-TTL key without
+        # resetting a live window. NOTE: EXPIRE NX needs Redis >= 7.
+        pipe = r.pipeline(transaction=True)
+        pipe.incr(key)
+        pipe.expire(key, window_seconds, nx=True)
+        count = (await cast("Awaitable[list[int]]", pipe.execute()))[0]
         ttl = await r.ttl(key)
         retry_after = max(int(ttl), 0)
         return int(count), retry_after
