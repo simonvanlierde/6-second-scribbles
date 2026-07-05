@@ -76,6 +76,12 @@ def normalize_text(text: str) -> str:
     the base characters of every script. The previous ``encode("ascii", "ignore")``
     dropped all non-Latin text to an empty string, making Cyrillic/CJK/Greek/Arabic
     answers permanently unscoreable.
+
+    NOTE: accent-insensitive is correct for every shipped locale (European
+    accents are optional; CJK/Korean carry no combining marks on their bases). It
+    would over-match a tone/diacritic-phonemic locale where the mark IS the letter
+    (Vietnamese ``má``/``ma``/``mã``, Arabic harakat). Make stripping locale-aware
+    (thread the room locale from ``score_round``) if such a locale is ever added.
     """
     decomposed = unicodedata.normalize("NFD", text.casefold().strip())
     without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
@@ -119,7 +125,12 @@ class GuessMatcher:
             return True, 100.0
 
         token_score = fuzz.token_sort_ratio(guess_norm, target_norm)
-        partial_score = fuzz.partial_ratio(guess_norm, target_norm)
+        # partial_ratio scores any substring 100, so it's only trustworthy for
+        # multi-character overlaps ("new york" in "new york city"). Gate it on a
+        # minimum shared length, or a single CJK character would fully match a
+        # 2-char word (e.g. "大" scoring 100 against "大象").
+        shortest = min(len(guess_norm), len(target_norm))
+        partial_score = fuzz.partial_ratio(guess_norm, target_norm) if shortest >= 4 else 0
         similarity = max(token_score, partial_score)
         return similarity >= self.FUZZY_MATCH_THRESHOLD, similarity
 

@@ -74,6 +74,14 @@ class TestGuessMatcher:
         assert not is_match
         assert score < THRESHOLD
 
+    def test_fuzzy_match_short_substring_not_credited(self, matcher: GuessMatcher) -> None:
+        """A single CJK char must not fully match a longer word (partial_ratio gate)."""
+        is_match, score = matcher.fuzzy_match("大", "大象")
+        assert not is_match
+        assert score < THRESHOLD
+        # Multi-character substrings are still trusted above the length gate.
+        assert matcher.fuzzy_match("new york", "new york city")[0]
+
     def test_fuzzy_match_no_match(self, matcher: GuessMatcher) -> None:
         """Test fuzzy matching with completely different words."""
         is_match, score = matcher.fuzzy_match(CAT, ELEPHANT)
