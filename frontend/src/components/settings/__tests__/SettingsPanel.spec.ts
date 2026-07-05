@@ -5,11 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import { i18n } from "@/i18n";
 
-// Stub LocaleSelector to avoid pulling in its async locale-availability plumbing.
-vi.mock("@/components/LocaleSelector.vue", () => ({
-  default: { name: "LocaleSelector", template: "<div data-testid='locale-selector' />" },
-}));
-
 vi.mock("@/composables/useLocaleAvailability", () => ({
   useLocaleAvailability: () => ({
     localeOptions: { value: [] },

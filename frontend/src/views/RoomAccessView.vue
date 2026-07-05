@@ -2,6 +2,10 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import HdButton from "@/components/ui/HdButton.vue";
+import HdCard from "@/components/ui/HdCard.vue";
+import HdInput from "@/components/ui/HdInput.vue";
+import HdPill from "@/components/ui/HdPill.vue";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { RoomStatusResponseSchema } from "@/generated/api";
 import { i18n } from "@/i18n";
@@ -46,15 +50,12 @@ const phaseLabel = computed(() => {
       return i18n.global.t("roomEntry.checkingRoom");
   }
 });
-const helperText = computed(() => {
-  if (statusError.value) return i18n.global.t("roomAccess.loadFailed");
+// Body copy for terminal states (invalid / missing / failed) — the joinable
+// state renders its own pieces (player count pill, in-progress note) instead.
+const terminalBody = computed(() => {
+  if (statusError.value) return i18n.global.t("roomEntry.tryGoBack");
   if (isInvalidCode.value) return i18n.global.t("roomEntry.invalidCodeText");
-  if (!roomExists.value) return i18n.global.t("roomAccess.roomDoesNotExist");
-  if (isInProgress.value)
-    return roomPhase.value === "drawing" || roomPhase.value === "guessing"
-      ? i18n.global.t("roomEntry.roomInProgress")
-      : "";
-  return i18n.global.t("roomEntry.playersInRoom", { count: roomPlayerCount.value });
+  return i18n.global.t("roomAccess.roomDoesNotExist");
 });
 const primaryActionLabel = computed(() =>
   isSubmitting.value
@@ -139,83 +140,133 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="grid min-h-screen place-items-center gap-4 px-6 py-8"
-    style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)"
-  >
-    <div
-      class="relative z-10 w-full max-w-[640px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] p-8 text-white shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
-    >
-      <p class="m-0 mb-2 text-xs tracking-widest text-white/70 uppercase">
-        {{ $t("common.roomCode", { code: roomCode }) }}
-      </p>
-      <h1 v-if="isLoadingRoom" class="m-0">{{ $t('roomEntry.checkingRoom') }}</h1>
-      <h1 v-else-if="statusError" class="m-0">{{ statusError }}</h1>
-      <h1 v-else-if="isInvalidCode" class="m-0">{{ $t('roomEntry.invalidCode') }}</h1>
-      <h1 v-else-if="roomExists" class="m-0">{{ phaseLabel }}</h1>
-      <h1 v-else class="m-0">{{ $t('roomEntry.roomNotFound') }}</h1>
+  <div class="access-page">
+    <HdCard class="access-card">
+      <span class="access-code">
+        <span class="access-code__label">{{ $t('home.roomCodeLabel') }}</span>
+        <span class="access-code__value">{{ roomCode }}</span>
+      </span>
 
-      <p class="mt-3 mb-0 text-white/85">{{ helperText }}</p>
+      <h1 v-if="isLoadingRoom" class="access-title">{{ $t('roomEntry.checkingRoom') }}</h1>
+      <h1 v-else-if="statusError" class="access-title">{{ statusError }}</h1>
+      <h1 v-else-if="isInvalidCode" class="access-title">{{ $t('roomEntry.invalidCode') }}</h1>
+      <h1 v-else-if="roomExists" class="access-title">{{ phaseLabel }}</h1>
+      <h1 v-else class="access-title">{{ $t('roomEntry.roomNotFound') }}</h1>
 
-      <div v-if="roomExists && !isInvalidCode && !statusError" class="mt-6 grid gap-4">
-        <label class="grid gap-2">
-          <span class="text-sm font-semibold text-white/80">{{ $t('roomEntry.enterYourName') }}</span>
-          <input
+      <template v-if="roomExists && !isInvalidCode && !statusError">
+        <HdPill class="access-players">{{ $t('roomEntry.playersInRoom', { count: roomPlayerCount }) }}</HdPill>
+
+        <HdCard v-if="isInProgress" variant="postit" class="access-note"> {{ $t('roomEntry.roomInProgress') }} </HdCard>
+
+        <label class="access-name">
+          <span class="access-name__label">{{ $t('roomEntry.enterYourName') }}</span>
+          <HdInput
             v-model="playerNameDraft"
-            type="text"
+            class="name-input"
             maxlength="20"
             :placeholder="$t('roomEntry.yourName')"
-            class="name-input rounded-2xl border border-white/15 bg-white/5 px-4 py-3.5 text-inherit text-white"
             @keyup.enter="handlePrimaryAction"
-          >
+          />
         </label>
 
-        <p
-          v-if="isInProgress"
-          class="m-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/85"
-        >
-          {{ $t('roomEntry.roomInProgress') }}
-        </p>
-
-        <p class="m-0 text-sm text-white/70">{{ $t('roomEntry.playersInRoom', { count: roomPlayerCount }) }}</p>
-
-        <div class="flex flex-wrap gap-3">
-          <button
-            type="button"
-            class="cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
-            @click="leaveRoom"
-          >
-            {{ $t('roomEntry.back') }}
-          </button>
-          <button
-            type="button"
-            class="cursor-pointer rounded-xl border-0 bg-gradient-to-br from-[#ffd166] to-[#ff8e72] px-4 py-3.5 font-extrabold text-[#1e1e1e] disabled:cursor-not-allowed disabled:opacity-55"
+        <div class="access-actions">
+          <HdButton variant="secondary" @click="leaveRoom">{{ $t('roomEntry.back') }}</HdButton>
+          <HdButton
+            variant="primary"
             :disabled="!hasName || isLoadingRoom || !!statusError || isSubmitting"
             @click="handlePrimaryAction"
           >
             {{ primaryActionLabel }}
-          </button>
+          </HdButton>
         </div>
-      </div>
+      </template>
 
-      <div v-else class="mt-6 flex flex-wrap gap-3">
-        <div v-if="isInvalidCode" class="grid gap-2">
-          <p class="m-0 text-sm text-white/80">{{ $t('roomEntry.invalidCodeText') }}</p>
+      <template v-else-if="!isLoadingRoom">
+        <p class="access-body">{{ terminalBody }}</p>
+        <div class="access-actions">
+          <HdButton variant="secondary" @click="leaveRoom">{{ $t('roomEntry.backToHome') }}</HdButton>
         </div>
-        <div v-else-if="statusError" class="grid gap-2">
-          <p class="m-0 text-sm text-white/80">{{ $t('roomEntry.tryGoBack') }}</p>
-        </div>
-        <div v-else-if="!roomExists" class="grid gap-2">
-          <p class="m-0 text-sm text-white/80">{{ $t('roomEntry.roomNotExist') }}</p>
-        </div>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
-          @click="leaveRoom"
-        >
-          {{ $t('roomEntry.backToLobby') }}
-        </button>
-      </div>
-    </div>
+      </template>
+    </HdCard>
   </div>
 </template>
+
+<style scoped>
+.access-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px 20px;
+  position: relative;
+  z-index: 1;
+}
+.access-card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+.access-code {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
+  border: 2px dashed var(--color-ink);
+  border-radius: 12px 18px 14px 22px;
+  padding: 4px 14px;
+}
+.access-code__label {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  opacity: 0.7;
+}
+.access-code__value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+}
+.access-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-display-sm);
+  line-height: 1.15;
+  margin: 0;
+  color: var(--color-ink);
+}
+.access-players {
+  align-self: flex-start;
+}
+.access-note {
+  margin: 0;
+}
+.access-name {
+  display: grid;
+  gap: var(--space-2);
+}
+.access-name__label {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  color: var(--color-ink-muted);
+}
+.access-body {
+  font-family: var(--font-body);
+  font-size: var(--text-body-lg);
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+.access-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.access-actions > :only-child {
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
