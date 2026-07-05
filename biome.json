@@ -1,5 +1,13 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    },
+    "enabled": true
+  },
   "files": {
     "includes": [
       "*.js",
@@ -15,13 +23,32 @@
       "scripts/**"
     ]
   },
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
   "formatter": {
     "indentStyle": "space",
     "lineWidth": 120
+  },
+  "linter": {
+    "domains": {
+      "project": "recommended",
+      "react": "recommended",
+      "test": "recommended",
+      "types": "recommended",
+      "vue": "recommended"
+    },
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "a11y": "on",
+      "complexity": "on",
+      "correctness": "on",
+      "performance": "on",
+      "security": "on",
+      "suspicious": "on"
+    }
+  },
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
   }
 }
