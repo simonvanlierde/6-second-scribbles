@@ -18,7 +18,7 @@ const open = defineModel<boolean>("open", { default: false });
 const store = useGameStore();
 const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
-const { focusNameOnOpen } = useSettingsPanel();
+const { focusNameOnOpen, pendingNameAction } = useSettingsPanel();
 const nameInputRef = useTemplateRef<InstanceType<typeof HdInput>>("nameInput");
 const dialogRef = useTemplateRef<HTMLDialogElement>("dialog");
 
@@ -46,6 +46,11 @@ const { t } = useI18n({ useScope: "global" });
 
 function close() {
   open.value = false;
+  // Resume the action that opened the panel for a name (e.g. Create Room),
+  // now that the player has picked one — so they don't have to click twice.
+  const action = pendingNameAction.value;
+  pendingNameAction.value = null;
+  if (action && store.localPlayerName.trim()) action();
 }
 
 const playerName = computed({
@@ -124,6 +129,7 @@ function selectTheme(value: Theme) {
       <!-- Identity -->
       <section class="settings-section">
         <h3 class="settings-section__title">{{ t("settings.identity") }}</h3>
+        <p v-if="pendingNameAction" class="settings-hint">{{ t("settings.namePrompt") }}</p>
         <div class="settings-identity">
           <button
             type="button"
@@ -152,6 +158,7 @@ function selectTheme(value: Theme) {
             v-model="playerName"
             :aria-label="t('settings.yourName')"
             :placeholder="t('settings.namePlaceholder')"
+            @keyup.enter="close"
           />
         </div>
         <Transition name="settings-expand">
@@ -415,6 +422,12 @@ function selectTheme(value: Theme) {
 }
 
 /* ─── Identity ─── */
+.settings-hint {
+  margin: 0 0 12px;
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  color: var(--color-ink-muted);
+}
 .settings-identity {
   display: flex;
   align-items: center;

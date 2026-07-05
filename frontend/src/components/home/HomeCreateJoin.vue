@@ -26,9 +26,11 @@ const roomCodeModel = ref("");
 const isCheckingRoom = ref(false);
 const isQuickPlaying = ref(false);
 
-function ensurePlayerName(): boolean {
+function ensurePlayerName(resume: () => void): boolean {
   if (store.localPlayerName.trim()) return true;
-  openForName();
+  // Open the name prompt and resume this action once a name is set, so the
+  // player's click isn't lost to the detour through Settings.
+  openForName(resume);
   return false;
 }
 
@@ -41,7 +43,7 @@ async function navigateToRoom(roomCode: string) {
 }
 
 async function handleCreateRoom() {
-  if (!ensurePlayerName()) return;
+  if (!ensurePlayerName(handleCreateRoom)) return;
   try {
     const data = await apiRequest("/api/rooms", {
       method: "POST",
@@ -54,7 +56,7 @@ async function handleCreateRoom() {
 }
 
 async function handleJoinRoom() {
-  if (!ensurePlayerName()) return;
+  if (!ensurePlayerName(handleJoinRoom)) return;
   if (!roomCodeModel.value) {
     showNotification(t("notifications.enterRoomCode"), "error");
     return;
