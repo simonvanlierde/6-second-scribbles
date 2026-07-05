@@ -97,6 +97,10 @@ export const useGameStore = defineStore(
     // (base64 PNGs are large) — rebuilt round-by-round as each round completes.
     const drawingHistory = ref<GalleryDrawing[]>([]);
     const totalGuessesMade = ref<number>(0);
+    // Highest round already folded into the gallery/stats. Rounds arrive in order,
+    // so this dedupes a resent round_complete even for a round that produced no
+    // drawings (where drawingHistory alone would stay empty and re-count).
+    const lastCapturedRound = ref<number>(0);
     const readyCount = ref<number>(0);
     const totalPlayers = ref<number>(0);
 
@@ -107,6 +111,9 @@ export const useGameStore = defineStore(
 
     // --- Computed ---
     const localPlayer = computed(() => players.value.get(localPlayerId.value));
+    // Resolved avatar colour: the chosen colour, or a deterministic per-id one.
+    // Centralised so consumers don't each re-hardcode the `?? getAvatarColor` fallback.
+    const localAvatarColor = computed(() => localPlayerColor.value ?? getAvatarColor(localPlayerId.value));
     const playersList = computed(() => Array.from(players.value.values()));
     const canStartGame = computed(() => players.value.size >= 2 && gamePhase.value === "lobby");
     const isHost = computed(() => hostId.value === localPlayerId.value);
@@ -229,6 +236,7 @@ export const useGameStore = defineStore(
       for (const p of players.value.values()) p.score = 0;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
+      lastCapturedRound.value = 0;
     }
 
     function startRound(roundNumber: number, cards: Record<string, Card>) {
@@ -254,6 +262,7 @@ export const useGameStore = defineStore(
       for (const p of players.value.values()) p.score = 0;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
+      lastCapturedRound.value = 0;
     }
 
     function startGuessing(startTime?: number | null, targets?: Record<string, string>) {
@@ -287,7 +296,8 @@ export const useGameStore = defineStore(
     function captureRoundDrawings(round: number) {
       // Idempotent: a resent/duplicate round_complete must not double-list
       // drawings in the gallery or double-count guesses in the running total.
-      if (drawingHistory.value.some((entry) => entry.round === round)) return;
+      if (round <= lastCapturedRound.value) return;
+      lastCapturedRound.value = round;
       for (const player of players.value.values()) {
         if (player.drawing) {
           drawingHistory.value.push({
@@ -389,6 +399,9 @@ export const useGameStore = defineStore(
           color: entry.color ?? getAvatarColor(entry.playerId),
           drawing: entry.drawing,
         }));
+        // Keep the dedupe cursor in step so a re-delivered round_complete for a
+        // round already in the rebuilt gallery isn't folded in a second time.
+        lastCapturedRound.value = Math.max(...roomState.drawingHistory.map((e) => e.round), lastCapturedRound.value);
       }
       if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
@@ -442,6 +455,7 @@ export const useGameStore = defineStore(
       lastHighlights.value = null;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
+      lastCapturedRound.value = 0;
       readyCount.value = 0;
       totalPlayers.value = 0;
       setLocalPadVisible(true);
@@ -487,6 +501,7 @@ export const useGameStore = defineStore(
       customCategoryIds,
       localPlayerLocale,
       localPlayerColor,
+      localAvatarColor,
       kickVotes,
       isPrivateRoom,
 

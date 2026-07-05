@@ -4,7 +4,7 @@ import { computed } from "vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdTimer from "@/components/ui/HdTimer.vue";
-import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarInitial } from "@/composables/useAvatar";
 import { useSound } from "@/composables/useSound";
 import { useGameStore } from "@/stores/game";
 
@@ -28,7 +28,7 @@ const { enabled: soundEnabled } = useSound();
 
 const score = computed(() => store.localPlayer?.score ?? 0);
 const initial = computed(() => getAvatarInitial(store.localPlayerName || "?"));
-const avatarColor = computed(() => store.localPlayerColor ?? getAvatarColor(store.localPlayerId));
+const avatarColor = computed(() => store.localAvatarColor);
 </script>
 
 <template>

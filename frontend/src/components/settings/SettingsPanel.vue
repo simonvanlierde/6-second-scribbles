@@ -6,7 +6,7 @@ import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdInput from "@/components/ui/HdInput.vue";
-import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarInitial } from "@/composables/useAvatar";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { useSound } from "@/composables/useSound";
 import { type Theme, useTheme } from "@/composables/useTheme";
@@ -64,7 +64,7 @@ const playerLocale = computed({
   set: (v: string) => store.setLocalPlayerLocale(v),
 });
 const playerColor = computed({
-  get: () => store.localPlayerColor ?? getAvatarColor(store.localPlayerId),
+  get: () => store.localAvatarColor,
   set: (v) => store.setLocalPlayerColor(v),
 });
 const initial = computed(() => getAvatarInitial(playerName.value || "?"));

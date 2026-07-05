@@ -13,6 +13,7 @@ type StoreMock = {
   localPlayerId: string;
   localPlayerName: string;
   localPlayerColor: string;
+  localAvatarColor: string;
   isHost: boolean;
   gamePhase: string;
   roomCode: string;
@@ -55,6 +56,7 @@ function createStoreMock(finalScores: FinalScore[], overrides: Partial<StoreMock
     localPlayerId: "p1",
     localPlayerName: "Alice",
     localPlayerColor: "#ffb4a2",
+    localAvatarColor: "#ffb4a2",
     isHost: true,
     gamePhase: "final_results",
     roomCode: "ROOM1",

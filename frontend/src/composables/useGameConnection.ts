@@ -98,7 +98,7 @@ export function useGameConnection() {
           playerId: store.localPlayerId,
           name: store.localPlayerName,
           preferredLocale: store.localPlayerLocale,
-          preferredColor: store.localPlayerColor,
+          preferredColor: store.localAvatarColor,
         });
       } else {
         store.setSpectatorMode(true);

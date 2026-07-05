@@ -50,20 +50,24 @@ function clearLocal() {
   canvas.clear();
 }
 
+function flushPending() {
+  if (pendingPoints.length > 0 && pendingMeta && store.localPlayerId) {
+    send({
+      type: "draw_stroke_partial",
+      playerId: store.localPlayerId,
+      stroke: { color: pendingMeta.color, width: pendingMeta.width, points: pendingPoints },
+      strokeStart: pendingStart,
+    });
+  }
+  pendingPoints = [];
+  pendingStart = false;
+}
+
 function scheduleSend() {
   if (rafId !== null) return;
   rafId = requestAnimationFrame(() => {
     rafId = null;
-    if (pendingPoints.length > 0 && pendingMeta && store.localPlayerId) {
-      send({
-        type: "draw_stroke_partial",
-        playerId: store.localPlayerId,
-        stroke: { color: pendingMeta.color, width: pendingMeta.width, points: pendingPoints },
-        strokeStart: pendingStart,
-      });
-      pendingPoints = [];
-      pendingStart = false;
-    }
+    flushPending();
   });
 }
 
@@ -107,7 +111,9 @@ onMounted(() => {
 
   canvas.setStrokeProgressCallback((delta) => {
     if (delta.first) {
-      pendingPoints = [];
+      // Send the previous stroke's buffered tail before starting a new one, so a
+      // rapid up→down within one frame doesn't drop the old stroke's last points.
+      flushPending();
       pendingStart = true;
     }
     pendingMeta = { color: delta.color, width: delta.width };
@@ -117,8 +123,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  canvas.cleanup();
   if (rafId) cancelAnimationFrame(rafId);
+  flushPending();
+  canvas.cleanup();
 });
 </script>
 
