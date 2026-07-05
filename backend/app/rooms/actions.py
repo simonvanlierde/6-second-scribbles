@@ -250,7 +250,7 @@ async def handle_room_custom_categories_update(
     session.room.metadata.custom_category_ids = sorted(set(category_ids)) if category_ids is not None else None
     await broadcast_and_persist(
         session,
-        RoomCustomCategoriesUpdateServerEvent(category_ids=session.room.metadata.custom_category_ids),
+        RoomCustomCategoriesUpdateServerEvent(categoryIds=session.room.metadata.custom_category_ids),
     )
 
 

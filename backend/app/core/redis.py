@@ -7,11 +7,15 @@ import json
 import logging
 import secrets
 import sys
+from typing import TYPE_CHECKING, cast
 
 import redis.asyncio as redis
 
 from app.core.config import settings
 from app.rooms.state import RoomState
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
 
 _PERSISTENCE_ERRORS = (redis.RedisError, asyncio.TimeoutError, ValueError, TypeError)
 
@@ -121,7 +125,9 @@ async def get_session_user_id(session_id: str) -> str | None:
     """Return the user id for an existing auth session."""
     try:
         r = await get_redis()
-        return await r.get(_session_key(session_id))
+        # redis-py's async stubs type get() via the shared sync signature, so the
+        # awaited value needs a cast to satisfy the type checker.
+        return cast("str | None", await r.get(_session_key(session_id)))
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to read session %s", session_id)
         return None
@@ -141,7 +147,9 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
     try:
         r = await get_redis()
         key = _rate_limit_key(bucket, identifier)
-        count = await r.incr(key)
+        # redis-py's async incr() is typed via the sync signature (returns int, not
+        # Awaitable[int]); cast so the await type-checks.
+        count = await cast("Awaitable[int]", r.incr(key))
         if count == 1:
             await r.expire(key, window_seconds)
         ttl = await r.ttl(key)

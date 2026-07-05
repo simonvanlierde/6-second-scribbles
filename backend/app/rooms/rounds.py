@@ -134,7 +134,7 @@ def guessing_event_payload(room: GameRoom) -> StartGuessingEvent:
     """Build the start-guessing broadcast event from current metadata."""
     return StartGuessingEvent(
         type="start_guessing",
-        guessing_start_time=room.metadata.guessing_start_time,
+        guessingStartTime=room.metadata.guessing_start_time,
         guessTargets=dict(room.metadata.guess_targets),
     )
 
@@ -269,9 +269,9 @@ def compute_highlights(
     if not submissions:
         return None
     highlights = RoundHighlights(
-        best_guesser=_best_guesser_highlight(results),
-        speed_demon=_speed_demon_highlight(submissions),
-        wildest_miss=_wildest_miss_highlight(miss_candidates),
+        bestGuesser=_best_guesser_highlight(results),
+        speedDemon=_speed_demon_highlight(submissions),
+        wildestMiss=_wildest_miss_highlight(miss_candidates),
     )
     if highlights.best_guesser is None and highlights.speed_demon is None and highlights.wildest_miss is None:
         return None
