@@ -180,6 +180,21 @@ class DrawStrokePartialEvent(ClientEventModel):
     stroke_start: bool = Field(default=False, alias="strokeStart")
 
 
+class DrawStrokePayload(BaseModel):
+    """A full shared-drawpad stroke the server reconstructs from partial fragments.
+
+    Unlike ``StrokeDelta`` (a per-frame fragment, capped at 1000 points), this is a
+    whole completed/in-progress stroke, so late joiners can hydrate the collective
+    doodle from ``room_state`` instead of only seeing strokes drawn after they join.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    color: str
+    width: float
+    points: list[StrokePoint] = Field(default_factory=list)
+
+
 class DrawpadClearEvent(ClientEventModel):
     type: Literal["drawpad_clear"]
 
@@ -321,6 +336,9 @@ class RoomStateEvent(ServerEventModel):
     guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
     drawings: dict[str, str] = Field(default_factory=dict)
     drawing_history: list[GalleryDrawingPayload] = Field(default_factory=list, alias="drawingHistory")
+    # The shared lobby drawpad's strokes so far, so a late joiner or reconnect sees
+    # the collective doodle rather than a blank canvas until the next stroke.
+    lobby_strokes: list[DrawStrokePayload] = Field(default_factory=list, alias="lobbyStrokes")
     # The requesting player's own card, so a mid-round reconnect can restore the
     # prompt without relying on client-side persistence. None outside a round or
     # for connections that have not joined yet.

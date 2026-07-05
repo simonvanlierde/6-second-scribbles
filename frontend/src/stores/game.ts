@@ -36,6 +36,10 @@ export const useGameStore = defineStore(
     // per frame (the source of the old O(n^2) growth).
     const partialStrokeIndex = new Map<string, number>();
 
+    // Prior/completed strokes are hydrated from room_state.lobbyStrokes on join
+    // (the server reconstructs them from these same partials). A stroke still in
+    // progress exactly at join time may restart on its next fragment — a one-stroke
+    // seam, not a permanent gap.
     function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean) {
       const idx = partialStrokeIndex.get(playerId);
       if (isStart || idx === undefined || !currentStrokes.value[idx]) {
@@ -402,6 +406,17 @@ export const useGameStore = defineStore(
         // Keep the dedupe cursor in step so a re-delivered round_complete for a
         // round already in the rebuilt gallery isn't folded in a second time.
         lastCapturedRound.value = Math.max(...roomState.drawingHistory.map((e) => e.round), lastCapturedRound.value);
+      }
+      // Hydrate the shared lobby doodle so a late joiner/reconnect sees the strokes
+      // drawn before they arrived, not a blank canvas. Only when we hold none yet,
+      // so we never clobber strokes already applied from live partials.
+      if (currentStrokes.value.length === 0 && roomState.lobbyStrokes?.length) {
+        currentStrokes.value = roomState.lobbyStrokes.map((s) => ({
+          color: s.color,
+          width: s.width,
+          points: [...(s.points ?? [])],
+        }));
+        partialStrokeIndex.clear();
       }
       if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;

@@ -47,6 +47,20 @@ export const ServerEventSchema = z.union([
             .describe("One completed drawing retained for the end-of-game gallery."),
         )
         .optional(),
+      lobbyStrokes: z
+        .array(
+          z
+            .object({
+              color: z.string(),
+              width: z.number(),
+              points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+            })
+            .strict()
+            .describe(
+              "A full shared-drawpad stroke the server reconstructs from partial fragments.\n\nUnlike ``StrokeDelta`` (a per-frame fragment, capped at 1000 points), this is a\nwhole completed/in-progress stroke, so late joiners can hydrate the collective\ndoodle from ``room_state`` instead of only seeing strokes drawn after they join.",
+            ),
+        )
+        .optional(),
       card: z
         .union([
           z.object({

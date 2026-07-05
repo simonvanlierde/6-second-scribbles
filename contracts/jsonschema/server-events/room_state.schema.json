@@ -177,6 +177,46 @@
       "title": "Drawinghistory",
       "type": "array"
     },
+    "lobbyStrokes": {
+      "items": {
+        "additionalProperties": false,
+        "description": "A full shared-drawpad stroke the server reconstructs from partial fragments.\n\nUnlike ``StrokeDelta`` (a per-frame fragment, capped at 1000 points), this is a\nwhole completed/in-progress stroke, so late joiners can hydrate the collective\ndoodle from ``room_state`` instead of only seeing strokes drawn after they join.",
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "number"
+          },
+          "points": {
+            "items": {
+              "properties": {
+                "x": {
+                  "title": "X",
+                  "type": "number"
+                },
+                "y": {
+                  "title": "Y",
+                  "type": "number"
+                }
+              },
+              "required": ["x", "y"],
+              "title": "StrokePoint",
+              "type": "object"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": ["color", "width"],
+        "title": "DrawStrokePayload",
+        "type": "object"
+      },
+      "title": "Lobbystrokes",
+      "type": "array"
+    },
     "card": {
       "anyOf": [
         {

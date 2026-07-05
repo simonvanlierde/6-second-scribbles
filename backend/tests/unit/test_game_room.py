@@ -17,7 +17,7 @@ from app.rooms import manager as manager_module
 from app.rooms import rounds
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
-from app.rooms.protocol import WebSocketMessage
+from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
     HOST_ONE,
@@ -258,6 +258,30 @@ class TestGameRoom:
 
         await game_room.remove_player(PLAYER_ONE_ID)
         assert game_room.is_empty()
+
+    async def test_lobby_strokes_reconstructed_and_hydrated(self, game_room: GameRoom) -> None:
+        """Partials fold into one authoritative stroke that room_state replays to late joiners."""
+
+        def delta(x: float) -> StrokeDelta:
+            return StrokeDelta(color="#000", width=3, points=[StrokePoint(x=x, y=x)])
+
+        # Start a stroke, then two continuation fragments — one growing stroke.
+        game_room.apply_lobby_partial("p1", delta(1), is_start=True)
+        game_room.apply_lobby_partial("p1", delta(2), is_start=False)
+        game_room.apply_lobby_partial("p1", delta(3), is_start=False)
+        # A different player's start opens a second stroke.
+        game_room.apply_lobby_partial("p2", delta(9), is_start=True)
+
+        assert len(game_room.lobby_strokes) == 2
+        assert [p.x for p in game_room.lobby_strokes[0].points] == [1, 2, 3]
+
+        # A late joiner's snapshot carries the whole doodle, not a blank canvas.
+        state = game_room.room_state_event()
+        assert len(state.lobby_strokes) == 2
+
+        game_room.clear_lobby_strokes()
+        assert game_room.lobby_strokes == []
+        assert game_room.room_state_event().lobby_strokes == []
 
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""

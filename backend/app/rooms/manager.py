@@ -37,6 +37,7 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import lifecycle as room_lifecycle
 from app.rooms.protocol import (
+    DrawStrokePayload,
     GalleryDrawingPayload,
     PlayerCardPayload,
     PlayerLeftEvent,
@@ -46,6 +47,7 @@ from app.rooms.protocol import (
     ReadyStatusEvent,
     RoomStateEvent,
     StartRoundServerEvent,
+    StrokeDelta,
     WebSocketMessage,
     send_ws_message,
 )
@@ -65,6 +67,10 @@ if TYPE_CHECKING:
     from app.rooms.state import RoomState
 
 logger = logging.getLogger(__name__)
+
+# Cap on retained shared-lobby-doodle strokes, so a long-lived lobby can't grow
+# the in-memory stroke list without bound. Oldest strokes are trimmed past this.
+MAX_LOBBY_STROKES = 500
 
 
 class RoomCapacityError(Exception):
@@ -119,6 +125,11 @@ class GameRoom:
         # Completed drawings for every scored round, for the end-of-game gallery.
         # In-memory only (like round_drawings); rehydrated to clients via room_state.
         self.drawing_history: list[GalleryDrawingPayload] = []
+        # Server-authoritative strokes of the shared lobby drawpad, reconstructed
+        # from the partials clients already relay, so late joiners/reconnects
+        # hydrate the doodle via room_state. In-memory only, like round_drawings.
+        self.lobby_strokes: list[DrawStrokePayload] = []
+        self._lobby_partial_index: dict[str, int] = {}
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -393,6 +404,32 @@ class GameRoom:
         """Return whether the given player currently owns the room."""
         return player_lifecycle.is_host(self, player_id)
 
+    def apply_lobby_partial(self, player_id: str, stroke: StrokeDelta, *, is_start: bool) -> None:
+        """Fold a relayed stroke fragment into the authoritative lobby doodle.
+
+        Mirrors the client's applyPartialStroke: a start (or an unknown player)
+        opens a new stroke; later fragments extend that player's in-progress one.
+        """
+        idx = self._lobby_partial_index.get(player_id)
+        if is_start or idx is None or idx >= len(self.lobby_strokes):
+            self.lobby_strokes.append(
+                DrawStrokePayload(color=stroke.color, width=stroke.width, points=list(stroke.points))
+            )
+            self._lobby_partial_index[player_id] = len(self.lobby_strokes) - 1
+        else:
+            self.lobby_strokes[idx].points.extend(stroke.points)
+        # ponytail: bound the shared doodle so a marathon lobby can't grow unbounded.
+        # Trim oldest strokes past the cap; indices shift, so reset the partial map
+        # (an in-progress stroke at most restarts on its next fragment).
+        if len(self.lobby_strokes) > MAX_LOBBY_STROKES:
+            self.lobby_strokes = self.lobby_strokes[-MAX_LOBBY_STROKES:]
+            self._lobby_partial_index.clear()
+
+    def clear_lobby_strokes(self) -> None:
+        """Reset the shared lobby doodle (host clear, or leaving the lobby)."""
+        self.lobby_strokes.clear()
+        self._lobby_partial_index.clear()
+
     def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot.
 
@@ -419,6 +456,7 @@ class GameRoom:
                 "guessTargets": self.metadata.guess_targets,
                 "drawings": self.round_drawings,
                 "drawingHistory": self.drawing_history,
+                "lobbyStrokes": self.lobby_strokes,
                 "card": card,
                 "readyCount": len(self.metadata.ready_players),
                 "totalPlayers": len(self.players),

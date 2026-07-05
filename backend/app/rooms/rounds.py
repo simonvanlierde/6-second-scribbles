@@ -56,6 +56,7 @@ def configure_game(
     room.metadata.ready_players.clear()
     room.round_drawings.clear()
     room.drawing_history.clear()
+    room.clear_lobby_strokes()
 
 
 def start_round(
@@ -73,6 +74,7 @@ def start_round(
     room.metadata.player_assignments = cards or {}
     room.metadata.guess_targets = {}
     room.round_drawings.clear()
+    room.clear_lobby_strokes()
     room.metadata.guess_submissions = []
     room.metadata.submitted_players = set()
     for player_id in room.players:
@@ -159,6 +161,7 @@ def reset_game(room: GameRoom) -> None:
     room.metadata.game_phase = GamePhase.LOBBY
     room.round_drawings.clear()
     room.drawing_history.clear()
+    room.clear_lobby_strokes()
 
 
 def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
