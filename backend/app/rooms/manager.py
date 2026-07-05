@@ -350,8 +350,12 @@ class GameRoom:
             await self.persist()
             return
 
-        if not player.connected:
-            return  # already marked (e.g. by a failed broadcast send)
+        # `player.connected` may already be False if a broadcast send to this
+        # socket failed first (broadcast() marks it to stop retrying). That marks
+        # the socket dead but does NOT run migration/presence — so we must not
+        # early-return here, or a host whose send failed would never be replaced.
+        # Double-invocation for the same live socket can't happen: on_disconnect
+        # fires once per connection and handle_disconnect drops stale sockets.
         player.connected = False
         await self.broadcast(PlayerPresenceEvent(playerId=player_id, connected=False))
 

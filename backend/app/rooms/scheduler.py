@@ -147,6 +147,11 @@ class RoomTaskScheduler:
     async def _start_guessing_after_delay(self, drawing_time_limit_seconds: int) -> None:
         try:
             await asyncio.sleep(drawing_time_limit_seconds + settings.drawing_to_guessing_buffer_seconds)
+            # cancel_*() calls .cancel() without awaiting, so a timer that already
+            # woke can reach here after being superseded/cancelled. Bail unless we
+            # are still the scheduled task, else we'd fire a stale phase transition.
+            if self._guessing_start_task is not asyncio.current_task():
+                return
             guessing_event = rounds.start_guessing_event(self._room)
             await self._room.broadcast(guessing_event)
             await self._room.persist()
@@ -177,6 +182,8 @@ class RoomTaskScheduler:
     ) -> None:
         try:
             await asyncio.sleep(timeout_seconds)
+            if self._next_round_start_task is not asyncio.current_task():
+                return  # superseded/cancelled while we slept
             await self._room.start_round_with_server_cards(round_number=round_number)
         except asyncio.CancelledError:
             pass

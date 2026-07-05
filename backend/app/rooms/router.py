@@ -135,19 +135,22 @@ async def _reserve_new_room_code() -> str:
         value = state.model_dump_json()
         ok = await r.set(key, value, nx=True, ex=settings.room_ttl_seconds)
         if ok:
+            # Any failure after the reserve must release the code, or it lingers
+            # for the full TTL with no room behind it (status reports exists=False
+            # while Redis still considers the code taken).
             try:
                 room = room_manager.get_or_create_room(code)
+                await room.persist()
             except RoomCapacityError as exc:
-                # Release the just-reserved code so it doesn't linger for the full
-                # TTL with no room behind it (status would report exists=False
-                # while Redis still considers the code taken).
                 await r.delete(key)
                 raise HTTPException(
                     status_code=503,
                     detail="Server is at capacity. Please try again shortly.",
                     headers={"Retry-After": "30"},
                 ) from exc
-            await room.persist()
+            except Exception:
+                await r.delete(key)
+                raise
             return code
 
     raise HTTPException(status_code=500, detail="Failed to generate unique room code. Try again.")
