@@ -77,7 +77,10 @@ export const GamePhaseSchema = z
 export type GamePhase = z.infer<typeof GamePhaseSchema>;
 
 export const GuestAuthRequestSchema = z
-  .object({ displayName: z.union([z.string(), z.null()]).optional(), preferredLocale: z.string().default("en") })
+  .object({
+    displayName: z.union([z.string().max(80), z.null()]).optional(),
+    preferredLocale: z.string().max(16).default("en"),
+  })
   .describe("Optional request body for guest session bootstrap.");
 export type GuestAuthRequest = z.infer<typeof GuestAuthRequestSchema>;
 
@@ -132,9 +135,9 @@ export type RandomRoomResponse = z.infer<typeof RandomRoomResponseSchema>;
 
 export const RegisterRequestSchema = z
   .object({
-    displayName: z.union([z.string(), z.null()]).optional(),
+    displayName: z.union([z.string().max(80), z.null()]).optional(),
     password: z.string().min(8).max(128),
-    preferredLocale: z.string().default("en"),
+    preferredLocale: z.string().max(16).default("en"),
     username: z
       .string()
       .regex(/^[a-zA-Z0-9_-]+$/)

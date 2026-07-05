@@ -311,8 +311,10 @@
         },
         "guesses": {
           "items": {
+            "maxLength": 100,
             "type": "string"
           },
+          "maxItems": 50,
           "title": "Guesses",
           "type": "array"
         }

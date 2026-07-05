@@ -421,7 +421,7 @@ export const ClientEventSchema = z.union([
     type: z.literal("submit_guess"),
     targetPlayerId: z.string(),
     playerId: z.string(),
-    guesses: z.array(z.string()).optional(),
+    guesses: z.array(z.string().max(100)).max(50).optional(),
   }),
   z.object({ type: z.literal("restart_game") }),
   z.object({ type: z.literal("heartbeat") }),
