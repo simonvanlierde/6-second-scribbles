@@ -16,7 +16,8 @@
     "copyRoomCode": "點擊複製房間代碼",
     "soundMute": "靜音",
     "soundUnmute": "取消靜音",
-    "and": "和"
+    "and": "和",
+    "gotIt": "知道了"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -60,7 +61,8 @@
     "sound": "音效",
     "soundOn": "開",
     "soundOff": "關",
-    "about": "關於"
+    "about": "關於",
+    "namePrompt": "輸入名字以繼續。"
   },
   "lobby": {
     "leaveRoom": "離開房間",
@@ -90,7 +92,8 @@
     "backToLobby": "回到大廳",
     "enterYourName": "輸入你的名字",
     "yourName": "你的名字",
-    "back": "返回"
+    "back": "返回",
+    "backToHome": "返回首頁"
   },
   "game": {
     "waitingForRound": "等待回合開始..."

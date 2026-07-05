@@ -16,7 +16,8 @@
     "copyRoomCode": "Clique para copiar o código da sala",
     "soundMute": "Silenciar som",
     "soundUnmute": "Ativar som",
-    "and": "e"
+    "and": "e",
+    "gotIt": "Entendi"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -60,7 +61,8 @@
     "sound": "Som",
     "soundOn": "ligado",
     "soundOff": "desligado",
-    "about": "Sobre"
+    "about": "Sobre",
+    "namePrompt": "Escolha um nome para continuar."
   },
   "lobby": {
     "leaveRoom": "Sair da sala",
@@ -90,7 +92,8 @@
     "backToLobby": "Voltar ao lobby",
     "enterYourName": "Digite seu nome",
     "yourName": "Seu nome",
-    "back": "Voltar"
+    "back": "Voltar",
+    "backToHome": "Voltar ao início"
   },
   "game": {
     "waitingForRound": "Aguardando o início da rodada..."
