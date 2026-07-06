@@ -32,9 +32,19 @@ logger = logging.getLogger(__name__)
 IDLE_CHECK_INTERVAL_SECONDS = 60
 
 
+# Strong references to fire-and-forget tasks. asyncio only holds weak references
+# to running tasks, so a task whose only reference is discarded by its caller can
+# be garbage-collected mid-flight (CPython docs warn about exactly this). Callers
+# that store the task themselves (the scheduler fields) are also fine; this set
+# covers the fire-and-forget callers that don't.
+_background_tasks: set[asyncio.Task[object]] = set()
+
+
 def create_logged_task(coroutine: Coroutine[object, object, object], name: str) -> asyncio.Task[object]:
     """Create a fire-and-forget task that logs any unhandled exception."""
     task = asyncio.create_task(coroutine, name=name)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     task.add_done_callback(_log_task_exception)
     return task
 
@@ -42,6 +52,13 @@ def create_logged_task(coroutine: Coroutine[object, object, object], name: str) 
 async def cancel_task(task: asyncio.Task[object] | None) -> None:
     """Cancel a task and wait for it to finish."""
     if task is None:
+        return
+    if task is asyncio.current_task():
+        # A task must never cancel-and-await itself: `await task` on the running
+        # task raises "Task cannot await on itself". This happens when the
+        # scoring-timeout task itself triggers scoring, which then tries to cancel
+        # the pending scoring timeout (== this task). The caller clears the field
+        # right after, so simply skipping is correct.
         return
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
@@ -130,6 +147,11 @@ class RoomTaskScheduler:
     async def _start_guessing_after_delay(self, drawing_time_limit_seconds: int) -> None:
         try:
             await asyncio.sleep(drawing_time_limit_seconds + settings.drawing_to_guessing_buffer_seconds)
+            # cancel_*() calls .cancel() without awaiting, so a timer that already
+            # woke can reach here after being superseded/cancelled. Bail unless we
+            # are still the scheduled task, else we'd fire a stale phase transition.
+            if self._guessing_start_task is not asyncio.current_task():
+                return
             guessing_event = rounds.start_guessing_event(self._room)
             await self._room.broadcast(guessing_event)
             await self._room.persist()
@@ -160,6 +182,8 @@ class RoomTaskScheduler:
     ) -> None:
         try:
             await asyncio.sleep(timeout_seconds)
+            if self._next_round_start_task is not asyncio.current_task():
+                return  # superseded/cancelled while we slept
             await self._room.start_round_with_server_cards(round_number=round_number)
         except asyncio.CancelledError:
             pass
@@ -195,11 +219,19 @@ class RoomTaskScheduler:
         )
 
     async def _broadcast_game_complete_after_delay(self) -> None:
-        await asyncio.sleep(settings.game_complete_delay_seconds)
-        event = rounds.game_complete_event(self._room)
-        await self._room.broadcast(event)
-        logger.info("[GameRoom %s] Game complete. Winner: %s", self._room.room_id, event.winner)
-        await self._room.persist()
+        try:
+            await asyncio.sleep(settings.game_complete_delay_seconds)
+            event = rounds.game_complete_event(self._room)
+            await self._room.broadcast(event)
+            logger.info("[GameRoom %s] Game complete. Winner: %s", self._room.room_id, event.winner)
+            await self._room.persist()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            # Terminal task: if building/broadcasting game_complete throws, log it
+            # rather than letting the failure vanish into the done-callback and
+            # strand every client on the results screen.
+            logger.exception("[GameRoom %s] Failed to broadcast game complete", self._room.room_id)
 
     # ---------- Cancellation helpers ----------
 

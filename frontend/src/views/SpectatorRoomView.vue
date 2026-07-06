@@ -1,127 +1,175 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRouter } from "vue-router";
 
-import { useGameConnection } from "@/composables/useGameConnection";
+import HdButton from "@/components/ui/HdButton.vue";
+import HdCard from "@/components/ui/HdCard.vue";
+import HdPill from "@/components/ui/HdPill.vue";
+import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { i18n } from "@/i18n";
-import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const router = useRouter();
-const { connect, disconnect } = useGameConnection();
-
-function leaveRoom() {
-  disconnect();
-  store.reset();
-  router.push({ name: "home" });
-}
-
-function joinNextGame() {
-  if (!store.roomCode || !store.localPlayerName.trim()) return;
-  store.setSpectatorMode(false);
-  store.setLocalPlayer(getOrCreatePlayerId(), store.localPlayerName.trim());
-  connect(store.roomCode);
-}
+const { leaveRoom } = useLeaveRoom();
 
 const drawings = computed(() => store.playersList.filter((player) => player.drawing));
+// RoomView only renders this view outside the lobby, so no lobby label is needed.
 const phaseLabel = computed(() => {
   if (store.gamePhase === "drawing") return i18n.global.t("spectator.drawingRound");
   if (store.gamePhase === "guessing") return i18n.global.t("spectator.guessingRound");
-  if (store.gamePhase === "lobby") return i18n.global.t("spectator.roomBackInLobby");
   if (store.gamePhase === "round_results") return i18n.global.t("spectator.roundResults");
   if (store.gamePhase === "final_results") return i18n.global.t("spectator.finalResults");
   return i18n.global.t("spectator.watchingRoom");
 });
-const canJoinNow = computed(() => store.gamePhase === "lobby" && store.localPlayerName.trim().length > 0);
 </script>
 
 <template>
-  <div
-    class="grid min-h-screen gap-4 p-6 text-white"
-    style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)"
-  >
-    <header
-      class="mx-auto flex w-full max-w-[1100px] items-start justify-between gap-4 rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
-    >
-      <div>
-        <p class="m-0 mb-2 text-xs tracking-widest text-white/70 uppercase">
-          {{ $t("common.roomCode", { code: store.roomCode }) }}
-        </p>
-        <h1 class="m-0">{{ phaseLabel }}</h1>
-        <p class="m-0 mt-2 text-white/80">
-          {{ canJoinNow ? $t("spectator.joinableAgain") : $t("spectator.watchingLive") }}
-        </p>
+  <div class="spectator-page">
+    <header class="spectator-topbar">
+      <div class="spectator-topbar__info">
+        <span class="spectator-code">
+          <span class="spectator-code__label">{{ $t('home.roomCodeLabel') }}</span>
+          <span class="spectator-code__value">{{ store.roomCode }}</span>
+        </span>
+        <h1 class="spectator-title">{{ phaseLabel }}</h1>
+        <p class="spectator-sub">{{ $t("spectator.watchingLive") }}</p>
       </div>
-      <div class="flex flex-wrap justify-end gap-3">
-        <button
-          v-if="canJoinNow"
-          type="button"
-          class="cursor-pointer rounded-xl border-0 bg-gradient-to-br from-[#ffd166] to-[#ff8e72] px-4 py-3.5 font-extrabold text-[#1e1e1e]"
-          @click="joinNextGame"
-        >
-          {{ $t("spectator.joinNextGame") }}
-        </button>
-        <button
-          type="button"
-          class="leave-btn cursor-pointer rounded-xl border-0 bg-white/10 px-4 py-3.5 font-extrabold text-white"
-          @click="leaveRoom"
-        >
-          {{ $t("spectator.leaveRoom") }}
-        </button>
-      </div>
+      <HdButton variant="secondary" class="leave-btn" @click="leaveRoom"> {{ $t("spectator.leaveRoom") }} </HdButton>
     </header>
 
-    <section
-      class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
-    >
-      <h2 class="m-0">{{ $t("spectator.players") }}</h2>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <div
-          v-for="player in store.playersList"
-          :key="player.id"
-          class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2"
-        >
+    <HdCard class="spectator-section">
+      <h2 class="spectator-section__title">{{ $t("spectator.players") }}</h2>
+      <div class="spectator-players">
+        <HdPill v-for="player in store.playersList" :key="player.id">
           {{ player.name }}
-          <span class="text-sm text-white/70">{{ $t("common.pointsShort", { count: player.score }) }}</span>
-        </div>
+          <span class="spectator-players__score">{{ $t("common.pointsShort", { count: player.score }) }}</span>
+        </HdPill>
       </div>
-    </section>
+    </HdCard>
 
-    <section
-      v-if="store.gamePhase === 'drawing'"
-      class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
-    >
-      <h2 class="m-0">{{ $t("spectator.drawings") }}</h2>
-      <div
-        v-if="drawings.length"
-        class="mt-3 grid gap-3"
-        style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))"
-      >
-        <article
-          v-for="player in drawings"
-          :key="player.id"
-          class="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
-        >
+    <HdCard v-if="store.gamePhase === 'drawing'" class="spectator-section">
+      <h2 class="spectator-section__title">{{ $t("spectator.drawings") }}</h2>
+      <div v-if="drawings.length" class="spectator-drawings">
+        <figure v-for="player in drawings" :key="player.id" class="spectator-drawing">
           <img
             :src="player.drawing"
             :alt="$t('spectator.drawingAlt', { name: player.name })"
-            class="block h-[180px] w-full bg-black/15 object-contain"
+            class="spectator-drawing__img"
           >
-          <p class="p-3 text-white/85">{{ player.name }}</p>
-        </article>
+          <figcaption class="spectator-drawing__name">{{ player.name }}</figcaption>
+        </figure>
       </div>
-      <p v-else class="p-3 text-white/85">{{ $t("spectator.noDrawingsYet") }}</p>
-    </section>
+      <p v-else class="spectator-body">{{ $t("spectator.noDrawingsYet") }}</p>
+    </HdCard>
 
-    <section
-      v-else
-      class="mx-auto w-full max-w-[1100px] rounded-3xl border border-white/10 bg-[rgba(10,12,28,0.78)] px-6 pt-5 pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-[14px]"
-    >
-      <h2 class="m-0">{{ $t("spectator.roundStatus") }}</h2>
-      <p v-if="store.gamePhase === 'guessing'" class="p-3 text-white/85">{{ $t("spectator.guessingInProgress") }}</p>
-      <p v-else-if="store.gamePhase === 'lobby'" class="p-3 text-white/85">{{ $t("spectator.lobbyAgain") }}</p>
-      <p v-else class="p-3 text-white/85">{{ $t("spectator.betweenRounds") }}</p>
-    </section>
+    <HdCard v-else class="spectator-section">
+      <h2 class="spectator-section__title">{{ $t("spectator.roundStatus") }}</h2>
+      <p v-if="store.gamePhase === 'guessing'" class="spectator-body">{{ $t("spectator.guessingInProgress") }}</p>
+      <p v-else class="spectator-body">{{ $t("spectator.betweenRounds") }}</p>
+    </HdCard>
   </div>
 </template>
+
+<style scoped>
+.spectator-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+.spectator-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  /* Clear the globally-fixed settings gear (App.vue, top/right ≈ 20px). */
+  padding-right: calc(var(--space-4) + 52px);
+}
+.spectator-code {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  background: var(--color-highlighter-yellow);
+  color: var(--color-ink-fixed);
+  border: 2px dashed var(--color-ink);
+  border-radius: 12px 18px 14px 22px;
+  padding: 4px 14px;
+}
+.spectator-code__label {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  opacity: 0.7;
+}
+.spectator-code__value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+}
+.spectator-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-display-sm);
+  line-height: 1.15;
+  margin: 10px 0 0;
+  color: var(--color-ink);
+}
+.spectator-sub {
+  font-family: var(--font-body);
+  color: var(--color-ink-muted);
+  margin: 4px 0 0;
+}
+.spectator-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.spectator-section__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-heading-md);
+  margin: 0;
+  color: var(--color-ink);
+}
+.spectator-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.spectator-players__score {
+  color: var(--color-ink-muted);
+}
+.spectator-drawings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+.spectator-drawing {
+  margin: 0;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--r-input);
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.spectator-drawing__img {
+  display: block;
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+}
+.spectator-drawing__name {
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  border-top: 1.5px dashed var(--color-ink);
+}
+.spectator-body {
+  font-family: var(--font-body);
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+</style>

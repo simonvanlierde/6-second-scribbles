@@ -46,24 +46,30 @@ words:
   - argosmodel
   - ACMR
   - Caddyfile
+  - Centralised
   - cloudflared
   - dedup
   - dorny
   - duinlab
   - geolocation
+  - harakat
   - healthz
   - htmlcov
   - imagetools
   - Isguest
   - justfile
   - kalam
+  - KVCLEAN
   - nosniff
   - opencc
   - persistedstate
   - postit
   - selectinload
+  - spoofable
+  - unscoreable
   - uppercased
   - usefixtures
+  - WCAG
   - whereclause
   - zstd
 

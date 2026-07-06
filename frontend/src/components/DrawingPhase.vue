@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
 import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
@@ -26,7 +26,7 @@ const canvas = useDrawingCanvas();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const { leaveRoom } = useLeaveRoom();
 
-const canvasElement = ref<HTMLCanvasElement | null>(null);
+const canvasElement = useTemplateRef<HTMLCanvasElement>("canvasElement");
 const hasSubmittedDrawing = ref(false);
 const leaveDialogOpen = ref(false);
 const doneItems = ref<Set<number>>(new Set());

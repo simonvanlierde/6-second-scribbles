@@ -16,7 +16,8 @@
     "copyRoomCode": "Klik om de roomcode te kopiëren",
     "soundMute": "Geluid dempen",
     "soundUnmute": "Geluid aanzetten",
-    "and": "en"
+    "and": "en",
+    "gotIt": "Begrepen"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -60,7 +61,8 @@
     "sound": "Geluid",
     "soundOn": "aan",
     "soundOff": "uit",
-    "about": "Over"
+    "about": "Over",
+    "namePrompt": "Kies een naam om verder te gaan."
   },
   "lobby": {
     "leaveRoom": "Kamer verlaten",
@@ -90,7 +92,8 @@
     "backToLobby": "Terug naar lobby",
     "enterYourName": "Voer je naam in",
     "yourName": "Jouw naam",
-    "back": "Terug"
+    "back": "Terug",
+    "backToHome": "Terug naar start"
   },
   "game": {
     "waitingForRound": "Wachten tot de ronde begint..."

@@ -10,7 +10,10 @@ import {
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, UI_TIMINGS } from "@/config/gameConfig";
 import { type ClientEvent, ClientEventSchema, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
+import { createLogger } from "@/shared/logger";
 import { useGameStore } from "@/stores/game";
+
+const log = createLogger("WebSocket");
 
 // Singleton WebSocket connection shared across all components
 let ws: WebSocket | null = null;
@@ -57,7 +60,7 @@ export function useGameConnection() {
   function connect(roomCode: string, options: ConnectOptions = {}) {
     const normalizedRoomCode = roomCode.trim();
     if (!normalizedRoomCode) {
-      if (import.meta.env.DEV) console.warn("[WebSocket] Refused to connect without a room code");
+      log.debug("Refused to connect without a room code");
       return;
     }
 
@@ -98,7 +101,7 @@ export function useGameConnection() {
           playerId: store.localPlayerId,
           name: store.localPlayerName,
           preferredLocale: store.localPlayerLocale,
-          preferredColor: store.localPlayerColor,
+          preferredColor: store.localAvatarColor,
         });
       } else {
         store.setSpectatorMode(true);
@@ -118,26 +121,27 @@ export function useGameConnection() {
     };
 
     socket.onmessage = (event: MessageEvent) => {
+      if (ws !== socket) return; // ignore messages queued on a superseded socket
       try {
         const result = ServerEventSchema.safeParse(JSON.parse(event.data));
         if (!result.success) {
-          console.error("[WebSocket] Invalid message from server:", result.error.issues, "Raw:", event.data);
+          log.error("Invalid message from server:", result.error.issues, "Raw:", event.data);
           return;
         }
         handleMessage(result.data);
       } catch (error) {
-        console.error("[WebSocket] Failed to parse message:", error, "Raw:", event.data);
+        log.error("Failed to parse message:", error, "Raw:", event.data);
         connectionError.value = "Failed to process server message";
       }
     };
 
     socket.onerror = (error) => {
-      console.error("[WebSocket] Connection error:", error);
+      log.error("Connection error:", error);
       connectionError.value = "Connection error occurred";
     };
 
     socket.onclose = (event) => {
-      if (import.meta.env.DEV) console.log("[WebSocket] Connection closed:", event.code, event.reason);
+      log.debug("Connection closed:", event.code, event.reason);
       // Ignore the close of a socket we've already replaced (e.g. a fresh connect
       // or an in-flight retry superseded this one).
       if (ws !== socket) return;
@@ -169,7 +173,7 @@ export function useGameConnection() {
   function send(message: ClientEvent) {
     const result = ClientEventSchema.safeParse(message);
     if (!result.success) {
-      console.error("[WebSocket] Refused to send invalid client event:", result.error.issues, "Raw:", message);
+      log.error("Refused to send invalid client event:", result.error.issues, "Raw:", message);
       return false;
     }
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -180,7 +184,7 @@ export function useGameConnection() {
   }
 
   function handleMessage(message: ServerEvent) {
-    if (import.meta.env.DEV) console.log("[WebSocket] Received:", message.type);
+    log.debug("Received:", message.type);
 
     switch (message.type) {
       case "join_error":

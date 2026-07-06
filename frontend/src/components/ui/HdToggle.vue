@@ -23,6 +23,7 @@ function onChange(event: Event) {
 </script>
 
 <template>
+  <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the checkbox below, which carries its own aria-label -->
   <label class="hd-toggle">
     <span v-if="props.label" class="hd-toggle__label">
       {{ props.label }}
@@ -30,7 +31,6 @@ function onChange(event: Event) {
         v-if="props.help"
         class="hd-toggle__info"
         role="img"
-        tabindex="0"
         :title="props.help"
         :aria-label="props.help"
       >

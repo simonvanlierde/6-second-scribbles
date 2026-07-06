@@ -99,9 +99,7 @@ function toggleRoomPadVisibility() {
     <div class="lobby-topbar">
       <HdButton variant="secondary" @click="showLeaveDialog"> ← {{ t('lobby.leaveRoom') }} </HdButton>
       <button type="button" class="lobby-code" :title="t('common.copyRoomCode')" @click="copyRoomCode">
-        <span class="lobby-code__label"
-          >{{ t('common.roomCode', { code: '' }).replace(/\s*\{code\}\s*/, '').trim() || 'Room' }}</span
-        >
+        <span class="lobby-code__label">{{ t('home.roomCodeLabel') }}</span>
         <span class="lobby-code__value">{{ roomCode }}</span>
         <svg
           width="16"

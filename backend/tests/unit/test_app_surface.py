@@ -120,7 +120,6 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
                 "name": PLAYER_ONE_NAME,
                 "color": "var(--avatar-1)",
                 "connected": True,
-                "categories": [],
             },
         ]
         assert room_state["difficulty"] == MEDIUM

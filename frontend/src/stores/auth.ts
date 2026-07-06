@@ -16,7 +16,9 @@ export const useAuthStore = defineStore("auth", () => {
     isBootstrapping.value = true;
     bootstrapError.value = null;
     try {
-      currentUser.value = await apiRequest("/api/me", { schema: UserResponseSchema });
+      currentUser.value = await apiRequest("/api/me", {
+        schema: UserResponseSchema,
+      });
     } catch {
       try {
         currentUser.value = await apiRequest("/api/auth/guest", {

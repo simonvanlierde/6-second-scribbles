@@ -34,7 +34,7 @@ pre-push:
     spelling:
       run: pnpm exec cspell lint --config .cspell.yml --cache --cache-strategy content --no-must-find-files {files}
     markdown:
-      glob: "**/README.md"
+      glob: "{README.md,**/README.md}"
       run: pnpm exec markdownlint-cli2 {files}
     # Type-check needs the whole project (incremental: ~0.5s warm).
     frontend-types:

@@ -73,15 +73,30 @@ const header = `\
 `;
 
 const schemaSpecs = [
-  { filename: "server-event.schema.json", name: "ServerEventSchema", typeName: "ServerEvent", module: "esm" },
-  { filename: "client-event.schema.json", name: "ClientEventSchema", typeName: "ClientEvent", module: "none" },
+  {
+    filename: "server-event.schema.json",
+    name: "ServerEventSchema",
+    typeName: "ServerEvent",
+    module: "esm",
+  },
+  {
+    filename: "client-event.schema.json",
+    name: "ClientEventSchema",
+    typeName: "ClientEvent",
+    module: "none",
+  },
 ];
 
 const [serverSpec, clientSpec] = schemaSpecs;
 const serverSchema = read(serverSpec.filename);
 const clientSchema = read(clientSpec.filename);
-const serverModule = jsonSchemaToZod(serverSchema, { name: serverSpec.name, module: serverSpec.module });
-const clientExpression = jsonSchemaToZod(clientSchema, { module: clientSpec.module });
+const serverModule = jsonSchemaToZod(serverSchema, {
+  name: serverSpec.name,
+  module: serverSpec.module,
+});
+const clientExpression = jsonSchemaToZod(clientSchema, {
+  module: clientSpec.module,
+});
 const serverEventTypes = getDiscriminatorValues(serverSchema);
 const clientEventTypes = getDiscriminatorValues(clientSchema);
 const serverGroups = groupEntries(eventCatalog.server);

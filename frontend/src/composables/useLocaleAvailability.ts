@@ -4,13 +4,12 @@ import { z } from "zod";
 import { LocaleAvailabilityItemSchema } from "@/generated/api";
 import { i18n } from "@/i18n";
 import { apiRequest } from "@/lib/api";
-import { type LocaleAvailability, type LocaleOption, PLAYABLE_CONTENT_LOCALES } from "@/shared/locales";
+import { type LocaleAvailability, type LocaleOption, SUPPORTED_LOCALES } from "@/shared/locales";
 
 const availability = ref<Record<string, LocaleAvailability>>({});
 const isLoading = ref(false);
 const loadError = ref<string | null>(null);
 const hasLoaded = ref(false);
-let loaded = false;
 
 function normalizeLocale(locale: string): string {
   const [language, region] = locale.trim().replace("_", "-").split("-");
@@ -32,7 +31,7 @@ function getDisabledReason(item: LocaleAvailability | undefined): string {
 }
 
 async function fetchLocaleAvailability(force = false): Promise<void> {
-  if (loaded && !force) {
+  if (hasLoaded.value && !force) {
     return;
   }
 
@@ -48,7 +47,6 @@ async function fetchLocaleAvailability(force = false): Promise<void> {
       normalized[normalizeLocale(item.locale)] = item;
     }
     availability.value = normalized;
-    loaded = true;
     hasLoaded.value = true;
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : i18n.global.t("localeSelector.failedToLoad");
@@ -59,11 +57,14 @@ async function fetchLocaleAvailability(force = false): Promise<void> {
 
 export function useLocaleAvailability() {
   const localeOptions = computed<LocaleOption[]>(() => {
-    if (!hasLoaded.value && !loadError.value) {
-      return PLAYABLE_CONTENT_LOCALES.map((locale) => ({ code: locale, enabled: true }));
+    if (!(hasLoaded.value || loadError.value)) {
+      return SUPPORTED_LOCALES.map((locale) => ({
+        code: locale,
+        enabled: true,
+      }));
     }
 
-    return PLAYABLE_CONTENT_LOCALES.map((locale) => {
+    return SUPPORTED_LOCALES.map((locale) => {
       const item = availability.value[locale];
       const enabled = !!item && item.category_count > 0;
       return {

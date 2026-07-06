@@ -12,7 +12,3 @@ class KickVoteResult(BaseModel):
 
     success: bool
     error: str | None = None
-    vote_id: str | None = None
-    vote_passed: bool | None = None
-    current_votes: int | None = None
-    required_votes: int | None = None

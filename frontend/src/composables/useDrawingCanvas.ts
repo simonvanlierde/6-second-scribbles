@@ -11,8 +11,14 @@ export function useDrawingCanvas() {
   const strokes = ref<DrawStroke[]>([]);
   const currentColor = ref("#000000");
   const currentWidth = ref(5);
+  // The stroke belongs to a single pointer; secondary pointers (multi-touch) are
+  // ignored so a second finger can't hijack or corrupt the in-progress stroke.
+  let activePointerId: number | null = null;
+  // Points already handed to onStrokeProgress, so each callback carries only the
+  // newly added points (a delta) rather than the whole growing stroke.
+  let progressEmittedCount = 0;
   let onStrokeProgress:
-    | ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void)
+    | ((delta: { color: string; width: number; points: Array<{ x: number; y: number }>; first: boolean }) => void)
     | null = null;
   let stopResizeObserver: (() => void) | null = null;
   let stopEventListeners: (() => void) | null = null;
@@ -76,17 +82,22 @@ export function useDrawingCanvas() {
 
   function startDrawing(event: PointerEvent) {
     if (!ctx.value || !canvasRef.value) return;
+    // Already drawing with another pointer — ignore this secondary touch.
+    if (activePointerId !== null) return;
 
     // Capture the pointer so pointermove keeps firing even outside the canvas.
+    activePointerId = event.pointerId;
     canvasRef.value.setPointerCapture(event.pointerId);
 
     isDrawing.value = true;
+    progressEmittedCount = 0;
     const coords = getCoordinates(event);
     currentStroke.value = [coords];
   }
 
   function draw(event: PointerEvent) {
     if (!isDrawing.value || !ctx.value) return;
+    if (event.pointerId !== activePointerId) return;
 
     const coords = getCoordinates(event);
     const prevCoords = currentStroke.value[currentStroke.value.length - 1];
@@ -106,18 +117,28 @@ export function useDrawingCanvas() {
     }
 
     if (onStrokeProgress) {
-      onStrokeProgress({
-        color: currentColor.value,
-        width: currentWidth.value,
-        points: [...currentStroke.value],
-      });
+      // Emit only the points added since the last callback (delta), flagging the
+      // first fragment of the stroke so receivers start a fresh stroke.
+      const newPoints = currentStroke.value.slice(progressEmittedCount);
+      if (newPoints.length > 0) {
+        onStrokeProgress({
+          color: currentColor.value,
+          width: currentWidth.value,
+          points: newPoints,
+          first: progressEmittedCount === 0,
+        });
+        progressEmittedCount = currentStroke.value.length;
+      }
     }
   }
 
-  function stopDrawing() {
+  function stopDrawing(event?: PointerEvent) {
+    // Only the pointer that started the stroke may end it.
+    if (event && event.pointerId !== activePointerId) return;
     if (!isDrawing.value) return;
 
     isDrawing.value = false;
+    activePointerId = null;
 
     if (currentStroke.value.length > 0) {
       strokes.value.push({
@@ -130,7 +151,9 @@ export function useDrawingCanvas() {
   }
 
   function setStrokeProgressCallback(
-    cb: ((partial: { color: string; width: number; points: Array<{ x: number; y: number }> }) => void) | null,
+    cb:
+      | ((delta: { color: string; width: number; points: Array<{ x: number; y: number }>; first: boolean }) => void)
+      | null,
   ) {
     onStrokeProgress = cb;
   }
@@ -192,10 +215,14 @@ export function useDrawingCanvas() {
     }
   }
 
-  function drawStroke(stroke: DrawStroke) {
+  // `from` renders only the tail of a stroke (from index `from`), connecting to
+  // the previous point — used to draw incoming delta fragments incrementally
+  // without re-stroking the whole path. `from` = 0 draws the entire stroke.
+  function drawStroke(stroke: DrawStroke, from = 0) {
     if (!ctx.value || stroke.points.length === 0) return;
 
-    const firstPoint = stroke.points[0];
+    const startIdx = from > 0 ? from - 1 : 0;
+    const firstPoint = stroke.points[startIdx];
     if (!firstPoint) return;
 
     ctx.value.strokeStyle = stroke.color;
@@ -203,7 +230,7 @@ export function useDrawingCanvas() {
     ctx.value.beginPath();
     ctx.value.moveTo(firstPoint.x, firstPoint.y);
 
-    for (let i = 1; i < stroke.points.length; i++) {
+    for (let i = startIdx + 1; i < stroke.points.length; i++) {
       const point = stroke.points[i];
       if (point) {
         ctx.value.lineTo(point.x, point.y);

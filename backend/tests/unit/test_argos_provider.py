@@ -20,7 +20,7 @@ class _ProviderHarness(ArgosTranslationProvider):
 def _make_provider() -> _ProviderHarness:
     provider = _ProviderHarness.__new__(_ProviderHarness)
     provider.installed_pairs = set()
-    provider.available_packages: list[_FakePackage] = []
+    provider.available_packages = []
     provider.argos_package = _FakeArgosPackage()
     provider.argos_translate = _FakeArgosTranslate()
     return provider

@@ -120,7 +120,7 @@ describe("RoomAccessView", () => {
 
     expect(wrapper.text()).toContain("Room not found");
     expect(wrapper.text()).toContain("This room does not exist.");
-    expect(wrapper.findAll("button").some((button) => button.text().match(/back to lobby/i))).toBe(true);
+    expect(wrapper.findAll("button").some((button) => button.text().match(/back to home/i))).toBe(true);
   });
 
   it("rejects invalid room codes before hitting the network", async () => {

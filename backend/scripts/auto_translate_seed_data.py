@@ -12,7 +12,6 @@ import argparse
 import hashlib
 import logging
 import time
-import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +19,7 @@ import yaml
 
 from app.categories.models import normalize_locale_code
 from app.core.logging import configure_logging
+from app.scoring import normalize_text
 from translation import TranslationService
 
 if TYPE_CHECKING:
@@ -33,12 +33,6 @@ DEFAULT_SEED_PATH = Path(__file__).parent / "seed_data.yaml"
 SEED_HASH_FILE = DEFAULT_SEED_PATH.parent / ".seed_translation_hash"
 PROMPTS_KEY = "prompts"
 SYSTEM_CATEGORIES_KEY = "system_categories"
-
-
-def normalize_text(text: str) -> str:
-    """Normalize text for comparison: lowercase, strip, remove accents."""
-    lowered = text.lower().strip()
-    return unicodedata.normalize("NFD", lowered).encode("ascii", "ignore").decode("ascii")
 
 
 def _is_blank(value: object) -> bool:

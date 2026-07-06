@@ -43,7 +43,7 @@ defineProps<{
   right: calc(-1 * var(--space-8));
   transform: rotate(38deg);
   padding: var(--space-1) var(--space-8);
-  background: var(--color-marker-red);
+  background: var(--color-primary-strong);
   color: white;
   font-family: var(--font-display);
   font-weight: 700;

@@ -19,7 +19,7 @@ A live demo is hosted at [6ss.duinlab.nl](https://6ss.duinlab.nl).
 - **Backend** — FastAPI, SQLAlchemy, PostgreSQL, Redis
 - **Tooling** — pnpm, uv, just, Docker Compose, Vitest, Playwright, pytest
 
-It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI and WebSocket schemas shared by both sides).
+It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI and WebSocket schemas shared by both sides). See [docs/architecture.md](docs/architecture.md) for how the pieces fit together and [docs/adr/](docs/adr/) for design decisions.
 
 ## Status
 
@@ -37,9 +37,19 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 - Full mobile support (currently desktop-first)
 - Improved handling mid-game user disconnects
 
+## Accessibility
+
+Accessibility is checked three ways, all part of CI:
+
+- **Static a11y linting.** Biome's accessibility rules are enabled (`linter.rules.a11y: "on"` in `biome.json`) and run with `pnpm --dir frontend run lint`. This catches markup issues like missing labels, invalid ARIA, and non-interactive elements with click handlers.
+- **axe scans.** Playwright + [`@axe-core/playwright`](https://github.com/dequelabs/axe-core-npm) scan Home, the Settings panel, and the `/__ds` component-library page against WCAG 2.1 A/AA rule tags, in both light and dark themes. These run frontend-only (no backend) as the `a11y` CI job; run them locally with `just test-a11y`.
+- **Accessibility-tree assertions.** The broader Playwright e2e suite locates elements by ARIA role and accessible name (`getByRole`, including `getByRole("alert")`), so those flows only pass when the underlying roles and labels are present. Run locally with `just test-e2e` (this suite needs the backend stack).
+
+These check specific WCAG A/AA **rules** — a passing axe run flags no violations of those rules, but it is not a full manual audit and does **not** certify WCAG AA conformance.
+
 ## Running locally
 
-Requires Node 24+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
+Requires Node 26+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
 
 ```bash
 just install                                   # install dependencies
@@ -48,7 +58,17 @@ cp frontend/.env.example frontend/.env.local
 just dev                                        # Docker services + dev servers
 ```
 
-`just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more.
+`just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more, or [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to contribute.
+
+## Deployment
+
+The live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl) runs the self-hosted
+Docker Compose stack in [`compose.prod.yml`](compose.prod.yml), started on the
+host with `just up-prod`. Caddy serves the built SPA and proxies `/api` and `/ws`
+to the backend; PostgreSQL and Redis stay on the internal Docker network. The
+only external ingress is a Cloudflare Tunnel (`cloudflared`, Compose `tunnel`
+profile), so nothing is published directly to the internet. See
+[docs/architecture.md](docs/architecture.md) for the full topology.
 
 ## Attribution
 

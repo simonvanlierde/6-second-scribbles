@@ -75,3 +75,8 @@ seed-auto:
 [group('install')]
 install:
     uv sync --group dev
+
+# Bump dependencies to their latest versions.
+[group('install')]
+bump:
+    uv sync --group dev --upgrade

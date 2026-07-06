@@ -1,71 +1,61 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Lobby page", () => {
+// The name now lives in the Settings panel (opened from the gear), not on Home.
+async function setPlayerName(page: Parameters<Parameters<typeof test>[1]>[0]["page"], name: string) {
+  await page.getByRole("button", { name: /^settings$/i }).click();
+  const nameInput = page.getByPlaceholder(/pick a name/i);
+  await nameInput.fill(name);
+  await nameInput.press("Escape");
+  await expect(nameInput).toBeHidden();
+}
+
+test.describe("Home page", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
 
   test("renders key UI elements", async ({ page }) => {
     await expect(page.getByRole("heading", { name: /six second scribbles/i })).toBeVisible();
-    await expect(page.locator("#player-name")).toBeVisible();
     await expect(page.getByRole("button", { name: /create room/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /join room/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /join random room/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /quick-play/i })).toBeVisible();
+    await expect(page.locator("input.hd-input--code")).toBeVisible();
   });
 
-  test("create room button works when a name is entered", async ({ page }) => {
-    await page.locator("#player-name").fill("Test Player");
+  test("create room button works when a name is set", async ({ page }) => {
+    await setPlayerName(page, "Test Player");
     await page.getByRole("button", { name: /create room/i }).click();
-    // Should navigate away from lobby into a room
-    await expect(page).not.toHaveURL("/");
+    // Should navigate away from Home into a room
+    await expect(page).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
   });
 
-  test("shows an error when creating a room without a name", async ({ page }) => {
+  test("creating without a name opens the name prompt, then resumes", async ({ page }) => {
     await page.getByRole("button", { name: /create room/i }).click();
-    await expect(page.getByRole("alert")).toContainText(/name/i);
-  });
-
-  test("shows an error when joining without a name", async ({ page }) => {
-    await page.getByRole("button", { name: /join room/i }).click();
-    await expect(page.getByRole("alert")).toContainText(/name/i);
+    // Settings opens focused on the name field with a prompt explaining why.
+    const nameInput = page.getByPlaceholder(/pick a name/i);
+    await expect(nameInput).toBeVisible();
+    // Typing a name and confirming resumes the Create Room action.
+    await nameInput.fill("Late Namer");
+    await nameInput.press("Enter");
+    await expect(page).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
   });
 
   test("shows an error when joining without a room code", async ({ page }) => {
-    await page.locator("#player-name").fill("Test Player");
+    await setPlayerName(page, "Test Player");
     await page.getByRole("button", { name: /join room/i }).click();
     await expect(page.getByRole("alert")).toContainText(/room code/i);
   });
 
-  test("room code input: typing 6 characters fills all cells", async ({ page }) => {
-    const inputs = page.locator("input.code-input");
-    await expect(inputs).toHaveCount(6);
-
-    // Type one character into each cell
-    for (let i = 0; i < 6; i++) {
-      await inputs.nth(i).fill(String.fromCharCode(65 + i)); // A–F
-    }
-
-    // All 6 inputs should now have a value
-    for (let i = 0; i < 6; i++) {
-      await expect(inputs.nth(i)).not.toHaveValue("");
-    }
-  });
-
-  test("room code input: paste fills all cells at once", async ({ page }) => {
-    const firstInput = page.locator("input.code-input").first();
-    await firstInput.focus();
-    await page.keyboard.insertText("ABCDEF");
-    // Cells should collectively contain the pasted characters
-    const values = await page
-      .locator("input.code-input")
-      .evaluateAll((els) => (els as HTMLInputElement[]).map((el) => el.value).join(""));
-    expect(values.replace(/\s/g, "")).toMatch(/[A-Z0-9]{1,6}/);
+  test("room code input accepts a 6-character code", async ({ page }) => {
+    const input = page.locator("input.hd-input--code");
+    await input.fill("ABCDEF");
+    await expect(input).toHaveValue(/ABCDEF/i);
   });
 
   test("player name persists after page reload", async ({ page }) => {
-    await page.locator("#player-name").fill("Persistent Player");
+    await setPlayerName(page, "Persistent Player");
     await page.reload();
-    // Name should be restored from localStorage
-    await expect(page.locator("#player-name")).toHaveValue("Persistent Player");
+    await page.getByRole("button", { name: /^settings$/i }).click();
+    await expect(page.getByPlaceholder(/pick a name/i)).toHaveValue("Persistent Player");
   });
 });

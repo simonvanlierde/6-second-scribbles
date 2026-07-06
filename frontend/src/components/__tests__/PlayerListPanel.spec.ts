@@ -31,6 +31,12 @@ describe("PlayerListPanel", () => {
     return store;
   }
 
+  function rowFor(wrapper: ReturnType<typeof mount>, playerName: string) {
+    const row = wrapper.findAll("li").find((item) => item.text().includes(playerName));
+    if (!row) throw new Error(`Missing row for ${playerName}`);
+    return row;
+  }
+
   it("shows Kick for the host on non-host rows", async () => {
     const store = seedPlayers();
     store.localPlayerId = "p1";
@@ -86,5 +92,44 @@ describe("PlayerListPanel", () => {
       .find((button) => button.text() === "Vote kick")
       ?.trigger("click");
     expect(playerWrapper.text()).toContain("Start vote-kick?");
+  });
+
+  it("casts a vote when a kick vote is already active", async () => {
+    const store = seedPlayers();
+    store.localPlayerId = "p2";
+    store.startKickVote("p3", {
+      currentVotes: 1,
+      requiredVotes: 2,
+      expiresAt: Date.now() + 30_000,
+    });
+
+    const wrapper = mount(PlayerListPanel);
+    await rowFor(wrapper, "Player Three")
+      .findAll("button")
+      .find((button) => button.text() === "Vote kick")
+      ?.trigger("click");
+
+    expect(wrapper.text()).toContain("Vote: 1/2");
+    expect(sendMock).toHaveBeenCalledWith({
+      type: "cast_kick_vote",
+      targetPlayerId: "p3",
+    });
+  });
+
+  it("confirms a host kick by initiating a kick request", async () => {
+    const store = seedPlayers();
+    store.localPlayerId = "p1";
+
+    const wrapper = mount(PlayerListPanel);
+    await rowFor(wrapper, "Player Two")
+      .findAll("button")
+      .find((button) => button.text() === "Kick player")
+      ?.trigger("click");
+    await wrapper.find('[data-testid="hd-dialog-confirm"]').trigger("click");
+
+    expect(sendMock).toHaveBeenCalledWith({
+      type: "initiate_kick",
+      targetPlayerId: "p2",
+    });
   });
 });

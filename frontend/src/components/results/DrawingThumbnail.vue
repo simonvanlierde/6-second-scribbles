@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import { getAvatarInitial } from "@/composables/useAvatar";
 
-defineProps<{
+const props = defineProps<{
   drawing?: string;
   name: string;
   color: string;
@@ -12,12 +12,23 @@ defineProps<{
 }>();
 
 const broken = ref(false);
+
+// The instance is reused across rounds (keyed by player id), so clear a stale
+// error when a new drawing arrives — otherwise one failed load pins the
+// placeholder for the rest of the game.
+watch(
+  () => props.drawing,
+  () => {
+    broken.value = false;
+  },
+);
 </script>
 
 <template>
   <figure class="thumb">
     <HdAvatar class="thumb__avatar" :initial="getAvatarInitial(name)" :color="color" size="sm" />
     <div class="thumb__stage">
+      <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: @error is a resource-load fallback, not a user interaction -->
       <img v-if="drawing && !broken" :src="drawing" :alt="alt" class="thumb__img" @error="broken = true">
       <span v-else class="thumb__placeholder" aria-hidden="true">
         <svg

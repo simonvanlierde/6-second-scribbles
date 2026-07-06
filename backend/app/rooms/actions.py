@@ -10,6 +10,7 @@ from app.rooms import rounds
 from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
+    DrawStrokePartialEvent,
     HostRestoredEvent,
     JoinErrorEvent,
     PlayerJoinedEvent,
@@ -31,7 +32,6 @@ if TYPE_CHECKING:
         DefaultLocaleUpdateEvent,
         DrawpadClearEvent,
         DrawStrokeEvent,
-        DrawStrokePartialEvent,
         InitiateKickEvent,
         JoinEvent,
         LeaveEvent,
@@ -250,7 +250,7 @@ async def handle_room_custom_categories_update(
     session.room.metadata.custom_category_ids = sorted(set(category_ids)) if category_ids is not None else None
     await broadcast_and_persist(
         session,
-        RoomCustomCategoriesUpdateServerEvent(category_ids=session.room.metadata.custom_category_ids),
+        RoomCustomCategoriesUpdateServerEvent(categoryIds=session.room.metadata.custom_category_ids),
     )
 
 
@@ -258,6 +258,7 @@ async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClea
     """Handle a drawpad-clear event."""
     if not await require_host(session, "clear the drawpad"):
         return
+    session.room.clear_lobby_strokes()
     await session.room.broadcast(event)
 
 
@@ -304,12 +305,18 @@ async def handle_request_game_state(session: RoomWebSocketSession, event: Reques
 async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEvent | DrawStrokePartialEvent) -> None:
     """Handle a draw-stroke event (broadcast as-is).
 
-    A completed stroke carries a full `drawing` PNG; retain the latest one per
-    player so reconnecting clients can recover it via room_state.
+    The in-game path carries a full `drawing` PNG; retain the latest one per player
+    so reconnecting clients recover it via room_state. The lobby shared drawpad
+    relays vector `stroke` fragments; fold those into the room's authoritative
+    stroke list so late joiners hydrate the collective doodle via room_state.
     """
-    drawing = (event.model_extra or {}).get("drawing")
-    if session.player_id and isinstance(drawing, str):
-        session.room.round_drawings[session.player_id] = drawing
+    if isinstance(event, DrawStrokePartialEvent):
+        if session.player_id and event.stroke is not None:
+            session.room.apply_lobby_partial(session.player_id, event.stroke, is_start=event.stroke_start)
+    else:
+        drawing = (event.model_extra or {}).get("drawing")
+        if session.player_id and isinstance(drawing, str):
+            session.room.round_drawings[session.player_id] = drawing
     await session.room.broadcast(event)
 
 

@@ -14,7 +14,10 @@ import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEventGroup, ServerEventOf } from "@/generated/protocol";
 import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
+import { createLogger } from "@/shared/logger";
 import type { useGameStore } from "@/stores/game";
+
+const log = createLogger("WebSocket");
 
 export type ShowNotification = (text: string, type?: NotificationType, duration?: number) => void;
 
@@ -68,12 +71,12 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
       }
 
       showNotification(message.message || i18n.global.t("notifications.unableToJoinRoom"), "error");
-      console.error("[WebSocket] Join error:", message.message);
+      log.error("Join error:", message.message);
       setTimeout(() => router.push({ name: "home" }), UI_TIMINGS.JOIN_ERROR_REDIRECT_MS);
       break;
 
     case "host_restored":
-      console.log("[WebSocket] Host status restored");
+      log.info("Host status restored");
       showNotification(i18n.global.t("notifications.hostStatusRestored"), "success");
       break;
 
@@ -111,7 +114,9 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
         const nextHost = store.players.get(message.newHostId);
         showNotification(
           nextHost
-            ? i18n.global.t("notifications.hostChanged", { name: nextHost.name })
+            ? i18n.global.t("notifications.hostChanged", {
+                name: nextHost.name,
+              })
             : i18n.global.t("notifications.hostChangedFallback"),
         );
       }
@@ -139,7 +144,7 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
         store.roundStartTime = message.roundStartTime;
         store.startRound(message.round ?? 1, message.cards);
       } else {
-        console.error("[WebSocket] Invalid cards in start_round message:", message);
+        log.error("Invalid cards in start_round message:", message);
       }
       break;
 
@@ -218,14 +223,25 @@ export function handleDrawingEvent(message: DrawingEvent, ctx: HandlerContext): 
 
   switch (message.type) {
     case "draw_stroke":
-    case "draw_stroke_partial":
+      // A completed stroke carries the full PNG for the shared/round drawing.
       if (typeof message.drawing === "string" && message.playerId && message.playerId !== store.localPlayerId) {
         store.setPlayerDrawing(message.playerId, message.drawing);
-        break;
       }
+      break;
 
-      if (message.stroke && message.playerId !== store.localPlayerId) {
-        store.addStroke(message.stroke);
+    case "draw_stroke_partial":
+      // An in-progress stroke arrives as delta fragments; append them to the
+      // sender's active stroke (a new stroke when strokeStart is set).
+      if (message.stroke && message.playerId && message.playerId !== store.localPlayerId) {
+        store.applyPartialStroke(
+          message.playerId,
+          {
+            color: message.stroke.color,
+            width: message.stroke.width,
+            points: message.stroke.points ?? [],
+          },
+          message.strokeStart ?? false,
+        );
       }
       break;
 
@@ -267,9 +283,17 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
         expiresAt: message.expiresAt,
       });
       if (message.initiatorId === store.localPlayerId) {
-        showNotification(i18n.global.t("moderation.kickVoteStartedByYou", { name: message.targetPlayerName }));
+        showNotification(
+          i18n.global.t("moderation.kickVoteStartedByYou", {
+            name: message.targetPlayerName,
+          }),
+        );
       } else {
-        showNotification(i18n.global.t("moderation.kickVoteStarted", { name: message.targetPlayerName }));
+        showNotification(
+          i18n.global.t("moderation.kickVoteStarted", {
+            name: message.targetPlayerName,
+          }),
+        );
       }
       break;
 
@@ -288,14 +312,22 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
         store.reset();
         router.push({ name: "home" });
       } else {
-        showNotification(i18n.global.t("moderation.playerKicked", { name: message.playerName }));
+        showNotification(
+          i18n.global.t("moderation.playerKicked", {
+            name: message.playerName,
+          }),
+        );
       }
       break;
 
-    case "kick_vote_expired":
+    case "kick_vote_expired": {
+      // The event carries only the id, so resolve the display name from the store
+      // (falling back to a generic label rather than showing a raw player id).
+      const targetName = store.players.get(message.targetPlayerId)?.name ?? i18n.global.t("common.unknown");
       store.removeKickVote(message.targetPlayerId);
-      showNotification(i18n.global.t("moderation.kickVoteExpired", { name: message.targetPlayerId }));
+      showNotification(i18n.global.t("moderation.kickVoteExpired", { name: targetName }));
       break;
+    }
 
     case "kick_error":
       showNotification(message.error || i18n.global.t("moderation.kickRequestFailed"), "error");

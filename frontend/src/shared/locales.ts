@@ -15,21 +15,6 @@ export const SUPPORTED_LOCALES = [
   "zh-TW",
 ] as const;
 
-export const PLAYABLE_CONTENT_LOCALES = [
-  "en",
-  "de",
-  "es",
-  "fr",
-  "it",
-  "ja",
-  "ko",
-  "nl",
-  "pl",
-  "pt",
-  "zh-CN",
-  "zh-TW",
-] as const;
-
 export type LocaleAvailability = LocaleAvailabilityItem;
 
 export type LocaleOption = {
@@ -49,7 +34,9 @@ export const LOCALE_LABELS: Record<string, string> = {
   nl: "Nederlands",
   pl: "Polski",
   pt: "Português",
+  // biome-ignore lint/security/noSecrets: This is not a secret, it's just a label for a locale.
   "zh-CN": "中文（简体）",
+  // biome-ignore lint/security/noSecrets: This is not a secret, it's just a label for a locale.
   "zh-TW": "中文（繁體）",
 };
 

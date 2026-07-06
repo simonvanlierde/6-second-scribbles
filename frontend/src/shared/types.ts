@@ -11,12 +11,6 @@ export interface Card {
   alternatives?: Record<string, string[]> | null;
 }
 
-export interface Deck {
-  easy: Card[];
-  medium: Card[];
-  hard: Card[];
-}
-
 export type Difficulty = ContractDifficulty;
 export type GamePhase = ContractGamePhase;
 
@@ -28,25 +22,6 @@ export interface Player {
   currentCard?: Card;
   drawing?: string; // Base64 data URL of canvas drawing
   connected: boolean; // false while disconnected/"reconnecting"
-}
-
-export interface GameState {
-  roomCode: string;
-  players: Map<string, Player>;
-  currentRound: number;
-  maxRounds: number;
-  roundStartTime?: number; // Unix timestamp when the current round started (server-generated)
-  guessingStartTime?: number; // Unix timestamp when the guessing phase started (server-generated)
-  drawingTimeLimit?: number; // Drawing duration in seconds (host-configured)
-  guessingTimeLimit?: number; // Guessing duration in seconds (host-configured)
-  guessTargets?: Record<string, string>; // One assigned drawing target per player
-  gamePhase: GamePhase;
-}
-
-export interface GuessSubmission {
-  playerId: string;
-  targetPlayerId: string;
-  guesses: string[];
 }
 
 export interface RoundResult {

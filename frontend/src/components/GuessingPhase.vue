@@ -59,16 +59,25 @@ const draft = useRoundDraft<Record<string, string[]>>(STORAGE_KEYS.GUESSING_STAT
   active: () => !allGuessesSubmitted.value,
 });
 
+// Ensure the assigned target always has at least one (empty) guess field.
+// Seeding here (not lazily inside the template) keeps guessesFor a pure read,
+// so rendering never mutates reactive state.
+function ensureAssignedGuess() {
+  const target = assignedTargetPlayerId.value;
+  if (target && !playerGuesses.value[target]) playerGuesses.value[target] = [""];
+}
+
+// Seed synchronously so the first render already shows an input.
+ensureAssignedGuess();
+
 onMounted(() => {
   submittedPlayers.value = [];
-  if (!draft.restore() && assignedTargetPlayerId.value) {
-    playerGuesses.value[assignedTargetPlayerId.value] = [""];
-  }
+  draft.restore();
+  ensureAssignedGuess();
 });
 
 function guessesFor(playerId: string): string[] {
-  if (!playerGuesses.value[playerId]) playerGuesses.value[playerId] = [""];
-  return playerGuesses.value[playerId] as string[];
+  return playerGuesses.value[playerId] ?? [];
 }
 
 function onGuessInput(playerId: string, idx: number) {
@@ -166,6 +175,7 @@ function confirmLeave() {
             {{ $t("guessing.guessPlayerDrawing", { name: assignedTargetPlayer.name }) }}
           </h2>
           <div class="drawing-frame__stage">
+            <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: @error is a resource-load fallback, not a user interaction -->
             <img
               v-if="assignedTargetPlayer.drawing && !brokenImages.has(assignedTargetPlayer.id)"
               :src="assignedTargetPlayer.drawing"

@@ -22,7 +22,12 @@ vi.mock("@/stores/game", () => ({
     roomCode: "ROOM1",
     gamePhase: "drawing",
     playersList: [
-      { id: "p1", name: "Alice", score: 12, drawing: "data:image/png;base64,abc" },
+      {
+        id: "p1",
+        name: "Alice",
+        score: 12,
+        drawing: "data:image/png;base64,abc",
+      },
       { id: "p2", name: "Bob", score: 9 },
     ],
     reset: resetMock,

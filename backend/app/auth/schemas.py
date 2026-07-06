@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field
 class GuestAuthRequest(BaseModel):
     """Optional request body for guest session bootstrap."""
 
-    preferred_locale: str = Field(default="en", alias="preferredLocale")
-    display_name: str | None = Field(default=None, alias="displayName")
+    # Bounds match the DB columns (display_name String(80), preferred_locale
+    # String(16)); without them an over-long value is a 500 on commit, not a 422.
+    preferred_locale: str = Field(default="en", alias="preferredLocale", max_length=16)
+    display_name: str | None = Field(default=None, alias="displayName", max_length=80)
 
 
 class RegisterRequest(BaseModel):
@@ -17,8 +19,8 @@ class RegisterRequest(BaseModel):
 
     username: str = Field(min_length=3, max_length=40, pattern=r"^[a-zA-Z0-9_-]+$")
     password: str = Field(min_length=8, max_length=128)
-    preferred_locale: str = Field(default="en", alias="preferredLocale")
-    display_name: str | None = Field(default=None, alias="displayName")
+    preferred_locale: str = Field(default="en", alias="preferredLocale", max_length=16)
+    display_name: str | None = Field(default=None, alias="displayName", max_length=80)
 
 
 class LoginRequest(BaseModel):

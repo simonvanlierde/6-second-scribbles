@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ "update:modelValue": [string] }>();
 
 // Fallback group name if not supplied — stable within the component lifetime.
+// biome-ignore lint/suspicious/noBitwiseOperators: `| 0` truncates the random float to an int.
 const groupName = computed(() => props.name ?? `hd-seg-${(Math.random() * 1e6) | 0}`);
 
 function onChange(value: string): void {
@@ -30,6 +31,7 @@ function onChange(value: string): void {
 
 <template>
   <div class="hd-seg" role="radiogroup" :aria-label="props.ariaLabel">
+    <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the radio input and its text; Biome misses controls inside v-for labels -->
     <label
       v-for="opt in props.options"
       :key="opt.value"

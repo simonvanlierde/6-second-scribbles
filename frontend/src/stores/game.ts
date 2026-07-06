@@ -1,12 +1,20 @@
-import { defineStore, storeToRefs } from "pinia";
+import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { normalizeGamePhase } from "@/shared/gamePhase";
-import type { Card, Difficulty, GalleryDrawing, KickVote, Player, RoundHighlights, RoundResult } from "@/shared/types";
-import { useDrawingStore } from "./drawing";
+import type {
+  Card,
+  Difficulty,
+  DrawStroke,
+  GalleryDrawing,
+  KickVote,
+  Player,
+  RoundHighlights,
+  RoundResult,
+} from "@/shared/types";
 
 function getBrowserLocale(): string {
   if (typeof navigator === "undefined" || !navigator.language) {
@@ -19,14 +27,53 @@ function getBrowserLocale(): string {
 export const useGameStore = defineStore(
   "game",
   () => {
-    const drawing = useDrawingStore();
-    const { currentStrokes, localPadVisible, roomPadVisible } = storeToRefs(drawing);
+    // --- Drawing ---
+    const currentStrokes = ref<DrawStroke[]>([]);
+    const localPadVisible = ref<boolean>(true);
+    const roomPadVisible = ref<boolean>(true);
+    // Index into currentStrokes of each remote player's in-progress stroke, so
+    // delta fragments append to the same stroke instead of creating a new entry
+    // per frame (the source of the old O(n^2) growth).
+    const partialStrokeIndex = new Map<string, number>();
+
+    // Prior/completed strokes are hydrated from room_state.lobbyStrokes on join
+    // (the server reconstructs them from these same partials). A stroke still in
+    // progress exactly at join time may restart on its next fragment — a one-stroke
+    // seam, not a permanent gap.
+    function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean) {
+      const idx = partialStrokeIndex.get(playerId);
+      if (isStart || idx === undefined || !currentStrokes.value[idx]) {
+        currentStrokes.value.push({
+          color: stroke.color,
+          width: stroke.width,
+          points: [...stroke.points],
+        });
+        partialStrokeIndex.set(playerId, currentStrokes.value.length - 1);
+      } else {
+        currentStrokes.value[idx].points.push(...stroke.points);
+      }
+    }
+
+    function clearStrokes() {
+      currentStrokes.value = [];
+      partialStrokeIndex.clear();
+    }
+
+    function setRoomPadVisible(visible: boolean) {
+      roomPadVisible.value = visible;
+    }
+
+    function setLocalPadVisible(visible: boolean) {
+      localPadVisible.value = visible;
+    }
 
     // --- Player identity ---
     const localPlayerId = ref<string>("");
     const localPlayerName = ref<string>("");
     const localPlayerLocale = ref<string>(getBrowserLocale());
-    const localPlayerColor = ref<AvatarColor>(AVATAR_COLORS[0]);
+    // Null until chosen or derived: setLocalPlayer fills it with a deterministic
+    // per-id colour so fresh players don't all default to the same one.
+    const localPlayerColor = ref<AvatarColor | null>(null);
     const pendingLocalPlayerId = ref<string | null>(null);
     const pendingLocalPlayerName = ref<string | null>(null);
     const isSpectatorMode = ref<boolean>(false);
@@ -58,6 +105,10 @@ export const useGameStore = defineStore(
     // (base64 PNGs are large) — rebuilt round-by-round as each round completes.
     const drawingHistory = ref<GalleryDrawing[]>([]);
     const totalGuessesMade = ref<number>(0);
+    // Highest round already folded into the gallery/stats. Rounds arrive in order,
+    // so this dedupes a resent round_complete even for a round that produced no
+    // drawings (where drawingHistory alone would stay empty and re-count).
+    const lastCapturedRound = ref<number>(0);
     const readyCount = ref<number>(0);
     const totalPlayers = ref<number>(0);
 
@@ -65,10 +116,12 @@ export const useGameStore = defineStore(
     const defaultLocale = ref<string>("en");
     const customCategoryIds = ref<number[] | null>(null);
     const isPrivateRoom = ref<boolean>(false);
-    const categories = ref<string[]>([]);
 
     // --- Computed ---
     const localPlayer = computed(() => players.value.get(localPlayerId.value));
+    // Resolved avatar colour: the chosen colour, or a deterministic per-id one.
+    // Centralised so consumers don't each re-hardcode the `?? getAvatarColor` fallback.
+    const localAvatarColor = computed(() => localPlayerColor.value ?? getAvatarColor(localPlayerId.value));
     const playersList = computed(() => Array.from(players.value.values()));
     const canStartGame = computed(() => players.value.size >= 2 && gamePhase.value === "lobby");
     const isHost = computed(() => hostId.value === localPlayerId.value);
@@ -116,16 +169,6 @@ export const useGameStore = defineStore(
       roomCode.value = code;
     }
 
-    /** @deprecated Use setRoomCode — persistence is now automatic */
-    function setRoomCodeAndSave(code: string) {
-      setRoomCode(code);
-    }
-
-    /** @deprecated Use setLocalPlayer — persistence is now automatic */
-    function setLocalPlayerAndSave(id: string, name: string) {
-      setLocalPlayer(id, name);
-    }
-
     function addPlayer(id: string, name: string) {
       if (!players.value.has(id)) {
         players.value.set(id, { id, name, score: 0, connected: true });
@@ -135,7 +178,14 @@ export const useGameStore = defineStore(
       }
     }
 
-    function setPlayers(nextPlayers: Array<{ id: string; name: string; color?: string | null; connected?: boolean }>) {
+    function setPlayers(
+      nextPlayers: Array<{
+        id: string;
+        name: string;
+        color?: string | null;
+        connected?: boolean;
+      }>,
+    ) {
       const next = new Map<string, Player>();
       for (const incoming of nextPlayers) {
         const existing = players.value.get(incoming.id);
@@ -162,10 +212,6 @@ export const useGameStore = defineStore(
         next.delete(id);
         players.value = next;
       }
-    }
-
-    function clearPlayers() {
-      players.value.clear();
     }
 
     function setHost(id: string | null) {
@@ -205,6 +251,7 @@ export const useGameStore = defineStore(
       for (const p of players.value.values()) p.score = 0;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
+      lastCapturedRound.value = 0;
     }
 
     function startRound(roundNumber: number, cards: Record<string, Card>) {
@@ -214,7 +261,7 @@ export const useGameStore = defineStore(
       totalPlayers.value = players.value.size;
       guessingStartTime.value = undefined;
       guessTargets.value = {};
-      drawing.clearStrokes();
+      clearStrokes();
       localPlayerCard.value = undefined;
       for (const [playerId, player] of players.value) {
         player.currentCard = cards[playerId];
@@ -230,6 +277,7 @@ export const useGameStore = defineStore(
       for (const p of players.value.values()) p.score = 0;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
+      lastCapturedRound.value = 0;
     }
 
     function startGuessing(startTime?: number | null, targets?: Record<string, string>) {
@@ -261,6 +309,10 @@ export const useGameStore = defineStore(
      * hold this round's `.drawing` (startRound clears them on the next round).
      */
     function captureRoundDrawings(round: number) {
+      // Idempotent: a resent/duplicate round_complete must not double-list
+      // drawings in the gallery or double-count guesses in the running total.
+      if (round <= lastCapturedRound.value) return;
+      lastCapturedRound.value = round;
       for (const player of players.value.values()) {
         if (player.drawing) {
           drawingHistory.value.push({
@@ -332,7 +384,6 @@ export const useGameStore = defineStore(
     function applyRoomState(roomState: ServerEventOf<"room_state">) {
       setPlayers(roomState.players);
       hostId.value = roomState.hostId ?? null;
-      categories.value = roomState.categories ?? [];
       gamePhase.value = normalizeGamePhase(roomState.gamePhase);
       if (roomState.currentRound !== undefined) currentRound.value = roomState.currentRound;
       applySettingsUpdate({
@@ -363,8 +414,22 @@ export const useGameStore = defineStore(
           color: entry.color ?? getAvatarColor(entry.playerId),
           drawing: entry.drawing,
         }));
+        // Keep the dedupe cursor in step so a re-delivered round_complete for a
+        // round already in the rebuilt gallery isn't folded in a second time.
+        lastCapturedRound.value = Math.max(...roomState.drawingHistory.map((e) => e.round), lastCapturedRound.value);
       }
-      if (roomState.padVisibility !== undefined) drawing.setRoomPadVisible(roomState.padVisibility);
+      // Hydrate the shared lobby doodle so a late joiner/reconnect sees the strokes
+      // drawn before they arrived, not a blank canvas. Only when we hold none yet,
+      // so we never clobber strokes already applied from live partials.
+      if (currentStrokes.value.length === 0 && roomState.lobbyStrokes?.length) {
+        currentStrokes.value = roomState.lobbyStrokes.map((s) => ({
+          color: s.color,
+          width: s.width,
+          points: [...(s.points ?? [])],
+        }));
+        partialStrokeIndex.clear();
+      }
+      if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
       customCategoryIds.value = roomState.customCategoryIds ?? null;
       if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
@@ -377,7 +442,7 @@ export const useGameStore = defineStore(
       }
     }
 
-    // --- Actions: drawing (delegated to useDrawingStore; proxied here for backward compat) ---
+    // --- Actions: drawing ---
     function setPlayerDrawing(playerId: string, playerDrawing: string) {
       const player = players.value.get(playerId);
       if (player) {
@@ -409,18 +474,18 @@ export const useGameStore = defineStore(
       drawingTimeLimit.value = GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT;
       guessingTimeLimit.value = GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT;
       guessTargets.value = {};
-      drawing.clearStrokes();
+      clearStrokes();
       localPlayerCard.value = undefined;
       isSpectatorMode.value = false;
       lastRoundResults.value = [];
       lastHighlights.value = null;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
-      categories.value = [];
+      lastCapturedRound.value = 0;
       readyCount.value = 0;
       totalPlayers.value = 0;
-      drawing.setLocalPadVisible(true);
-      drawing.setRoomPadVisible(true);
+      setLocalPadVisible(true);
+      setRoomPadVisible(true);
       defaultLocale.value = "en";
       customCategoryIds.value = null;
       localPlayerLocale.value = getBrowserLocale();
@@ -445,7 +510,7 @@ export const useGameStore = defineStore(
       guessingStartTime,
       drawingTimeLimit,
       guessingTimeLimit,
-      // Drawing state (refs from useDrawingStore — auto-unwrapped by Pinia)
+      // Drawing state
       currentStrokes,
       localPadVisible,
       roomPadVisible,
@@ -455,7 +520,6 @@ export const useGameStore = defineStore(
       lastHighlights,
       drawingHistory,
       totalGuessesMade,
-      categories,
       guessTargets,
       readyCount,
       totalPlayers,
@@ -463,6 +527,7 @@ export const useGameStore = defineStore(
       customCategoryIds,
       localPlayerLocale,
       localPlayerColor,
+      localAvatarColor,
       kickVotes,
       isPrivateRoom,
 
@@ -481,12 +546,9 @@ export const useGameStore = defineStore(
       setLocalPlayerLocale,
       setLocalPlayerColor,
       setRoomCode,
-      setRoomCodeAndSave,
-      setLocalPlayerAndSave,
       addPlayer,
       setPlayers,
       removePlayer,
-      clearPlayers,
       setHost,
       startKickVote,
       updateKickVote,
@@ -508,13 +570,13 @@ export const useGameStore = defineStore(
       setPrivacy,
       applySettingsUpdate,
       applyRoomState,
-      // Drawing actions proxied from useDrawingStore
-      addStroke: drawing.addStroke,
-      clearStrokes: drawing.clearStrokes,
+      // Drawing actions
+      applyPartialStroke,
+      clearStrokes,
       setPlayerDrawing,
       setPlayerConnected,
-      setRoomPadVisible: drawing.setRoomPadVisible,
-      setLocalPadVisible: drawing.setLocalPadVisible,
+      setRoomPadVisible,
+      setLocalPadVisible,
       reset,
     };
   },
@@ -525,7 +587,15 @@ export const useGameStore = defineStore(
       // state (phase, round, timers, guess targets, settings) is server-owned and
       // rehydrated from room_state on (re)connect — persisting it would let a
       // reloaded client render stale, un-synced state. See `hydrated`.
-      pick: ["localPlayerId", "localPlayerName", "localPlayerLocale", "localPlayerColor", "roomCode", "defaultLocale"],
+      pick: [
+        "localPlayerId",
+        "localPlayerName",
+        "localPlayerLocale",
+        "localPlayerColor",
+        "roomCode",
+        "defaultLocale",
+        "localPadVisible",
+      ],
     },
   },
 );

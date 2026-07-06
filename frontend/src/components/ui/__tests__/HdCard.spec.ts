@@ -15,7 +15,10 @@ describe("HdCard", () => {
   });
 
   it("applies the postit variant class", () => {
-    const w = mount(HdCard, { props: { variant: "postit" }, slots: { default: "x" } });
+    const w = mount(HdCard, {
+      props: { variant: "postit" },
+      slots: { default: "x" },
+    });
     expect(w.classes()).toContain("hd-card--postit");
   });
 });

@@ -15,12 +15,18 @@ describe("HdPill", () => {
   });
 
   it("applies the info variant class", () => {
-    const w = mount(HdPill, { props: { variant: "info" }, slots: { default: "x" } });
+    const w = mount(HdPill, {
+      props: { variant: "info" },
+      slots: { default: "x" },
+    });
     expect(w.classes()).toContain("hd-pill--info");
   });
 
   it("applies the success variant class", () => {
-    const w = mount(HdPill, { props: { variant: "success" }, slots: { default: "x" } });
+    const w = mount(HdPill, {
+      props: { variant: "success" },
+      slots: { default: "x" },
+    });
     expect(w.classes()).toContain("hd-pill--success");
   });
 });

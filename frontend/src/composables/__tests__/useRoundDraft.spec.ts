@@ -98,7 +98,10 @@ describe("useRoundDraft", () => {
     });
 
     window.dispatchEvent(new Event("pagehide"));
-    expect(JSON.parse(localStorage.getItem(KEY) ?? "{}")).toEqual({ round: 3, data: ["dog"] });
+    expect(JSON.parse(localStorage.getItem(KEY) ?? "{}")).toEqual({
+      round: 3,
+      data: ["dog"],
+    });
 
     api.clear();
     expect(localStorage.getItem(KEY)).toBeNull();

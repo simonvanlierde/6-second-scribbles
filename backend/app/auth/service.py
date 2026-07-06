@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.auth.security import hash_password, verify_password
 from app.core.redis import create_session, delete_session, get_session_user_id
@@ -22,7 +23,18 @@ def _new_user_id() -> str:
 
 
 def _new_guest_username() -> str:
-    return f"guest-{secrets.token_hex(4)}"
+    # 64 bits of entropy: at 32 bits (token_hex(4)) guest names collided against
+    # the UNIQUE constraint around ~77k accounts, turning into intermittent 500s.
+    return f"guest-{secrets.token_hex(8)}"
+
+
+async def _commit_or_username_conflict(db: AsyncSession) -> None:
+    """Commit, translating a username UNIQUE violation into a clean 409."""
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Username is already taken") from exc
 
 
 async def create_guest_user(
@@ -31,17 +43,23 @@ async def create_guest_user(
     preferred_locale: str,
     display_name: str | None,
 ) -> User:
-    """Create a lightweight guest user."""
-    user = User(
-        id=_new_user_id(),
-        username=_new_guest_username(),
-        display_name=display_name,
-        preferred_locale=preferred_locale,
-        password_hash=None,
-    )
-    db.add(user)
-    await db.commit()
-    return user
+    """Create a lightweight guest user, retrying on the rare username collision."""
+    for _ in range(3):
+        user = User(
+            id=_new_user_id(),
+            username=_new_guest_username(),
+            display_name=display_name,
+            preferred_locale=preferred_locale,
+            password_hash=None,
+        )
+        db.add(user)
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            continue
+        return user
+    raise HTTPException(status_code=500, detail="Could not allocate a guest account. Try again.")
 
 
 async def register_user(
@@ -65,7 +83,7 @@ async def register_user(
         current_user.password_hash = password_hash
         current_user.preferred_locale = preferred_locale
         current_user.display_name = display_name
-        await db.commit()
+        await _commit_or_username_conflict(db)
         return current_user
 
     user = User(
@@ -76,7 +94,7 @@ async def register_user(
         display_name=display_name,
     )
     db.add(user)
-    await db.commit()
+    await _commit_or_username_conflict(db)
     return user
 
 

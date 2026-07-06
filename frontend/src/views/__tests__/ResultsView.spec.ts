@@ -13,6 +13,7 @@ type StoreMock = {
   localPlayerId: string;
   localPlayerName: string;
   localPlayerColor: string;
+  localAvatarColor: string;
   isHost: boolean;
   gamePhase: string;
   roomCode: string;
@@ -20,7 +21,12 @@ type StoreMock = {
   totalPlayers: number;
   maxRounds: number;
   currentRound: number;
-  playersList: Array<{ id: string; name: string; score: number; color?: string | null }>;
+  playersList: Array<{
+    id: string;
+    name: string;
+    score: number;
+    color?: string | null;
+  }>;
   players: Map<string, { id: string; name: string; color?: string | null }>;
   difficulty: string;
   drawingHistory: GalleryDrawing[];
@@ -50,11 +56,17 @@ vi.mock("@/stores/game", () => ({
 }));
 
 function createStoreMock(finalScores: FinalScore[], overrides: Partial<StoreMock> = {}): StoreMock {
-  const playersList = finalScores.map((p) => ({ id: p.playerId, name: p.playerName, score: p.score, color: null }));
+  const playersList = finalScores.map((p) => ({
+    id: p.playerId,
+    name: p.playerName,
+    score: p.score,
+    color: null,
+  }));
   return {
     localPlayerId: "p1",
     localPlayerName: "Alice",
     localPlayerColor: "#ffb4a2",
+    localAvatarColor: "#ffb4a2",
     isHost: true,
     gamePhase: "final_results",
     roomCode: "ROOM1",
@@ -113,8 +125,20 @@ describe("ResultsView", () => {
   it("shows game stats including drawings and correct guesses", () => {
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }], {
       drawingHistory: [
-        { round: 1, playerId: "p1", name: "Alice", color: "#fff", drawing: "data:,1" },
-        { round: 2, playerId: "p1", name: "Alice", color: "#fff", drawing: "data:,2" },
+        {
+          round: 1,
+          playerId: "p1",
+          name: "Alice",
+          color: "#fff",
+          drawing: "data:,1",
+        },
+        {
+          round: 2,
+          playerId: "p1",
+          name: "Alice",
+          color: "#fff",
+          drawing: "data:,2",
+        },
       ],
       totalGuessesMade: 7,
     });
@@ -127,7 +151,15 @@ describe("ResultsView", () => {
 
   it("renders the all-drawings gallery from drawingHistory", () => {
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }], {
-      drawingHistory: [{ round: 1, playerId: "p1", name: "Alice", color: "#fff", drawing: "data:,1" }],
+      drawingHistory: [
+        {
+          round: 1,
+          playerId: "p1",
+          name: "Alice",
+          color: "#fff",
+          drawing: "data:,1",
+        },
+      ],
     });
     const wrapper = mount(ResultsView);
     expect(wrapper.findAll(".gallery__cell")).toHaveLength(1);
@@ -150,7 +182,10 @@ describe("ResultsView", () => {
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }], { isHost: false });
     const wrapper = mount(ResultsView);
     await wrapper.find(".final-cta__again").trigger("click");
-    expect(sendMock).toHaveBeenCalledWith({ type: "player_ready", playerId: "p1" });
+    expect(sendMock).toHaveBeenCalledWith({
+      type: "player_ready",
+      playerId: "p1",
+    });
   });
 
   it("back-home leaves immediately when no confirmation is needed", async () => {

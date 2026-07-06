@@ -1,4 +1,3 @@
-import { Howl } from "howler";
 import { customRef } from "vue";
 
 export const SOUND_KEYS = {
@@ -47,25 +46,26 @@ const enabled = customRef<boolean>((track, trigger) => {
   };
 });
 
-const cache = new Map<SoundKey, Howl>();
+const cache = new Map<SoundKey, HTMLAudioElement>();
 
-function getHowl(key: SoundKey): Howl {
-  let h = cache.get(key);
-  if (!h) {
-    h = new Howl({
-      src: [SOUND_KEYS[key]],
-      volume: 0.5,
-      preload: true,
-    });
-    cache.set(key, h);
+function getAudio(key: SoundKey): HTMLAudioElement {
+  let audio = cache.get(key);
+  if (!audio) {
+    audio = new Audio(SOUND_KEYS[key]);
+    audio.volume = 0.5;
+    cache.set(key, audio);
   }
-  return h;
+  return audio;
 }
 
 export function useSound() {
   function play(key: SoundKey): void {
     if (!enabled.value) return;
-    getHowl(key).play();
+    const audio = getAudio(key);
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      /* autoplay blocked or unsupported */
+    });
   }
 
   return { enabled, play };

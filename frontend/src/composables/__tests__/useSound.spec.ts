@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const playMock = vi.fn();
+const playMock = vi.fn(() => Promise.resolve());
 
-vi.mock("howler", () => ({
-  Howl: vi.fn().mockImplementation(function (this: { play: typeof playMock }) {
+vi.stubGlobal(
+  "Audio",
+  vi.fn().mockImplementation(function (this: {
+    play: typeof playMock;
+    volume: number;
+    currentTime: number;
+  }) {
     this.play = playMock;
+    this.volume = 0;
+    this.currentTime = 0;
   }),
-}));
+);
 
 import { SOUND_KEYS, useSound } from "@/composables/useSound";
 

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from app.auth.service import get_user_by_session
 from app.core.config import settings
 from app.core.database import get_session_maker
+from app.core.rate_limits import enforce_rate_limit, get_client_identifier
 from app.rooms.manager import RoomCapacityError, room_manager
 from app.rooms.session import RoomWebSocketSession
 
@@ -22,6 +23,22 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
     """WebSocket endpoint for game rooms."""
     await websocket.accept()
     logger.info("[WebSocket] Connection accepted for room %s", room_id)
+
+    # Connecting to a code that has no room yet creates one. Apply the same per-IP
+    # limit as POST /rooms so an unauthenticated client can't exhaust the global
+    # room pool by opening sockets to arbitrary codes.
+    if room_manager.get_room(room_id) is None:
+        try:
+            await enforce_rate_limit(
+                bucket="room_creation",
+                identifier=get_client_identifier(websocket),
+                limit=settings.room_creation_rate_limit,
+                window_seconds=settings.room_creation_rate_window_seconds,
+            )
+        except HTTPException:
+            logger.warning("[WebSocket] Room %s creation rejected: rate limited", room_id)
+            await websocket.close(code=1013, reason="Rate limit exceeded")
+            return
 
     try:
         room = room_manager.get_or_create_room(room_id)

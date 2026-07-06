@@ -110,7 +110,10 @@ class StartGuessingEvent(ClientEventModel):
 
 class SubmitGuessEvent(ClientPlayerEventModel, ClientTargetPlayerEventModel):
     type: Literal["submit_guess"]
-    guesses: list[str] = Field(default_factory=list)
+    # Bound the payload: scoring runs a synchronous O(guesses x targets) rapidfuzz
+    # loop on the event loop, so an unbounded list would let one submission stall
+    # every room on the worker. A round never has more than a handful of targets.
+    guesses: list[Annotated[str, Field(max_length=100)]] = Field(default_factory=list, max_length=50)
 
 
 class RestartGameEvent(ClientEventModel):
@@ -151,8 +154,45 @@ class DrawStrokeEvent(DrawEventModel):
     type: Literal["draw_stroke"]
 
 
-class DrawStrokePartialEvent(DrawEventModel):
+class StrokePoint(BaseModel):
+    x: float
+    y: float
+
+
+class StrokeDelta(BaseModel):
+    """A stroke fragment: only the points added since the previous partial.
+
+    Sending deltas (rather than the whole growing point list every frame) keeps
+    an in-progress stroke's relayed payload O(new points) instead of O(n^2).
+    """
+
+    color: str
+    width: float
+    points: list[StrokePoint] = Field(default_factory=list, max_length=1000)
+
+
+class DrawStrokePartialEvent(ClientEventModel):
     type: Literal["draw_stroke_partial"]
+    player_id: str | None = Field(default=None, alias="playerId")
+    stroke: StrokeDelta | None = None
+    # True on the first fragment of a stroke so relayed clients begin a fresh
+    # stroke instead of appending the points to the previous one.
+    stroke_start: bool = Field(default=False, alias="strokeStart")
+
+
+class DrawStrokePayload(BaseModel):
+    """A full shared-drawpad stroke the server reconstructs from partial fragments.
+
+    Unlike ``StrokeDelta`` (a per-frame fragment, capped at 1000 points), this is a
+    whole completed/in-progress stroke, so late joiners can hydrate the collective
+    doodle from ``room_state`` instead of only seeing strokes drawn after they join.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    color: str
+    width: float
+    points: list[StrokePoint] = Field(default_factory=list)
 
 
 class DrawpadClearEvent(ClientEventModel):
@@ -258,7 +298,6 @@ class PlayerSnapshot(BaseModel):
     name: str
     color: str | None = None
     connected: bool = True
-    categories: list[str] = Field(default_factory=list)
 
 
 class PlayerListItem(BaseModel):
@@ -286,7 +325,6 @@ class RoomStateEvent(ServerEventModel):
     type: Literal["room_state"] = "room_state"
     players: list[PlayerSnapshot]
     host_id: str | None = Field(default=None, alias="hostId")
-    categories: list[str] = Field(default_factory=list)
     game_phase: GamePhase = Field(alias="gamePhase")
     difficulty: Difficulty
     current_round: int = Field(default=0, alias="currentRound")
@@ -298,6 +336,9 @@ class RoomStateEvent(ServerEventModel):
     guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
     drawings: dict[str, str] = Field(default_factory=dict)
     drawing_history: list[GalleryDrawingPayload] = Field(default_factory=list, alias="drawingHistory")
+    # The shared lobby drawpad's strokes so far, so a late joiner or reconnect sees
+    # the collective doodle rather than a blank canvas until the next stroke.
+    lobby_strokes: list[DrawStrokePayload] = Field(default_factory=list, alias="lobbyStrokes")
     # The requesting player's own card, so a mid-round reconnect can restore the
     # prompt without relying on client-side persistence. None outside a round or
     # for connections that have not joined yet.

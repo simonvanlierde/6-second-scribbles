@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
@@ -18,9 +18,9 @@ const open = defineModel<boolean>("open", { default: false });
 const store = useGameStore();
 const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
-const { focusNameOnOpen } = useSettingsPanel();
-const nameInputRef = ref<InstanceType<typeof HdInput> | null>(null);
-const dialogRef = ref<HTMLDialogElement | null>(null);
+const { focusNameOnOpen, pendingNameAction } = useSettingsPanel();
+const nameInputRef = useTemplateRef<InstanceType<typeof HdInput>>("nameInput");
+const dialogRef = useTemplateRef<HTMLDialogElement>("dialog");
 
 watch(
   open,
@@ -46,6 +46,11 @@ const { t } = useI18n({ useScope: "global" });
 
 function close() {
   open.value = false;
+  // Resume the action that opened the panel for a name (e.g. Create Room),
+  // now that the player has picked one — so they don't have to click twice.
+  const action = pendingNameAction.value;
+  pendingNameAction.value = null;
+  if (action && store.localPlayerName.trim()) action();
 }
 
 const playerName = computed({
@@ -59,7 +64,7 @@ const playerLocale = computed({
   set: (v: string) => store.setLocalPlayerLocale(v),
 });
 const playerColor = computed({
-  get: () => store.localPlayerColor,
+  get: () => store.localAvatarColor,
   set: (v) => store.setLocalPlayerColor(v),
 });
 const initial = computed(() => getAvatarInitial(playerName.value || "?"));
@@ -101,7 +106,9 @@ function selectTheme(value: Theme) {
 </script>
 
 <template>
-  <dialog ref="dialogRef" class="settings-dialog" @click.self="close" @close="close">
+  <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: native <dialog>; @click.self is a pointer-only backdrop dismiss -->
+  <!-- biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users close via Escape, handled by @close -->
+  <dialog ref="dialog" class="settings-dialog" @click.self="close" @close="close">
     <header class="settings-dialog__header">
       <h2 class="settings-dialog__title">{{ t("settings.title") }}</h2>
       <HdIconButton label="Close" variant="ghost" data-testid="settings-close" @click="close">
@@ -124,6 +131,7 @@ function selectTheme(value: Theme) {
       <!-- Identity -->
       <section class="settings-section">
         <h3 class="settings-section__title">{{ t("settings.identity") }}</h3>
+        <p v-if="pendingNameAction" class="settings-hint">{{ t("settings.namePrompt") }}</p>
         <div class="settings-identity">
           <button
             type="button"
@@ -148,10 +156,11 @@ function selectTheme(value: Theme) {
             </span>
           </button>
           <HdInput
-            ref="nameInputRef"
+            ref="nameInput"
             v-model="playerName"
             :aria-label="t('settings.yourName')"
             :placeholder="t('settings.namePlaceholder')"
+            @keyup.enter="close"
           />
         </div>
         <Transition name="settings-expand">
@@ -248,6 +257,7 @@ function selectTheme(value: Theme) {
             {{ t("settings.theme") }}
           </span>
           <div class="seg" role="radiogroup" :aria-label="t('settings.theme')">
+            <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the radio input with its aria-label; Biome misses controls inside v-for labels -->
             <label
               v-for="opt in themeOptions"
               :key="opt.value"
@@ -339,6 +349,7 @@ function selectTheme(value: Theme) {
             </svg>
             {{ t("settings.sound") }}
           </span>
+          <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the checkbox below, which carries its own aria-label -->
           <label class="switch" :class="{ 'switch--on': soundEnabled }">
             <input
               type="checkbox"
@@ -415,6 +426,12 @@ function selectTheme(value: Theme) {
 }
 
 /* ─── Identity ─── */
+.settings-hint {
+  margin: 0 0 12px;
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  color: var(--color-ink-muted);
+}
 .settings-identity {
   display: flex;
   align-items: center;

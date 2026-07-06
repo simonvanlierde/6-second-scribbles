@@ -6,26 +6,26 @@ updates:
       interval: monthly
     groups:
       actions:
-        patterns: ["*"]
+        patterns: [ "*" ]
 
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       npm-deps:
-        patterns: ["*"]
+        patterns: [ "*" ]
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
+        update-types: [ "version-update:semver-major" ]
 
-  - package-ecosystem: pip
+  - package-ecosystem: uv
     directory: /backend
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      pip-deps:
-        patterns: ["*"]
+      uv-deps:
+        patterns: [ "*" ]
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
+        update-types: [ "version-update:semver-major" ]

@@ -17,12 +17,10 @@ export const ServerEventSchema = z.union([
             name: z.string(),
             color: z.union([z.string(), z.null()]).default(null),
             connected: z.boolean().default(true),
-            categories: z.array(z.string()).optional(),
           })
           .strict(),
       ),
       hostId: z.union([z.string(), z.null()]).default(null),
-      categories: z.array(z.string()).optional(),
       gamePhase: z
         .enum(["lobby", "drawing", "guessing", "round_results", "final_results"])
         .describe("Valid room lifecycle phases for game flow state."),
@@ -47,6 +45,20 @@ export const ServerEventSchema = z.union([
             })
             .strict()
             .describe("One completed drawing retained for the end-of-game gallery."),
+        )
+        .optional(),
+      lobbyStrokes: z
+        .array(
+          z
+            .object({
+              color: z.string(),
+              width: z.number(),
+              points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+            })
+            .strict()
+            .describe(
+              "A full shared-drawpad stroke the server reconstructs from partial fragments.\n\nUnlike ``StrokeDelta`` (a per-frame fragment, capped at 1000 points), this is a\nwhole completed/in-progress stroke, so late joiners can hydrate the collective\ndoodle from ``room_state`` instead of only seeing strokes drawn after they join.",
+            ),
         )
         .optional(),
       card: z
@@ -262,9 +274,28 @@ export const ServerEventSchema = z.union([
   z
     .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
     .catchall(z.any()),
-  z
-    .object({ type: z.literal("draw_stroke_partial"), playerId: z.union([z.string(), z.null()]).default(null) })
-    .catchall(z.any()),
+  z.object({
+    type: z.literal("draw_stroke_partial"),
+    playerId: z.union([z.string(), z.null()]).default(null),
+    stroke: z
+      .union([
+        z
+          .object({
+            color: z.string(),
+            width: z.number(),
+            points: z
+              .array(z.object({ x: z.number(), y: z.number() }))
+              .max(1000)
+              .optional(),
+          })
+          .describe(
+            "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
+          ),
+        z.null(),
+      ])
+      .default(null),
+    strokeStart: z.boolean().default(false),
+  }),
   z.object({ type: z.literal("drawpad_clear") }),
   z.object({ type: z.literal("pad_visibility"), visible: z.boolean().default(true) }),
 ]);
@@ -404,7 +435,7 @@ export const ClientEventSchema = z.union([
     type: z.literal("submit_guess"),
     targetPlayerId: z.string(),
     playerId: z.string(),
-    guesses: z.array(z.string()).optional(),
+    guesses: z.array(z.string().max(100)).max(50).optional(),
   }),
   z.object({ type: z.literal("restart_game") }),
   z.object({ type: z.literal("heartbeat") }),
@@ -430,9 +461,28 @@ export const ClientEventSchema = z.union([
   z
     .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
     .catchall(z.any()),
-  z
-    .object({ type: z.literal("draw_stroke_partial"), playerId: z.union([z.string(), z.null()]).default(null) })
-    .catchall(z.any()),
+  z.object({
+    type: z.literal("draw_stroke_partial"),
+    playerId: z.union([z.string(), z.null()]).default(null),
+    stroke: z
+      .union([
+        z
+          .object({
+            color: z.string(),
+            width: z.number(),
+            points: z
+              .array(z.object({ x: z.number(), y: z.number() }))
+              .max(1000)
+              .optional(),
+          })
+          .describe(
+            "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
+          ),
+        z.null(),
+      ])
+      .default(null),
+    strokeStart: z.boolean().default(false),
+  }),
   z.object({ type: z.literal("drawpad_clear") }),
   z.object({ type: z.literal("pad_visibility"), visible: z.boolean().default(true) }),
   z.object({ type: z.literal("privacy_changed"), isPrivate: z.boolean() }),
