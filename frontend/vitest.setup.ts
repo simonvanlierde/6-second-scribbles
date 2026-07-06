@@ -28,6 +28,34 @@ if (typeof (globalThis as { DataTransfer?: unknown }).DataTransfer === "undefine
   (globalThis as { DataTransfer?: unknown }).DataTransfer = _DataTransfer;
 }
 
+// Web Storage polyfill. Node 26 exposes a native experimental `localStorage`
+// global that is `undefined` (and warns) unless started with --localstorage-file,
+// and it shadows the Storage jsdom would otherwise provide — so both
+// `localStorage` and `sessionStorage` are unusable in tests. Install a plain
+// in-memory Storage (theme, sound, and Pinia persistence all read it). The
+// per-test `localStorage.clear()` below keeps it isolated between tests.
+function createMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear: () => store.clear(),
+    getItem: (key: string) => (store.has(key) ? (store.get(key) as string) : null),
+    key: (index: number) => [...store.keys()][index] ?? null,
+    removeItem: (key: string) => void store.delete(key),
+    setItem: (key: string, value: string) => void store.set(key, String(value)),
+  } as Storage;
+}
+
+for (const name of ["localStorage", "sessionStorage"] as const) {
+  const value = createMemoryStorage();
+  Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, name, { value, writable: true, configurable: true });
+  }
+}
+
 // Global baseline mock for vue-router. Test files that need custom router
 // behaviour (e.g. to capture push() calls) override this with their own
 // vi.mock("vue-router", ...) — per-file mocks completely replace this one
