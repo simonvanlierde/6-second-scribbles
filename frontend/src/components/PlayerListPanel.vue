@@ -17,10 +17,8 @@ const showKickConfirm = ref<string | null>(null);
 const activeKickVotes = computed(() => store.kickVotes);
 const kickDialogOpen = computed({
   get: () => showKickConfirm.value !== null,
-  set: (value: boolean) => {
-    if (!value) {
-      showKickConfirm.value = null;
-    }
+  set: () => {
+    // Confirm/cancel handlers clear the target after HdDialog emits.
   },
 });
 const targetPlayer = computed(() => store.playersList.find((player) => player.id === showKickConfirm.value) ?? null);
