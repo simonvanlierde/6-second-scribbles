@@ -60,6 +60,16 @@ just dev                                        # Docker services + dev servers
 
 `just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more, or [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to contribute.
 
+## Deployment
+
+The live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl) runs the self-hosted
+Docker Compose stack in [`compose.prod.yml`](compose.prod.yml), started on the
+host with `just up-prod`. Caddy serves the built SPA and proxies `/api` and `/ws`
+to the backend; PostgreSQL and Redis stay on the internal Docker network. The
+only external ingress is a Cloudflare Tunnel (`cloudflared`, Compose `tunnel`
+profile), so nothing is published directly to the internet. See
+[docs/architecture.md](docs/architecture.md) for the full topology.
+
 ## Attribution
 
 Inspired by *Six Second Scribbles* by Hazel Reynolds, published by [Gamely Games](https://gamelygames.com/products/six-second-scribbles), and the solo web version by [Oliver Culley de Lange](https://github.com/OliverCulleyDeLange/6ss).
