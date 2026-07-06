@@ -2,17 +2,8 @@
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import { AVATAR_COLORS, type AvatarColor } from "@/composables/useAvatar";
 
-interface Props {
-  modelValue: AvatarColor;
-  initial: string;
-}
-
-defineProps<Props>();
-const emit = defineEmits<{ "update:modelValue": [AvatarColor] }>();
-
-function pick(c: AvatarColor): void {
-  emit("update:modelValue", c);
-}
+const model = defineModel<AvatarColor>({ required: true });
+defineProps<{ initial: string }>();
 </script>
 
 <template>
@@ -22,9 +13,9 @@ function pick(c: AvatarColor): void {
       :key="c"
       type="button"
       class="avatar-picker__btn"
-      :class="{ 'avatar-picker__btn--active': c === modelValue }"
-      v-bind="{ role: 'radio', 'aria-checked': c === modelValue }"
-      @click="pick(c)"
+      :class="{ 'avatar-picker__btn--active': c === model }"
+      v-bind="{ role: 'radio', 'aria-checked': c === model }"
+      @click="model = c"
     >
       <HdAvatar :initial="initial" :color="c" size="md" />
     </button>

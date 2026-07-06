@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -61,11 +62,37 @@ class _FakeRedis:
         self.store[key] = str(next_value)
         return next_value
 
-    async def expire(self, key: str, ttl: int) -> None:
+    async def expire(self, key: str, ttl: int, *, nx: bool = False) -> bool:
+        if nx and key in self.expirations:
+            return False
         self.expirations[key] = ttl
+        return True
 
     async def ttl(self, key: str) -> int:
         return self.expirations.get(key, -1)
+
+    def pipeline(self, *, transaction: bool = True) -> _FakePipeline:
+        del transaction
+        return _FakePipeline(self)
+
+
+class _FakePipeline:
+    """Minimal MULTI/EXEC stand-in: queue commands, run them on execute()."""
+
+    def __init__(self, backend: _FakeRedis) -> None:
+        self._backend = backend
+        self._ops: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+    def incr(self, key: str) -> _FakePipeline:
+        self._ops.append(("incr", (key,), {}))
+        return self
+
+    def expire(self, key: str, ttl: int, *, nx: bool = False) -> _FakePipeline:
+        self._ops.append(("expire", (key, ttl), {"nx": nx}))
+        return self
+
+    async def execute(self) -> list[object]:
+        return [await getattr(self._backend, name)(*args, **kwargs) for name, args, kwargs in self._ops]
 
 
 class _MemoryCache:
@@ -152,8 +179,12 @@ async def test_redis_helpers_fall_back_cleanly_on_errors(monkeypatch: pytest.Mon
     assert await redis_module.load_room_state("ROOM01") is None
     assert await redis_module.load_all_room_states() == []
     assert await redis_module.get_session_user_id("session-1") is None
-    assert await redis_module.increment_rate_limit("auth", "id", window_seconds=10) == (0, 0)
-    assert await redis_module.get_cached_localized_scoring_targets(1, "en") is None
+    # Rate limiting fails CLOSED: an un-countable request is reported as over-limit
+    # so a Redis outage cannot silently disable every throttle.
+    count, retry_after = await redis_module.increment_rate_limit("auth", "id", window_seconds=10)
+    assert count == sys.maxsize
+    assert retry_after == 10
+    assert await redis_module.get_cached_localized_scoring_targets(1, "en", [1]) is None
     assert await redis_module.get_cached_category_locale_availability(None) is None
 
 

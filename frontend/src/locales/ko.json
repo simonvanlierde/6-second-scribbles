@@ -16,7 +16,8 @@
     "copyRoomCode": "클릭해서 방 코드 복사",
     "soundMute": "소리 끄기",
     "soundUnmute": "소리 켜기",
-    "and": "그리고"
+    "and": "그리고",
+    "gotIt": "알겠어요"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -60,7 +61,8 @@
     "sound": "소리",
     "soundOn": "켜짐",
     "soundOff": "꺼짐",
-    "about": "정보"
+    "about": "정보",
+    "namePrompt": "계속하려면 이름을 입력하세요."
   },
   "lobby": {
     "leaveRoom": "방 나가기",
@@ -90,7 +92,8 @@
     "backToLobby": "로비로 돌아가기",
     "enterYourName": "이름을 입력하세요",
     "yourName": "이름",
-    "back": "뒤로"
+    "back": "뒤로",
+    "backToHome": "홈으로 돌아가기"
   },
   "game": {
     "waitingForRound": "라운드가 시작되길 기다리는 중..."

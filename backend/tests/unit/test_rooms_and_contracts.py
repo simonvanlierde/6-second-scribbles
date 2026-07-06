@@ -91,8 +91,8 @@ async def test_room_action_handlers_cover_validation_and_updates(
             type="settings_update",
             difficulty="hard",
             rounds=5,
-            drawing_time_limit=40,
-            guessing_time_limit=20,
+            drawingTimeLimit=40,
+            guessingTimeLimit=20,
         ),
     )
     await room_actions.handle_default_locale_update(
@@ -101,7 +101,7 @@ async def test_room_action_handlers_cover_validation_and_updates(
     )
     await room_actions.handle_room_custom_categories_update(
         cast("RoomWebSocketSession", session),
-        RoomCustomCategoriesUpdateEvent(type="room_custom_categories_update", category_ids=[5, 3, 3]),
+        RoomCustomCategoriesUpdateEvent(type="room_custom_categories_update", categoryIds=[5, 3, 3]),
     )
     await room_actions.handle_pad_visibility(
         cast("RoomWebSocketSession", session),

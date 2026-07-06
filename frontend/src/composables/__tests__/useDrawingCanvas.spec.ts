@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import type { DrawStroke } from "@/shared/types";
 
-const stroke = (color: string): DrawStroke => ({ color, width: 5, points: [{ x: 0, y: 0 }] });
+const stroke = (color: string): DrawStroke => ({
+  color,
+  width: 5,
+  points: [{ x: 0, y: 0 }],
+});
 
 describe("useDrawingCanvas.undo", () => {
   it("removes the most recent stroke", () => {

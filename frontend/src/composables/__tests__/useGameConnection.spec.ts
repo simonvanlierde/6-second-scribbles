@@ -33,18 +33,18 @@ describe("client message handlers", () => {
     vi.stubGlobal("WebSocket", MockWebSocket);
   });
 
-  it("applies draw_stroke to the store", () => {
+  it("applies a completed draw_stroke (PNG) to the target player", () => {
     const store = useGameStore();
+    store.addPlayer("p2", "Bob");
     const { handleMessage } = useGameConnection();
 
     handleMessage({
       type: "draw_stroke",
       playerId: "p2",
-      stroke: { color: "#000", width: 2, points: [{ x: 1, y: 2 }] },
+      drawing: "data:image/png;base64,xyz",
     });
 
-    expect(store.currentStrokes.length).toBeGreaterThan(0);
-    expect(store.currentStrokes[0]?.color).toBe("#000");
+    expect(store.players.get("p2")?.drawing).toBe("data:image/png;base64,xyz");
   });
 
   it("adds remote partials but ignores local-origin partials", () => {
@@ -111,7 +111,6 @@ describe("client message handlers", () => {
         { id: "p2", name: "Bob" },
       ],
       hostId: "p1",
-      categories: [],
       gamePhase: "lobby",
       difficulty: "medium",
       maxRounds: 5,

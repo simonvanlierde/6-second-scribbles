@@ -11,9 +11,27 @@ vi.mock("@/composables/useDrawingExport", () => ({
 }));
 
 const drawings: GalleryDrawing[] = [
-  { round: 1, playerId: "p1", name: "Alice", color: "#ffb4a2", drawing: "data:image/png;base64,A1" },
-  { round: 2, playerId: "p1", name: "Alice", color: "#ffb4a2", drawing: "data:image/png;base64,A2" },
-  { round: 1, playerId: "p2", name: "Bob", color: "#b5e6b5", drawing: "data:image/png;base64,B1" },
+  {
+    round: 1,
+    playerId: "p1",
+    name: "Alice",
+    color: "#ffb4a2",
+    drawing: "data:image/png;base64,A1",
+  },
+  {
+    round: 2,
+    playerId: "p1",
+    name: "Alice",
+    color: "#ffb4a2",
+    drawing: "data:image/png;base64,A2",
+  },
+  {
+    round: 1,
+    playerId: "p2",
+    name: "Bob",
+    color: "#b5e6b5",
+    drawing: "data:image/png;base64,B1",
+  },
 ];
 
 beforeEach(() => {

@@ -5,7 +5,10 @@ import HdIconButton from "@/components/ui/HdIconButton.vue";
 
 describe("HdIconButton", () => {
   it("renders a button with the label as aria-label", () => {
-    const w = mount(HdIconButton, { props: { label: "Settings" }, slots: { default: "⚙" } });
+    const w = mount(HdIconButton, {
+      props: { label: "Settings" },
+      slots: { default: "⚙" },
+    });
     expect(w.element.tagName).toBe("BUTTON");
     expect(w.attributes("aria-label")).toBe("Settings");
     expect(w.attributes("type")).toBe("button");
@@ -20,13 +23,19 @@ describe("HdIconButton", () => {
   });
 
   it("emits click when pressed and not disabled", async () => {
-    const w = mount(HdIconButton, { props: { label: "X" }, slots: { default: "x" } });
+    const w = mount(HdIconButton, {
+      props: { label: "X" },
+      slots: { default: "x" },
+    });
     await w.trigger("click");
     expect(w.emitted("click")).toHaveLength(1);
   });
 
   it("does not emit click when disabled", async () => {
-    const w = mount(HdIconButton, { props: { label: "X", disabled: true }, slots: { default: "x" } });
+    const w = mount(HdIconButton, {
+      props: { label: "X", disabled: true },
+      slots: { default: "x" },
+    });
     await w.trigger("click");
     expect(w.emitted("click")).toBeUndefined();
   });

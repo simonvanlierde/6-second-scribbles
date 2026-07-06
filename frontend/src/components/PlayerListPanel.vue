@@ -17,10 +17,8 @@ const showKickConfirm = ref<string | null>(null);
 const activeKickVotes = computed(() => store.kickVotes);
 const kickDialogOpen = computed({
   get: () => showKickConfirm.value !== null,
-  set: (value: boolean) => {
-    if (!value) {
-      showKickConfirm.value = null;
-    }
+  set: () => {
+    // Confirm/cancel handlers clear the target after HdDialog emits.
   },
 });
 const targetPlayer = computed(() => store.playersList.find((player) => player.id === showKickConfirm.value) ?? null);
@@ -66,10 +64,8 @@ function voteToKick(targetPlayerId: string) {
 }
 
 function colorFor(player: Player): string {
-  // Prefer server-supplied colour; fall back to a deterministic one derived
-  // from the player id (keeps the UI stable for older rooms without server colours).
-  const serverColor = (player as Player & { color?: string }).color;
-  return serverColor ?? getAvatarColor(player.id);
+  // Prefer server-supplied colour; fall back to a deterministic per-id one.
+  return player.color ?? getAvatarColor(player.id);
 }
 </script>
 

@@ -68,16 +68,17 @@ function setDifficulty(d: string) {
   difficulty.value = d as Difficulty;
 }
 
-watch(rounds, (val) => {
-  if (Number.isFinite(val)) store.maxRounds = val;
-});
-
-watch(drawingTimeLimit, (val) => {
-  if (Number.isFinite(val)) store.drawingTimeLimit = val;
-});
-
-watch(guessingTimeLimit, (val) => {
-  if (Number.isFinite(val)) store.guessingTimeLimit = val;
+// Push the host's local edits into the store so other screens (lobby, header,
+// results) read them immediately. Guarded on isHost so an incoming
+// settings_update doesn't round-trip store -> ref -> store; difficulty is
+// included here too (it was previously the only setting that lagged the store
+// until the server echoed it back).
+watch([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], ([d, r, dl, gl]) => {
+  if (!store.isHost) return;
+  store.difficulty = d;
+  if (Number.isFinite(r)) store.maxRounds = r;
+  if (Number.isFinite(dl)) store.drawingTimeLimit = dl;
+  if (Number.isFinite(gl)) store.guessingTimeLimit = gl;
 });
 
 watchDebounced([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], broadcastSettings, {
@@ -152,7 +153,7 @@ watch(
     <!-- Difficulty + rounds sit side by side, stacking when space is tight -->
     <div class="settings__row">
       <div class="field">
-        <label class="field__label">{{ $t("settings.difficulty") }}</label>
+        <span class="field__label">{{ $t("settings.difficulty") }}</span>
         <HdSegmented
           :model-value="difficulty"
           :options="difficultyOptions"
@@ -162,7 +163,7 @@ watch(
       </div>
 
       <div class="field">
-        <label class="field__label">{{ $t("settings.rounds") }}</label>
+        <span class="field__label">{{ $t("settings.rounds") }}</span>
         <StepperInput
           v-model="rounds"
           :label="$t('settings.rounds')"
@@ -195,7 +196,7 @@ watch(
       <div v-if="advancedOpen" class="advanced">
         <div class="advanced__times">
           <div class="field">
-            <label class="field__label">
+            <span class="field__label">
               <svg
                 class="label-icon"
                 viewBox="0 0 24 24"
@@ -210,7 +211,7 @@ watch(
                 <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
               {{ $t("settings.drawingTime") }}
-            </label>
+            </span>
             <StepperInput
               v-model="drawingTimeLimit"
               :label="$t('settings.drawingTime')"
@@ -222,7 +223,7 @@ watch(
           </div>
 
           <div class="field">
-            <label class="field__label">
+            <span class="field__label">
               <svg
                 class="label-icon"
                 viewBox="0 0 24 24"
@@ -238,7 +239,7 @@ watch(
                 />
               </svg>
               {{ $t("settings.guessingTime") }}
-            </label>
+            </span>
             <StepperInput
               v-model="guessingTimeLimit"
               :label="$t('settings.guessingTime')"

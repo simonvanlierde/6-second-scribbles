@@ -12,15 +12,30 @@ vi.mock("vue-router", () => ({
 
 const connectMock = vi.fn();
 vi.mock("@/composables/useGameConnection", () => ({
-  useGameConnection: () => ({ connect: connectMock, connectionStatus: ref("disconnected") }),
+  useGameConnection: () => ({
+    connect: connectMock,
+    connectionStatus: ref("disconnected"),
+  }),
 }));
 
-vi.mock("@/views/RoomAccessView.vue", () => ({ default: { template: "<div>guest</div>" } }));
-vi.mock("@/views/SpectatorRoomView.vue", () => ({ default: { template: "<div>spectator</div>" } }));
-vi.mock("@/views/LobbyView.vue", () => ({ default: { template: "<div>waiting</div>" } }));
-vi.mock("@/views/GameView.vue", () => ({ default: { template: "<div>game</div>" } }));
-vi.mock("@/views/RoundResultsView.vue", () => ({ default: { template: "<div>round-results</div>" } }));
-vi.mock("@/views/ResultsView.vue", () => ({ default: { template: "<div>final-results</div>" } }));
+vi.mock("@/views/RoomAccessView.vue", () => ({
+  default: { template: "<div>guest</div>" },
+}));
+vi.mock("@/views/SpectatorRoomView.vue", () => ({
+  default: { template: "<div>spectator</div>" },
+}));
+vi.mock("@/views/LobbyView.vue", () => ({
+  default: { template: "<div>waiting</div>" },
+}));
+vi.mock("@/views/GameView.vue", () => ({
+  default: { template: "<div>game</div>" },
+}));
+vi.mock("@/views/RoundResultsView.vue", () => ({
+  default: { template: "<div>round-results</div>" },
+}));
+vi.mock("@/views/ResultsView.vue", () => ({
+  default: { template: "<div>final-results</div>" },
+}));
 
 describe("RoomView", () => {
   beforeEach(() => {

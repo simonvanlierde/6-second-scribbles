@@ -73,7 +73,7 @@ def get_age_seconds(room: GameRoom) -> float:
     return time.time() - room.created_at
 
 
-async def hibernate(room: GameRoom) -> None:
+def hibernate(room: GameRoom) -> None:
     """Put an empty room into hibernation mode."""
     if room.is_hibernated or not room.is_empty():
         return
@@ -110,7 +110,7 @@ async def run_cleanup(manager: RoomManager) -> tuple[int, int]:
             rooms_to_hibernate.append(room)
 
     for room in rooms_to_hibernate:
-        await hibernate(room)
+        hibernate(room)
         hibernated_count += 1
 
     for room_id in rooms_to_remove:

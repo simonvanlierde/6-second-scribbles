@@ -21,7 +21,11 @@ describe("useLocaleAvailability", () => {
 
   it("disables locales with zero category coverage after load", async () => {
     apiRequestMock.mockResolvedValueOnce([
-      { locale: "en", category_count: 5, difficulty_counts: { easy: 2, medium: 2, hard: 1 } },
+      {
+        locale: "en",
+        category_count: 5,
+        difficulty_counts: { easy: 2, medium: 2, hard: 1 },
+      },
       { locale: "es", category_count: 0, difficulty_counts: {} },
     ]);
 
@@ -40,9 +44,21 @@ describe("useLocaleAvailability", () => {
 
   it("uses backend playable locale codes for room language availability", async () => {
     apiRequestMock.mockResolvedValueOnce([
-      { locale: "de", category_count: 37, difficulty_counts: { easy: 12, medium: 12, hard: 13 } },
-      { locale: "zh-CN", category_count: 37, difficulty_counts: { easy: 12, medium: 12, hard: 13 } },
-      { locale: "zh-TW", category_count: 37, difficulty_counts: { easy: 12, medium: 12, hard: 13 } },
+      {
+        locale: "de",
+        category_count: 37,
+        difficulty_counts: { easy: 12, medium: 12, hard: 13 },
+      },
+      {
+        locale: "zh-CN",
+        category_count: 37,
+        difficulty_counts: { easy: 12, medium: 12, hard: 13 },
+      },
+      {
+        locale: "zh-TW",
+        category_count: 37,
+        difficulty_counts: { easy: 12, medium: 12, hard: 13 },
+      },
     ]);
 
     const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();

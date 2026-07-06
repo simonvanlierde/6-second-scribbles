@@ -1,0 +1,144 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    },
+    "enabled": true
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**/*{.js,.jsx,.ts,.tsx,.vue,.css,.scss,.html,.json,.jsonc,.md,.mdx}",
+      "!**/dist",
+      "!**/playwright-report",
+      "!**/node_modules"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "html": {
+    "experimentalFullSupportEnabled": true,
+    "formatter": {
+      "enabled": false
+    }
+  },
+  "linter": {
+    "domains": {
+      "project": "recommended",
+      // Vue app, not React: the react domain's rules-of-hooks (useHookAtTopLevel)
+      // misfire on every composable/store call, so it stays off.
+      "react": "none",
+      "test": "recommended",
+      "types": "recommended",
+      "vue": "recommended"
+    },
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "a11y": "on",
+      "security": "on",
+      "suspicious": "on"
+    }
+  },
+  "overrides": [
+    {
+      // Vue SFC <script> blocks are always-strict ES modules (useStrictMode wants a
+      // literal directive we never write); comment-only script blocks are legit docs.
+      "includes": ["**/*.vue"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useStrictMode": "off",
+            "noEmptySource": "off"
+          }
+        }
+      }
+    },
+    {
+      // index.html's inline theme-bootstrap: strict-mode is implicit, and its
+      // best-effort `catch {}` around localStorage is intentional.
+      "includes": ["**/*.html"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useStrictMode": "off",
+            "noEmptyBlockStatements": "off"
+          }
+        }
+      }
+    },
+    {
+      // Tests & build scripts: Node builtins are allowed, entropy heuristics flag
+      // fixture/selector strings, and empty mocks / non-awaiting async are normal.
+      "includes": [
+        "**/*.test.{js,jsx,ts,tsx}",
+        "**/*.spec.{js,jsx,ts,tsx}",
+        "**/__tests__/**",
+        "**/vitest.setup.ts",
+        "scripts/**",
+        "**/scripts/**/*.{js,cjs,mjs,ts,tsx}"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "security": {
+            "noSecrets": "off"
+          },
+          "suspicious": {
+            "noConsole": "off",
+            "noEmptyBlockStatements": "off",
+            "useAwait": "off"
+          }
+        }
+      }
+    },
+    {
+      // WebSocket network boundary: noSecrets flags i18n keys, and the server can send
+      // malformed data despite the optimistic generated types, so the defensive guards
+      // noUnnecessaryConditions calls "redundant" are deliberate. (Logging goes through
+      // @/shared/logger, so noConsole stays enforced here.)
+      "includes": ["**/useGameConnection.ts", "**/composables/connection/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          },
+          "suspicious": {
+            "noUnnecessaryConditions": "off"
+          }
+        }
+      }
+    },
+    {
+      // The one module allowed to touch console: everything else routes through it.
+      "includes": ["**/shared/logger.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  }
+}

@@ -17,13 +17,11 @@ from app.categories.models import Category, CategoryPrompt, Prompt, normalize_lo
 from app.categories.schemas import (
     CategoryListItem,
     CategorySelectionResponse,
-    GuessScoreRequest,
-    GuessScoreResponse,
     LocaleAvailabilityItem,
     SelectedCategorySet,
 )
 from app.core import redis
-from app.scoring import GuessTarget, guess_matcher
+from app.scoring import GuessTarget
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -345,7 +343,7 @@ async def get_localized_scoring_targets(
 ) -> LocalizedScoringTargets:
     """Resolve prompt ids to localized scoring targets."""
     # Check cache first
-    cached = await redis.get_cached_localized_scoring_targets(category_id, preferred_locale)
+    cached = await redis.get_cached_localized_scoring_targets(category_id, preferred_locale, prompt_ids)
     if cached is not None:
         return LocalizedScoringTargets(
             category_id=cached["category_id"],
@@ -382,19 +380,5 @@ async def get_localized_scoring_targets(
             targets.append(GuessTarget(item_id=p.id, label=pt.get("label", ""), aliases=pt.get("aliases", [])))
 
     result = LocalizedScoringTargets(category_id=category.id, category_name=ct.get("name", ""), targets=targets)
-    await redis.cache_localized_scoring_targets(category_id, preferred_locale, asdict(result))
+    await redis.cache_localized_scoring_targets(category_id, preferred_locale, prompt_ids, asdict(result))
     return result
-
-
-def score_guess_request(request: GuessScoreRequest) -> GuessScoreResponse:
-    """Score player guesses against accepted answers and aliases."""
-    res = guess_matcher.score_guesses(
-        guesses=request.guesses, correct_answers=request.correct_answers, alternatives_map=request.alternatives
-    )
-    return GuessScoreResponse(
-        score=res.score,
-        total=res.total,
-        percentage=res.percentage,
-        matches=res.matches,
-        unmatched_answers=res.unmatched_answers,
-    )

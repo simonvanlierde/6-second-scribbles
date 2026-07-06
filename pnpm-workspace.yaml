@@ -1,2 +1,16 @@
 packages:
   - frontend
+
+allowBuilds:
+  lefthook: true
+
+overrides:
+  undici: ^7.28.0
+  fast-uri: ^3.1.2
+  ws: ^8.21.0
+  js-cookie: ^3.0.7
+  "@babel/core": ^7.29.6
+  postcss: ^8.5.10
+  js-yaml: ^4.2.0
+  markdown-it: ^14.2.0
+  esbuild: ^0.28.1

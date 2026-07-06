@@ -29,13 +29,7 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
     }
   }
 
-  const { pause, resume } = useIntervalFn(refresh, 1000, { immediate: true });
-
-  function start() {
-    expired = false;
-    refresh();
-    resume();
-  }
+  const { pause } = useIntervalFn(refresh, 1000, { immediate: true });
 
   function stop() {
     pause();
@@ -53,5 +47,5 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
 
   const isWarning = computed(() => timeLeft.value <= warningThreshold);
 
-  return { timeLeft, isWarning, start, stop };
+  return { timeLeft, isWarning, stop };
 }

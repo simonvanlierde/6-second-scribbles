@@ -16,7 +16,8 @@
     "copyRoomCode": "クリックでルームコードをコピー",
     "soundMute": "サウンドをミュート",
     "soundUnmute": "ミュートを解除",
-    "and": "と"
+    "and": "と",
+    "gotIt": "わかった"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -60,7 +61,8 @@
     "sound": "サウンド",
     "soundOn": "オン",
     "soundOff": "オフ",
-    "about": "このアプリについて"
+    "about": "このアプリについて",
+    "namePrompt": "続けるには名前を入力してください。"
   },
   "lobby": {
     "leaveRoom": "ルームを退出",
@@ -90,7 +92,8 @@
     "backToLobby": "ロビーに戻る",
     "enterYourName": "名前を入力",
     "yourName": "あなたの名前",
-    "back": "戻る"
+    "back": "戻る",
+    "backToHome": "ホームに戻る"
   },
   "game": {
     "waitingForRound": "ラウンド開始を待っています..."

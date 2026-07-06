@@ -28,6 +28,11 @@ test-e2e:
 test-e2e-ui:
     pnpm run test:e2e:ui
 
+# Run accessibility (axe) checks — frontend only, no backend needed.
+[group('test')]
+test-a11y:
+    pnpm run test:e2e:a11y
+
 # Start the local dev stack for Playwright e2e against the real backend.
 [group('test')]
 e2e-dev:
@@ -68,3 +73,8 @@ build:
 [group('install')]
 install:
     pnpm install
+
+# Bump dependencies to their latest versions.
+[group('install')]
+bump:
+    pnpm update --latest

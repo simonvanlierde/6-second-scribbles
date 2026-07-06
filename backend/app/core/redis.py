@@ -2,14 +2,20 @@
 
 # spell-checker: ignore setex
 import asyncio
+import hashlib
 import json
 import logging
 import secrets
+import sys
+from typing import TYPE_CHECKING, cast
 
 import redis.asyncio as redis
 
 from app.core.config import settings
 from app.rooms.state import RoomState
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
 
 _PERSISTENCE_ERRORS = (redis.RedisError, asyncio.TimeoutError, ValueError, TypeError)
 
@@ -119,7 +125,9 @@ async def get_session_user_id(session_id: str) -> str | None:
     """Return the user id for an existing auth session."""
     try:
         r = await get_redis()
-        return await r.get(_session_key(session_id))
+        # redis-py's async stubs type get() via the shared sync signature, so the
+        # awaited value needs a cast to satisfy the type checker.
+        return cast("str | None", await r.get(_session_key(session_id)))
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to read session %s", session_id)
         return None
@@ -139,28 +147,46 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
     try:
         r = await get_redis()
         key = _rate_limit_key(bucket, identifier)
-        count = await r.incr(key)
-        if count == 1:
-            await r.expire(key, window_seconds)
+        # INCR + EXPIRE must be atomic: if the coroutine is cancelled (client
+        # disconnect/timeout) between a plain incr and a separate expire, the key
+        # would persist with no TTL and 429 that identifier forever. A MULTI/EXEC
+        # pipeline runs both as one unit; EXPIRE ... NX sets the window only when
+        # none exists, so it also self-heals any stray no-TTL key without
+        # resetting a live window. NOTE: EXPIRE NX needs Redis >= 7.
+        pipe = r.pipeline(transaction=True)
+        pipe.incr(key)
+        pipe.expire(key, window_seconds, nx=True)
+        count = (await cast("Awaitable[list[int]]", pipe.execute()))[0]
         ttl = await r.ttl(key)
         retry_after = max(int(ttl), 0)
         return int(count), retry_after
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to increment rate limit %s for %s", bucket, identifier)
-        return 0, 0
+        # Fail closed: if Redis is unavailable we cannot count attempts, so treat
+        # the request as over-limit rather than silently disabling every throttle
+        # (login/register/room-creation) during the outage. Availability trade-off:
+        # a Redis blip 429s these endpoints, but Redis backs sessions/persistence
+        # too, so the app is already degraded.
+        return sys.maxsize, window_seconds
 
 
-def _cat_targets_key(category_id: int, locale: str) -> str:
-    """Generate a Redis key for localized scoring targets cache."""
-    return f"cat_targets:{category_id}:{locale}"
+def _cat_targets_key(category_id: int, locale: str, prompt_ids: list[int]) -> str:
+    """Generate a Redis key for localized scoring targets cache.
+
+    The prompt-id subset is part of the key: the same category+locale can be
+    requested with different prompt subsets, and each yields different targets.
+    Omitting it caused collisions where players were scored against the wrong words.
+    """
+    digest = hashlib.sha1(",".join(map(str, sorted(prompt_ids))).encode()).hexdigest()[:16]  # noqa: S324
+    return f"cat_targets:{category_id}:{locale}:{digest}"
 
 
-async def cache_localized_scoring_targets(category_id: int, locale: str, data: dict) -> None:
+async def cache_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int], data: dict) -> None:
     """Cache the localized scoring targets dictionary for 24 hours."""
     try:
         r = await get_redis()
         await r.setex(
-            _cat_targets_key(category_id, locale),
+            _cat_targets_key(category_id, locale, prompt_ids),
             settings.category_cache_ttl_seconds,
             json.dumps(data),
         )
@@ -168,11 +194,11 @@ async def cache_localized_scoring_targets(category_id: int, locale: str, data: d
         logger.exception("[Redis] Failed to cache scoring targets for %s locale %s", category_id, locale)
 
 
-async def get_cached_localized_scoring_targets(category_id: int, locale: str) -> dict | None:
+async def get_cached_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int]) -> dict | None:
     """Load cached localized scoring targets dictionary from Redis."""
     try:
         r = await get_redis()
-        data = await r.get(_cat_targets_key(category_id, locale))
+        data = await r.get(_cat_targets_key(category_id, locale, prompt_ids))
         return json.loads(data) if data else None
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load cached scoring targets for %s locale %s", category_id, locale)

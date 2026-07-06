@@ -5,10 +5,10 @@ const { notifications } = useNotifications();
 </script>
 
 <template>
-  <div class="hd-toast-stack" aria-live="polite">
-    <div v-for="n in notifications" :key="n.id" class="hd-toast" :class="`hd-toast--${n.type}`" role="status">
-      {{ n.text }}
-    </div>
+  <!-- The stack owns the single live region; per-toast role="status" here would
+       make each notification announce twice. -->
+  <div class="hd-toast-stack" role="status" aria-live="polite">
+    <div v-for="n in notifications" :key="n.id" class="hd-toast" :class="`hd-toast--${n.type}`">{{ n.text }}</div>
   </div>
 </template>
 
@@ -40,7 +40,7 @@ const { notifications } = useNotifications();
   color: var(--color-ink-fixed);
 }
 .hd-toast--error {
-  background: var(--color-marker-red);
+  background: var(--color-primary-strong);
   color: white;
 }
 .hd-toast--info {

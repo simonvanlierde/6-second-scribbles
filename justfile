@@ -185,3 +185,22 @@ install-frontend:
 [group('install')]
 install-backend:
     just backend/install
+
+# Bump all dependencies to their latest versions.
+[group('install')]
+bump: bump-root bump-frontend bump-backend
+
+# Bump root-level dependencies.
+[group('install')]
+bump-root:
+    pnpm update --latest
+
+# Bump frontend dependencies.
+[group('install')]
+bump-frontend:
+    just frontend/bump
+
+# Bump backend dependencies.
+[group('install')]
+bump-backend:
+    just backend/bump

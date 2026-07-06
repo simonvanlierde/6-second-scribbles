@@ -2,18 +2,37 @@
 
 from __future__ import annotations
 
-from fastapi import HTTPException, Request
+from typing import TYPE_CHECKING
 
+from fastapi import HTTPException
+
+from app.core.config import settings
 from app.core.redis import increment_rate_limit
 
+if TYPE_CHECKING:
+    from starlette.requests import HTTPConnection
 
-def get_client_identifier(request: Request) -> str:
-    """Return a stable best-effort client identifier for route throttling."""
-    forwarded_for = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    if forwarded_for:
-        return forwarded_for
-    if request.client and request.client.host:
-        return request.client.host
+
+def get_client_identifier(conn: HTTPConnection) -> str:
+    """Return a stable best-effort client identifier for route throttling.
+
+    Accepts any Starlette connection (HTTP ``Request`` or ``WebSocket``). Only
+    honours X-Forwarded-For when ``rate_limit_trust_forwarded_for`` is set, since
+    a client-supplied value would otherwise let an attacker rotate IPs to bypass
+    per-IP throttles (login/register/room-creation brute force).
+    """
+    if settings.rate_limit_trust_forwarded_for:
+        # Use the RIGHTMOST entry: the trusted proxy (Caddy) appends the real peer
+        # IP, so the last hop is what it saw. The leftmost is client-supplied and
+        # spoofable — taking it would reintroduce the per-IP throttle bypass.
+        forwarded_for = conn.headers.get("x-forwarded-for", "")
+        # A trailing comma ("1.2.3.4,") yields an empty rightmost token; fall
+        # through to the peer IP rather than bucketing all such clients together.
+        client = forwarded_for.rsplit(",", 1)[-1].strip()
+        if client:
+            return client
+    if conn.client and conn.client.host:
+        return conn.client.host
     return "unknown"
 
 

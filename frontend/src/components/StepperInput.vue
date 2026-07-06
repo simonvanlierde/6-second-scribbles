@@ -70,6 +70,7 @@ function onBlur() {
 
 <template>
   <div class="stepper-field">
+    <!-- biome-ignore lint/a11y/useSemanticElements: role=group + aria-label names the button/field cluster; no native element fits -->
     <div class="stepper" role="group" :aria-label="label">
       <button
         type="button"

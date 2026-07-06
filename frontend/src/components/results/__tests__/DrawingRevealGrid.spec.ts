@@ -41,7 +41,11 @@ describe("DrawingRevealGrid", () => {
     // First reaction button of the first drawing's pad.
     await wrapper.find('[aria-label="React with laugh"]').trigger("click");
 
-    expect(sendMock).toHaveBeenCalledWith({ type: "reaction_send", drawingId: "p1", reactionKey: "laugh" });
+    expect(sendMock).toHaveBeenCalledWith({
+      type: "reaction_send",
+      drawingId: "p1",
+      reactionKey: "laugh",
+    });
   });
 
   it("renders accumulated reaction badges from the reactions store", async () => {

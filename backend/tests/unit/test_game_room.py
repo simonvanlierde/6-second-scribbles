@@ -17,11 +17,12 @@ from app.rooms import manager as manager_module
 from app.rooms import rounds
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
-from app.rooms.protocol import WebSocketMessage
+from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
     HOST_ONE,
     KICK_VOTE_STARTED,
+    KICK_VOTE_UPDATED,
     MEDIUM,
     PLAYER_FOUR_ID,
     PLAYER_FOUR_NAME,
@@ -258,6 +259,40 @@ class TestGameRoom:
         await game_room.remove_player(PLAYER_ONE_ID)
         assert game_room.is_empty()
 
+    async def test_lobby_strokes_reconstructed_and_hydrated(self, game_room: GameRoom) -> None:
+        """Partials fold into one authoritative stroke that room_state replays to late joiners."""
+
+        def delta(x: float) -> StrokeDelta:
+            return StrokeDelta(color="#000", width=3, points=[StrokePoint(x=x, y=x)])
+
+        # Start a stroke, then two continuation fragments — one growing stroke.
+        game_room.apply_lobby_partial("p1", delta(1), is_start=True)
+        game_room.apply_lobby_partial("p1", delta(2), is_start=False)
+        game_room.apply_lobby_partial("p1", delta(3), is_start=False)
+        # A different player's start opens a second stroke.
+        game_room.apply_lobby_partial("p2", delta(9), is_start=True)
+
+        assert len(game_room.lobby_strokes) == 2
+        assert [p.x for p in game_room.lobby_strokes[0].points] == [1, 2, 3]
+
+        # A late joiner's snapshot carries the whole doodle, not a blank canvas.
+        state = game_room.room_state_event()
+        assert len(state.lobby_strokes) == 2
+
+        game_room.clear_lobby_strokes()
+        assert game_room.lobby_strokes == []
+        assert game_room.room_state_event().lobby_strokes == []
+
+    async def test_lobby_stroke_points_are_capped(self, game_room: GameRoom) -> None:
+        """One never-ending stroke can't grow memory past the per-stroke cap."""
+        chunk = StrokeDelta(color="#000", width=3, points=[StrokePoint(x=0, y=0)] * 1000)
+        game_room.apply_lobby_partial("p1", chunk, is_start=True)
+        for _ in range(10):  # 10k points offered into one stroke
+            game_room.apply_lobby_partial("p1", chunk, is_start=False)
+
+        assert len(game_room.lobby_strokes) == 1
+        assert len(game_room.lobby_strokes[0].points) == manager_module.MAX_STROKE_POINTS
+
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""
         assert game_room.metadata.game_phase == GamePhase.LOBBY
@@ -448,7 +483,6 @@ class TestGameRoom:
         result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
 
         assert result.success
-        assert result.vote_id == PLAYER_THREE_ID
         messages = [json.loads(message) for message in ws1.sent_texts]
         assert messages[-1]["type"] == KICK_VOTE_STARTED
         assert messages[-1]["targetPlayerId"] == PLAYER_THREE_ID
@@ -458,12 +492,12 @@ class TestGameRoom:
         assert messages[-1]["requiredVotes"] == 2
         assert EXPIRES_AT in messages[-1]
 
-    async def test_cast_kick_vote_returns_typed_progress_result(
+    async def test_cast_kick_vote_broadcasts_progress(
         self,
         game_room: GameRoom,
         make_ws: Callable[..., TestWebSocket],
     ) -> None:
-        """Test kick-vote progress returns a typed result object."""
+        """Test a non-final kick vote broadcasts the updated tally."""
         ws1, ws2, ws3, ws4 = make_ws(), make_ws(), make_ws(), make_ws()
 
         await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
@@ -477,9 +511,11 @@ class TestGameRoom:
         vote_result = await game_room.cast_kick_vote(PLAYER_THREE_ID, PLAYER_FOUR_ID)
 
         assert vote_result.success
-        assert not vote_result.vote_passed
-        assert vote_result.current_votes == 2
-        assert vote_result.required_votes == 3
+        update = [json.loads(m) for m in ws1.sent_texts if json.loads(m)["type"] == KICK_VOTE_UPDATED][-1]
+        assert update["targetPlayerId"] == PLAYER_FOUR_ID
+        assert update["currentVotes"] == 2
+        assert update["requiredVotes"] == 3
+        assert PLAYER_FOUR_ID in game_room.players
 
     async def test_players_cannot_vote_kick_the_host(
         self,

@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     kick_vote_timeout_seconds: int = 60
 
     # Abuse / overload protection
+    # Only trust the X-Forwarded-For header for client identification when the app
+    # runs behind a proxy that sets it (e.g. the prod Caddy setup). Trusting it by
+    # default would let a client spoof a fresh IP per request and bypass per-IP
+    # throttles, so it stays off unless explicitly enabled.
+    rate_limit_trust_forwarded_for: bool = IS_PROD
     max_total_rooms: int = 500
     ws_max_message_bytes: int = 64 * 1024
     ws_draw_messages_per_window: int = 60

@@ -5,6 +5,7 @@ defineEmits<{ react: [ReactionKey] }>();
 </script>
 
 <template>
+  <!-- biome-ignore lint/a11y/useSemanticElements: role=group + aria-label names the reaction button cluster; no native element fits -->
   <div class="hd-rpad" role="group" aria-label="Reactions">
     <button
       v-for="k in REACTION_KEYS"

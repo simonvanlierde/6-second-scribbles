@@ -1,10 +1,10 @@
 {
-	"[vue]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[python]": {
-		"editor.defaultFormatter": "charliermarsh.ruff"
-	},
-	"biome.lsp.bin": "./frontend/node_modules/@biomejs/biome/bin/biome",
-	"python-envs.workspaceSearchPaths": ["./backend/.venv"]
+  "[vue]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "biome.lsp.bin": "./node_modules/@biomejs/biome/bin/biome",
+  "python-envs.workspaceSearchPaths": ["./backend/.venv"]
 }

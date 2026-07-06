@@ -69,6 +69,9 @@ class PersistentTranslationCache:
         """Store translation in cache and persist to disk."""
         self.cache.setdefault(from_locale, {})[self._make_key(from_locale, to_locale, text)] = translation
         self.stats.total_writes += 1
+        # NOTE: full-file rewrite per put is O(n^2) over a seed run, but this is
+        # one-time offline tooling and per-word durability beats throughput here.
+        # Upgrade path if a seed ever gets huge: SQLite, or flush every N puts.
         self._save()
 
     def _save(self) -> None:

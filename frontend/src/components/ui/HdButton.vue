@@ -59,7 +59,7 @@ defineEmits<{ click: [MouseEvent] }>();
   cursor: not-allowed;
 }
 .hd-btn--primary {
-  background: var(--color-marker-red);
+  background: var(--color-primary-strong);
   color: white;
 }
 .hd-btn--secondary {

@@ -13,6 +13,7 @@ export type AvatarColor = (typeof AVATAR_COLORS)[number];
 function hash(id: string): number {
   let h = 0;
   for (let i = 0; i < id.length; i += 1) {
+    // biome-ignore lint/suspicious/noBitwiseOperators: `>>> 0` coerces the running hash to a uint32.
     h = (h * 31 + id.charCodeAt(i)) >>> 0;
   }
   return h;
