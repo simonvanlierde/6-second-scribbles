@@ -43,7 +43,11 @@ export const useGameStore = defineStore(
     function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean) {
       const idx = partialStrokeIndex.get(playerId);
       if (isStart || idx === undefined || !currentStrokes.value[idx]) {
-        currentStrokes.value.push({ color: stroke.color, width: stroke.width, points: [...stroke.points] });
+        currentStrokes.value.push({
+          color: stroke.color,
+          width: stroke.width,
+          points: [...stroke.points],
+        });
         partialStrokeIndex.set(playerId, currentStrokes.value.length - 1);
       } else {
         currentStrokes.value[idx].points.push(...stroke.points);
@@ -174,7 +178,14 @@ export const useGameStore = defineStore(
       }
     }
 
-    function setPlayers(nextPlayers: Array<{ id: string; name: string; color?: string | null; connected?: boolean }>) {
+    function setPlayers(
+      nextPlayers: Array<{
+        id: string;
+        name: string;
+        color?: string | null;
+        connected?: boolean;
+      }>,
+    ) {
       const next = new Map<string, Player>();
       for (const incoming of nextPlayers) {
         const existing = players.value.get(incoming.id);

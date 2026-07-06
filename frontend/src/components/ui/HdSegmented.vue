@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ "update:modelValue": [string] }>();
 
 // Fallback group name if not supplied — stable within the component lifetime.
+// biome-ignore lint/suspicious/noBitwiseOperators: `| 0` truncates the random float to an int.
 const groupName = computed(() => props.name ?? `hd-seg-${(Math.random() * 1e6) | 0}`);
 
 function onChange(value: string): void {

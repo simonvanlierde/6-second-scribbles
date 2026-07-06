@@ -16,14 +16,23 @@ describe("HdButton", () => {
   });
 
   it("does not emit click when disabled", async () => {
-    const w = mount(HdButton, { props: { disabled: true }, slots: { default: "Go" } });
+    const w = mount(HdButton, {
+      props: { disabled: true },
+      slots: { default: "Go" },
+    });
     await w.trigger("click");
     expect(w.emitted("click")).toBeUndefined();
   });
 
   it("applies the variant class", () => {
-    const primary = mount(HdButton, { props: { variant: "primary" }, slots: { default: "P" } });
-    const secondary = mount(HdButton, { props: { variant: "secondary" }, slots: { default: "S" } });
+    const primary = mount(HdButton, {
+      props: { variant: "primary" },
+      slots: { default: "P" },
+    });
+    const secondary = mount(HdButton, {
+      props: { variant: "secondary" },
+      slots: { default: "S" },
+    });
     expect(primary.classes()).toContain("hd-btn--primary");
     expect(secondary.classes()).toContain("hd-btn--secondary");
   });

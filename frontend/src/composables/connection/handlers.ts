@@ -111,7 +111,9 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
         const nextHost = store.players.get(message.newHostId);
         showNotification(
           nextHost
-            ? i18n.global.t("notifications.hostChanged", { name: nextHost.name })
+            ? i18n.global.t("notifications.hostChanged", {
+                name: nextHost.name,
+              })
             : i18n.global.t("notifications.hostChangedFallback"),
         );
       }
@@ -278,9 +280,17 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
         expiresAt: message.expiresAt,
       });
       if (message.initiatorId === store.localPlayerId) {
-        showNotification(i18n.global.t("moderation.kickVoteStartedByYou", { name: message.targetPlayerName }));
+        showNotification(
+          i18n.global.t("moderation.kickVoteStartedByYou", {
+            name: message.targetPlayerName,
+          }),
+        );
       } else {
-        showNotification(i18n.global.t("moderation.kickVoteStarted", { name: message.targetPlayerName }));
+        showNotification(
+          i18n.global.t("moderation.kickVoteStarted", {
+            name: message.targetPlayerName,
+          }),
+        );
       }
       break;
 
@@ -299,7 +309,11 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
         store.reset();
         router.push({ name: "home" });
       } else {
-        showNotification(i18n.global.t("moderation.playerKicked", { name: message.playerName }));
+        showNotification(
+          i18n.global.t("moderation.playerKicked", {
+            name: message.playerName,
+          }),
+        );
       }
       break;
 

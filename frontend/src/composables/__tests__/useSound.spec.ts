@@ -4,7 +4,11 @@ const playMock = vi.fn(() => Promise.resolve());
 
 vi.stubGlobal(
   "Audio",
-  vi.fn().mockImplementation(function (this: { play: typeof playMock; volume: number; currentTime: number }) {
+  vi.fn().mockImplementation(function (this: {
+    play: typeof playMock;
+    volume: number;
+    currentTime: number;
+  }) {
     this.play = playMock;
     this.volume = 0;
     this.currentTime = 0;

@@ -34,7 +34,9 @@ export const LOCALE_LABELS: Record<string, string> = {
   nl: "Nederlands",
   pl: "Polski",
   pt: "Português",
+  // biome-ignore lint/security/noSecrets: This is not a secret, it's just a label for a locale.
   "zh-CN": "中文（简体）",
+  // biome-ignore lint/security/noSecrets: This is not a secret, it's just a label for a locale.
   "zh-TW": "中文（繁體）",
 };
 

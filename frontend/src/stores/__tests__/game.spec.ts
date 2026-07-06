@@ -326,7 +326,11 @@ describe("captureRoundDrawings", () => {
 
     expect(store.drawingHistory).toHaveLength(2);
     expect(store.drawingHistory.map((d) => d.playerId)).toEqual(["p1", "p2"]);
-    expect(store.drawingHistory[0]).toMatchObject({ round: 1, name: "Alice", drawing: "data:image/png;base64,AAA" });
+    expect(store.drawingHistory[0]).toMatchObject({
+      round: 1,
+      name: "Alice",
+      drawing: "data:image/png;base64,AAA",
+    });
     expect(store.drawingHistory[0]?.color).toBeTruthy();
   });
 
@@ -349,8 +353,20 @@ describe("captureRoundDrawings", () => {
     const store = useGameStore();
     store.setPlayers([{ id: "p1", name: "Alice" }]);
     store.setRoundResults([
-      { playerId: "p1", targetPlayerId: "p2", correctGuesses: 3, totalItems: 5, pointsEarned: 30 },
-      { playerId: "p2", targetPlayerId: "p1", correctGuesses: 2, totalItems: 5, pointsEarned: 20 },
+      {
+        playerId: "p1",
+        targetPlayerId: "p2",
+        correctGuesses: 3,
+        totalItems: 5,
+        pointsEarned: 30,
+      },
+      {
+        playerId: "p2",
+        targetPlayerId: "p1",
+        correctGuesses: 2,
+        totalItems: 5,
+        pointsEarned: 20,
+      },
     ]);
     store.captureRoundDrawings(1);
 
@@ -362,7 +378,13 @@ describe("captureRoundDrawings", () => {
     store.setPlayers([{ id: "p1", name: "Alice" }]);
     store.setPlayerDrawing("p1", "data:image/png;base64,AAA");
     store.setRoundResults([
-      { playerId: "p1", targetPlayerId: "p2", correctGuesses: 1, totalItems: 2, pointsEarned: 10 },
+      {
+        playerId: "p1",
+        targetPlayerId: "p2",
+        correctGuesses: 1,
+        totalItems: 2,
+        pointsEarned: 10,
+      },
     ]);
     store.captureRoundDrawings(1);
 

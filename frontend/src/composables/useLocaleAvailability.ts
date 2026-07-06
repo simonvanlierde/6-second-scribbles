@@ -57,8 +57,11 @@ async function fetchLocaleAvailability(force = false): Promise<void> {
 
 export function useLocaleAvailability() {
   const localeOptions = computed<LocaleOption[]>(() => {
-    if (!hasLoaded.value && !loadError.value) {
-      return SUPPORTED_LOCALES.map((locale) => ({ code: locale, enabled: true }));
+    if (!(hasLoaded.value || loadError.value)) {
+      return SUPPORTED_LOCALES.map((locale) => ({
+        code: locale,
+        enabled: true,
+      }));
     }
 
     return SUPPORTED_LOCALES.map((locale) => {

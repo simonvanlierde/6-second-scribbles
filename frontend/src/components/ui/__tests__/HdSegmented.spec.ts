@@ -32,7 +32,9 @@ describe("HdSegmented", () => {
   });
 
   it("groups the radios under a single name so only one is selected at a time", () => {
-    const w = mount(HdSegmented, { props: { modelValue: "light", options, name: "theme" } });
+    const w = mount(HdSegmented, {
+      props: { modelValue: "light", options, name: "theme" },
+    });
     for (const r of w.findAll('input[type="radio"]')) {
       expect(r.attributes("name")).toBe("theme");
     }

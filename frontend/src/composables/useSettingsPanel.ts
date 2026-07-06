@@ -25,5 +25,12 @@ export function useSettingsPanel() {
     pendingNameAction.value = null;
   }
 
-  return { isOpen, focusNameOnOpen, pendingNameAction, open, openForName, close };
+  return {
+    isOpen,
+    focusNameOnOpen,
+    pendingNameAction,
+    open,
+    openForName,
+    close,
+  };
 }

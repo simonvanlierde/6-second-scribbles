@@ -50,9 +50,17 @@ function createMemoryStorage(): Storage {
 
 for (const name of ["localStorage", "sessionStorage"] as const) {
   const value = createMemoryStorage();
-  Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
+  Object.defineProperty(globalThis, name, {
+    value,
+    writable: true,
+    configurable: true,
+  });
   if (typeof window !== "undefined") {
-    Object.defineProperty(window, name, { value, writable: true, configurable: true });
+    Object.defineProperty(window, name, {
+      value,
+      writable: true,
+      configurable: true,
+    });
   }
 }
 

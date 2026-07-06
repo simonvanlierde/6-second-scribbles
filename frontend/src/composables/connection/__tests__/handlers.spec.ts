@@ -84,7 +84,11 @@ describe("connection handlers translations", () => {
         type: "round_complete",
         results: [],
         scores: { p1: 0 },
-        highlights: { bestGuesser: { playerId: "p1", detail: "2/2" }, speedDemon: null, wildestMiss: null },
+        highlights: {
+          bestGuesser: { playerId: "p1", detail: "2/2" },
+          speedDemon: null,
+          wildestMiss: null,
+        },
       },
       ctx,
     );
@@ -106,7 +110,15 @@ describe("connection handlers translations", () => {
     handleGameFlowEvent(
       {
         type: "round_complete",
-        results: [{ playerId: "p1", targetPlayerId: "p2", correctGuesses: 2, totalItems: 3, pointsEarned: 20 }],
+        results: [
+          {
+            playerId: "p1",
+            targetPlayerId: "p2",
+            correctGuesses: 2,
+            totalItems: 3,
+            pointsEarned: 20,
+          },
+        ],
         scores: { p1: 20, p2: 0 },
         highlights: null,
       },
@@ -118,7 +130,14 @@ describe("connection handlers translations", () => {
     expect(store.totalGuessesMade).toBe(2);
 
     // The next round nulls player.drawing — the captured history must persist.
-    handleGameFlowEvent({ type: "start_round", round: 2, cards: { p1: { category: "X", items: ["a"] } } }, ctx);
+    handleGameFlowEvent(
+      {
+        type: "start_round",
+        round: 2,
+        cards: { p1: { category: "X", items: ["a"] } },
+      },
+      ctx,
+    );
     expect(store.drawingHistory).toHaveLength(2);
   });
 
@@ -126,9 +145,22 @@ describe("connection handlers translations", () => {
     const reactions = useReactions();
     reactions.clear();
 
-    handleResultsEvent({ type: "reaction_received", drawingId: "p2", reactionKey: "laugh", senderId: "p1" }, ctx);
     handleResultsEvent(
-      { type: "reaction_received", drawingId: "p2", reactionKey: "bogus", senderId: "p1" } as never,
+      {
+        type: "reaction_received",
+        drawingId: "p2",
+        reactionKey: "laugh",
+        senderId: "p1",
+      },
+      ctx,
+    );
+    handleResultsEvent(
+      {
+        type: "reaction_received",
+        drawingId: "p2",
+        reactionKey: "bogus",
+        senderId: "p1",
+      } as never,
       ctx,
     );
 

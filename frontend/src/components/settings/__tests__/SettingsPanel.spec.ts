@@ -19,7 +19,13 @@ function mountPanel(initialState: Record<string, unknown> = {}) {
       plugins: [
         createTestingPinia({
           createSpy: vi.fn,
-          initialState: { game: { localPlayerName: "", localPlayerColor: "var(--avatar-1)", ...initialState } },
+          initialState: {
+            game: {
+              localPlayerName: "",
+              localPlayerColor: "var(--avatar-1)",
+              ...initialState,
+            },
+          },
           stubActions: false,
         }),
         i18n,

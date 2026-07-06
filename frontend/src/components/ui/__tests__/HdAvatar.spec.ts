@@ -5,13 +5,19 @@ import HdAvatar from "@/components/ui/HdAvatar.vue";
 
 describe("HdAvatar", () => {
   it("renders the initial passed in", () => {
-    const w = mount(HdAvatar, { props: { initial: "S", color: "var(--avatar-3)" } });
+    const w = mount(HdAvatar, {
+      props: { initial: "S", color: "var(--avatar-3)" },
+    });
     expect(w.text()).toBe("S");
   });
 
   it("applies the size class", () => {
-    const sm = mount(HdAvatar, { props: { initial: "X", color: "var(--avatar-1)", size: "sm" } });
-    const lg = mount(HdAvatar, { props: { initial: "X", color: "var(--avatar-1)", size: "lg" } });
+    const sm = mount(HdAvatar, {
+      props: { initial: "X", color: "var(--avatar-1)", size: "sm" },
+    });
+    const lg = mount(HdAvatar, {
+      props: { initial: "X", color: "var(--avatar-1)", size: "lg" },
+    });
     expect(sm.classes()).toContain("hd-avatar--sm");
     expect(lg.classes()).toContain("hd-avatar--lg");
   });

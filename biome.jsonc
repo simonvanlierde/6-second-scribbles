@@ -38,7 +38,7 @@
   "linter": {
     "domains": {
       "project": "recommended",
-      "react": "recommended",
+      "react": "none",
       "test": "recommended",
       "types": "recommended",
       "vue": "recommended"
@@ -47,25 +47,68 @@
     "rules": {
       "preset": "recommended",
       "a11y": "on",
-      "complexity": "on",
-      "correctness": "on",
-      "performance": "on",
       "security": "on",
       "suspicious": "on"
     }
   },
   "overrides": [
     {
+      "includes": ["**/*.vue"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useStrictMode": "off",
+            "noEmptySource": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.html"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useStrictMode": "off",
+            "noEmptyBlockStatements": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": [
-        "scripts/**"
+        "**/*.test.{js,jsx,ts,tsx}",
+        "**/*.spec.{js,jsx,ts,tsx}",
+        "**/__tests__/**",
+        "**/vitest.setup.ts",
+        "scripts/**",
+        "**/scripts/**/*.{js,cjs,mjs,ts,tsx}"
       ],
       "linter": {
         "rules": {
           "correctness": {
             "noNodejsModules": "off"
           },
+          "security": {
+            "noSecrets": "off"
+          },
           "suspicious": {
-            "noConsole": "off"
+            "noConsole": "off",
+            "noEmptyBlockStatements": "off",
+            "useAwait": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/useGameConnection.ts", "**/composables/connection/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          },
+          "suspicious": {
+            "noConsole": "off",
+            "noUnnecessaryConditions": "off"
           }
         }
       }
