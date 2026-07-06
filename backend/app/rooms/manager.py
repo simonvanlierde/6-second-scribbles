@@ -418,7 +418,7 @@ class GameRoom:
             self._lobby_partial_index[player_id] = len(self.lobby_strokes) - 1
         else:
             self.lobby_strokes[idx].points.extend(stroke.points)
-        # ponytail: bound the shared doodle so a marathon lobby can't grow unbounded.
+        # NOTE: bound the shared doodle so a marathon lobby can't grow unbounded.
         # Trim oldest strokes past the cap; indices shift, so reset the partial map
         # (an in-progress stroke at most restarts on its next fragment).
         if len(self.lobby_strokes) > MAX_LOBBY_STROKES:

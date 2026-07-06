@@ -5,6 +5,7 @@
 // unexpected. `git status --porcelain` surfaces all three in one shot.
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
+import process from "node:process";
 
 const root = resolve(import.meta.dirname, "..");
 const paths = ["contracts", "frontend/src/generated"];
