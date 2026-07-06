@@ -8,23 +8,25 @@
     },
     "enabled": true
   },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
   "files": {
+    "ignoreUnknown": true,
     "includes": [
-      "*.js",
-      "*.cjs",
-      "*.mjs",
-      "*.json",
-      "*.jsonc",
-      "*.yml",
-      "*.yaml",
-      "*.toml",
-      ".github/**",
-      "contracts/**",
-      "scripts/**"
+      "**/*{.js,.jsx,.ts,.tsx,.vue,.css,.scss,.html,.json,.jsonc,.md,.mdx}",
+      "!**/dist",
+      "!**/playwright-report",
+      "!**/node_modules"
     ]
   },
   "formatter": {
+    "enabled": true,
     "indentStyle": "space",
+    "indentWidth": 2,
     "lineWidth": 120
   },
   "html": {
@@ -52,6 +54,23 @@
       "suspicious": "on"
     }
   },
+  "overrides": [
+    {
+      "includes": [
+        "scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
   "vcs": {
     "clientKind": "git",
     "enabled": true,
