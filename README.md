@@ -19,7 +19,7 @@ A live demo is hosted at [6ss.duinlab.nl](https://6ss.duinlab.nl).
 - **Backend** — FastAPI, SQLAlchemy, PostgreSQL, Redis
 - **Tooling** — pnpm, uv, just, Docker Compose, Vitest, Playwright, pytest
 
-It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI and WebSocket schemas shared by both sides).
+It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI and WebSocket schemas shared by both sides). See [docs/architecture.md](docs/architecture.md) for how the pieces fit together and [docs/adr/](docs/adr/) for design decisions.
 
 ## Status
 
@@ -39,7 +39,7 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 
 ## Running locally
 
-Requires Node 24+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
+Requires Node 26+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
 
 ```bash
 just install                                   # install dependencies
@@ -48,7 +48,7 @@ cp frontend/.env.example frontend/.env.local
 just dev                                        # Docker services + dev servers
 ```
 
-`just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more.
+`just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more, or [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to contribute.
 
 ## Attribution
 
