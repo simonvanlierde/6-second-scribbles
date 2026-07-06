@@ -38,6 +38,8 @@
   "linter": {
     "domains": {
       "project": "recommended",
+      // Vue app, not React: the react domain's rules-of-hooks (useHookAtTopLevel)
+      // misfire on every composable/store call, so it stays off.
       "react": "none",
       "test": "recommended",
       "types": "recommended",
@@ -53,6 +55,8 @@
   },
   "overrides": [
     {
+      // Vue SFC <script> blocks are always-strict ES modules (useStrictMode wants a
+      // literal directive we never write); comment-only script blocks are legit docs.
       "includes": ["**/*.vue"],
       "linter": {
         "rules": {
@@ -64,6 +68,8 @@
       }
     },
     {
+      // index.html's inline theme-bootstrap: strict-mode is implicit, and its
+      // best-effort `catch {}` around localStorage is intentional.
       "includes": ["**/*.html"],
       "linter": {
         "rules": {
@@ -75,6 +81,8 @@
       }
     },
     {
+      // Tests & build scripts: Node builtins are allowed, entropy heuristics flag
+      // fixture/selector strings, and empty mocks / non-awaiting async are normal.
       "includes": [
         "**/*.test.{js,jsx,ts,tsx}",
         "**/*.spec.{js,jsx,ts,tsx}",
@@ -100,6 +108,10 @@
       }
     },
     {
+      // WebSocket network boundary: noSecrets flags i18n keys, and the server can send
+      // malformed data despite the optimistic generated types, so the defensive guards
+      // noUnnecessaryConditions calls "redundant" are deliberate. (Logging goes through
+      // @/shared/logger, so noConsole stays enforced here.)
       "includes": ["**/useGameConnection.ts", "**/composables/connection/**"],
       "linter": {
         "rules": {
@@ -107,8 +119,18 @@
             "noSecrets": "off"
           },
           "suspicious": {
-            "noConsole": "off",
             "noUnnecessaryConditions": "off"
+          }
+        }
+      }
+    },
+    {
+      // The one module allowed to touch console: everything else routes through it.
+      "includes": ["**/shared/logger.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
           }
         }
       }
