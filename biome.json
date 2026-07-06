@@ -27,6 +27,12 @@
     "indentStyle": "space",
     "lineWidth": 120
   },
+  "html": {
+    "experimentalFullSupportEnabled": true,
+    "formatter": {
+      "enabled": false
+    }
+  },
   "linter": {
     "domains": {
       "project": "recommended",
