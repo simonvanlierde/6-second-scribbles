@@ -71,6 +71,11 @@ logger = logging.getLogger(__name__)
 # Cap on retained shared-lobby-doodle strokes, so a long-lived lobby can't grow
 # the in-memory stroke list without bound. Oldest strokes are trimmed past this.
 MAX_LOBBY_STROKES = 500
+# Cap on points within a single reconstructed stroke. Without this, a client that
+# opens one stroke and then only ever sends continuation fragments (never a new
+# strokeStart) would extend that one stroke forever — MAX_LOBBY_STROKES bounds the
+# count of strokes, not points inside one. Generous vs any real freehand stroke.
+MAX_STROKE_POINTS = 4000
 
 
 class RoomCapacityError(Exception):
@@ -417,7 +422,11 @@ class GameRoom:
             )
             self._lobby_partial_index[player_id] = len(self.lobby_strokes) - 1
         else:
-            self.lobby_strokes[idx].points.extend(stroke.points)
+            # Bound points per stroke too: a client that keeps sending continuation
+            # fragments without a new strokeStart would grow one stroke unbounded.
+            room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points)
+            if room > 0:
+                self.lobby_strokes[idx].points.extend(stroke.points[:room])
         # NOTE: bound the shared doodle so a marathon lobby can't grow unbounded.
         # Trim oldest strokes past the cap; indices shift, so reset the partial map
         # (an in-progress stroke at most restarts on its next fragment).

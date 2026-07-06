@@ -283,6 +283,16 @@ class TestGameRoom:
         assert game_room.lobby_strokes == []
         assert game_room.room_state_event().lobby_strokes == []
 
+    async def test_lobby_stroke_points_are_capped(self, game_room: GameRoom) -> None:
+        """One never-ending stroke can't grow memory past the per-stroke cap."""
+        chunk = StrokeDelta(color="#000", width=3, points=[StrokePoint(x=0, y=0)] * 1000)
+        game_room.apply_lobby_partial("p1", chunk, is_start=True)
+        for _ in range(10):  # 10k points offered into one stroke
+            game_room.apply_lobby_partial("p1", chunk, is_start=False)
+
+        assert len(game_room.lobby_strokes) == 1
+        assert len(game_room.lobby_strokes[0].points) == manager_module.MAX_STROKE_POINTS
+
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""
         assert game_room.metadata.game_phase == GamePhase.LOBBY
