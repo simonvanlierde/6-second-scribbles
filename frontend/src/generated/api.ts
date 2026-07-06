@@ -129,11 +129,7 @@ export const QuickPlayResponseSchema = z
 export type QuickPlayResponse = z.infer<typeof QuickPlayResponseSchema>;
 
 export const RandomRoomResponseSchema = z
-  .object({
-    max_players: z.number().int(),
-    player_count: z.number().int(),
-    room_code: z.string(),
-  })
+  .object({ max_players: z.number().int(), player_count: z.number().int(), room_code: z.string() })
   .describe("Response for finding a random joinable room.");
 export type RandomRoomResponse = z.infer<typeof RandomRoomResponseSchema>;
 

@@ -159,13 +159,7 @@ export const ServerEventSchema = z.union([
       roundStartTime: z.number().int(),
     })
     .strict(),
-  z
-    .object({
-      type: z.literal("ready_status"),
-      readyCount: z.number().int(),
-      totalPlayers: z.number().int(),
-    })
-    .strict(),
+  z.object({ type: z.literal("ready_status"), readyCount: z.number().int(), totalPlayers: z.number().int() }).strict(),
   z.object({ type: z.literal("host_changed"), newHostId: z.string() }).strict(),
   z
     .object({
@@ -181,11 +175,7 @@ export const ServerEventSchema = z.union([
     .strict(),
   z.object({ type: z.literal("player_left"), playerId: z.string() }).strict(),
   z
-    .object({
-      type: z.literal("player_presence"),
-      playerId: z.string(),
-      connected: z.boolean(),
-    })
+    .object({ type: z.literal("player_presence"), playerId: z.string(), connected: z.boolean() })
     .strict()
     .describe("A player's connection status changed (disconnected/reconnecting or back)."),
   z
@@ -207,19 +197,9 @@ export const ServerEventSchema = z.union([
       requiredVotes: z.number().int(),
     })
     .strict(),
+  z.object({ type: z.literal("kick_vote_expired"), targetPlayerId: z.string() }).strict(),
   z
-    .object({
-      type: z.literal("kick_vote_expired"),
-      targetPlayerId: z.string(),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("player_kicked"),
-      playerId: z.string(),
-      playerName: z.string(),
-      reason: z.string(),
-    })
+    .object({ type: z.literal("player_kicked"), playerId: z.string(), playerName: z.string(), reason: z.string() })
     .strict(),
   z
     .object({
@@ -241,37 +221,13 @@ export const ServerEventSchema = z.union([
           z
             .object({
               bestGuesser: z
-                .union([
-                  z
-                    .object({
-                      playerId: z.string(),
-                      detail: z.string().default(""),
-                    })
-                    .strict(),
-                  z.null(),
-                ])
+                .union([z.object({ playerId: z.string(), detail: z.string().default("") }).strict(), z.null()])
                 .default(null),
               speedDemon: z
-                .union([
-                  z
-                    .object({
-                      playerId: z.string(),
-                      detail: z.string().default(""),
-                    })
-                    .strict(),
-                  z.null(),
-                ])
+                .union([z.object({ playerId: z.string(), detail: z.string().default("") }).strict(), z.null()])
                 .default(null),
               wildestMiss: z
-                .union([
-                  z
-                    .object({
-                      playerId: z.string(),
-                      detail: z.string().default(""),
-                    })
-                    .strict(),
-                  z.null(),
-                ])
+                .union([z.object({ playerId: z.string(), detail: z.string().default("") }).strict(), z.null()])
                 .default(null),
             })
             .strict(),
@@ -316,10 +272,7 @@ export const ServerEventSchema = z.union([
     guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
   }),
   z
-    .object({
-      type: z.literal("draw_stroke"),
-      playerId: z.union([z.string(), z.null()]).default(null),
-    })
+    .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
     .catchall(z.any()),
   z.object({
     type: z.literal("draw_stroke_partial"),
@@ -344,18 +297,13 @@ export const ServerEventSchema = z.union([
     strokeStart: z.boolean().default(false),
   }),
   z.object({ type: z.literal("drawpad_clear") }),
-  z.object({
-    type: z.literal("pad_visibility"),
-    visible: z.boolean().default(true),
-  }),
+  z.object({ type: z.literal("pad_visibility"), visible: z.boolean().default(true) }),
 ]);
 
 export type ServerEvent = z.infer<typeof ServerEventSchema>;
 export type ServerEventType = ServerEvent["type"];
 export type ServerEventOf<TType extends ServerEventType> = Extract<ServerEvent, { type: TType }>;
-export type ServerEventMap = {
-  [TType in ServerEventType]: ServerEventOf<TType>;
-};
+export type ServerEventMap = { [TType in ServerEventType]: ServerEventOf<TType> };
 export const serverEventTypes = [
   "default_locale_update",
   "draw_stroke",
@@ -511,10 +459,7 @@ export const ClientEventSchema = z.union([
     categoryIds: z.union([z.array(z.number().int()), z.null()]).default(null),
   }),
   z
-    .object({
-      type: z.literal("draw_stroke"),
-      playerId: z.union([z.string(), z.null()]).default(null),
-    })
+    .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
     .catchall(z.any()),
   z.object({
     type: z.literal("draw_stroke_partial"),
@@ -539,17 +484,11 @@ export const ClientEventSchema = z.union([
     strokeStart: z.boolean().default(false),
   }),
   z.object({ type: z.literal("drawpad_clear") }),
-  z.object({
-    type: z.literal("pad_visibility"),
-    visible: z.boolean().default(true),
-  }),
+  z.object({ type: z.literal("pad_visibility"), visible: z.boolean().default(true) }),
   z.object({ type: z.literal("privacy_changed"), isPrivate: z.boolean() }),
   z.object({ type: z.literal("initiate_kick"), targetPlayerId: z.string() }),
   z.object({ type: z.literal("cast_kick_vote"), targetPlayerId: z.string() }),
-  z.object({
-    type: z.literal("request_game_state"),
-    playerId: z.union([z.string(), z.null()]).default(null),
-  }),
+  z.object({ type: z.literal("request_game_state"), playerId: z.union([z.string(), z.null()]).default(null) }),
   z.object({
     type: z.literal("reaction_send"),
     drawingId: z.string(),
@@ -559,9 +498,7 @@ export const ClientEventSchema = z.union([
 export type ClientEvent = z.infer<typeof ClientEventSchema>;
 export type ClientEventType = ClientEvent["type"];
 export type ClientEventOf<TType extends ClientEventType> = Extract<ClientEvent, { type: TType }>;
-export type ClientEventMap = {
-  [TType in ClientEventType]: ClientEventOf<TType>;
-};
+export type ClientEventMap = { [TType in ClientEventType]: ClientEventOf<TType> };
 export const clientEventTypes = [
   "cast_kick_vote",
   "default_locale_update",
