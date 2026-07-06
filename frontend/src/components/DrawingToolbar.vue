@@ -33,6 +33,7 @@ const { t } = useI18n();
 
 <template>
   <div class="toolbar" :class="{ 'toolbar--compact': compact }">
+    <!-- biome-ignore lint/a11y/useSemanticElements: role=group + aria-label names the swatch cluster; no native element fits -->
     <div class="toolbar__group" role="group" :aria-label="t('drawing.color')">
       <button
         v-for="color in palette"
@@ -47,6 +48,7 @@ const { t } = useI18n();
       />
     </div>
     <span class="toolbar__divider" aria-hidden="true" />
+    <!-- biome-ignore lint/a11y/useSemanticElements: role=group + aria-label names the brush-size cluster; no native element fits -->
     <div class="toolbar__group" role="group" :aria-label="t('drawing.size')">
       <button
         v-for="size in sizes"

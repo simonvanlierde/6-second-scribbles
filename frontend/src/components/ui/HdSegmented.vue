@@ -30,6 +30,7 @@ function onChange(value: string): void {
 
 <template>
   <div class="hd-seg" role="radiogroup" :aria-label="props.ariaLabel">
+    <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the radio input and its text; Biome misses controls inside v-for labels -->
     <label
       v-for="opt in props.options"
       :key="opt.value"

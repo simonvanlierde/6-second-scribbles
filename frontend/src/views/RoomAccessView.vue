@@ -158,6 +158,7 @@ onBeforeUnmount(() => {
 
         <HdCard v-if="isInProgress" variant="postit" class="access-note"> {{ $t('roomEntry.roomInProgress') }} </HdCard>
 
+        <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps HdInput, which renders the text input, plus its visible label text -->
         <label class="access-name">
           <span class="access-name__label">{{ $t('roomEntry.enterYourName') }}</span>
           <HdInput

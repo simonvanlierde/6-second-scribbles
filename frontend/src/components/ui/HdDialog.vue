@@ -66,6 +66,8 @@ function onClose(): void {
 </script>
 
 <template>
+  <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: native <dialog>; @click.self is a pointer-only backdrop dismiss -->
+  <!-- biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users cancel via Escape, handled by @close -->
   <dialog
     ref="dialogRef"
     class="hd-dialog"

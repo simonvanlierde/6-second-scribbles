@@ -175,6 +175,7 @@ function confirmLeave() {
             {{ $t("guessing.guessPlayerDrawing", { name: assignedTargetPlayer.name }) }}
           </h2>
           <div class="drawing-frame__stage">
+            <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: @error is a resource-load fallback, not a user interaction -->
             <img
               v-if="assignedTargetPlayer.drawing && !brokenImages.has(assignedTargetPlayer.id)"
               :src="assignedTargetPlayer.drawing"

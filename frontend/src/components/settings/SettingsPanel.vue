@@ -106,6 +106,8 @@ function selectTheme(value: Theme) {
 </script>
 
 <template>
+  <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: native <dialog>; @click.self is a pointer-only backdrop dismiss -->
+  <!-- biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users close via Escape, handled by @close -->
   <dialog ref="dialog" class="settings-dialog" @click.self="close" @close="close">
     <header class="settings-dialog__header">
       <h2 class="settings-dialog__title">{{ t("settings.title") }}</h2>
@@ -255,6 +257,7 @@ function selectTheme(value: Theme) {
             {{ t("settings.theme") }}
           </span>
           <div class="seg" role="radiogroup" :aria-label="t('settings.theme')">
+            <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the radio input with its aria-label; Biome misses controls inside v-for labels -->
             <label
               v-for="opt in themeOptions"
               :key="opt.value"
@@ -346,6 +349,7 @@ function selectTheme(value: Theme) {
             </svg>
             {{ t("settings.sound") }}
           </span>
+          <!-- biome-ignore lint/a11y/noLabelWithoutControl: wraps the checkbox below, which carries its own aria-label -->
           <label class="switch" :class="{ 'switch--on': soundEnabled }">
             <input
               type="checkbox"

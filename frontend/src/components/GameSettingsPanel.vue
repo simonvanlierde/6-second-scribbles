@@ -153,7 +153,7 @@ watch(
     <!-- Difficulty + rounds sit side by side, stacking when space is tight -->
     <div class="settings__row">
       <div class="field">
-        <label class="field__label">{{ $t("settings.difficulty") }}</label>
+        <span class="field__label">{{ $t("settings.difficulty") }}</span>
         <HdSegmented
           :model-value="difficulty"
           :options="difficultyOptions"
@@ -163,7 +163,7 @@ watch(
       </div>
 
       <div class="field">
-        <label class="field__label">{{ $t("settings.rounds") }}</label>
+        <span class="field__label">{{ $t("settings.rounds") }}</span>
         <StepperInput
           v-model="rounds"
           :label="$t('settings.rounds')"
@@ -196,7 +196,7 @@ watch(
       <div v-if="advancedOpen" class="advanced">
         <div class="advanced__times">
           <div class="field">
-            <label class="field__label">
+            <span class="field__label">
               <svg
                 class="label-icon"
                 viewBox="0 0 24 24"
@@ -211,7 +211,7 @@ watch(
                 <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
               {{ $t("settings.drawingTime") }}
-            </label>
+            </span>
             <StepperInput
               v-model="drawingTimeLimit"
               :label="$t('settings.drawingTime')"
@@ -223,7 +223,7 @@ watch(
           </div>
 
           <div class="field">
-            <label class="field__label">
+            <span class="field__label">
               <svg
                 class="label-icon"
                 viewBox="0 0 24 24"
@@ -239,7 +239,7 @@ watch(
                 />
               </svg>
               {{ $t("settings.guessingTime") }}
-            </label>
+            </span>
             <StepperInput
               v-model="guessingTimeLimit"
               :label="$t('settings.guessingTime')"

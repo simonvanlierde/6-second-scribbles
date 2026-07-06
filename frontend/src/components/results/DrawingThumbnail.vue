@@ -28,6 +28,7 @@ watch(
   <figure class="thumb">
     <HdAvatar class="thumb__avatar" :initial="getAvatarInitial(name)" :color="color" size="sm" />
     <div class="thumb__stage">
+      <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: @error is a resource-load fallback, not a user interaction -->
       <img v-if="drawing && !broken" :src="drawing" :alt="alt" class="thumb__img" @error="broken = true">
       <span v-else class="thumb__placeholder" aria-hidden="true">
         <svg
