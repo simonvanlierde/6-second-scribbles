@@ -14,7 +14,10 @@ import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEventGroup, ServerEventOf } from "@/generated/protocol";
 import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
+import { createLogger } from "@/shared/logger";
 import type { useGameStore } from "@/stores/game";
+
+const log = createLogger("WebSocket");
 
 export type ShowNotification = (text: string, type?: NotificationType, duration?: number) => void;
 
@@ -68,12 +71,12 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
       }
 
       showNotification(message.message || i18n.global.t("notifications.unableToJoinRoom"), "error");
-      console.error("[WebSocket] Join error:", message.message);
+      log.error("Join error:", message.message);
       setTimeout(() => router.push({ name: "home" }), UI_TIMINGS.JOIN_ERROR_REDIRECT_MS);
       break;
 
     case "host_restored":
-      console.log("[WebSocket] Host status restored");
+      log.info("Host status restored");
       showNotification(i18n.global.t("notifications.hostStatusRestored"), "success");
       break;
 
@@ -141,7 +144,7 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
         store.roundStartTime = message.roundStartTime;
         store.startRound(message.round ?? 1, message.cards);
       } else {
-        console.error("[WebSocket] Invalid cards in start_round message:", message);
+        log.error("Invalid cards in start_round message:", message);
       }
       break;
 
