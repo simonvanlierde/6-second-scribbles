@@ -8,13 +8,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Accessibility checks in CI
-- architecture, contributing, ADR, and changelog docs.
+- Accessibility checks in CI.
+- Architecture, contributing, ADR, and changelog documentation.
+- Late-joiner hydration for shared lobby doodles.
 
 ### Changed
 
-- Hardened multiplayer room handling, guess scoring, rate limiting, and shared drawpad synchronization.
-- Refreshed frontend lobby/invite/spectator flows and moved the repo to Node 26 / pnpm 11.
+- Hardened multiplayer room lifecycle, host migration, kick votes, timers, and WebSocket room-creation throttling.
+- Improved guess scoring for non-Latin text, short fuzzy matches, duplicate guesses, and localized cache keys.
+- Optimized shared drawpad sync by sending stroke deltas instead of full growing strokes.
+- Simplified frontend game/drawing state and refreshed invite, lobby, settings, and spectator flows.
+- Updated project tooling to Node 26 and pnpm 11.
 
 ## [0.2.0] - 2026-06-29
 
