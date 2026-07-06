@@ -9,12 +9,13 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { urgentAt: 10 });
 
 const isUrgent = computed(() => props.seconds <= props.urgentAt);
+
+// The timer is aria-hidden: a per-second live region would make screen readers
+// announce every tick. The countdown is a visual urgency cue only.
 </script>
 
 <template>
   <div class="hd-timer" :class="isUrgent ? 'hd-timer--urgent' : 'hd-timer--calm'" aria-hidden="true">
-    <!-- aria-hidden: a per-second live region would make screen readers announce
-         every tick. The countdown is a visual urgency cue only. -->
     {{ props.seconds }}
   </div>
 </template>
@@ -43,7 +44,7 @@ const isUrgent = computed(() => props.seconds <= props.urgentAt);
   color: var(--color-ink-fixed);
 }
 .hd-timer--urgent {
-  background: var(--color-marker-red);
+  background: var(--color-primary-strong);
   color: white;
   animation: heartbeat 1s var(--ease-spring) infinite;
 }

@@ -37,6 +37,16 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 - Full mobile support (currently desktop-first)
 - Improved handling mid-game user disconnects
 
+## Accessibility
+
+Accessibility is checked three ways, all part of CI:
+
+- **Static a11y linting.** Biome's accessibility rules are enabled (`linter.rules.a11y: "on"` in `biome.json`) and run with `pnpm --dir frontend run lint`. This catches markup issues like missing labels, invalid ARIA, and non-interactive elements with click handlers.
+- **axe scans.** Playwright + [`@axe-core/playwright`](https://github.com/dequelabs/axe-core-npm) scan Home, the Settings panel, and the `/__ds` component-library page against WCAG 2.1 A/AA rule tags, in both light and dark themes. These run frontend-only (no backend) as the `a11y` CI job; run them locally with `just test-a11y`.
+- **Accessibility-tree assertions.** The broader Playwright e2e suite locates elements by ARIA role and accessible name (`getByRole`, including `getByRole("alert")`), so those flows only pass when the underlying roles and labels are present. Run locally with `just test-e2e` (this suite needs the backend stack).
+
+These check specific WCAG A/AA **rules** — a passing axe run flags no violations of those rules, but it is not a full manual audit and does **not** certify WCAG AA conformance.
+
 ## Running locally
 
 Requires Node 26+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.

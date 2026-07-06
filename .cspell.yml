@@ -64,6 +64,7 @@ words:
   - selectinload
   - uppercased
   - usefixtures
+  - WCAG
   - whereclause
   - zstd
 

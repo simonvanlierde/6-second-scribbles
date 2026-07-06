@@ -130,6 +130,30 @@ jobs:
           files: ./frontend/coverage/lcov.info
           flags: frontend
 
+  a11y:
+    name: Accessibility (axe)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Install frontend deps
+        run: pnpm --dir frontend install --frozen-lockfile
+
+      # Frontend-only axe checks (Home, Settings, component library) — no
+      # backend, so only the Chromium browser is needed.
+      - name: Install Playwright Chromium
+        run: pnpm --dir frontend exec playwright install --with-deps chromium
+
+      - name: Run accessibility checks
+        run: pnpm --dir frontend run test:e2e:a11y
+
   backend:
     name: Backend checks + unit tests
     runs-on: ubuntu-latest

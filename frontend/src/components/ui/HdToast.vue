@@ -40,7 +40,7 @@ const { notifications } = useNotifications();
   color: var(--color-ink-fixed);
 }
 .hd-toast--error {
-  background: var(--color-marker-red);
+  background: var(--color-primary-strong);
   color: white;
 }
 .hd-toast--info {

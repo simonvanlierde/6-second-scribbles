@@ -29,6 +29,12 @@
    * always be dark. */
   --color-ink-fixed: #3a332c;
 
+  /* Strong marker red — for red surfaces that carry white text (primary button,
+   * toast, timer, winner card). The bright --color-marker-red only reaches ~3:1
+   * against white; this darker red clears WCAG AA (4.5:1) in both modes. Same
+   * value both modes because white text needs a dark background either way. */
+  --color-primary-strong: #d23c3c;
+
   /* Semantic aliases */
   --color-bg: var(--color-paper);
   --color-surface: var(--color-card);
