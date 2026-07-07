@@ -1,13 +1,18 @@
 """Seed script to load category data into the database (M2M + Library-First YAML).
 
 Run this from the backend directory after setting up the database:
-    uv run python -m scripts.seed_data
+    uv run python -m scripts.seed_data              # seed a fresh DB; warn + abort if already seeded
+    uv run python -m scripts.seed_data --append     # add only categories not already present
+    uv run python -m scripts.seed_data --overwrite  # replace all system categories + prompts
+    uv run python -m scripts.seed_data --clear       # delete ALL categories, prompts, and users
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -35,7 +40,6 @@ logger = logging.getLogger(__name__)
 SEED_DATA_PATH = Path(__file__).parent / "seed_data.yaml"
 SEED_DATA = yaml.safe_load(SEED_DATA_PATH.read_text())
 
-CLEAR_FLAG = "--clear"
 SEEDED_USERS_KEY = "seeded_users"
 SYSTEM_CATEGORIES_KEY = "system_categories"
 PROMPTS_KEY = "prompts"
@@ -133,27 +137,61 @@ async def _create_category(
     return category, len(resolved_prompts)
 
 
-async def seed_database() -> None:
-    """Seed the database using M2M + Library-First logic."""
+async def seed_database(*, overwrite: bool = False, append: bool = False) -> None:
+    """Seed the database using M2M + Library-First logic.
+
+    Modes (mutually exclusive):
+      - default: seed a fresh database. If system categories already exist, warn
+        and make no changes — the caller must opt in via ``overwrite`` or ``append``.
+      - ``overwrite``: delete existing system categories and the prompt library,
+        then re-seed everything from the YAML.
+      - ``append``: leave existing data untouched; insert only categories whose
+        slug is not already present (the prompt library is get-or-create either way).
+    """
     async with get_session_maker()() as session:
         try:
-            logger.info("Starting database seed")
-            # Clear existing system data for a clean re-seed
-            await session.execute(delete(Category).where(Category.source == DEFAULT_CATEGORY_SOURCE))
-            await session.execute(delete(Prompt))
+            existing_slugs = set(
+                (await session.execute(select(Category.slug).where(Category.source == DEFAULT_CATEGORY_SOURCE)))
+                .scalars()
+                .all()
+            )
 
-            # 1. Seed Prompt Library
+            if existing_slugs and not (overwrite or append):
+                logger.warning(
+                    "Database already contains %d system categories; making no changes. "
+                    "Re-run with --append to add only new entries, or --overwrite to replace all system data.",
+                    len(existing_slugs),
+                )
+                return
+
+            if overwrite:
+                logger.info(
+                    "Overwrite mode: clearing %d existing system categories and the prompt library.",
+                    len(existing_slugs),
+                )
+                await session.execute(delete(Category).where(Category.source == DEFAULT_CATEGORY_SOURCE))
+                await session.execute(delete(Prompt))
+                existing_slugs = set()
+            elif existing_slugs:
+                logger.info("Append mode: %d existing system categories will be left untouched.", len(existing_slugs))
+
+            # 1. Seed Prompt Library (get-or-create; safe to run in append mode)
             prompts = SEED_DATA.get(PROMPTS_KEY, [])
             await _seed_prompt_library(session, prompts)
             logger.info("Populated Prompt Library with %d entries.", len(prompts))
 
-            # 2. Seed Categories
+            # 2. Seed Categories, skipping any slug that already exists (append mode)
             total_categories = 0
             total_links = 0
+            skipped = 0
             for cat_data in SEED_DATA.get(SYSTEM_CATEGORIES_KEY, []):
+                slug = str(cat_data["id"])
+                if slug in existing_slugs:
+                    skipped += 1
+                    continue
                 _, created_links = await _create_category(
                     session,
-                    id_name=str(cat_data["id"]),
+                    id_name=slug,
                     difficulty=str(cat_data["difficulty"]),
                     default_locale=str(cat_data.get("default_locale", "en")),
                     translations=list(cat_data["translations"]),
@@ -164,9 +202,10 @@ async def seed_database() -> None:
 
             await session.commit()
             logger.info(
-                "Seeded database with %d categories and %d prompt links (Many-to-Many).",
+                "Seeded database with %d new categories and %d prompt links (skipped %d existing).",
                 total_categories,
                 total_links,
+                skipped,
             )
 
         except Exception:
@@ -189,11 +228,31 @@ async def clear_database() -> None:
             raise
 
 
-if __name__ == "__main__":
-    import sys
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Seed category data into the database.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Delete existing system categories and the prompt library, then re-seed from scratch.",
+    )
+    group.add_argument(
+        "--append",
+        action="store_true",
+        help="Insert only categories whose slug is not already present; leave existing data untouched.",
+    )
+    group.add_argument(
+        "--clear",
+        action="store_true",
+        help="Delete ALL categories, prompts, and users. Use with caution.",
+    )
+    return parser.parse_args(argv)
 
+
+if __name__ == "__main__":
     configure_logging()
-    if len(sys.argv) > 1 and sys.argv[1] == CLEAR_FLAG:
+    args = _parse_args(sys.argv[1:])
+    if args.clear:
         asyncio.run(clear_database())
     else:
-        asyncio.run(seed_database())
+        asyncio.run(seed_database(overwrite=args.overwrite, append=args.append))
