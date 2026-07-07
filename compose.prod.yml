@@ -51,6 +51,30 @@ services:
     environment:
       ENV: prod
 
+  # One-off seeding job. Gated behind the `database-seed` profile so it never
+  # starts on a normal `up`; invoke on demand with:
+  #   docker compose -f compose.yml -f compose.prod.yml --profile database-seed \
+  #     run --rm --build database-seed [python scripts/seed_data.py --overwrite|--append]
+  # No source mount (unlike dev): the seed YAML baked into the image at build
+  # time is used, keeping prod seeds reproducible.
+  database-seed:
+    build:
+      context: ./backend
+      target: db-seed
+    restart: "no"
+    depends_on:
+      database:
+        condition: service_healthy
+      database-migrations:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_HOST: database
+      ENV: prod
+    env_file:
+      - backend/.env.prod
+    profiles:
+      - db-seed
+
   frontend:
     build:
       target: prod
