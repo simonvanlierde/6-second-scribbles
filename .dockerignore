@@ -1,3 +1,9 @@
+# Build context for the FRONTEND image. Its context is the repo root
+# (compose.yml -> frontend.build.context: ".") so the build can reach the pnpm
+# workspace files (package.json, pnpm-lock.yaml, pnpm-workspace.yaml). Docker
+# reads .dockerignore from the context root, so the frontend's ignore rules must
+# live here. The backend has its own backend/.dockerignore (context: ./backend).
+
 # Git / editor
 .git
 .github
@@ -14,6 +20,13 @@ tmp
 **/.ruff_cache
 **/.mypy_cache
 **/.venv
+
+# Secrets / local env — never bake into the bundle. A baked VITE_* would hardcode
+# a backend host into the static JS (that is what caused the http:// mixed-content
+# bug). Prod derives the backend from window.location (same-origin); dev sets
+# VITE_BACKEND_HOST via compose. Mirrors backend/.dockerignore.
+.env
+.env.*
 
 # Frontend build artifacts
 frontend/.vite
