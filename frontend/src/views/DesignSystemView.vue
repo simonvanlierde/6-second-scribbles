@@ -6,6 +6,7 @@ import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
 import HdInput from "@/components/ui/HdInput.vue";
+import HdLogo from "@/components/ui/HdLogo.vue";
 import HdPill from "@/components/ui/HdPill.vue";
 import HdReactionPad from "@/components/ui/HdReactionPad.vue";
 import HdTimer from "@/components/ui/HdTimer.vue";
@@ -61,6 +62,15 @@ function setTheme(t: "light" | "dark" | null): void {
         <HdButton variant="secondary" @click="setTheme(null)">Auto</HdButton>
       </div>
     </header>
+
+    <section class="ds-section">
+      <h2>Logo</h2>
+      <div class="ds-row">
+        <HdLogo style="--logo-size: 32px" />
+        <HdLogo style="--logo-size: 48px" />
+        <HdLogo style="--logo-size: 64px" />
+      </div>
+    </section>
 
     <section class="ds-section">
       <h2>Buttons</h2>

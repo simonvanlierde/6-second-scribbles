@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import AboutDialog from "@/components/home/AboutDialog.vue";
 import HomeCreateJoin from "@/components/home/HomeCreateJoin.vue";
 import HowToPlayDialog from "@/components/home/HowToPlayDialog.vue";
+import HdLogo from "@/components/ui/HdLogo.vue";
 
 const { t } = useI18n();
 const howOpen = ref(false);
@@ -14,6 +15,7 @@ const aboutOpen = ref(false);
 <template>
   <div class="home-page">
     <header class="home-hero">
+      <HdLogo class="home-logo" />
       <h1 class="home-wordmark">{{ t("home.title") }}</h1>
       <svg class="home-underline" viewBox="0 0 300 18" fill="none" aria-hidden="true" preserveAspectRatio="none">
         <path
@@ -54,6 +56,10 @@ const aboutOpen = ref(false);
 }
 .home-hero {
   text-align: center;
+}
+.home-logo {
+  --logo-size: 64px;
+  margin-bottom: 20px;
 }
 .home-wordmark {
   font-family: var(--font-display);
