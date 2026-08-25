@@ -107,10 +107,12 @@ check-backend:
 check-root:
     pnpm run check
 
-# Scan the repository for secrets.
+# Scan the full git history for secrets (Dockerized; no local gitleaks install).
 [group('check')]
 check-security:
-    gitleaks detect --redact --no-banner
+    docker run --rm --user "$(id -u):$(id -g)" \
+        -v "$(pwd)":/repo -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 \
+        git --redact --no-banner
 
 # Format everything.
 [group('format')]
