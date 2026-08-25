@@ -150,6 +150,7 @@ async def seed_database(*, overwrite: bool = False, append: bool = False) -> Non
     """
     async with get_session_maker()() as session:
         try:
+            logger.info("Starting database seed")
             existing_slugs = set(
                 (await session.execute(select(Category.slug).where(Category.source == DEFAULT_CATEGORY_SOURCE)))
                 .scalars()

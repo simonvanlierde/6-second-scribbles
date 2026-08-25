@@ -1,4 +1,7 @@
-# compose.override.yml - Docker Compose overrides for development environment; automatically used on `docker-compose up`
+# compose.dev.yml - Docker Compose overrides for local development. Not named
+# compose.override.yml on purpose: an override file applies itself silently, which
+# on a host that sets COMPOSE_FILE (see .env) means the same bare `docker compose`
+# means different things on different machines. Pass this file explicitly.
 
 name: 6ss-dev
 

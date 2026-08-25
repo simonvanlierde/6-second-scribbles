@@ -1,20 +1,21 @@
 name: 'Setup Node and pnpm'
-description: 'Sets up Node.js and prepares pnpm via Corepack.'
+description: 'Installs pnpm and Node.js in a single step.'
 runs:
   using: 'composite'
   steps:
-    - name: Enable pnpm via Corepack
-      shell: bash
-      run: |
-        corepack enable
-        corepack prepare --activate
-
-    - name: Setup Node
-      uses: actions/setup-node@v4
+    # pnpm/setup installs both pnpm and the Node runtime, taking the pnpm version
+    # from package.json's `packageManager` field. It replaces the older
+    # corepack-then-setup-node pair: Node 25+ no longer bundles Corepack, so
+    # `corepack enable` is not something CI can rely on being present.
+    # `install: false` keeps dependency installation in the calling workflow,
+    # which installs per-package (root vs. frontend) rather than always at root.
+    - name: Setup pnpm and Node
+      uses: pnpm/setup@v2
       with:
-        node-version: ${{ inputs.node-version }}
-        cache: pnpm
+        runtime: node@${{ inputs.node-version }}
+        cache: true
         cache-dependency-path: pnpm-lock.yaml
+        install: false
 
 inputs:
   node-version:

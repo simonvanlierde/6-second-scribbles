@@ -36,9 +36,9 @@ test-a11y:
 # Start the local dev stack for Playwright e2e against the real backend.
 [group('test')]
 e2e-dev:
-    docker compose --project-directory .. -f ../compose.yml -f ../compose.override.yml down --remove-orphans
-    docker compose --project-directory .. -f ../compose.yml -f ../compose.override.yml up -d database cache
-    docker compose --project-directory .. -f ../compose.yml -f ../compose.override.yml run --rm --build database-migrations
+    docker compose --project-directory .. -f ../compose.yml -f ../compose.dev.yml down --remove-orphans
+    docker compose --project-directory .. -f ../compose.yml -f ../compose.dev.yml up -d database cache
+    docker compose --project-directory .. -f ../compose.yml -f ../compose.dev.yml run --rm --build database-migrations
     sh -c 'cd ../backend && uv run uvicorn app.main:app --host localhost --port 8000 & backend_pid=$$!; trap "kill $$backend_pid" EXIT INT TERM; until curl -sf http://localhost:8000/api/health >/dev/null; do sleep 1; done; pnpm run dev -- --host localhost --port 3001'
 
 # ── Check & Format ────────────────────────────────────────────────────────────

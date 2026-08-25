@@ -1,9 +1,12 @@
-FROM node:24-bookworm-slim AS base
+FROM node:26-trixie-slim AS base
 
 ENV PNPM_HOME=/pnpm \
     PATH="/pnpm:$PATH"
 
-RUN corepack enable
+# Node 25+ no longer bundles Corepack, so it has to be installed before it can be
+# enabled. Corepack is kept rather than installing pnpm directly so that
+# package.json's `packageManager` field stays the one source of the pnpm version.
+RUN npm install -g corepack@latest && corepack enable
 
 WORKDIR /app
 

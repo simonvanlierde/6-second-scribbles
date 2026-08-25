@@ -1,6 +1,13 @@
 set shell := ["bash", "-euo", "pipefail", "-O", "nullglob", "-c"]
 set dotenv-load := true
 
+# Every compose invocation names its files explicitly. This repo's .env sets
+# COMPOSE_FILE so that Dockge's flagless `docker compose up -d` gets prod config;
+# that also makes a bare `docker compose` here mean prod, which is not what a
+# recipe called `dev-*` or `down-clean` should ever touch.
+dev_compose := "docker compose -f compose.yml -f compose.dev.yml"
+prod_compose := "docker compose -f compose.yml -f compose.prod.yml"
+
 # List available recipes.
 default:
     @just --list
@@ -16,49 +23,49 @@ dev: dev-infra-up
 # Start only the infrastructure needed for local development.
 [group('dev')]
 dev-infra-up:
-    docker compose up -d database cache
-    docker compose run --rm --build database-migrations
+    {{ dev_compose }} up -d database cache
+    {{ dev_compose }} run --rm --build database-migrations
 
 # Stop the infrastructure used by local development.
 [group('dev')]
 dev-down:
-    docker compose stop database cache
+    {{ dev_compose }} stop database cache
 
 # Start the local dev stack for Playwright e2e against the real backend.
 [group('docker')]
 e2e-backend-up:
-    docker compose up --build -d database cache database-migrations backend
+    {{ dev_compose }} up --build -d database cache database-migrations backend
 
 e2e-backend-down:
-    docker compose down
+    {{ dev_compose }} down
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
 # Start full dev stack in Docker (infra + backend + frontend hot reload).
 [group('docker')]
 up:
-    docker compose up -d
+    {{ dev_compose }} up -d
 
 # Stop full dev stack.
 [group('docker')]
 down:
-    docker compose down
+    {{ dev_compose }} down
 
 # Stop full dev stack and remove volumes.
 [confirm("This will delete all local database data. Continue? (y/n)")]
 [group('docker')]
 down-clean:
-    docker compose down -v
+    {{ dev_compose }} down -v
 
 # Start full prod stack in Docker (infra + backend + built frontend).
 [group('docker')]
 up-prod:
-    docker compose -f compose.yml -f compose.prod.yml up -d --build
+    {{ prod_compose }} up -d --build
 
 # Stop full prod stack.
 [group('docker')]
 down-prod:
-    docker compose -f compose.yml -f compose.prod.yml down
+    {{ prod_compose }} down
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
@@ -107,10 +114,12 @@ check-backend:
 check-root:
     pnpm run check
 
-# Scan the repository for secrets.
+# Scan the full git history for secrets (Dockerized; no local gitleaks install).
 [group('check')]
 check-security:
-    gitleaks detect --redact --no-banner
+    docker run --rm --user "$(id -u):$(id -g)" \
+        -v "$(pwd)":/repo -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 \
+        git --redact --no-banner
 
 # Format everything.
 [group('format')]
