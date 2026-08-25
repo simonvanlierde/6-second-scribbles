@@ -81,6 +81,9 @@
       "ANN204", # missing-return-type-special-method
       "D105",   # undocumented-magic-method
       "D107",   # undocumented-public-init
+
+      # We don't use per-file copyright notices
+      "CPY001",
     ]
 
     # Allow default arguments for FastAPI functions
