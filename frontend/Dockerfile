@@ -1,4 +1,4 @@
-FROM node:26-bookworm-slim AS base
+FROM node:26-trixie-slim AS base
 
 ENV PNPM_HOME=/pnpm \
     PATH="/pnpm:$PATH"
