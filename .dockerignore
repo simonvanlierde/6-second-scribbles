@@ -43,5 +43,5 @@ scripts
 README.md
 justfile
 compose.yml
-compose.override.yml
+compose.dev.yml
 compose.prod.yml
