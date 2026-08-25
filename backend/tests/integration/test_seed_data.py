@@ -20,6 +20,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="session")
 STARTING_SEED_LOG = "Starting database seed"
 SEEDED_DATABASE_LOG = "Seeded database with"
 POPULATED_PROMPT_LIBRARY_LOG = "Populated Prompt Library"
+MAKING_NO_CHANGES_LOG = "making no changes"
 CLEARING_DATABASE_LOG = "Clearing database"
 DATABASE_CLEARED_LOG = "Database cleared"
 SYSTEM_SOURCE = "system"
@@ -41,6 +42,7 @@ class TestSeedDataScript:
         await seed_data.seed_database()
 
         assert STARTING_SEED_LOG in caplog.text
+        assert POPULATED_PROMPT_LIBRARY_LOG in caplog.text
         assert SEEDED_DATABASE_LOG in caplog.text
 
         categories_result = await db_session.execute(select(Category))
@@ -74,9 +76,9 @@ class TestSeedDataScript:
         await seed_data.seed_database()
 
         assert STARTING_SEED_LOG in caplog.text
-        assert POPULATED_PROMPT_LIBRARY_LOG in caplog.text
+        assert MAKING_NO_CHANGES_LOG in caplog.text
         categories_result = await db_session.execute(select(Category))
-        assert len(categories_result.scalars().all()) > 1
+        assert len(categories_result.scalars().all()) == 1
 
     async def test_clear_database_logs_when_it_deletes_categories(
         self,
