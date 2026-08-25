@@ -3,18 +3,13 @@ description: 'Sets up Node.js and prepares pnpm via Corepack.'
 runs:
   using: 'composite'
   steps:
-    - name: Enable pnpm via Corepack
-      shell: bash
-      run: |
-        corepack enable
-        corepack prepare --activate
-
-    - name: Setup Node
-      uses: actions/setup-node@v4
+    - name: Set up pnpm and Node.js
+      uses: pnpm/setup@v2
       with:
-        node-version: ${{ inputs.node-version }}
-        cache: pnpm
+        runtime: node@${{ inputs.node-version }}
+        cache: true
         cache-dependency-path: pnpm-lock.yaml
+        install: false
 
 inputs:
   node-version:
