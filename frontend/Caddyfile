@@ -1,4 +1,24 @@
+{
+	servers {
+		# In prod the only ingress is the Cloudflare tunnel: cloudflared runs as a
+		# sibling container and reaches this Caddy over the Docker network, so the
+		# peer address is always a private Docker IP. Trusting that range is what
+		# lets CF-Connecting-IP (set by cloudflared) be believed and land in the
+		# access log's `request.client_ip` instead of the cloudflared container IP.
+		# `request.remote_ip` still records the real peer, so a spoofed header is
+		# always visible as a mismatch between the two fields.
+		trusted_proxies static private_ranges
+		client_ip_headers Cf-Connecting-Ip
+	}
+}
+
 :80 {
+	# JSON to stderr so the Docker log driver picks it up; no volume to manage.
+	log {
+		output stderr
+		format json
+	}
+
 	encode zstd gzip
 
 	header {
@@ -18,6 +38,8 @@
 	}
 
 	handle /healthz {
+		# The container healthcheck hits this every 30s — don't drown the log in it.
+		log_skip
 		respond "ok" 200
 	}
 
