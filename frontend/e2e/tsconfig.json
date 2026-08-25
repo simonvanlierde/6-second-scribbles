@@ -1,4 +1,13 @@
 {
-  "extends": "@tsconfig/node26/tsconfig.json",
-  "include": ["./**/*"]
+  // Must be a relative path, not "@tsconfig/node26/tsconfig.json": Playwright
+  // resolves `extends` from this file's own directory, and e2e/ has no
+  // node_modules, so a bare specifier fails to resolve and no tests are found.
+  // ../tsconfig.node.json sits beside node_modules and pulls in the Node base.
+  "extends": "../tsconfig.node.json",
+  "include": ["./**/*"],
+  "compilerOptions": {
+    // ../tsconfig.node.json is a composite project sharing one tsBuildInfoFile;
+    // this config is standalone and must not write to it.
+    "composite": false
+  }
 }
