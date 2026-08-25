@@ -42,7 +42,7 @@ describe("SettingsPanel", () => {
     // picker it sits next to instead.
     const input = w.findAll("input[type='text']").find((i) => i.element.tagName === "INPUT");
     expect(input).toBeTruthy();
-    expect((input?.element as HTMLInputElement).value).toBe("Simon");
+    expect((input?.element as HTMLInputElement | undefined)?.value).toBe("Simon");
   });
 
   it("renders three theme options in the appearance segmented control", () => {

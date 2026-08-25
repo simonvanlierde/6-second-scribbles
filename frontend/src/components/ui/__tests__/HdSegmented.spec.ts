@@ -21,8 +21,8 @@ describe("HdSegmented", () => {
   it("checks the radio matching modelValue", () => {
     const w = mount(HdSegmented, { props: { modelValue: "dark", options } });
     const radios = w.findAll('input[type="radio"]');
-    expect((radios[0]?.element as HTMLInputElement).checked).toBe(false);
-    expect((radios[1]?.element as HTMLInputElement).checked).toBe(true);
+    expect((radios[0]?.element as HTMLInputElement | undefined)?.checked).toBe(false);
+    expect((radios[1]?.element as HTMLInputElement | undefined)?.checked).toBe(true);
   });
 
   it("emits update:modelValue when a different option is selected", async () => {
