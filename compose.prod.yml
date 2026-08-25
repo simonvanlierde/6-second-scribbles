@@ -26,6 +26,7 @@ services:
           memory: 1g
 
   cache:
+    restart: unless-stopped
     deploy:
       resources:
         limits:
