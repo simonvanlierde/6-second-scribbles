@@ -305,7 +305,7 @@ async def get_localized_category_set(
     available_set = {loc.lower() for loc in category.available_locales}
     chosen_locale = next((loc for loc in candidate_locales if loc.lower() in available_set), None)
     if chosen_locale is None and category.available_locales:
-        chosen_locale = sorted(category.available_locales)[0]
+        chosen_locale = min(category.available_locales)
     if chosen_locale is None:
         raise HTTPException(status_code=404, detail="Category has no available locales")
 
