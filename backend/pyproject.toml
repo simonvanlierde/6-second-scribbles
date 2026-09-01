@@ -2,13 +2,13 @@
   dependencies = [
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.31.0",
-    "fastapi>=0.139.0",
-    "pydantic-settings>=2.14.2",
+    "fastapi>=0.141.1",
+    "pydantic-settings>=2.15.0",
     "rapidfuzz>=3.14.3",
-    "redis>=8.0.1",
-    "sqlalchemy>=2.0.51",
+    "redis>=8.1.0",
+    "sqlalchemy>=2.0.52",
     "structlog>=26.1.0",
-    "uvicorn[standard]>=0.50.1",
+    "uvicorn[standard]>=0.52.4",
   ]
   description = "Backend for 6-second-scribbles"
   name = "backend"
@@ -21,22 +21,22 @@
     { include-group = "db-migrations" },
     { include-group = "db-seed" },
     { include-group = "testing" },
-    "ruff>=0.15.20",
-    "ty>=0.0.27",
+    "ruff>=0.16.5",
+    "ty>=0.0.75",
   ]
 
-  db-migrations = ["alembic>=1.18.5"]
+  db-migrations = ["alembic>=1.19.1"]
   db-seed = ["pyyaml>=6.0.1"]
   db-translate = ["argostranslate>=1.11.0", "opencc-python-reimplemented>=0.1.7", "pyyaml>=6.0.1"]
   testing = [
-    "fakeredis>=2.36.2",
-    "greenlet>=3.5.3",
+    "fakeredis>=2.37.1",
+    "greenlet>=3.5.5",
     "httpx>=0.28.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
     "pytest>=9.1.1",
-    "testcontainers>=4.14.2",
+    "testcontainers>=4.15.0",
   ]
 
 [tool.pytest.ini_options]
