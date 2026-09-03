@@ -1,8 +1,8 @@
 name: CI
 
+# No push trigger: main only advances through a PR, so a push run repeats
+# the check that already passed on the PR head.
 on:
-  push:
-    branches: [ main ]
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
   workflow_dispatch:
