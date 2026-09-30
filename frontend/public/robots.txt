@@ -1,2 +1,7 @@
 User-agent: *
 Allow: /
+# Backend, websocket, rooms that expire, and the internal design-system page.
+Disallow: /api/
+Disallow: /ws
+Disallow: /rooms/
+Disallow: /__ds
