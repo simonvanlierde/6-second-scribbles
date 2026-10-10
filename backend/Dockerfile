@@ -56,6 +56,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM runtime-base AS app-source
 
 COPY app ./app
+# Read by app/__init__.py for the reported version.
+COPY pyproject.toml ./
 
 FROM app-source AS migrations-source
 

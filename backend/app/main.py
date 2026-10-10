@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis.exceptions import RedisError
 
 import app.users.models as _user_models  # noqa: F401
+from app import __version__
 from app.auth.router import router as auth_router
 from app.categories.router import router as categories_router
 from app.core.config import settings
@@ -56,7 +57,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 application = FastAPI(
     title="Six Second Scribbles API",
     description="Real-time multiplayer drawing game backend",
-    version="2.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
