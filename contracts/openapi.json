@@ -937,7 +937,7 @@
     },
     "/api/rooms/": {
       "post": {
-        "description": "Create a new room with a unique alphanumeric code and reserve it in Redis.\n\nThis endpoint attempts several times to generate a code and atomically set the\nRedis key so multiple server instances won't collide. On success it creates\nthe in-memory room and persists initial state.",
+        "description": "Create a new room with a unique alphanumeric code and reserve it in Redis.\n\nThis endpoint attempts several times to generate a code and atomically set the\nRedis key, so a new code never reuses one still held in Redis. On success it\ncreates the in-memory room and persists initial state. Rooms live in this\nprocess's memory, so the backend must run as a single worker: another worker\nwould not see the room created here.",
         "operationId": "create_room_api_rooms__post",
         "responses": {
           "200": {

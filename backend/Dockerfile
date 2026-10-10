@@ -97,7 +97,7 @@ ENV SERVER_HOST=0.0.0.0
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
 
 # ── DB Ops ────────────────────────────────────────────────────────────────────
 FROM runtime-base AS db-migrations
