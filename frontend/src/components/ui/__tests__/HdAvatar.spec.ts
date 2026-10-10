@@ -24,7 +24,6 @@ describe("HdAvatar", () => {
 
   it("sets background color via inline style", () => {
     const w = mount(HdAvatar, { props: { initial: "S", color: "#FFB4A2" } });
-    expect(w.attributes("style")).toContain("background");
-    expect(w.attributes("style")).toContain("#FFB4A2".toLowerCase());
+    expect((w.element as HTMLElement).style.background).toMatch(/#ffb4a2|rgb\(255, 180, 162\)/i);
   });
 });

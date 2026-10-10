@@ -26,6 +26,10 @@
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# The SPA calls /api and /ws on its own origin (src/config/gameConfig.ts).
+		# ws/wss are listed as well as 'self' for browsers that predate CSP 3's
+		# rule that 'self' covers them. Drawings are shown as data: PNGs.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws://{hostport} wss://{hostport}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		-Server
 	}
 
