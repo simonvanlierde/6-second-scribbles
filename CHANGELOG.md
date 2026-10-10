@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- A logo, favicon, and Apple touch icon.
+- A `robots.txt` that keeps crawlers off the API, the WebSocket, room pages, and the internal design-system page.
+- A Content Security Policy on the frontend: scripts, styles, fonts, and API and WebSocket calls are limited to the site's own origin.
+- `seed_data` modes: `--append` adds only new categories, `--overwrite` replaces the system categories and prompts. A `database-seed` Compose service runs the seeder on demand.
+- JSON access logs from the frontend's Caddy server, recording the real visitor IP behind the Cloudflare tunnel.
+- End-to-end Playwright tests in CI, against Postgres and Redis.
+
+### Changed
+
+- **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
+- The health endpoint and the OpenAPI document report the release version (0.2.1) instead of a hardcoded 2.0.0.
+- The frontend build image runs Node 26 on Debian trixie.
+- Backend dependency updates.
+
+### Fixed
+
+- Rooms could split in production: the backend ran four worker processes, each with its own in-memory rooms, so a player could create a room on one worker and connect to another. It now runs a single worker.
+- Production builds could bake a local `VITE_BACKEND_HOST` into the bundle, sending plain `http://` requests from the HTTPS page. The bundle now always derives the backend from the page's own address.
+- The production Redis service now restarts after a crash or host reboot.
+- Local `dev-*` and `down-clean` recipes no longer act on the production stack when `COMPOSE_FILE` points at it.
+
 ## [0.2.1] - 2026-07-06
 
 ### Added
@@ -44,6 +69,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   registered accounts, locale-aware prompt categories, and a deployable
   Docker Compose stack.
 
+[Unreleased]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.2.1
 [0.2.0]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.2.0
 [0.1.0]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.1.0
