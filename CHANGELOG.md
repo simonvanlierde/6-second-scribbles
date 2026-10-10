@@ -28,6 +28,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Production builds could bake a local `VITE_BACKEND_HOST` into the bundle, sending plain `http://` requests from the HTTPS page. The bundle now always derives the backend from the page's own address.
 - The production Redis service now restarts after a crash or host reboot.
 - Local `dev-*` and `down-clean` recipes no longer act on the production stack when `COMPOSE_FILE` points at it.
+- The page language (`<html lang>`) now follows the chosen language instead of staying English, so screen readers read the text with the right voice and pronunciation.
 
 ## [0.2.1] - 2026-07-06
 
