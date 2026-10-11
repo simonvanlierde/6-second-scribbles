@@ -43,7 +43,7 @@ test.describe("Home page", () => {
   test("shows an error when joining without a room code", async ({ page }) => {
     await setPlayerName(page, "Test Player");
     await page.getByRole("button", { name: /join room/i }).click();
-    await expect(page.getByRole("alert")).toContainText(/room code/i);
+    await expect(page.getByRole("status").filter({ hasText: /room code/i })).toBeVisible();
   });
 
   test("room code input accepts a 6-character code", async ({ page }) => {
