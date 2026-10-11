@@ -37,10 +37,29 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: "just e2e-dev",
-    url: process.env.CI ? "http://127.0.0.1:4173" : "http://localhost:3001",
-    reuseExistingServer: !process.env.CI,
-    timeout: 180 * 1000,
-  },
+  // CI provides Postgres and Redis as service containers and runs migrations
+  // first, so it only needs the backend and the built bundle. `vite preview`
+  // reuses the dev server's /api and /ws proxy, keeping the page same-origin.
+  webServer: process.env.CI
+    ? [
+        {
+          command: "cd ../backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000",
+          url: "http://127.0.0.1:8000/api/health",
+          timeout: 60 * 1000,
+          // The suite creates several rooms per run, and retries add more, so the
+          // default 10 rooms/min per IP would answer 429.
+          env: { ROOM_CREATION_RATE_LIMIT: "1000" },
+        },
+        {
+          command: "pnpm run build && pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort",
+          url: "http://127.0.0.1:4173",
+          timeout: 120 * 1000,
+        },
+      ]
+    : {
+        command: "just e2e-dev",
+        url: "http://localhost:3001",
+        reuseExistingServer: true,
+        timeout: 180 * 1000,
+      },
 });

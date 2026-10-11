@@ -56,6 +56,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM runtime-base AS app-source
 
 COPY app ./app
+# Read by app/__init__.py for the reported version.
+COPY pyproject.toml ./
 
 FROM app-source AS migrations-source
 
@@ -97,7 +99,7 @@ ENV SERVER_HOST=0.0.0.0
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
 
 # ── DB Ops ────────────────────────────────────────────────────────────────────
 FROM runtime-base AS db-migrations

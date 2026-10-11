@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import tomllib
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
@@ -35,6 +37,7 @@ ROOM_STATUS_SCHEMA = "RoomStatusResponse"
 USER_RESPONSE_SCHEMA = "UserResponse"
 LOCALE_AVAILABILITY_SCHEMA = "LocaleAvailabilityItem"
 VERSION_KEY = "version"
+PYPROJECT = Path(__file__).parents[2] / "pyproject.toml"
 DATABASE_KEY = "database"
 CACHE_KEY = "cache"
 
@@ -47,7 +50,7 @@ def test_root_endpoint(test_client: TestClient) -> None:
     payload = response.json()
     assert payload["status"] in OK_STATUSES
     assert payload["service"] == SERVICE_NAME
-    assert VERSION_KEY in payload
+    assert payload[VERSION_KEY] == tomllib.loads(PYPROJECT.read_text())["project"]["version"]
     assert DATABASE_KEY in payload
     assert CACHE_KEY in payload
 

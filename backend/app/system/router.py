@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter
 from sqlalchemy import text
 
+from app import __version__
 from app.core import redis as redis_module
 from app.core.database import get_session_maker
 from app.rooms.manager import room_manager
@@ -46,7 +47,7 @@ async def health() -> AppInfoResponse:
     return AppInfoResponse(
         status="ok" if all_ok else "degraded",
         service="Six Second Scribbles API",
-        version="2.0.0",
+        version=__version__,
         database=db_status,
         cache=cache_status,
     )

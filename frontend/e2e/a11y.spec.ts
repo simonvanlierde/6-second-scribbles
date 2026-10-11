@@ -41,3 +41,16 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+// One non-English pass: translated strings change label lengths and the page
+// language, which axe checks (html-has-lang, valid-lang).
+test.describe("Accessibility (axe) — German", () => {
+  test.use({ locale: "de-DE" });
+
+  test("Home has no WCAG A/AA violations and lang follows the locale", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("lang", "de");
+    await expect(page.getByRole("heading", { name: /six second scribbles/i })).toBeVisible();
+    await expectNoViolations(page);
+  });
+});
