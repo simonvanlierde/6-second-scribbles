@@ -31,5 +31,15 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          // src/lib/zodConfig.ts must run before any schema is defined. Sharing
+          // zod's chunk guarantees that; in the entry chunk it would run after
+          // the shared chunk that defines the schemas.
+          groups: [{ name: "zod", test: /node_modules[\\/]zod[\\/]|src[\\/]lib[\\/]zodConfig\.ts$/ }],
+        },
+      },
+    },
   },
 });

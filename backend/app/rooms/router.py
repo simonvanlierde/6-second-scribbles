@@ -90,8 +90,10 @@ async def create_room(request: Request) -> CreateRoomResponse:
     """Create a new room with a unique alphanumeric code and reserve it in Redis.
 
     This endpoint attempts several times to generate a code and atomically set the
-    Redis key so multiple server instances won't collide. On success it creates
-    the in-memory room and persists initial state.
+    Redis key, so a new code never reuses one still held in Redis. On success it
+    creates the in-memory room and persists initial state. Rooms live in this
+    process's memory, so the backend must run as a single worker: another worker
+    would not see the room created here.
     """
     await _enforce_room_creation_limit(request)
     code = await _reserve_new_room_code()

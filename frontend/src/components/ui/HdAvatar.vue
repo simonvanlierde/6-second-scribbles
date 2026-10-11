@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { onMounted, onUpdated, useTemplateRef } from "vue";
-
 type Size = "sm" | "md" | "lg";
 
 interface Props {
@@ -11,24 +9,14 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { size: "md", disconnected: false });
-
-const rootRef = useTemplateRef<HTMLSpanElement>("root");
-
-function applyBackground() {
-  if (rootRef.value) {
-    const color = props.color.startsWith("#") ? props.color.toLowerCase() : props.color;
-    rootRef.value.setAttribute("style", `background: ${color}`);
-  }
-}
-
-onMounted(applyBackground);
-onUpdated(applyBackground);
+// NOTE: the color goes through :style, which Vue applies via the CSSOM. The CSP
+// (frontend/Caddyfile) blocks a literal style attribute without 'unsafe-inline'.
 </script>
 
 <template>
   <span
-    ref="root"
     class="hd-avatar"
+    :style="{ background: props.color }"
     :class="[`hd-avatar--${props.size}`, { 'hd-avatar--disconnected': props.disconnected }]"
     aria-hidden="true"
   >
