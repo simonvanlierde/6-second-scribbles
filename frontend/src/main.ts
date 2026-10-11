@@ -1,3 +1,4 @@
+import "./lib/zodConfig";
 import "./assets/main.css";
 
 import { createPinia } from "pinia";

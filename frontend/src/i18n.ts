@@ -32,4 +32,6 @@ export async function setLocale(code: string): Promise<void> {
   if (!isSupportedLocale(code)) return;
   await loadLocale(code);
   i18n.global.locale.value = code;
+  // index.html ships lang="en"; screen readers pick voice and pronunciation from it.
+  document.documentElement.lang = code;
 }

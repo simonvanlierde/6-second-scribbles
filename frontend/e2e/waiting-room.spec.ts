@@ -27,7 +27,7 @@ test.describe("Waiting room", () => {
     const roomCode = await createRoom(page);
 
     await expect(page.getByRole("button", { name: /leave room/i })).toBeVisible();
-    await expect(page.locator('button[title="Click to copy room code"] span')).toHaveText(roomCode);
+    await expect(page.getByRole("button", { name: `Room code ${roomCode}` })).toBeVisible();
     await expect(page.getByRole("heading", { name: /players/i })).toBeVisible();
   });
 
@@ -44,22 +44,31 @@ test.describe("Waiting room", () => {
     await hostPage.close();
   });
 
-  test("back dialog can be cancelled without leaving the room", async ({ page }) => {
+  test("back dialog can be cancelled without leaving the room", async ({ browser, page }) => {
     const roomCode = await createRoom(page);
+
+    // The host only gets a confirmation when someone else is in the room.
+    const joinerContext = await browser.newContext();
+    const joiner = await joinerContext.newPage();
+    await joiner.goto("/");
+    await setPlayerName(joiner, "Joiner");
+    await joiner.locator("input.hd-input--code").fill(roomCode);
+    await joiner.getByRole("button", { name: /join room/i }).click();
+    await expect(page.getByRole("heading", { name: /players \(2\)/i })).toBeVisible();
 
     await page.getByRole("button", { name: /leave room/i }).click();
     await expect(page.getByText(/leave room\?/i)).toBeVisible();
-    await page.getByRole("button", { name: /^cancel$/i }).click();
+    await page.getByRole("button", { name: /^stay$/i }).click();
 
     await expect(page).toHaveURL(new RegExp(`/rooms/${roomCode}$`));
     await expect(page.getByRole("button", { name: /leave room/i })).toBeVisible();
+    await joinerContext.close();
   });
 
-  test("confirming leave returns to the lobby", async ({ page }) => {
+  test("a host alone in the room leaves without a confirmation", async ({ page }) => {
     await createRoom(page);
 
     await page.getByRole("button", { name: /leave room/i }).click();
-    await page.getByRole("button", { name: /^leave$/i }).click();
 
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("heading", { name: /six second scribbles/i })).toBeVisible();
@@ -68,7 +77,7 @@ test.describe("Waiting room", () => {
   test("local drawpad toggle hides and shows the shared canvas", async ({ page }) => {
     await createRoom(page);
 
-    const canvas = page.locator("canvas.mini-canvas");
+    const canvas = page.locator(".drawpad-canvas canvas");
     await expect(canvas).toBeVisible();
 
     await page.getByRole("button", { name: /hide my pad/i }).click();
