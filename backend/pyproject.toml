@@ -39,6 +39,10 @@
     "testcontainers>=4.15.0",
   ]
 
+[tool.uv]
+  # GHSA-v5jw-96jm-7h2c: argostranslate 1.11.0 pins stanza==1.10.1. Drop once argostranslate allows >=1.12.2.
+  override-dependencies = ["stanza>=1.12.2"]
+
 [tool.pytest.ini_options]
   addopts = ["--strict-markers", "--tb=short", "-v"]
   asyncio_default_fixture_loop_scope = "session"

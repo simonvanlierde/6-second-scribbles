@@ -1,3 +1,4 @@
+# spell-checker: ignore jqrq, pmpm, smol, katex
 packages:
   - frontend
 
@@ -14,3 +15,7 @@ overrides:
   js-yaml: ^4.2.0
   markdown-it: ^14.2.0
   esbuild: ^0.28.1
+  # GHSA-r4xh-jqrq-34v2: markdownlint-cli2 0.23.3 pins smol-toml 1.8.0. Drop once it ships >=1.9.0.
+  smol-toml: ^1.9.0
+  # GHSA-238p-pmpm-9mq7: micromark-extension-math 3.1.0 (via markdownlint) asks for ^0.16. Drop once it allows >=0.18.2.
+  katex: 0.18.10 # 0.18.11 is deprecated upstream for breaking changes
