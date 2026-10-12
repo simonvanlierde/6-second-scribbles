@@ -38,11 +38,27 @@ async def test_draw_strokes_dropped_past_window_limit(
     broadcast = AsyncMock()
     monkeypatch.setattr(game_room, "broadcast", broadcast)
     session = RoomWebSocketSession(game_room, as_websocket(mock_websocket))
+    session.player_id = PLAYER_ONE_ID
 
     for _ in range(3):
         await session.handle(DRAW_PAYLOAD)
 
     assert broadcast.await_count == 2
+
+
+async def test_draw_strokes_from_unjoined_socket_are_dropped(
+    game_room: GameRoom,
+    mock_websocket: TestWebSocket,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A socket that has not joined cannot relay drawings to the room."""
+    broadcast = AsyncMock()
+    monkeypatch.setattr(game_room, "broadcast", broadcast)
+    session = RoomWebSocketSession(game_room, as_websocket(mock_websocket))
+
+    await session.handle(DRAW_PAYLOAD)
+
+    broadcast.assert_not_awaited()
 
 
 async def test_control_events_not_throttled(

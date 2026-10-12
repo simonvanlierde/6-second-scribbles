@@ -14,13 +14,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `seed_data` modes: `--append` adds only new categories, `--overwrite` replaces the system categories and prompts. A `database-seed` Compose service runs the seeder on demand.
 - JSON access logs from the frontend's Caddy server, recording the real visitor IP behind the Cloudflare tunnel.
 - End-to-end Playwright tests in CI, against Postgres and Redis.
+- A WebSocket load test, `just loadtest`, and [docs/capacity.md](docs/capacity.md) with its result: about 80 rooms of 6 busy players on one backend under the production limits.
 
 ### Changed
 
+- Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
 - **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
 - The health endpoint and the OpenAPI document report the release version (0.2.1) instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
 - Backend dependency updates.
+- The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
 
 ### Fixed
 
@@ -29,6 +32,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The production Redis service now restarts after a crash or host reboot.
 - Local `dev-*` and `down-clean` recipes no longer act on the production stack when `COMPOSE_FILE` points at it.
 - The page language (`<html lang>`) now follows the chosen language instead of staying English, so screen readers read the text with the right voice and pronunciation.
+- A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
+- Rooms nobody ever joined, such as a created code left unused, and rooms restored from Redis after a restart never expired, so they piled up until the 500-room cap refused new rooms. Both now expire after the normal 5-minute empty-room TTL.
+- Room-creation and login rate limits in production counted every visitor as one client: the backend read the last `X-Forwarded-For` entry, which Caddy filled with the Cloudflare tunnel container's address. Caddy now forwards the visitor's own IP.
+- A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
 
 ## [0.2.1] - 2026-07-06
 

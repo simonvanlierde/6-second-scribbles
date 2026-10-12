@@ -1,0 +1,31 @@
+# Overrides for `just loadtest`, applied on top of compose.yml + compose.prod.yml
+# so the backend keeps the prod build target and CPU/memory limits. It replaces
+# backend/.env.prod with throwaway credentials, so a load test never needs (or
+# touches) the real prod secrets, and publishes the backend on loopback so the
+# load generator can run outside the limited container.
+
+x-env: &env
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: loadtest
+  POSTGRES_DB: scribbles_loadtest
+  # Required by the prod settings check; no browser talks to this stack.
+  ALLOWED_ORIGINS: http://localhost
+
+services:
+  backend:
+    env_file: !reset []
+    environment: *env
+    ports:
+      - "127.0.0.1:${LOADTEST_PORT:-18000}:8000"
+
+  database:
+    env_file: !reset []
+    environment: *env
+
+  database-migrations:
+    env_file: !reset []
+    environment: *env
+
+  database-seed:
+    env_file: !reset []
+    environment: *env

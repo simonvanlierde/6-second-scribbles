@@ -35,7 +35,9 @@ def from_state(state: RoomState, *, room_factory: type[GameRoom]) -> GameRoom:
     room.host_id = state.host_id
     room.last_host_id = state.last_host_id
     room.created_at = state.created_at
-    room.emptied_at = state.emptied_at
+    # Restored rooms have no connected players yet; start their empty clock now
+    # if the saved state had players, or the room would never expire.
+    room.emptied_at = state.emptied_at or time.time()
     room.is_hibernated = state.is_hibernated
     room.metadata = state.metadata.model_copy(deep=True)
     return room

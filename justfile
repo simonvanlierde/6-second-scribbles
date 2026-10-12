@@ -7,6 +7,9 @@ set dotenv-load := true
 # recipe called `dev-*` or `down-clean` should ever touch.
 dev_compose := "docker compose -f compose.yml -f compose.dev.yml"
 prod_compose := "docker compose -f compose.yml -f compose.prod.yml"
+# Prod build and limits under a throwaway project name, so a load test never
+# touches a real stack; container names start with tmp- to mark them disposable.
+loadtest_compose := "docker compose -p tmp-6ss-load --profile db-seed -f compose.yml -f compose.prod.yml -f backend/loadtest/compose.yml"
 
 # List available recipes.
 default:
@@ -92,6 +95,17 @@ test-e2e-ui:
 [group('test')]
 test-backend:
     just backend/test
+
+# Harness flags pass through, e.g. `just loadtest --smoke`; see docs/capacity.md.
+# Measure WebSocket capacity under the prod CPU/memory limits.
+[group('test')]
+loadtest *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap '{{ loadtest_compose }} down -v --rmi local' EXIT
+    {{ loadtest_compose }} up -d --build --wait backend
+    {{ loadtest_compose }} run --rm --build --name tmp-6ss-load-seed database-seed
+    just backend/loadtest --url "ws://127.0.0.1:${LOADTEST_PORT:-18000}" --container tmp-6ss-load-backend-1 {{ args }}
 
 # ── Check & Format ────────────────────────────────────────────────────────────
 

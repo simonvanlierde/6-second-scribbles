@@ -1,9 +1,18 @@
 # compose.prod.yml - Docker Compose overrides for production environment
 name: 6ss-prod
 
+# Rotate container logs: Docker keeps json-file logs forever by default, and
+# Caddy's access log holds visitor IPs. 3 x 10 MB per container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
 
   backend:
+    logging: *logging
     build:
       target: prod
     restart: unless-stopped
@@ -26,6 +35,7 @@ services:
           memory: 1g
 
   cache:
+    logging: *logging
     restart: unless-stopped
     deploy:
       resources:
@@ -34,6 +44,7 @@ services:
           memory: 256m
 
   database:
+    logging: *logging
     restart: unless-stopped
     env_file:
       - backend/.env.prod
@@ -52,9 +63,9 @@ services:
     environment:
       ENV: prod
 
-  # One-off seeding job. Gated behind the `database-seed` profile so it never
+  # One-off seeding job. Gated behind the `db-seed` profile so it never
   # starts on a normal `up`; invoke on demand with:
-  #   docker compose -f compose.yml -f compose.prod.yml --profile database-seed \
+  #   docker compose -f compose.yml -f compose.prod.yml --profile db-seed \
   #     run --rm --build database-seed [python scripts/seed_data.py --overwrite|--append]
   # No source mount (unlike dev): the seed YAML baked into the image at build
   # time is used, keeping prod seeds reproducible.
@@ -77,6 +88,7 @@ services:
       - db-seed
 
   frontend:
+    logging: *logging
     build:
       target: prod
     restart: unless-stopped
@@ -95,6 +107,7 @@ services:
           memory: 128m
 
   cloudflared:
+    logging: *logging
     # Pinned by digest for reproducible, supply-chain-safe deploys instead of the
     # mutable `latest` tag. Resolved from cloudflare/cloudflared:latest on 2026-06-27.
     # To bump: `docker buildx imagetools inspect cloudflare/cloudflared:latest`.

@@ -33,12 +33,19 @@
 		-Server
 	}
 
+	# The backend rate-limits by the last X-Forwarded-For entry. Caddy would
+	# append its direct peer there, which is always the cloudflared container,
+	# so every visitor would share one bucket. Send the visitor IP instead.
 	handle /api/* {
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 
 	handle /ws/* {
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 
 	handle /healthz {

@@ -24,6 +24,11 @@ test:
 test-cov:
     uv run pytest -x --tb=short --cov --cov-report=term-missing --cov-report=html
 
+# Run the WebSocket load test against a running backend (`just loadtest` starts one).
+[group('test')]
+loadtest *args:
+    uv run python -m loadtest.run {{ args }}
+
 # ── Check & Format ────────────────────────────────────────────────────────────
 
 # Format the backend.
