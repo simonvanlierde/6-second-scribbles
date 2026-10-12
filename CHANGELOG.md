@@ -14,6 +14,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `seed_data` modes: `--append` adds only new categories, `--overwrite` replaces the system categories and prompts. A `database-seed` Compose service runs the seeder on demand.
 - JSON access logs from the frontend's Caddy server, recording the real visitor IP behind the Cloudflare tunnel.
 - End-to-end Playwright tests in CI, against Postgres and Redis.
+- A WebSocket load test, `just loadtest`, and [docs/capacity.md](docs/capacity.md) with its result: about 70 rooms of 6 busy players on one backend under the production limits.
 
 ### Changed
 
