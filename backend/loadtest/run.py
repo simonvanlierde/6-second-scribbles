@@ -3,7 +3,7 @@
 Each simulated room has one host and N-1 guests speaking the real room protocol:
 every player scribbles on the shared lobby drawpad (``draw_stroke_partial`` at
 the browser's frame rate), and every room regularly plays a one-round game
-(server-dealt cards, a PNG drawing, ready, guesses, scoring, restart). The
+(server-dealt cards, a drawing, ready, guesses, scoring, restart). The
 measured latency is send-to-receive time of a stroke fragment as seen by the
 other players in the room, which is the hot broadcast path.
 
@@ -41,8 +41,10 @@ FRAME_HZ = 60
 STROKE_FRAMES = 30  # half a second of continuous drawing per stroke
 POINTS_PER_FRAME = 2
 PAUSE_SECONDS = (0.5, 1.5)  # gap between strokes, uniform
-# Roughly the size of a sketched 6-second canvas exported with toDataURL().
-FAKE_PNG = "data:image/png;base64," + "A" * 20_000
+# The largest drawing the frontend sends: encodeDrawing (frontend/src/lib/
+# drawingImage.ts) shrinks every drawing to at most 56 KiB of data URL.
+FAKE_DRAWING = "data:image/webp;base64,"
+FAKE_DRAWING += "A" * (56 * 1024 - len(FAKE_DRAWING))
 SERVER_ERROR_TYPES = {
     "protocol_error",
     "permission_error",
@@ -217,10 +219,10 @@ class Player:
                     self.stats.errors[f"{kind}:{msg.get('error')}"] += 1
 
     async def finish_drawing(self) -> None:
-        """Send the round's PNG and mark ready; in-game drawing itself stays local."""
+        """Send the round's drawing and mark ready; in-game drawing itself stays local."""
         await asyncio.sleep(self.cfg.draw_seconds * random.uniform(0.5, 1.0))  # noqa: S311
         with contextlib.suppress(ConnectionClosed):
-            await self.send({"type": "draw_stroke", "playerId": self.player_id, "drawing": FAKE_PNG})
+            await self.send({"type": "draw_stroke", "playerId": self.player_id, "drawing": FAKE_DRAWING})
             await self.send({"type": "player_ready", "playerId": self.player_id})
 
     async def submit_guess(self, target: str | None) -> None:

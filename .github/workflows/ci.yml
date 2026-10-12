@@ -205,6 +205,11 @@ jobs:
         working-directory: backend
         run: uv run alembic upgrade head
 
+      # The drawing-submit test plays a round, which deals server-side cards.
+      - name: Seed the card decks
+        working-directory: backend
+        run: uv run python -m scripts.seed_data
+
       # Only tests tagged @cross-browser run in Firefox and WebKit, and none are
       # tagged today, so Chromium is the only browser the suite launches.
       - name: Install Playwright Chromium

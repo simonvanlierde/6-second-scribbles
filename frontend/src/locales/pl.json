@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "Nie udało się utworzyć pokoju. Spróbuj ponownie.",
+    "drawingTooLarge": "Twój rysunek był za duży, by go wysłać, więc inni gracze go nie widzą.",
     "enterRoomCode": "Wpisz kod pokoju",
     "invalidRoomCode": "Kod pokoju musi mieć 6 znaków (A–Z, 0–9)",
     "roomDoesNotExist": "Ten pokój nie istnieje. Dołącz do innego pokoju lub utwórz nowy!",

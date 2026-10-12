@@ -17,6 +17,7 @@ import { useSound } from "@/composables/useSound";
 import { BRUSH_SIZES, DRAW_PALETTE } from "@/config/drawing";
 import { STORAGE_KEYS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
+import { encodeDrawing } from "@/lib/drawingImage";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -83,7 +84,10 @@ function endDrawingPhase() {
   // Keep the timer running: it shows the shared round countdown, which still
   // ticks for everyone else after this player submits early.
 
-  const drawing = canvas.canvasRef.value?.toDataURL("image/png");
+  const el = canvas.canvasRef.value;
+  // Paint the card colour the drawer saw, so white ink on a dark card survives.
+  const stage = el?.parentElement;
+  const drawing = el && encodeDrawing(el, (stage && getComputedStyle(stage).backgroundColor) || "#ffffff");
   if (drawing) {
     send({ type: "draw_stroke", playerId: store.localPlayerId, drawing });
     // Keep our own copy too — the receive handler skips own-player strokes, so

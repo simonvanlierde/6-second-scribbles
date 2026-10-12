@@ -10,6 +10,7 @@ import {
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, UI_TIMINGS } from "@/config/gameConfig";
 import { type ClientEvent, ClientEventSchema, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
+import { i18n } from "@/i18n";
 import { createLogger } from "@/shared/logger";
 import { useGameStore } from "@/stores/game";
 
@@ -227,6 +228,14 @@ export function useGameConnection() {
       case "kick_vote_expired":
       case "kick_error":
         handleKickEvent(message, ctx);
+        break;
+
+      case "protocol_error":
+        // The server drops oversized frames; without this a drawing that did not
+        // fit would vanish and guessers would wait for it forever.
+        if (message.error === "payload_too_large")
+          showNotification(i18n.global.t("notifications.drawingTooLarge"), "error", 8000);
+        else log.warn("Server rejected a message:", message.error);
         break;
     }
   }

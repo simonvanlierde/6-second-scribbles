@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "Échec de la création du salon. Réessaie.",
+    "drawingTooLarge": "Ton dessin était trop lourd pour être envoyé, les autres joueurs ne le voient donc pas.",
     "enterRoomCode": "Saisis un code de salon",
     "invalidRoomCode": "Le code du salon doit comporter 6 caractères (A–Z, 0–9)",
     "roomDoesNotExist": "Ce salon n’existe pas. Rejoins un autre salon ou crées-en un nouveau !",

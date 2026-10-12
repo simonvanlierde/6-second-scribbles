@@ -1,9 +1,9 @@
 /**
  * Export a single drawing as a downloadable PNG.
  *
- * Drawings are stored as transparent PNG data URLs (the canvas is never
- * background-filled). For a standalone file we composite the strokes over a
- * cream background so the export matches the in-game paper look.
+ * New drawings arrive as opaque WebP over the drawer's card colour
+ * (lib/drawingImage.ts); older or fallback ones can be transparent PNGs. The
+ * cream fill gives those a paper background in the exported file.
  */
 
 // Hardcoded, NOT var(--color-paper): the paper token resolves to a dark value in

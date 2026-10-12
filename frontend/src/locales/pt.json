@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "Falha ao criar a sala. Tente novamente.",
+    "drawingTooLarge": "Seu desenho era grande demais para ser enviado, então os outros jogadores não podem vê-lo.",
     "enterRoomCode": "Insira um código de sala",
     "invalidRoomCode": "O código da sala deve ter 6 caracteres (A–Z, 0–9)",
     "roomDoesNotExist": "Essa sala não existe. Entre em outra sala ou crie uma nova!",

@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "建立房間失敗，請再試一次。",
+    "drawingTooLarge": "你的畫太大，無法傳送，其他玩家看不到它。",
     "enterRoomCode": "請輸入房間代碼",
     "invalidRoomCode": "房間代碼必須為 6 個字元（A–Z, 0–9）",
     "roomDoesNotExist": "那個房間不存在，加入其他房間或建立一個新房間吧！",

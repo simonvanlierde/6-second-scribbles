@@ -1,0 +1,139 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { encodeDrawing, MAX_DRAWING_CHARS } from "@/lib/drawingImage";
+
+type FakeCanvas = {
+  width: number;
+  height: number;
+  ctx: { fillStyle: string; fillRect: ReturnType<typeof vi.fn>; drawImage: ReturnType<typeof vi.fn> };
+  getContext: () => FakeCanvas["ctx"];
+  toDataURL: ReturnType<typeof vi.fn>;
+};
+
+// encode(type, quality, width) returns the data URL a canvas of that width gives.
+function stubCanvases(encode: (type: string, quality: number | undefined, width: number) => string): FakeCanvas[] {
+  const made: FakeCanvas[] = [];
+  vi.spyOn(document, "createElement").mockImplementation(() => {
+    const canvas: FakeCanvas = {
+      width: 0,
+      height: 0,
+      ctx: { fillStyle: "", fillRect: vi.fn(), drawImage: vi.fn() },
+      getContext: () => canvas.ctx,
+      toDataURL: vi.fn((type: string, quality?: number) => encode(type, quality, canvas.width)),
+    };
+    made.push(canvas);
+    return canvas as unknown as HTMLElement;
+  });
+  return made;
+}
+
+const source = { width: 2048, height: 2100, toDataURL: vi.fn() } as unknown as HTMLCanvasElement;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("encodeDrawing", () => {
+  it("scales a HiDPI canvas to 1024 px and encodes WebP over the background", () => {
+    const made = stubCanvases((type) => `data:${type};base64,small`);
+
+    const result = encodeDrawing(source, "rgb(255, 255, 255)");
+
+    expect(result).toBe("data:image/webp;base64,small");
+    const [canvas] = made;
+    expect(canvas?.height).toBe(1024);
+    expect(canvas?.width).toBe(999);
+    expect(canvas?.ctx.fillStyle).toBe("rgb(255, 255, 255)");
+    expect(canvas?.ctx.fillRect.mock.invocationCallOrder[0]).toBeLessThan(
+      canvas?.ctx.drawImage.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("steps down quality, then size, until the drawing fits", () => {
+    // Pretend only a canvas at most 640 px wide at quality 0.5 fits.
+    stubCanvases((type, quality, width) => {
+      const fits = width <= 640 && quality === 0.5;
+      return `data:${type};base64,${"x".repeat(fits ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    const result = encodeDrawing(source, "#fff");
+
+    expect(result.length).toBeLessThanOrEqual(MAX_DRAWING_CHARS);
+    expect(result.startsWith("data:image/webp")).toBe(true);
+  });
+
+  it("uses JPEG where the browser cannot encode WebP", () => {
+    // Safari: asking for WebP returns a PNG.
+    stubCanvases((type, quality) =>
+      type === "image/jpeg" ? `data:image/jpeg;base64,q${quality}` : "data:image/png;base64,big",
+    );
+
+    expect(encodeDrawing(source, "#fff")).toBe("data:image/jpeg;base64,q0.8");
+  });
+
+  it("asks for WebP only once when the browser cannot encode it", () => {
+    const made = stubCanvases((type, _quality, width) => {
+      if (type !== "image/jpeg") return "data:image/png;base64,big";
+      return `data:image/jpeg;base64,${"x".repeat(width <= 512 ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    encodeDrawing(source, "#fff");
+
+    const webpCalls = made.flatMap((c) => c.toDataURL.mock.calls).filter(([type]) => type === "image/webp");
+    expect(webpCalls).toHaveLength(1);
+  });
+
+  it("falls back to PNG where the browser can encode neither WebP nor JPEG", () => {
+    stubCanvases(() => "data:image/png;base64,small");
+
+    expect(encodeDrawing(source, "#fff")).toBe("data:image/png;base64,small");
+  });
+
+  it("still steps down a canvas that starts under 1024 px", () => {
+    // A 1x screen: the canvas is already smaller than the first step.
+    const small = { width: 900, height: 700, toDataURL: vi.fn() } as unknown as HTMLCanvasElement;
+    const made = stubCanvases((type, _quality, width) => {
+      return `data:${type};base64,${"x".repeat(width <= 640 ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    const result = encodeDrawing(small, "#fff");
+
+    expect(result.length).toBeLessThan(100);
+    // 900 (its own size), 800, then 640; never 1024, which would upscale.
+    expect(made.map((c) => c.width)).toEqual([900, 800, 640]);
+  });
+
+  it("steps PNG down by size where the browser has no lossy encoder", () => {
+    const made = stubCanvases((_type, _quality, width) => {
+      return `data:image/png;base64,${"x".repeat(width <= 512 ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    const result = encodeDrawing(source, "#fff");
+
+    expect(result.startsWith("data:image/png")).toBe(true);
+    expect(result.length).toBeLessThan(100);
+    // One PNG per size: a lower WebP quality means nothing to a PNG encoder.
+    expect(made.map((c) => c.toDataURL.mock.calls.filter(([type]) => type === "image/png").length)).toEqual([
+      1, 1, 1, 1,
+    ]);
+  });
+
+  it("sends the source as PNG when a 2D context is unavailable", () => {
+    vi.spyOn(document, "createElement").mockImplementation(
+      () => ({ width: 0, height: 0, getContext: () => null }) as unknown as HTMLElement,
+    );
+    const fallback = { width: 2048, height: 2100, toDataURL: vi.fn(() => "data:image/png;base64,FULL") };
+
+    // The server rejects it if it is too large, and the player then sees an error.
+    expect(encodeDrawing(fallback as unknown as HTMLCanvasElement, "#fff")).toBe("data:image/png;base64,FULL");
+    expect(fallback.toDataURL).toHaveBeenCalledWith("image/png");
+  });
+
+  it("returns the smallest attempt when nothing fits", () => {
+    stubCanvases((type, _quality, width) => `data:${type};base64,${"x".repeat(MAX_DRAWING_CHARS + width)}`);
+
+    const result = encodeDrawing(source, "#fff");
+
+    expect(result.length).toBe("data:image/webp;base64,".length + MAX_DRAWING_CHARS + 374);
+  });
+});
