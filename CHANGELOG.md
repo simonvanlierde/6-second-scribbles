@@ -33,6 +33,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The page language (`<html lang>`) now follows the chosen language instead of staying English, so screen readers read the text with the right voice and pronunciation.
 - A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
 - Rooms nobody ever joined, such as a created code left unused, and rooms restored from Redis after a restart never expired, so they piled up until the 500-room cap refused new rooms. Both now expire after the normal 5-minute empty-room TTL.
+- Room-creation and login rate limits in production counted every visitor as one client: the backend read the last `X-Forwarded-For` entry, which Caddy filled with the Cloudflare tunnel container's address. Caddy now forwards the visitor's own IP.
 
 ## [0.2.1] - 2026-07-06
 
