@@ -25,14 +25,14 @@ from app.system.router import router as system_router
 from app.users.router import router as users_router
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Application lifespan: startup and shutdown logic."""
     logger.info("Starting Six Second Scribbles API...")
 

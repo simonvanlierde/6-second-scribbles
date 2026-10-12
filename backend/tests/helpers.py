@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Generator, Sequence
 
     from fastapi.testclient import TestClient
     from starlette.testclient import WebSocketTestSession
@@ -43,7 +43,7 @@ def joined_players(
     test_client: TestClient,
     room_id: str,
     players: Sequence[JoinedPlayer],
-) -> Iterator[tuple[WebSocketTestSession, ...]]:
+) -> Generator[tuple[WebSocketTestSession, ...]]:
     """Open websocket sessions and join each player, draining expected join broadcasts."""
     with ExitStack() as stack:
         sockets: list[WebSocketTestSession] = []
