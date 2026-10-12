@@ -74,7 +74,8 @@ real room protocol, one WebSocket per player:
   points each), with 0.5 to 1.5 s between strokes. That is about 20 messages
   per second per player, so this is a busy lobby, not an average one.
 - After 7.5 to 22.5 s in the lobby the host starts a one-round game. The server
-  deals the cards, each player sends a 20 KB PNG `draw_stroke` and
+  deals the cards, each player sends a 56 KiB `draw_stroke` (the largest
+  drawing the frontend sends; the tables above used 20 KB) and
   `player_ready`, submits guesses for its assigned drawing, and the host
   restarts the game after the final results.
 - Latency is the time from a player sending a stroke fragment to another
