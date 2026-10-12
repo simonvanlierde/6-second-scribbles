@@ -6,7 +6,7 @@
     "pydantic-settings>=2.15.0",
     "rapidfuzz>=3.14.6",
     "redis>=8.1.0",
-    "sqlalchemy>=2.1.1",
+    "sqlalchemy[asyncio]>=2.1.1",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
   ]
@@ -38,6 +38,10 @@
     "pytest>=9.1.1",
     "testcontainers>=4.15.0",
   ]
+
+[tool.uv]
+  # GHSA-v5jw-96jm-7h2c: argostranslate 1.11.0 pins stanza==1.10.1. Drop once argostranslate allows >=1.12.2.
+  override-dependencies = ["stanza>=1.12.2"]
 
 [tool.pytest.ini_options]
   addopts = ["--strict-markers", "--tb=short", "-v"]
