@@ -1,9 +1,18 @@
 # compose.prod.yml - Docker Compose overrides for production environment
 name: 6ss-prod
 
+# Rotate container logs: Docker keeps json-file logs forever by default, and
+# Caddy's access log holds visitor IPs. 3 x 10 MB per container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
 
   backend:
+    logging: *logging
     build:
       target: prod
     restart: unless-stopped
@@ -26,6 +35,7 @@ services:
           memory: 1g
 
   cache:
+    logging: *logging
     restart: unless-stopped
     deploy:
       resources:
@@ -34,6 +44,7 @@ services:
           memory: 256m
 
   database:
+    logging: *logging
     restart: unless-stopped
     env_file:
       - backend/.env.prod
@@ -77,6 +88,7 @@ services:
       - db-seed
 
   frontend:
+    logging: *logging
     build:
       target: prod
     restart: unless-stopped
@@ -95,6 +107,7 @@ services:
           memory: 128m
 
   cloudflared:
+    logging: *logging
     # Pinned by digest for reproducible, supply-chain-safe deploys instead of the
     # mutable `latest` tag. Resolved from cloudflare/cloudflared:latest on 2026-06-27.
     # To bump: `docker buildx imagetools inspect cloudflare/cloudflared:latest`.
