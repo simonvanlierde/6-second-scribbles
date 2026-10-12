@@ -68,6 +68,20 @@ describe("encodeDrawing", () => {
     expect(encodeDrawing(source, "#fff")).toBe("data:image/png;base64,small");
   });
 
+  it("still steps down a canvas that starts under 1024 px", () => {
+    // A 1x screen: the canvas is already smaller than the first step.
+    const small = { width: 900, height: 700, toDataURL: vi.fn() } as unknown as HTMLCanvasElement;
+    const made = stubCanvases((type, _quality, width) => {
+      return `data:${type};base64,${"x".repeat(width <= 640 ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    const result = encodeDrawing(small, "#fff");
+
+    expect(result.length).toBeLessThan(100);
+    // 900 (its own size), 800, then 640; never 1024, which would upscale.
+    expect(made.map((c) => c.width)).toEqual([900, 800, 640]);
+  });
+
   it("returns the smallest attempt when nothing fits", () => {
     stubCanvases((type, _quality, width) => `data:${type};base64,${"x".repeat(MAX_DRAWING_CHARS + width)}`);
 

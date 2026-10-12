@@ -18,9 +18,11 @@ const WEBP_QUALITIES = [0.8, 0.5];
  */
 export function encodeDrawing(source: HTMLCanvasElement, background: string): string {
   const longest = Math.max(source.width, source.height, 1);
+  // A canvas already under a step is tried at its own size first, then smaller.
+  const sides = [...new Set(SIDES.map((side) => Math.min(side, longest)))];
   let smallest = "";
-  for (const side of SIDES) {
-    const scale = Math.min(1, side / longest);
+  for (const side of sides) {
+    const scale = side / longest;
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(source.width * scale));
     canvas.height = Math.max(1, Math.round(source.height * scale));
@@ -38,7 +40,6 @@ export function encodeDrawing(source: HTMLCanvasElement, background: string): st
       if (!smallest || dataUrl.length < smallest.length) smallest = dataUrl;
       if (!dataUrl.startsWith("data:image/webp")) break;
     }
-    if (scale === 1) break;
   }
   return smallest;
 }
