@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -130,8 +130,9 @@ def _make_provider() -> _ProviderHarness:
     provider = _ProviderHarness.__new__(_ProviderHarness)
     provider.installed_pairs = set()
     provider.available_packages = []
-    provider.argos_package = SimpleNamespace(install_from_path=Mock())
-    provider.argos_translate = SimpleNamespace(get_translation_from_codes=Mock())
+    # Module stand-ins: only the one function each test calls is needed.
+    provider.argos_package = cast("Any", SimpleNamespace(install_from_path=Mock()))
+    provider.argos_translate = cast("Any", SimpleNamespace(get_translation_from_codes=Mock()))
     return provider
 
 
