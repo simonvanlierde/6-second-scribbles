@@ -15,6 +15,19 @@ export const SUPPORTED_LOCALES = [
   "zh-TW",
 ] as const;
 
+/**
+ * Map a BCP 47 tag such as navigator.language to the app's locale codes: the
+ * base language, except Chinese, which the app splits by script.
+ */
+export function getBrowserLocale(tag = typeof navigator === "undefined" ? "" : navigator.language): string {
+  const [base, ...subtags] = (tag || "en").toLowerCase().split("-");
+  if (base === "zh") {
+    // Traditional script: zh-Hant, or a region that uses it by default.
+    return subtags.some((s) => ["hant", "tw", "hk", "mo"].includes(s)) ? "zh-TW" : "zh-CN";
+  }
+  return base || "en";
+}
+
 export type LocaleAvailability = LocaleAvailabilityItem;
 
 export type LocaleOption = {

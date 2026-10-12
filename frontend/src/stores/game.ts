@@ -5,6 +5,7 @@ import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/u
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { normalizeGamePhase } from "@/shared/gamePhase";
+import { getBrowserLocale } from "@/shared/locales";
 import type {
   Card,
   Difficulty,
@@ -15,14 +16,6 @@ import type {
   RoundHighlights,
   RoundResult,
 } from "@/shared/types";
-
-function getBrowserLocale(): string {
-  if (typeof navigator === "undefined" || !navigator.language) {
-    return "en";
-  }
-
-  return navigator.language.split("-")[0]?.toLowerCase() || "en";
-}
 
 export const useGameStore = defineStore(
   "game",

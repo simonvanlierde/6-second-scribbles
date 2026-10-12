@@ -68,7 +68,9 @@ host with `just up-prod`. Caddy serves the built SPA and proxies `/api` and `/ws
 to the backend; PostgreSQL and Redis stay on the internal Docker network. The
 only external ingress is a Cloudflare Tunnel (`cloudflared`, Compose `tunnel`
 profile), so nothing is published directly to the internet. See
-[docs/architecture.md](docs/architecture.md) for the full topology.
+[docs/architecture.md](docs/architecture.md) for the full topology, and
+[docs/capacity.md](docs/capacity.md) for how many rooms one backend holds
+under the production limits (`just loadtest` measures it).
 
 ## Attribution
 

@@ -153,7 +153,8 @@ def test_waiting_room_drawpad_controls_are_shared(test_client: TestClient) -> No
             ws1,
             {
                 "type": "draw_stroke",
-                "playerId": "p1",
+                # A forged sender id: the relay must carry the real one.
+                "playerId": PLAYER_2,
                 "stroke": {
                     "color": "#FF0000",
                     "width": 3,
@@ -161,7 +162,9 @@ def test_waiting_room_drawpad_controls_are_shared(test_client: TestClient) -> No
                 },
             },
         )
-        assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["draw_stroke", "draw_stroke"]
+        relays = [receive_json(ws1), receive_json(ws2)]
+        assert [r["type"] for r in relays] == ["draw_stroke", "draw_stroke"]
+        assert [r["playerId"] for r in relays] == [PLAYER_1, PLAYER_1]
 
         send_json(ws1, {"type": "drawpad_clear", "playerId": PLAYER_1})
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["drawpad_clear", "drawpad_clear"]

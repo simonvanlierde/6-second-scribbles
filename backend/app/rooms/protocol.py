@@ -654,6 +654,11 @@ def dump_ws_message(message: WebSocketMessage) -> object:
     return message
 
 
+def encode_ws_message(message: WebSocketMessage) -> str:
+    """Serialize a websocket message to the JSON text Starlette's ``send_json`` would send."""
+    return json.dumps(dump_ws_message(message), separators=(",", ":"), ensure_ascii=False)
+
+
 async def send_ws_message(websocket: WebSocket, message: WebSocketMessage) -> None:
     """Send a websocket message as JSON."""
-    await websocket.send_json(dump_ws_message(message))
+    await websocket.send_text(encode_ws_message(message))

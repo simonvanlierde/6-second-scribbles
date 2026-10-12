@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
@@ -23,10 +22,6 @@ class TestWebSocket:
         if self.send_error is not None:
             raise self.send_error
         self.sent_texts.append(message)
-
-    async def send_json(self, data: object) -> None:
-        """Serialize and record a websocket JSON payload."""
-        await self.send_text(json.dumps(data))
 
     async def close(self, code: int | None = None, reason: str | None = None) -> None:
         """Record a websocket close call."""
