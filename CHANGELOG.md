@@ -14,7 +14,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `seed_data` modes: `--append` adds only new categories, `--overwrite` replaces the system categories and prompts. A `database-seed` Compose service runs the seeder on demand.
 - JSON access logs from the frontend's Caddy server, recording the real visitor IP behind the Cloudflare tunnel.
 - End-to-end Playwright tests in CI, against Postgres and Redis.
-- A WebSocket load test, `just loadtest`, and [docs/capacity.md](docs/capacity.md) with its result: about 70 rooms of 6 busy players on one backend under the production limits.
+- A WebSocket load test, `just loadtest`, and [docs/capacity.md](docs/capacity.md) with its result: about 80 rooms of 6 busy players on one backend under the production limits.
 
 ### Changed
 
@@ -22,6 +22,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The health endpoint and the OpenAPI document report the release version (0.2.1) instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
 - Backend dependency updates.
+- The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
 
 ### Fixed
 
