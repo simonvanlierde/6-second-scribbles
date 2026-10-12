@@ -4,7 +4,7 @@
 import json
 import time
 from typing import TYPE_CHECKING, cast
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -210,7 +210,22 @@ class TestGameRoom:
         await room_with_players.broadcast(message)
 
         for player in room_with_players.players.values():
-            assert cast("TestWebSocket", player.websocket).sent_texts == [json.dumps(message)]
+            assert cast("TestWebSocket", player.websocket).sent_texts == [json.dumps(message, separators=(",", ":"))]
+
+    async def test_broadcast_serializes_once(
+        self, room_with_players: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A broadcast serializes its message once and sends the same text to every player."""
+        encode = Mock(wraps=manager_module.encode_ws_message)
+        monkeypatch.setattr(manager_module, "encode_ws_message", encode)
+        message = cast("WebSocketMessage", {"type": "test", "data": "naïve"})
+
+        await room_with_players.broadcast(message)
+
+        encode.assert_called_once_with(message)
+        texts = [cast("TestWebSocket", p.websocket).sent_texts for p in room_with_players.players.values()]
+        assert len(texts) > 1
+        assert all(t == ['{"type":"test","data":"naïve"}'] for t in texts)
 
     async def test_broadcast_exclude_player(self, room_with_players: GameRoom) -> None:
         """Test broadcasting with exclusion."""
@@ -222,7 +237,7 @@ class TestGameRoom:
         player2 = room_with_players.players[PLAYER_TWO_ID]
 
         assert cast("TestWebSocket", player1.websocket).sent_texts == []
-        assert cast("TestWebSocket", player2.websocket).sent_texts == [json.dumps(message)]
+        assert cast("TestWebSocket", player2.websocket).sent_texts == [json.dumps(message, separators=(",", ":"))]
 
     async def test_send_to_specific_player(self, room_with_players: GameRoom) -> None:
         """Test sending a message to a specific player."""
@@ -233,7 +248,7 @@ class TestGameRoom:
         player1 = room_with_players.players[PLAYER_ONE_ID]
         player2 = room_with_players.players[PLAYER_TWO_ID]
 
-        assert cast("TestWebSocket", player1.websocket).sent_texts == [json.dumps(message)]
+        assert cast("TestWebSocket", player1.websocket).sent_texts == [json.dumps(message, separators=(",", ":"))]
         assert cast("TestWebSocket", player2.websocket).sent_texts == []
 
     async def test_get_player_list(self, room_with_players: GameRoom) -> None:

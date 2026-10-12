@@ -49,6 +49,7 @@ from app.rooms.protocol import (
     StartRoundServerEvent,
     StrokeDelta,
     WebSocketMessage,
+    encode_ws_message,
     send_ws_message,
 )
 from app.rooms.scheduler import RoomTaskScheduler, create_logged_task
@@ -521,13 +522,16 @@ class GameRoom:
 
     async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
         """Broadcast a message to all connected players in the room."""
-        # Snapshot: send_ws_message awaits, and a concurrent remove/disconnect
+        # Every recipient gets the same text, so serialize once: per-recipient
+        # serialization made relay work grow with players squared.
+        text = encode_ws_message(message)
+        # Snapshot: send_text awaits, and a concurrent remove/disconnect
         # mutating self.players mid-iteration would raise "dict changed size".
         for player_id, player in list(self.players.items()):
             if (exclude and player_id == exclude) or not player.connected:
                 continue
             try:
-                await send_ws_message(player.websocket, message)
+                await player.websocket.send_text(text)
             except Exception:
                 # A failed send on a still-"connected" socket means we missed the
                 # close. Mark them disconnected so we stop trying; the websocket's
