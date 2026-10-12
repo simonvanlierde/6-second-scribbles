@@ -29,6 +29,12 @@ vi.mock("@/composables/useDrawingCanvas", () => ({
   useDrawingCanvas: () => canvasMocks,
 }));
 
+const encodeDrawingMock = vi.hoisted(() => vi.fn(() => "data:image/webp;base64,DRAWING"));
+
+vi.mock("@/lib/drawingImage", () => ({
+  encodeDrawing: encodeDrawingMock,
+}));
+
 vi.mock("@/composables/useGameConnection", () => ({
   useGameConnection: () => ({ send: sendMock }),
 }));
@@ -135,11 +141,12 @@ describe("DrawingPhase", () => {
     expect(sendMock).toHaveBeenCalledWith({
       type: "draw_stroke",
       playerId: "p1",
-      drawing: "data:image/png;base64,DRAWING",
+      drawing: "data:image/webp;base64,DRAWING",
     });
+    expect(encodeDrawingMock).toHaveBeenCalledWith(canvasMocks.canvasRef.value, expect.any(String));
     expect(sendMock).toHaveBeenCalledWith({ type: "player_ready", playerId: "p1" });
     expect(sendMock.mock.calls.filter(([event]) => event.type === "player_ready")).toHaveLength(1);
-    expect(store.players.get("p1")?.drawing).toBe("data:image/png;base64,DRAWING");
+    expect(store.players.get("p1")?.drawing).toBe("data:image/webp;base64,DRAWING");
     expect(draftClearMock).toHaveBeenCalledTimes(1);
   });
 
