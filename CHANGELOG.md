@@ -27,6 +27,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Creating a room from the home page failed in production: the backend redirected `POST /api/rooms` to an `http://` URL, which the browser blocked on the HTTPS site. The backend now trusts the forwarded scheme from Caddy.
 - Rooms could split in production: the backend ran four worker processes, each with its own in-memory rooms, so a player could create a room on one worker and connect to another. It now runs a single worker.
 - Production builds could bake a local `VITE_BACKEND_HOST` into the bundle, sending plain `http://` requests from the HTTPS page. The bundle now always derives the backend from the page's own address.
 - The production Redis service now restarts after a crash or host reboot.
