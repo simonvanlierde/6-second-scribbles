@@ -106,7 +106,6 @@ function selectTheme(value: Theme) {
 </script>
 
 <template>
-  <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: native <dialog>; @click.self is a pointer-only backdrop dismiss -->
   <!-- biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users close via Escape, handled by @close -->
   <dialog ref="dialog" class="settings-dialog" @click.self="close" @close="close">
     <header class="settings-dialog__header">
