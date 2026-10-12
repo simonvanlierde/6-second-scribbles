@@ -62,7 +62,16 @@ describe("encodeDrawing", () => {
     expect(result.startsWith("data:image/webp")).toBe(true);
   });
 
-  it("falls back to PNG where the browser cannot encode WebP", () => {
+  it("uses JPEG where the browser cannot encode WebP", () => {
+    // Safari: asking for WebP returns a PNG.
+    stubCanvases((type, quality) =>
+      type === "image/jpeg" ? `data:image/jpeg;base64,q${quality}` : "data:image/png;base64,big",
+    );
+
+    expect(encodeDrawing(source, "#fff")).toBe("data:image/jpeg;base64,q0.8");
+  });
+
+  it("falls back to PNG where the browser can encode neither WebP nor JPEG", () => {
     stubCanvases(() => "data:image/png;base64,small");
 
     expect(encodeDrawing(source, "#fff")).toBe("data:image/png;base64,small");
@@ -82,7 +91,7 @@ describe("encodeDrawing", () => {
     expect(made.map((c) => c.width)).toEqual([900, 800, 640]);
   });
 
-  it("steps PNG down by size where the browser cannot encode WebP", () => {
+  it("steps PNG down by size where the browser has no lossy encoder", () => {
     const made = stubCanvases((_type, _quality, width) => {
       return `data:image/png;base64,${"x".repeat(width <= 512 ? 10 : MAX_DRAWING_CHARS)}`;
     });
