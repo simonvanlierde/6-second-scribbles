@@ -12,11 +12,15 @@ const QUALITIES = [0.8, 0.5];
 // the drawing is painted on an opaque background.
 const LOSSY_TYPES = ["image/webp", "image/jpeg"];
 
-function encodeCanvas(canvas: HTMLCanvasElement, quality: number): string {
+// `unsupported` collects types the browser could not encode, so later attempts
+// skip them: each failed request costs a full PNG encode.
+function encodeCanvas(canvas: HTMLCanvasElement, quality: number, unsupported: Set<string>): string {
   for (const type of LOSSY_TYPES) {
+    if (unsupported.has(type)) continue;
     // A browser that cannot encode a type returns a PNG instead of failing.
     const dataUrl = canvas.toDataURL(type, quality);
     if (dataUrl.startsWith(`data:${type}`)) return dataUrl;
+    unsupported.add(type);
   }
   return canvas.toDataURL("image/png");
 }
@@ -34,6 +38,7 @@ export function encodeDrawing(source: HTMLCanvasElement, background: string): st
   const longest = Math.max(source.width, source.height, 1);
   // A canvas already under a step is tried at its own size first, then smaller.
   const sides = [...new Set(SIDES.map((side) => Math.min(side, longest)))];
+  const unsupported = new Set<string>();
   let smallest = "";
   for (const side of sides) {
     const scale = side / longest;
@@ -47,7 +52,7 @@ export function encodeDrawing(source: HTMLCanvasElement, background: string): st
     ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
 
     for (const quality of QUALITIES) {
-      const dataUrl = encodeCanvas(canvas, quality);
+      const dataUrl = encodeCanvas(canvas, quality, unsupported);
       if (dataUrl.length <= MAX_DRAWING_CHARS) return dataUrl;
       if (!smallest || dataUrl.length < smallest.length) smallest = dataUrl;
       // PNG ignores quality, so only a smaller size can help.

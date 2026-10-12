@@ -71,6 +71,18 @@ describe("encodeDrawing", () => {
     expect(encodeDrawing(source, "#fff")).toBe("data:image/jpeg;base64,q0.8");
   });
 
+  it("asks for WebP only once when the browser cannot encode it", () => {
+    const made = stubCanvases((type, _quality, width) => {
+      if (type !== "image/jpeg") return "data:image/png;base64,big";
+      return `data:image/jpeg;base64,${"x".repeat(width <= 512 ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    encodeDrawing(source, "#fff");
+
+    const webpCalls = made.flatMap((c) => c.toDataURL.mock.calls).filter(([type]) => type === "image/webp");
+    expect(webpCalls).toHaveLength(1);
+  });
+
   it("falls back to PNG where the browser can encode neither WebP nor JPEG", () => {
     stubCanvases(() => "data:image/png;base64,small");
 
