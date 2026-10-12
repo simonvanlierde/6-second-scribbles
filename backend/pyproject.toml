@@ -107,7 +107,7 @@
 
     [tool.ruff.lint.isort]
       # Keep backend package boundaries explicit for import sorting.
-      known-first-party = ["app", "scripts", "tests"]
+      known-first-party = ["app", "loadtest", "scripts", "tests"]
 
       # Prevent the alembic directory from shadowing the alembic PyPI package
       known-third-party = ["alembic"]
