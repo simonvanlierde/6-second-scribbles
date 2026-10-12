@@ -150,6 +150,37 @@ describe("DrawingPhase", () => {
     expect(draftClearMock).toHaveBeenCalledTimes(1);
   });
 
+  it("encodes the drawing over the card colour the drawer saw", async () => {
+    const stage = document.createElement("div");
+    stage.style.backgroundColor = "rgb(35, 30, 27)";
+    const canvasEl = document.createElement("canvas");
+    stage.append(canvasEl);
+    const original = canvasMocks.canvasRef.value;
+    canvasMocks.canvasRef.value = canvasEl as unknown as typeof original;
+    try {
+      const wrapper = mountPhase();
+      await wrapper.find(".drawing-phase__finish-desktop").trigger("click");
+
+      expect(encodeDrawingMock).toHaveBeenCalledWith(canvasEl, "rgb(35, 30, 27)");
+    } finally {
+      canvasMocks.canvasRef.value = original;
+    }
+  });
+
+  it("still marks the player ready when the canvas is gone", async () => {
+    const original = canvasMocks.canvasRef.value;
+    canvasMocks.canvasRef.value = null as unknown as typeof original;
+    try {
+      const wrapper = mountPhase();
+      await wrapper.find(".drawing-phase__finish-desktop").trigger("click");
+
+      expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "draw_stroke" }));
+      expect(sendMock).toHaveBeenCalledWith({ type: "player_ready", playerId: "p1" });
+    } finally {
+      canvasMocks.canvasRef.value = original;
+    }
+  });
+
   it("forwards toolbar actions to the drawing canvas", async () => {
     const wrapper = mountPhase();
 

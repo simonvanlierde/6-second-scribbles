@@ -82,6 +82,32 @@ describe("encodeDrawing", () => {
     expect(made.map((c) => c.width)).toEqual([900, 800, 640]);
   });
 
+  it("steps PNG down by size where the browser cannot encode WebP", () => {
+    const made = stubCanvases((_type, _quality, width) => {
+      return `data:image/png;base64,${"x".repeat(width <= 512 ? 10 : MAX_DRAWING_CHARS)}`;
+    });
+
+    const result = encodeDrawing(source, "#fff");
+
+    expect(result.startsWith("data:image/png")).toBe(true);
+    expect(result.length).toBeLessThan(100);
+    // One PNG per size: a lower WebP quality means nothing to a PNG encoder.
+    expect(made.map((c) => c.toDataURL.mock.calls.filter(([type]) => type === "image/png").length)).toEqual([
+      1, 1, 1, 1,
+    ]);
+  });
+
+  it("sends the source as PNG when a 2D context is unavailable", () => {
+    vi.spyOn(document, "createElement").mockImplementation(
+      () => ({ width: 0, height: 0, getContext: () => null }) as unknown as HTMLElement,
+    );
+    const fallback = { width: 2048, height: 2100, toDataURL: vi.fn(() => "data:image/png;base64,FULL") };
+
+    // The server rejects it if it is too large, and the player then sees an error.
+    expect(encodeDrawing(fallback as unknown as HTMLCanvasElement, "#fff")).toBe("data:image/png;base64,FULL");
+    expect(fallback.toDataURL).toHaveBeenCalledWith("image/png");
+  });
+
   it("returns the smallest attempt when nothing fits", () => {
     stubCanvases((type, _quality, width) => `data:${type};base64,${"x".repeat(MAX_DRAWING_CHARS + width)}`);
 

@@ -330,6 +330,19 @@ describe("client message handlers", () => {
     expect(notifications.at(-1)).toMatchObject({ type: "error", text: expect.stringMatching(/too big to send/) });
   });
 
+  it("only logs other protocol errors", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { handleMessage } = useGameConnection();
+    const { notifications } = useNotifications();
+    const before = notifications.length;
+
+    handleMessage({ type: "protocol_error", error: "invalid_payload", message: "Invalid websocket payload." });
+
+    expect(notifications.length).toBe(before);
+    expect(warn).toHaveBeenCalledWith(expect.anything(), "Server rejected a message:", "invalid_payload");
+    warn.mockRestore();
+  });
+
   it("validates outbound client events before sending them", () => {
     const store = useGameStore();
     store.localPlayerId = "p1";
