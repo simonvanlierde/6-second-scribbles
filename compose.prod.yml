@@ -22,6 +22,11 @@ services:
     # Set explicitly here so it holds even if .env.prod omits it.
     environment:
       ENV: prod
+      # Uvicorn reads X-Forwarded-Proto only from 127.0.0.1 by default, so behind
+      # Caddy it built its trailing-slash redirects as http:// and browsers blocked
+      # them (POST /api/rooms -> 307 http://.../api/rooms/). The backend is reachable
+      # only on the compose network, through Caddy.
+      FORWARDED_ALLOW_IPS: "*"
     # Require database migrations to complete before the backend starts.
     depends_on:
       database-migrations:
