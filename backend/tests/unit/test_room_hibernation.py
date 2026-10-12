@@ -52,6 +52,26 @@ class TestRoomHibernation:
         assert room.is_empty()
         assert room.emptied_at is not None
 
+    async def test_never_joined_room_expires(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A room nobody joins (a created code left unused) is still removed after the TTL."""
+        room = GameRoom(EMPTY_TEST_ROOM)
+        assert not room.should_be_removed()
+
+        later = time.time() + settings.room_ttl_seconds + 1
+        monkeypatch.setattr("app.rooms.lifecycle.time.time", lambda: later)
+
+        assert room.should_be_removed()
+
+    async def test_restored_room_without_empty_time_expires(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """A room saved while players were connected starts its empty clock on restore."""
+        room = GameRoom(EMPTY_TEST_ROOM)
+        await room.add_player(PLAYER_1, "Player 1", as_websocket(make_ws()))
+        assert room.to_state().emptied_at is None
+
+        restored = GameRoom.from_state(room.to_state())
+
+        assert restored.emptied_at is not None
+
     async def test_room_enters_hibernation_after_1_minute(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """Test that room enters hibernation after being empty for 1 minute."""
         room = GameRoom(HIBERNATE_TEST_ROOM)

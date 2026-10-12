@@ -121,7 +121,9 @@ class GameRoom:
         self.last_host_user_id: str | None = None  # Authenticated owner of last host, for reclaim checks
         self.created_at = time.time()
         self.last_activity = time.time()
-        self.emptied_at: float | None = None  # When room became empty
+        # When the room last had no connected players. A new room starts empty,
+        # so one that nobody ever joins still expires after the TTL.
+        self.emptied_at: float | None = self.created_at
         self.is_hibernated = False
         self.active_kick_votes: dict[str, KickVote] = {}  # target_player_id -> KickVote
         # Latest drawing PNG (data URL) per player for the current round. Kept in
