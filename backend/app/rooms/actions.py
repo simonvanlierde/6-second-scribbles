@@ -310,12 +310,17 @@ async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEve
     relays vector `stroke` fragments; fold those into the room's authoritative
     stroke list so late joiners hydrate the collective doodle via room_state.
     """
+    if not session.player_id:
+        return
+    # Clients pick the drawing to show from the relayed playerId, so it must be
+    # the sender's own: a forged id would overwrite another player's drawing.
+    event.player_id = session.player_id
     if isinstance(event, DrawStrokePartialEvent):
-        if session.player_id and event.stroke is not None:
+        if event.stroke is not None:
             session.room.apply_lobby_partial(session.player_id, event.stroke, is_start=event.stroke_start)
     else:
         drawing = (event.model_extra or {}).get("drawing")
-        if session.player_id and isinstance(drawing, str):
+        if isinstance(drawing, str):
             session.room.round_drawings[session.player_id] = drawing
     await session.room.broadcast(event)
 

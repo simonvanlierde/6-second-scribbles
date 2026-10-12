@@ -31,6 +31,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The production Redis service now restarts after a crash or host reboot.
 - Local `dev-*` and `down-clean` recipes no longer act on the production stack when `COMPOSE_FILE` points at it.
 - The page language (`<html lang>`) now follows the chosen language instead of staying English, so screen readers read the text with the right voice and pronunciation.
+- A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
 
 ## [0.2.1] - 2026-07-06
 
