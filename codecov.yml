@@ -7,3 +7,8 @@ coverage:
     patch:
       default:
         target: 60%
+
+# The load-test harness only runs against a live stack (`just loadtest`);
+# its stats helpers have unit tests, the socket code cannot run in CI.
+ignore:
+  - "backend/loadtest/**"
