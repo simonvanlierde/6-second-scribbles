@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameStore } from "@/stores/game";
 
@@ -316,6 +317,17 @@ describe("client message handlers", () => {
 
     handleMessage({ type: "kick_vote_expired", targetPlayerId: "p2" });
     expect(store.kickVotes.has("p2")).toBe(false);
+  });
+
+  it("tells the player when the server dropped an oversized message", () => {
+    const { handleMessage } = useGameConnection();
+    const { notifications } = useNotifications();
+    const before = notifications.length;
+
+    handleMessage({ type: "protocol_error", error: "payload_too_large", message: "Message too large." });
+
+    expect(notifications.length).toBe(before + 1);
+    expect(notifications.at(-1)).toMatchObject({ type: "error", text: expect.stringMatching(/too big to send/) });
   });
 
   it("validates outbound client events before sending them", () => {

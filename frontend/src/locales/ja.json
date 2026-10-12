@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "ルームの作成に失敗しました。もう一度お試しください。",
+    "drawingTooLarge": "絵のデータが大きすぎて送信できなかったため、他のプレイヤーには表示されません。",
     "enterRoomCode": "ルームコードを入力してください",
     "invalidRoomCode": "ルームコードは6文字です（A–Z, 0–9）",
     "roomDoesNotExist": "そのルームは存在しません。別のルームに参加するか、新しく作りましょう！",

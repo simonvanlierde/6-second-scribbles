@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "Creazione della stanza non riuscita. Riprova.",
+    "drawingTooLarge": "Il tuo disegno era troppo grande per essere inviato, quindi gli altri non lo vedono.",
     "enterRoomCode": "Inserisci un codice stanza",
     "invalidRoomCode": "Il codice stanza deve avere 6 caratteri (A–Z, 0–9)",
     "roomDoesNotExist": "Quella stanza non esiste. Entra in un’altra stanza o creane una nuova!",

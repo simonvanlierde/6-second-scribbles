@@ -182,6 +182,7 @@
   },
   "notifications": {
     "createRoomFailed": "Room aanmaken mislukt. Probeer het opnieuw.",
+    "drawingTooLarge": "Je tekening was te groot om te versturen, dus de andere spelers zien hem niet.",
     "enterRoomCode": "Voer een roomcode in",
     "invalidRoomCode": "De roomcode moet 6 tekens zijn (A–Z, 0–9)",
     "roomDoesNotExist": "Die room bestaat niet. Sluit je aan bij een andere room of maak een nieuwe aan!",

@@ -184,6 +184,7 @@
   },
   "notifications": {
     "createRoomFailed": "Failed to create room. Please try again.",
+    "drawingTooLarge": "Your drawing was too big to send, so the other players can't see it.",
     "enterRoomCode": "Please enter a room code",
     "invalidRoomCode": "Room code must be 6 characters (A–Z, 0–9)",
     "roomDoesNotExist": "That room doesn't exist. Join a different room or create a new one!",
