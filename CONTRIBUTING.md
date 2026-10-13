@@ -1,16 +1,7 @@
 # Contributing
 
-This is a personal project, but issues and pull requests are welcome.
-
-## Getting Set Up
-
-Requires Node 26+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker. See
-[Running locally](README.md#running-locally) for the full quickstart.
-
-```bash
-just install    # install frontend + backend dependencies
-just dev        # Docker services + dev servers
-```
+This is a personal project, but issues and pull requests are welcome. Set up with
+[Running locally](README.md#running-locally).
 
 ## Before You Open a PR
 
@@ -22,25 +13,25 @@ just test       # frontend + backend test suites
 just format     # auto-format everything
 ```
 
-If you change the shape of what the backend sends or accepts, regenerate the
-contracts so the frontend stays in sync. [ADR 0001](docs/adr/0001-committed-generated-contracts.md)
-explains why:
+If you change the shape of what the backend sends or accepts, run
+`just generate-contracts` so the frontend stays in sync
+([ADR 0001](docs/adr/0001-committed-generated-contracts.md)).
 
-```bash
-just generate-contracts
-```
+## Accessibility checks
+
+- **Static linting:** Biome's a11y rules, run by `pnpm --dir frontend run lint`.
+- **axe scans:** Playwright with [`@axe-core/playwright`](https://github.com/dequelabs/axe-core-npm)
+  scans Home, the Settings panel, and the `/__ds` page against the WCAG 2.1 A/AA
+  rule tags, in the light and the dark theme. They need only the frontend and run
+  as the `a11y` CI job. Locally: `just frontend/test-a11y`.
+- **Accessibility-tree assertions:** the e2e suite finds elements by ARIA role and
+  accessible name, so those flows pass only when the roles and labels are there.
+  They run as the `e2e` CI job. Locally: `just test-e2e`, which needs the backend stack.
+
+These tools check specific WCAG A/AA rules. A passing axe run is not a full manual
+audit, and it does **not** certify WCAG AA conformance.
 
 ## Commit Messages
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/). A git
-hook checks each message with `commitlint`. For example:
-
-```text
-feat(rooms): add spectator reconnect
-fix(scoring): reject short-substring fuzzy matches
-```
-
-## Project Layout
-
-See [docs/architecture.md](docs/architecture.md) for how the frontend, backend,
-and contracts fit together.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/), checked
+by a `commitlint` git hook. For example: `fix(scoring): reject short-substring fuzzy matches`.
