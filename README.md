@@ -5,9 +5,9 @@
 [![6ss.duinlab.nl](https://img.shields.io/website?url=https%3A%2F%2F6ss.duinlab.nl&up_message=online&down_message=offline)](https://6ss.duinlab.nl)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-6 Second Scribbles is a real-time, multiplayer drawing-and-guessing game. One player races through a list of prompts while everyone else guesses what's being drawn, and rooms move through lobby, round, and results states over WebSockets.
+6 Second Scribbles is a multiplayer drawing and guessing game that runs in real time. One player races through a list of prompts while everyone else guesses what's being drawn. Each room moves from the lobby to the rounds to the results, and the players stay in sync over WebSockets.
 
-A live demo is hosted at [6ss.duinlab.nl](https://6ss.duinlab.nl).
+You can play the live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl).
 
 | The drawer's view | What the guessers see |
 | --- | --- |
@@ -15,11 +15,11 @@ A live demo is hosted at [6ss.duinlab.nl](https://6ss.duinlab.nl).
 
 ## Stack
 
-- **Frontend** — Vue 3, TypeScript, Pinia, Vite, vue-i18n
-- **Backend** — FastAPI, SQLAlchemy, PostgreSQL, Redis
-- **Tooling** — pnpm, uv, just, Docker Compose, Vitest, Playwright, pytest
+- **Frontend:** Vue 3, TypeScript, Pinia, Vite, vue-i18n
+- **Backend:** FastAPI, SQLAlchemy, PostgreSQL, Redis
+- **Tooling:** pnpm, uv, just, Docker Compose, Vitest, Playwright, pytest
 
-It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI and WebSocket schemas shared by both sides). See [docs/architecture.md](docs/architecture.md) for how the pieces fit together and [docs/adr/](docs/adr/) for design decisions.
+Everything lives in one repo with three parts: `frontend/`, `backend/`, and `contracts/`. The contracts are the committed OpenAPI and WebSocket schemas that both sides share. [docs/architecture.md](docs/architecture.md) shows how the pieces fit together, and [docs/adr/](docs/adr/) records the design decisions.
 
 ## Status
 
@@ -31,21 +31,21 @@ It's a monorepo: `frontend/`, `backend/`, and `contracts/` (committed OpenAPI an
 - Locale-aware prompt categories and guess matching
 - Generated client/server contracts
 - Unit, integration, and end-to-end tests
-  
+
 ### Todo
 
-- Full mobile support (currently desktop-first)
-- Improved handling mid-game user disconnects
+- Full mobile support (the layout is desktop-first for now)
+- Better handling of players who disconnect mid-game
 
 ## Accessibility
 
-Accessibility is checked three ways, all part of CI:
+CI checks accessibility in three ways:
 
-- **Static a11y linting.** Biome's accessibility rules are enabled (`linter.rules.a11y: "on"` in `biome.json`) and run with `pnpm --dir frontend run lint`. This catches markup issues like missing labels, invalid ARIA, and non-interactive elements with click handlers.
-- **axe scans.** Playwright + [`@axe-core/playwright`](https://github.com/dequelabs/axe-core-npm) scan Home, the Settings panel, and the `/__ds` component-library page against WCAG 2.1 A/AA rule tags, in both light and dark themes. These run frontend-only (no backend) as the `a11y` CI job; run them locally with `just test-a11y`.
-- **Accessibility-tree assertions.** The broader Playwright e2e suite locates elements by ARIA role and accessible name (`getByRole`, including `getByRole("status")` for notifications), so those flows only pass when the underlying roles and labels are present. They run as the `e2e` CI job against Postgres and Redis service containers; run them locally with `just test-e2e` (this needs the backend stack).
+- **Static a11y linting.** Biome's accessibility rules are on (`linter.rules.a11y: "on"` in `biome.json`), and `pnpm --dir frontend run lint` runs them. They catch markup problems such as missing labels, invalid ARIA, and click handlers on elements that are not interactive.
+- **axe scans.** Playwright with [`@axe-core/playwright`](https://github.com/dequelabs/axe-core-npm) scans Home, the Settings panel, and the `/__ds` component-library page against the WCAG 2.1 A/AA rule tags, in both the light and the dark theme. These scans need only the frontend, not the backend, and run as the `a11y` CI job. Run them locally with `just test-a11y`.
+- **Accessibility-tree assertions.** The wider Playwright e2e suite finds elements by ARIA role and accessible name (`getByRole`, including `getByRole("status")` for notifications). So those flows pass only when the roles and labels are really there. They run as the `e2e` CI job against Postgres and Redis service containers. Run them locally with `just test-e2e`, which needs the backend stack.
 
-These check specific WCAG A/AA **rules** — a passing axe run flags no violations of those rules, but it is not a full manual audit and does **not** certify WCAG AA conformance.
+These tools check specific WCAG A/AA **rules**. A passing axe run means it found no violations of those rules. It is not a full manual audit, and it does **not** certify WCAG AA conformance.
 
 ## Running locally
 
@@ -58,19 +58,19 @@ cp frontend/.env.example frontend/.env.local
 just dev                                        # Docker services + dev servers
 ```
 
-`just up` runs the full containerized stack; `just test`, `just check`, and `just format` handle testing, linting, and formatting. See the [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs for more, or [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to contribute.
+`just up` runs the whole stack in containers. `just test`, `just check`, and `just format` run the tests, the linters, and the formatters. The [frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md) docs have more detail. If you'd like to contribute, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Deployment
 
-The live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl) runs the self-hosted
-Docker Compose stack in [`compose.prod.yml`](compose.prod.yml), started on the
-host with `just up-prod`. Caddy serves the built SPA and proxies `/api` and `/ws`
-to the backend; PostgreSQL and Redis stay on the internal Docker network. The
-only external ingress is a Cloudflare Tunnel (`cloudflared`, Compose `tunnel`
-profile), so nothing is published directly to the internet. See
-[docs/architecture.md](docs/architecture.md) for the full topology, and
-[docs/capacity.md](docs/capacity.md) for how many rooms one backend holds
-under the production limits (`just loadtest` measures it).
+The live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl) runs on my own server,
+as the Docker Compose stack in [`compose.prod.yml`](compose.prod.yml). I start it
+on the host with `just up-prod`. Caddy serves the built SPA and passes `/api` and
+`/ws` on to the backend. PostgreSQL and Redis stay on the internal Docker network.
+The only way in from outside is a Cloudflare Tunnel (`cloudflared`, in the Compose
+`tunnel` profile), so nothing is published straight to the internet.
+[docs/architecture.md](docs/architecture.md) shows the full layout.
+[docs/capacity.md](docs/capacity.md) says how many rooms one backend holds
+under the production limits, and `just loadtest` measures it.
 
 ## Attribution
 

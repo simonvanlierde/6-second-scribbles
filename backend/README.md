@@ -1,13 +1,13 @@
 # Backend
 
-The backend is a FastAPI application that handles authentication, category data, room lifecycle, scoring, and the real-time game protocol.
+The backend is a FastAPI app. It handles sign-in, category data, rooms from creation to close, scoring, and the real-time game protocol.
 
 ## Responsibilities
 
 - HTTP API under `/api`
 - WebSocket game transport under `/ws/{room_id}`
-- PostgreSQL-backed persistence for users and category content
-- Redis-backed runtime state, sessions, and room coordination
+- Users and category content, stored in PostgreSQL
+- Runtime state, sessions, and room coordination, held in Redis
 - Database migrations and seed tooling
 - Contract export for the frontend
 
@@ -61,7 +61,7 @@ just generate-contracts
 
 ## Data Model Notes
 
-Categories are stored as canonical content plus locale-specific translations. That lets the game validate guesses and display prompts in different languages without duplicating gameplay logic per locale.
+Each category is stored once as base content, with a separate translation for each locale. That way the game can check guesses and show prompts in different languages with one copy of the game logic.
 
 The main content tables are:
 

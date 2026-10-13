@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
-Records of notable design decisions, in [MADR](https://adr.github.io/madr/)
-format. Each file captures the context, the options considered, and why one was
-chosen, so the reasoning survives past the commit that made it.
+These records explain the larger design decisions, in [MADR](https://adr.github.io/madr/)
+format. Each file gives the context, the options we considered, and why we picked
+one. That way the reasoning outlives the commit that made the change.
 
-- [0001 — Committed, generated contracts as the frontend/backend source of truth](0001-committed-generated-contracts.md)
+- [0001: Committed, generated contracts as the frontend/backend source of truth](0001-committed-generated-contracts.md)

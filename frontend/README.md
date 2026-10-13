@@ -1,6 +1,6 @@
 # Frontend
 
-The frontend is a Vue 3 single-page app for creating rooms, joining games, drawing, guessing, and viewing round results in real time.
+The frontend is a Vue 3 single-page app. Players use it to create rooms, join games, draw, guess, and see the round results in real time.
 
 ## Responsibilities
 
@@ -22,15 +22,15 @@ The frontend is a Vue 3 single-page app for creating rooms, joining games, drawi
 
 ## Dependency notes
 
-`@vueuse/motion` (registered in `src/main.ts`) and `html-to-image` are installed
-but not yet wired into screens.
+`@vueuse/motion` (registered in `src/main.ts`) and `html-to-image` are installed,
+but no screen uses them yet.
 
 ## Routes
 
 - `/`: home and room entry flow
 - `/rooms/:roomCode`: live room experience
 
-The room route renders different states for lobby, drawing, guessing, round results, final results, and spectators based on the current server state.
+The room route shows a different screen for the lobby, drawing, guessing, round results, final results, and spectators. The server's current state decides which one.
 
 ## Local Setup
 
@@ -54,7 +54,7 @@ From the `frontend/` directory:
    pnpm run dev
    ```
 
-By default the app runs on `http://localhost:3001` in the Docker-backed dev setup used by the repo.
+In the repo's Docker-backed dev setup, the app runs on `http://localhost:3001` by default.
 
 ## Common Commands
 
@@ -68,11 +68,11 @@ pnpm run test:e2e
 pnpm run contracts:generate
 ```
 
-There is also a local `justfile` if you prefer `just` wrappers.
+If you prefer `just`, a local `justfile` wraps these.
 
 ## Generated Code
 
-The frontend consumes committed contract artifacts from the repo and generates:
+The frontend generates two files from the committed contracts:
 
 - `src/generated/api.ts` from `contracts/openapi.json`
 - `src/generated/protocol.ts` from the WebSocket schemas in `contracts/`

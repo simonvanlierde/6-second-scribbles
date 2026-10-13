@@ -1,8 +1,8 @@
 # Contracts
 
-This directory stores the committed contract artifacts shared by the backend and frontend.
+This directory holds the generated contract files that the backend and frontend share.
 
-Keeping these files in version control makes API changes visible in reviews and gives the frontend a stable input for code generation.
+These files are committed to git. So an API change shows up in review, and the frontend has a fixed input to generate its code from.
 
 ## What Lives Here
 
@@ -14,16 +14,16 @@ Keeping these files in version control makes API changes visible in reviews and 
 
 These files are generated from backend code:
 
-- HTTP models come from backend route and schema definitions
-- WebSocket message schemas come from the room protocol implementation
+- HTTP models come from the backend's route and schema definitions
+- WebSocket message schemas come from the room protocol code
 
-The generated files in this directory should not be edited by hand.
+Don't edit the generated files in this directory by hand.
 
 ## Workflow
 
-1. The backend exports API and protocol artifacts into `contracts/`
-2. The frontend generates TypeScript and Zod types from those artifacts
-3. Contract checks verify that the committed files are reproducible
+1. The backend exports the API and protocol schemas into `contracts/`
+2. The frontend generates TypeScript and Zod types from those files
+3. The contract check confirms that regenerating gives the same files as the committed ones
 
 ## Commands
 
@@ -34,7 +34,7 @@ just generate-contracts
 just check-contracts
 ```
 
-Compatibility scripts are also available through `pnpm`:
+The same two steps also run through `pnpm`:
 
 ```bash
 pnpm run contracts:generate
