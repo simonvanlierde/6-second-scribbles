@@ -1,7 +1,6 @@
 # Contributing
 
-Thanks for your interest in 6 Second Scribbles. This is a personal project, but
-issues and pull requests are welcome.
+This is a personal project, but issues and pull requests are welcome.
 
 ## Getting Set Up
 
@@ -23,8 +22,9 @@ just test       # frontend + backend test suites
 just format     # auto-format everything
 ```
 
-If you change the backend wire format, regenerate the contracts so the frontend
-stays in sync (see [ADR 0001](docs/adr/0001-committed-generated-contracts.md)):
+If you change the shape of what the backend sends or accepts, regenerate the
+contracts so the frontend stays in sync. [ADR 0001](docs/adr/0001-committed-generated-contracts.md)
+explains why:
 
 ```bash
 just generate-contracts
@@ -32,8 +32,8 @@ just generate-contracts
 
 ## Commit Messages
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) and
-are checked by `commitlint` via a git hook, e.g.:
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/). A git
+hook checks each message with `commitlint`. For example:
 
 ```text
 feat(rooms): add spectator reconnect

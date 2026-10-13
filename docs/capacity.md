@@ -1,27 +1,29 @@
 # Capacity
 
-How many rooms and players one backend container holds under the production
-limits in [`compose.prod.yml`](../compose.prod.yml) (1.0 CPU, 1 GiB memory, one
-uvicorn worker), and where it starts to degrade.
+This page says how many rooms and players one backend container holds under the
+production limits in [`compose.prod.yml`](../compose.prod.yml) (1.0 CPU, 1 GiB
+memory, one uvicorn worker), and where it starts to slow down.
 
 ## Result
 
-Up to about **80 rooms of 6 players (480 WebSocket connections)** with every
-player scribbling at once, p95 broadcast latency stays under 250 ms. At 90
-rooms p95 reaches 264 ms. The limit is CPU: the single worker sits near its
-1.0 CPU cap from 70 rooms on, while memory stays under 270 MiB of the 1 GiB
-limit.
+With every player scribbling at once, one backend holds up to about **80 rooms of
+6 players (480 WebSocket connections)** with the p95 broadcast latency under
+250 ms. (p95 means 95% of messages arrive at least this fast.) At 90 rooms p95 reaches
+264 ms. CPU is the limit: from 70 rooms on, the single worker sits near its
+1.0 CPU cap, while memory stays under 270 MiB of the 1 GiB limit.
 
-Before commit `85ddbea` every broadcast was serialized once per recipient; it
-is now serialized once and the same text goes to every player. That moved the
-knee from about 70 to about 80 rooms. The gain is modest because the send
-itself, which still happens once per recipient, is most of the cost.
+Before commit `85ddbea`, the backend turned every broadcast into JSON once per
+recipient. Now it does that once and sends the same text to every player. That
+moved the knee, the point where latency starts to climb fast, from about 70 to
+about 80 rooms. The gain is modest, because most of the cost is the send itself,
+and that still happens once per recipient.
 
 ### After: one serialization per broadcast
 
-Measured on 2026-10-12 against commit `85ddbea`. The 70 to 90 room rows are a
-second run of those steps; the first run gave p95 192 ms at 70 rooms, 126 ms
-at 80 and 601 ms at 100, so expect about ±50% run-to-run noise near the knee.
+Measured on 2026-10-12 against commit `85ddbea`. The rows for 70 to 90 rooms
+come from a second run of those steps. The first run gave p95 192 ms at 70 rooms,
+126 ms at 80 and 601 ms at 100. So expect about ±50% noise from run to run near
+the knee.
 
 | Rooms | Players/room | Connections | p50 | p95 | Deliveries/s | Backend CPU | Backend memory | Errors |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -51,41 +53,41 @@ Measured on 2026-10-12 against commit `71d868c`.
 | 80 | 6 | 480 | 95 ms | 354 ms | 29,480 | 95% | 250 MiB | 0 |
 
 Both runs used an AMD Ryzen 7 H 255 w/ Radeon 780M Graphics host (8 cores, 16
-threads, from `/proc/cpuinfo`). Backend CPU is `docker stats` CPU averaged
-over the step, where 100% is the whole 1.0 CPU limit; memory is the peak.
-Deliveries/s counts stroke fragments that reached another player. The load
-generator ran on the same host outside the limited container, using at most
+threads, from `/proc/cpuinfo`). Backend CPU is the `docker stats` CPU, averaged
+over the step, where 100% is the whole 1.0 CPU limit. Memory is the peak.
+Deliveries/s counts the stroke fragments that reached another player. The load
+generator ran on the same host, outside the limited container, and used at most
 34% of one core per process.
 
 **Bottleneck:** the event loop's CPU. Each relayed stroke is still sent once
-per player in the room, so work grows with rooms × players², and latency
-climbs once the worker reaches its CPU cap. Past this point the options are
-fewer messages (batching stroke fragments per frame on the server) or more
-CPU for the one worker.
+per player in the room, so the work grows with rooms × players². Latency
+climbs once the worker reaches its CPU cap. Past this point there are two
+options: send fewer messages (batch the stroke fragments per frame on the
+server), or give the one worker more CPU.
 
 ## Workload
 
-The harness ([`backend/loadtest/run.py`](../backend/loadtest/run.py)) speaks the
-real room protocol, one WebSocket per player:
+The test script ([`backend/loadtest/run.py`](../backend/loadtest/run.py)) speaks
+the real room protocol, with one WebSocket per player:
 
-- The host opens `/ws/{room}` and joins; the guests join after it.
+- The host opens `/ws/{room}` and joins. The guests join after it.
 - In the lobby every player draws on the shared drawpad: strokes of 30
   `draw_stroke_partial` fragments at 60 per second (one per browser frame, two
   points each), with 0.5 to 1.5 s between strokes. That is about 20 messages
   per second per player, so this is a busy lobby, not an average one.
-- After 7.5 to 22.5 s in the lobby the host starts a one-round game. The server
-  deals the cards, each player sends a 56 KiB `draw_stroke` (the largest
+- After 7.5 to 22.5 s in the lobby, the host starts a one-round game. The server
+  deals the cards. Each player sends a 56 KiB `draw_stroke` (the largest
   drawing the frontend sends; the tables above used 20 KB) and
-  `player_ready`, submits guesses for its assigned drawing, and the host
+  `player_ready`, then submits guesses for its assigned drawing. The host
   restarts the game after the final results.
 - Latency is the time from a player sending a stroke fragment to another
   player in the same room receiving the relay. Errors count failed connects,
   unexpected disconnects, and any error event from the server.
 
 Each step runs for 40 s after all sockets are open. The ramp stops at the
-first step whose p95 passes 250 ms or that has any error. The harness talks to
-the backend directly; the frontend's Caddy proxy (its own 0.5 CPU limit) is not
-part of the measurement.
+first step whose p95 passes 250 ms or that has any error. The test script talks
+to the backend directly. The frontend's Caddy proxy, which has its own 0.5 CPU
+limit, is not part of the measurement.
 
 ## Running it
 
@@ -100,7 +102,7 @@ prod build and limits, plus
 [`backend/loadtest/compose.yml`](../backend/loadtest/compose.yml), which swaps
 in throwaway credentials and publishes the backend on `127.0.0.1:18000`
 (`LOADTEST_PORT` changes it). It removes the stack, its volume, and its images
-when it finishes. To aim the harness at a backend you already run, use
-`just backend/loadtest --url ws://127.0.0.1:8000 --smoke`; outside prod the
+when it finishes. To aim the test at a backend you already run, use
+`just backend/loadtest --url ws://127.0.0.1:8000 --smoke`. Outside prod, the
 backend limits room creation to 10 per minute per client, so keep the room
 count small there.
