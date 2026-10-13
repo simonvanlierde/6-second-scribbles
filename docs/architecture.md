@@ -1,18 +1,17 @@
 # Architecture
 
-6 Second Scribbles keeps three parts in one repo: a Vue 3 single-page frontend, a
-FastAPI backend, and a set of committed contracts that keep the two sides in sync.
-This page is the overview. The [frontend](../frontend/README.md) and
-[backend](../backend/README.md) READMEs cover each side in more detail.
+A Vue 3 single-page frontend, a FastAPI backend, and committed contracts that keep
+the two in sync. The [frontend](../frontend/README.md) and
+[backend](../backend/README.md) READMEs cover each side.
 
 ## Runtime Topology
 
-In production, the only way in from outside is a Cloudflare tunnel. Caddy serves
-the built SPA and passes `/api` and `/ws` on to the backend over the internal
-Docker network, so the backend is never published directly. Redis holds the
-short-lived room and session state. PostgreSQL holds the content that must last:
-users and category data. Database migrations run to completion before the backend
-starts.
+The live demo runs on my own server as the Compose stack in
+[`compose.prod.yml`](../compose.prod.yml), started with `just up-prod`. The only
+way in from outside is a Cloudflare Tunnel (`cloudflared`, in the Compose `tunnel`
+profile). Caddy serves the built SPA and passes `/api` and `/ws` on to the backend
+over the internal Docker network, so nothing is published straight to the internet. Database migrations
+run to completion before the backend starts.
 
 ```mermaid
 flowchart TD
@@ -32,21 +31,15 @@ flowchart TD
     Migrations -.->|completes first| Backend
 ```
 
-The overrides in [`compose.prod.yml`](../compose.prod.yml) pin the resource limits,
-bind the frontend to loopback, and pin `cloudflared` by image digest. The comments
-in that file give the reason for each one.
+The comments in `compose.prod.yml` give the reason for each resource limit, the
+loopback bind, and the digest pin on `cloudflared`.
 
 ## Contract-First Boundary
 
-The backend owns the wire format. Its route and schema definitions and the room
-protocol are exported into `contracts/` as an OpenAPI document and JSON Schema
-files. The frontend generates its TypeScript and Zod types from those committed
-files, so it never guesses at the shape of a message. CI checks that the backend
-still reproduces the committed contracts. If the two sides drift apart, the build
-fails before the change reaches the running app.
-
-[ADR 0001](adr/0001-committed-generated-contracts.md) records why we chose this
-and what else we considered.
+The backend owns the wire format and exports it into `contracts/`. The frontend
+generates its types from those files, and CI fails if the backend no longer
+reproduces them. [ADR 0001](adr/0001-committed-generated-contracts.md) has the
+reasons and the alternatives.
 
 ```mermaid
 flowchart LR
@@ -66,8 +59,7 @@ flowchart LR
 ## Game Loop
 
 A room is a small state machine. The backend drives it and pushes each change to
-every client over WebSockets. Players move through the phases below. After the
-last round the room lands on final results, and a restart returns it to the lobby.
+every client over WebSockets.
 
 ```mermaid
 stateDiagram-v2

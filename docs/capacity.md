@@ -12,18 +12,16 @@ With every player scribbling at once, one backend holds up to about **80 rooms o
 264 ms. CPU is the limit: from 70 rooms on, the single worker sits near its
 1.0 CPU cap, while memory stays under 270 MiB of the 1 GiB limit.
 
-Before commit `85ddbea`, the backend turned every broadcast into JSON once per
-recipient. Now it does that once and sends the same text to every player. That
-moved the knee, the point where latency starts to climb fast, from about 70 to
-about 80 rooms. The gain is modest, because most of the cost is the send itself,
-and that still happens once per recipient.
+Commit `85ddbea` made each broadcast serialize to JSON once instead of once per
+recipient. That moved the knee, where latency starts to climb fast, from about 70
+to about 80 rooms. The gain is modest, because the send itself still happens once
+per recipient.
 
 ### After: one serialization per broadcast
 
-Measured on 2026-10-12 against commit `85ddbea`. The rows for 70 to 90 rooms
-come from a second run of those steps. The first run gave p95 192 ms at 70 rooms,
-126 ms at 80 and 601 ms at 100. So expect about ±50% noise from run to run near
-the knee.
+Measured on 2026-10-12 against commit `85ddbea`. The 70 to 90 room rows come from
+a second run; the first gave p95 192 ms at 70 rooms, 126 ms at 80 and 601 ms at
+100, so expect about ±50% run-to-run noise near the knee.
 
 | Rooms | Players/room | Connections | p50 | p95 | Deliveries/s | Backend CPU | Backend memory | Errors |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -59,11 +57,10 @@ Deliveries/s counts the stroke fragments that reached another player. The load
 generator ran on the same host, outside the limited container, and used at most
 34% of one core per process.
 
-**Bottleneck:** the event loop's CPU. Each relayed stroke is still sent once
-per player in the room, so the work grows with rooms × players². Latency
-climbs once the worker reaches its CPU cap. Past this point there are two
-options: send fewer messages (batch the stroke fragments per frame on the
-server), or give the one worker more CPU.
+**Bottleneck:** the event loop's CPU. Each relayed stroke is sent once per player
+in the room, so the work grows with rooms × players². Past the knee, either send
+fewer messages (batch the stroke fragments per frame on the server) or give the
+worker more CPU.
 
 ## Workload
 
