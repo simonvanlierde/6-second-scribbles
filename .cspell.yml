@@ -46,6 +46,7 @@ words:
   - argosmodel
   - ACMR
   - Caddyfile
+  - carryforward
   - Centralised
   - cloudflared
   - dedup

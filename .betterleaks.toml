@@ -1,0 +1,8 @@
+# The default rules, minus .betterleaksignore: its fingerprints end in
+# "generic-password:<line>", which the generic-password rule reads as a password.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Fingerprints of known findings, not secrets"
+paths = ['''^\.betterleaksignore$''']
