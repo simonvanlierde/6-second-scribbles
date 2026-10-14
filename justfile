@@ -128,11 +128,15 @@ check-backend:
 check-root:
     pnpm run check
 
-# Scan the full git history for secrets (Dockerized; no local gitleaks install).
+# Scan the full git history for secrets (Dockerized; mounts as in lefthook.yml).
+# NOTE: still gitleaks, matching CI's gitleaks-action: Betterleaks also flags 7 dev
+# and test passwords in history, so it needs a .betterleaksignore first.
 [group('check')]
 check-security:
     docker run --rm --user "$(id -u):$(id -g)" \
-        -v "$(pwd)":/repo -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 \
+        -v "$(pwd)":"$(pwd)" -w "$(pwd)" \
+        -v "$(git rev-parse --path-format=absolute --git-common-dir)":"$(git rev-parse --path-format=absolute --git-common-dir)" \
+        ghcr.io/gitleaks/gitleaks:v8.30.1 \
         git --redact --no-banner
 
 # Format everything.

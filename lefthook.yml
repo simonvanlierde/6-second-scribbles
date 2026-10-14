@@ -19,16 +19,20 @@ pre-commit:
       glob: "backend/**/*.py"
       run: uv run --project backend ruff check --fix {staged_files}
       stage_fixed: true
-    # Secret scan with no local gitleaks install: the official image, run as the
-    # current user so nothing it touches ends up root-owned. Pinned by tag like
-    # cloudflared in compose.prod.yml. `git --staged` is the current pre-commit
-    # mode; `protect`/`detect` were deprecated in v8.19. This is the only point
-    # where a secret can still be kept out of history entirely — CI's full-history
-    # scan (ci.yml, root-checks) catches it later, once it is already committed.
-    gitleaks:
+    # Secret scan with no local install: Betterleaks (gitleaks' successor) from
+    # its official image, run as the current user so nothing it touches ends up
+    # root-owned. Pinned by tag like cloudflared in compose.prod.yml. Both the
+    # checkout and git's shared directory are mounted at their real paths: in a
+    # linked worktree, .git is a file pointing at the main checkout's .git, so
+    # mounting the checkout alone leaves git with no repository. This is the only
+    # point where a secret can still be kept out of history entirely — CI's
+    # full-history scan (ci.yml, root-checks) catches it later, once committed.
+    betterleaks:
       run: >-
         docker run --rm --user "$(id -u):$(id -g)"
-        -v "$(pwd)":/repo -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1
+        -v "$(pwd)":"$(pwd)" -w "$(pwd)"
+        -v "$(git rev-parse --path-format=absolute --git-common-dir)":"$(git rev-parse --path-format=absolute --git-common-dir)"
+        ghcr.io/betterleaks/betterleaks:v1.9.0
         git --staged --no-banner --redact
 
 # A fast confidence gate scoped to what's being pushed. The comprehensive
