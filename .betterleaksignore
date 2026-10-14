@@ -1,0 +1,10 @@
+# Dev and test credentials in history, not secrets: CI's and the load test's
+# throwaway Postgres, the .env example, the README's local setup, unit-test
+# logins and the demo seed data. Fingerprints are commit:file:rule:line.
+447cc35f1c6b448bfcbd2fc0df186ef99a34840e:.github/workflows/ci.yml:generic-password:169
+bef0c8f89d9a8ae76f75b0d6002bfa871878fef4:backend/loadtest/compose.yml:generic-password:9
+a839b77833c8b210c14cb23ed20f7b523843e739:backend/README.md:generic-password:78
+a839b77833c8b210c14cb23ed20f7b523843e739:backend/.env.example:generic-password:8
+a839b77833c8b210c14cb23ed20f7b523843e739:backend/tests/unit/test_auth_fast.py:generic-password:63
+a839b77833c8b210c14cb23ed20f7b523843e739:backend/tests/unit/test_auth_fast.py:generic-password:133
+a839b77833c8b210c14cb23ed20f7b523843e739:backend/scripts/seed_data.yaml:generic-password:21688
