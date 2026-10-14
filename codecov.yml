@@ -19,3 +19,10 @@ comment:
 # its stats helpers have unit tests, the socket code cannot run in CI.
 ignore:
   - "backend/loadtest/**"
+
+# CI uploads one report per flag. Codecov compares as soon as the first arrives, so the
+# other flags' lines would count as a drop. Carryforward fills a missing report with the
+# base commit's numbers for that flag.
+flag_management:
+  default_rules:
+    carryforward: true
