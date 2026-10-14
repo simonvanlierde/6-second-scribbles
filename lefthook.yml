@@ -33,7 +33,7 @@ pre-commit:
         -v "$(pwd)":"$(pwd)" -w "$(pwd)"
         -v "$(git rev-parse --path-format=absolute --git-common-dir)":"$(git rev-parse --path-format=absolute --git-common-dir)"
         ghcr.io/betterleaks/betterleaks:v1.9.0
-        git --staged --no-banner --redact
+        git --staged --config .betterleaks.toml --no-banner --redact
 
 # A fast confidence gate scoped to what's being pushed. The comprehensive
 # full-repo scans (spelling, security, contract regeneration + type-check) run in CI.

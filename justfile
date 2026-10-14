@@ -136,7 +136,7 @@ check-security:
         -v "$(pwd)":"$(pwd)" -w "$(pwd)" \
         -v "$(git rev-parse --path-format=absolute --git-common-dir)":"$(git rev-parse --path-format=absolute --git-common-dir)" \
         ghcr.io/betterleaks/betterleaks:v1.9.0 \
-        git --redact --no-banner
+        git --config .betterleaks.toml --redact --no-banner
 
 # Format everything.
 [group('format')]
