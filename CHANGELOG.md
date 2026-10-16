@@ -19,6 +19,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
+- Guest accounts are deleted once their login session has expired (30 days by default), on backend startup and once a day after that. Registered accounts are kept.
 - **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
 - The health endpoint and the OpenAPI document report the release version (0.2.1) instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
