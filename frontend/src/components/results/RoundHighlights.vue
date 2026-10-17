@@ -91,13 +91,17 @@ const cards = computed(() => {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-heading-sm);
-  color: var(--color-ink);
+  color: inherit;
 }
 .highlight__detail {
   margin: 0;
   font-family: var(--font-body);
   font-size: var(--text-body-md);
   color: var(--color-ink-muted);
+}
+/* The post-it stays light in dark mode, so its text keeps the card's dark ink. */
+.hd-card--postit .highlight__detail {
+  color: inherit;
 }
 .highlights__empty {
   text-align: center;

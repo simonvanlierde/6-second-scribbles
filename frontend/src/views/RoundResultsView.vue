@@ -272,10 +272,6 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--color-primary-text);
 }
-/* The highlighter row stays light in dark mode, where the text red is too pale. */
-.standings__row--you .standings__rank {
-  color: inherit;
-}
 .standings__name {
   flex: 1;
   min-width: 0;
@@ -289,6 +285,11 @@ onUnmounted(() => {
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--color-ink);
+}
+/* The highlighter row stays light in dark mode, where the light text red and ink are too pale. */
+.standings__row--you .standings__rank,
+.standings__row--you .standings__score {
+  color: inherit;
 }
 @media (max-width: 768px) {
   .round-results__body {
