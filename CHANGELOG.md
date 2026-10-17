@@ -49,6 +49,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A modified client could deal its own cards or force the guessing phase: the host-only `start_round` and `start_guessing` commands still worked, although the app never sends them. They are removed, together with the unused `round_complete` and `game_complete` client events, and rounds are now dealt by the server only.
 - A refresh in the lobby released the player's seat, so someone else could claim their player id with a new rejoin key in the moment they were gone, and lock them out. The seat stays bound to its owner's key until they leave on purpose or are kicked.
 - During a Redis outage the backend wrote session ids, which work as 30-day login tokens, into its error log. It no longer logs them.
+- One player could freeze the server for every room by filling the lobby drawpad: each room snapshot could grow to tens of MB. The shared doodle now keeps at most 20,000 points (the oldest strokes go first), names, ids and stroke styles have length limits, and each connection gets at most 5 full room snapshots per 5 seconds.
 - In Safari the favicon lost its colours: the page's Content Security Policy was also sent with the SVG favicon and blocked the `<style>` inside it. SVG files now get their own policy that allows only inline styles.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
 

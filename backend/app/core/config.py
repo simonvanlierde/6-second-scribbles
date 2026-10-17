@@ -100,6 +100,8 @@ class Settings(BaseSettings):
     ws_max_message_bytes: int = 64 * 1024
     ws_draw_messages_per_window: int = 60
     ws_draw_window_seconds: int = 1
+    ws_state_requests_per_window: int = 5
+    ws_state_window_seconds: int = 5
     room_creation_rate_limit: int = 10
     room_creation_rate_window_seconds: int = 60
 

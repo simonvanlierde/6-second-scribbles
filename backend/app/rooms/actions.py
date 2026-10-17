@@ -258,6 +258,8 @@ async def handle_cast_kick_vote(session: RoomWebSocketSession, event: CastKickVo
 async def handle_request_game_state(session: RoomWebSocketSession, event: RequestGameStateEvent) -> None:
     """Handle a request-game-state event."""
     del event
+    if not session.state_request_allowed():
+        return
     await send_ws_message(session.websocket, session.room.room_state_event(for_player_id=session.player_id))
 
 
@@ -275,6 +277,9 @@ async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEve
     # the sender's own: a forged id would overwrite another player's drawing.
     event.player_id = session.player_id
     if isinstance(event, DrawStrokePartialEvent):
+        # Only the lobby's shared drawpad sends fragments.
+        if session.room.metadata.game_phase != GamePhase.LOBBY:
+            return
         if event.stroke is not None:
             session.room.apply_lobby_partial(session.player_id, event.stroke, is_start=event.stroke_start)
     else:

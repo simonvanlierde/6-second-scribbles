@@ -32,10 +32,12 @@
           "type": "string"
         },
         "playerId": {
+          "maxLength": 64,
           "title": "Playerid",
           "type": "string"
         },
         "name": {
+          "maxLength": 80,
           "title": "Name",
           "type": "string"
         },
@@ -149,6 +151,7 @@
           "type": "string"
         },
         "playerId": {
+          "maxLength": 64,
           "title": "Playerid",
           "type": "string"
         }
@@ -169,6 +172,7 @@
           "type": "string"
         },
         "playerId": {
+          "maxLength": 64,
           "title": "Playerid",
           "type": "string"
         },
@@ -376,10 +380,13 @@
               "description": "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
               "properties": {
                 "color": {
+                  "maxLength": 32,
                   "title": "Color",
                   "type": "string"
                 },
                 "width": {
+                  "exclusiveMinimum": 0,
+                  "maximum": 64,
                   "title": "Width",
                   "type": "number"
                 },

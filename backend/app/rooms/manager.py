@@ -77,6 +77,9 @@ MAX_LOBBY_STROKES = 500
 # strokeStart) would extend that one stroke forever — MAX_LOBBY_STROKES bounds the
 # count of strokes, not points inside one. Generous vs any real freehand stroke.
 MAX_STROKE_POINTS = 4000
+# Cap on points across the whole doodle. The two caps above still allow 500 x 4000
+# points, a room_state of tens of MB that freezes the single worker to build.
+MAX_LOBBY_POINTS = 20_000
 
 
 class RoomCapacityError(Exception):
@@ -435,6 +438,14 @@ class GameRoom:
         # (an in-progress stroke at most restarts on its next fragment).
         if len(self.lobby_strokes) > MAX_LOBBY_STROKES:
             self.lobby_strokes = self.lobby_strokes[-MAX_LOBBY_STROKES:]
+            self._lobby_partial_index.clear()
+        total = sum(len(s.points) for s in self.lobby_strokes)
+        if total > MAX_LOBBY_POINTS:
+            drop = 0
+            while total > MAX_LOBBY_POINTS and drop < len(self.lobby_strokes) - 1:
+                total -= len(self.lobby_strokes[drop].points)
+                drop += 1
+            self.lobby_strokes = self.lobby_strokes[drop:]
             self._lobby_partial_index.clear()
 
     def clear_lobby_strokes(self) -> None:

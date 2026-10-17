@@ -41,7 +41,7 @@ class ClientEventModel(BaseModel):
 class ClientPlayerEventModel(ClientEventModel):
     """Client event with a required player id."""
 
-    player_id: str = Field(alias="playerId")
+    player_id: str = Field(alias="playerId", max_length=64)
 
 
 class ClientTargetPlayerEventModel(ClientEventModel):
@@ -52,7 +52,8 @@ class ClientTargetPlayerEventModel(ClientEventModel):
 
 class JoinEvent(ClientPlayerEventModel):
     type: Literal["join"]
-    name: str
+    # Same bound as users.display_name, which a signed-in player joins with.
+    name: str = Field(max_length=80)
     preferred_locale: LanguageCode | None = Field(default=None, alias="preferredLocale")
     preferred_color: str | None = Field(default=None, alias="preferredColor")
     # Client-held secret for this player_id. player_ids are public (every roster
@@ -156,8 +157,8 @@ class StrokeDelta(BaseModel):
     an in-progress stroke's relayed payload O(new points) instead of O(n^2).
     """
 
-    color: str
-    width: float
+    color: str = Field(max_length=32)
+    width: float = Field(gt=0, le=64)
     points: list[StrokePoint] = Field(default_factory=list, max_length=1000)
 
 

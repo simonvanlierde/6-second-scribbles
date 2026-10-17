@@ -281,8 +281,8 @@ export const ServerEventSchema = z.union([
       .union([
         z
           .object({
-            color: z.string(),
-            width: z.number(),
+            color: z.string().max(32),
+            width: z.number().gt(0).lte(64),
             points: z
               .array(z.object({ x: z.number(), y: z.number() }))
               .max(1000)
@@ -397,8 +397,8 @@ export type ServerEventGroup<TGroup extends ServerEventGroupName> = ServerEventO
 export const ClientEventSchema = z.union([
   z.object({
     type: z.literal("join"),
-    playerId: z.string(),
-    name: z.string(),
+    playerId: z.string().max(64),
+    name: z.string().max(80),
     preferredLocale: z.union([z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/), z.null()]).default(null),
     preferredColor: z.union([z.string(), z.null()]).default(null),
     rejoinKey: z.union([z.string().max(128), z.null()]).default(null),
@@ -410,11 +410,11 @@ export const ClientEventSchema = z.union([
     drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
     guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
   }),
-  z.object({ type: z.literal("player_ready"), playerId: z.string() }),
+  z.object({ type: z.literal("player_ready"), playerId: z.string().max(64) }),
   z.object({
     type: z.literal("submit_guess"),
     targetPlayerId: z.string(),
-    playerId: z.string(),
+    playerId: z.string().max(64),
     guesses: z.array(z.string().max(100)).max(50).optional(),
   }),
   z.object({ type: z.literal("restart_game") }),
@@ -448,8 +448,8 @@ export const ClientEventSchema = z.union([
       .union([
         z
           .object({
-            color: z.string(),
-            width: z.number(),
+            color: z.string().max(32),
+            width: z.number().gt(0).lte(64),
             points: z
               .array(z.object({ x: z.number(), y: z.number() }))
               .max(1000)

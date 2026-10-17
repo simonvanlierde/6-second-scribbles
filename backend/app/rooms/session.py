@@ -41,6 +41,8 @@ class RoomWebSocketSession:
         self.current_user = current_user
         self._draw_window_start: float = 0.0
         self._draw_count: int = 0
+        self._state_window_start: float = 0.0
+        self._state_count: int = 0
 
     def resolve_join_locale(self, preferred_locale: LanguageCode | None) -> LanguageCode:
         """Choose the effective locale for this websocket player."""
@@ -70,6 +72,19 @@ class RoomWebSocketSession:
             self._draw_count = 0
         self._draw_count += 1
         return self._draw_count <= settings.ws_draw_messages_per_window
+
+    def state_request_allowed(self) -> bool:
+        """Return whether another full room_state fits the per-connection rate window.
+
+        Each reply carries every drawing of the game, so unthrottled requests are
+        an easy way to keep the worker busy. Spectators poll every 2 s.
+        """
+        now = time.monotonic()
+        if now - self._state_window_start >= settings.ws_state_window_seconds:
+            self._state_window_start = now
+            self._state_count = 0
+        self._state_count += 1
+        return self._state_count <= settings.ws_state_requests_per_window
 
     async def handle(self, payload: object) -> None:
         """Parse one inbound message and dispatch it."""
