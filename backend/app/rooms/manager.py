@@ -109,6 +109,11 @@ class RoomStats:
     total_players: int
 
 
+async def _close_quietly(websocket: WebSocket) -> None:
+    with contextlib.suppress(Exception):
+        await websocket.close(code=1011)
+
+
 class GameRoom:
     """Manages a single game room with multiple players."""
 
@@ -129,6 +134,9 @@ class GameRoom:
         self.emptied_at: float | None = self.created_at
         self.is_hibernated = False
         self.active_kick_votes: dict[str, KickVote] = {}  # target_player_id -> KickVote
+        # Player ids and accounts voted out of this room; add_player refuses them.
+        # In-memory only: a restart forgives, and a cleared browser gets a new id.
+        self.kicked_ids: set[str] = set()
         # Latest drawing PNG (data URL) per player for the current round. Kept in
         # memory only (deliberately not in the Redis-persisted RoomState) so
         # reconnecting players can recover drawings without bloating persistence.
@@ -547,7 +555,9 @@ class GameRoom:
 
     async def _deliver(self, player: PlayerInfo, text: str) -> None:
         try:
-            await player.websocket.send_text(text)
+            # A client that stops reading would otherwise hold this await, and with
+            # it every broadcast and timer in the room.
+            await asyncio.wait_for(player.websocket.send_text(text), settings.ws_send_timeout_seconds)
         except Exception:
             # A failed send on a still-"connected" socket means we missed the
             # close. Mark them disconnected so we stop trying; the websocket's
@@ -555,6 +565,9 @@ class GameRoom:
             # broadcasts presence and handles host/scoring/cleanup.
             logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
             player.connected = False
+            # Close so the client reconnects instead of sitting on a socket that gets
+            # nothing; in the background, because a stuck socket may not close quickly.
+            create_logged_task(_close_quietly(player.websocket), name=f"close_{self.room_id}_{player.id}")
 
     async def send_round_start(
         self,

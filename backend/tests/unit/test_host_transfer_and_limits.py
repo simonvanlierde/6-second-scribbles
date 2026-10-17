@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
@@ -10,9 +11,11 @@ import pytest
 from fastapi import WebSocketDisconnect
 
 from app.core.config import settings
+from app.rooms import kick_vote
 from app.rooms.manager import GameRoom, PlayerInfo, RoomCapacityError, room_manager
+from app.rooms.player_lifecycle import KICKED_ERROR
 from tests.constants import FULL, JOIN_ERROR, ROOM_FULL
-from tests.support import as_websocket
+from tests.support import TestWebSocket, as_websocket
 
 WS_TRY_AGAIN_LATER = 1013
 
@@ -20,8 +23,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from fastapi.testclient import TestClient
-
-    from tests.support import TestWebSocket
 
 HOST_PLAYER_ID = "host_123"
 SECOND_PLAYER_ID = "player_456"
@@ -206,3 +207,40 @@ class TestGhostPlayerPrevention:
         assert PLAYER_123_ID in room.players
         assert room.players[PLAYER_123_ID].websocket == ws2
         assert len(room.players) == 1
+
+
+class _StuckWebSocket(TestWebSocket):
+    """A client that stopped reading: sends never complete."""
+
+    async def send_text(self, message: str) -> None:
+        del message
+        await asyncio.Event().wait()
+
+
+async def test_stuck_socket_does_not_hold_up_the_room(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A send that never completes times out, and the other players still get the message."""
+    monkeypatch.setattr(settings, "ws_send_timeout_seconds", 0.05)
+    room = GameRoom("STUCK01")
+    stuck, healthy = _StuckWebSocket(), TestWebSocket()
+    room.players["stuck"] = PlayerInfo(id="stuck", name="Stuck", websocket=as_websocket(stuck))
+    room.players["ok"] = PlayerInfo(id="ok", name="Ok", websocket=as_websocket(healthy))
+
+    await asyncio.wait_for(room.broadcast(room.room_state_event()), timeout=1)
+    await asyncio.sleep(0)  # let the background close run
+
+    assert room.players["stuck"].connected is False
+    assert len(healthy.sent_texts) == 1
+    assert stuck.close_calls
+
+
+async def test_kicked_player_cannot_rejoin(make_ws: Callable[..., TestWebSocket]) -> None:
+    """A vote-kicked player id is refused when it tries to join the same room again."""
+    room = GameRoom("KICKED01")
+    await room.add_player("host", "Host", as_websocket(make_ws()))
+    await room.add_player("troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
+
+    await kick_vote.kick_player(room, "troll")
+
+    with pytest.raises(ValueError, match=KICKED_ERROR):
+        await room.add_player("troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
+    await room.scheduler.shutdown()

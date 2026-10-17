@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
 from app.rooms import rounds
-from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
     DrawStrokePartialEvent,
@@ -96,6 +96,8 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
         if str(exc) == IDENTITY_CONFLICT_ERROR:
             error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use in another browser or account."
+        elif str(exc) == KICKED_ERROR:
+            error, message = KICKED_ERROR, "You were voted out of this room."
         else:
             error, message = "room_full", str(exc)
         await send_ws_message(

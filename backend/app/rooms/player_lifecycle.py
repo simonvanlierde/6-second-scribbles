@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Sentinel raised by add_player when a player_id is claimed by a different user;
 # handle_join matches on it to send the right join error.
 IDENTITY_CONFLICT_ERROR = "identity_conflict"
+KICKED_ERROR = "kicked"
 
 
 async def add_player(
@@ -44,19 +45,8 @@ async def add_player(
         msg = f"Room is full (maximum {max_players} players)"
         raise ValueError(msg)
 
-    # Bind player identity to the authenticated session: a player_id already
-    # owned by one user cannot be claimed by a connection authenticated as a
-    # different user. This blocks seat/host takeover via a spoofed player_id.
-    existing_owner = room.metadata.player_user_ids.get(player_id)
-    if existing_owner is not None and existing_owner != user_id:
-        raise ValueError(IDENTITY_CONFLICT_ERROR)
-
-    # Guests have no user_id, so the rejoin key is what stops a seat takeover:
-    # a join for a known player_id must present the key its first join used.
-    key_hash = hashlib.sha256(rejoin_key.encode()).hexdigest() if rejoin_key else None
+    key_hash = _check_identity(room, player_id, user_id, rejoin_key)
     stored_hash = room.metadata.player_rejoin_keys.get(player_id)
-    if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
-        raise ValueError(IDENTITY_CONFLICT_ERROR)
 
     if room.is_hibernated:
         logger.info("[GameRoom %s] Waking from hibernation", room.room_id)
@@ -106,6 +96,27 @@ async def add_player(
 
     _settle_host_on_join(room, player_id, name, user_id=user_id, is_reconnecting_host=is_reconnecting_host)
     return player, is_reconnecting_host
+
+
+def _check_identity(room: GameRoom, player_id: str, user_id: str | None, rejoin_key: str | None) -> str | None:
+    """Refuse a join that may not take this player_id, and return the rejoin key's hash."""
+    if player_id in room.kicked_ids or (user_id is not None and user_id in room.kicked_ids):
+        raise ValueError(KICKED_ERROR)
+
+    # Bind player identity to the authenticated session: a player_id already
+    # owned by one user cannot be claimed by a connection authenticated as a
+    # different user. This blocks seat/host takeover via a spoofed player_id.
+    existing_owner = room.metadata.player_user_ids.get(player_id)
+    if existing_owner is not None and existing_owner != user_id:
+        raise ValueError(IDENTITY_CONFLICT_ERROR)
+
+    # Guests have no user_id, so the rejoin key is what stops a seat takeover:
+    # a join for a known player_id must present the key its first join used.
+    key_hash = hashlib.sha256(rejoin_key.encode()).hexdigest() if rejoin_key else None
+    stored_hash = room.metadata.player_rejoin_keys.get(player_id)
+    if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
+        raise ValueError(IDENTITY_CONFLICT_ERROR)
+    return key_hash
 
 
 def _owns_last_host(room: GameRoom, user_id: str | None) -> bool:
