@@ -139,7 +139,7 @@ async def get_session_user_id(session_id: str) -> str | None:
         # awaited value needs a cast to satisfy the type checker.
         return cast("str | None", await r.get(_session_key(session_id)))
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to read session %s", session_id)
+        logger.exception("[Redis] Failed to read a session")
         return None
 
 
@@ -149,7 +149,7 @@ async def delete_session(session_id: str) -> None:
         r = await get_redis()
         await r.delete(_session_key(session_id))
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to delete session %s", session_id)
+        logger.exception("[Redis] Failed to delete a session")
 
 
 async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: int) -> tuple[int, int]:

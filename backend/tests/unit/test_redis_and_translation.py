@@ -25,6 +25,7 @@ ROOM_SCAN_PATTERN = "room:*"
 ROOM_KEY_PREFIX = "room:"
 ROOM_ID = "ROOM01"
 USER_ID = "user-1"
+LEAKY_SESSION_ID = "secret-session-id"
 TRANSLATED_CHAT = "chat"
 TRANSLATED_DOG = "chien"
 TRANSLATED_CAT_ES = "gato"
@@ -182,6 +183,18 @@ async def test_load_all_room_states_skips_an_unreadable_room(monkeypatch: pytest
     states = await redis_module.load_all_room_states()
 
     assert [state.room_id for state in states] == ["ROOM01"]
+
+
+async def test_session_errors_do_not_log_the_session_id(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A session id is a login credential, so a Redis failure must not write it to the logs."""
+    monkeypatch.setattr(redis_module, "get_redis", AsyncMock(side_effect=RedisError("boom")))
+
+    await redis_module.get_session_user_id(LEAKY_SESSION_ID)
+    await redis_module.delete_session(LEAKY_SESSION_ID)
+
+    assert LEAKY_SESSION_ID not in caplog.text
 
 
 async def test_redis_helpers_fall_back_cleanly_on_errors(monkeypatch: pytest.MonkeyPatch) -> None:
