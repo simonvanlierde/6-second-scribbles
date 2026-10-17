@@ -11,8 +11,9 @@ import pytest
 from fastapi import WebSocketDisconnect
 
 from app.core.config import settings
+from app.core.rate_limits import client_network
 from app.rooms import kick_vote
-from app.rooms.manager import GameRoom, PlayerInfo, RoomCapacityError, room_manager
+from app.rooms.manager import ClientRoomLimitError, GameRoom, PlayerInfo, RoomCapacityError, RoomManager, room_manager
 from app.rooms.player_lifecycle import KICKED_ERROR
 from tests.constants import FULL, JOIN_ERROR, ROOM_FULL
 from tests.support import TestWebSocket, as_websocket
@@ -244,3 +245,30 @@ async def test_kicked_player_cannot_rejoin(make_ws: Callable[..., TestWebSocket]
     with pytest.raises(ValueError, match=KICKED_ERROR):
         await room.add_player("troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
     await room.scheduler.shutdown()
+
+
+CLIENT_A = "203.0.113.7"
+CLIENT_B = "198.51.100.1"
+NON_IP_CLIENT = "testclient"
+ROOM_A, ROOM_B, ROOM_C, ROOM_D = "AAAAAA", "BBBBBB", "CCCCCC", "DDDDDD"
+
+
+def test_one_client_cannot_hold_more_than_its_share_of_rooms(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The room cap per client stops one network from filling the global cap; others are unaffected."""
+    monkeypatch.setattr(settings, "max_rooms_per_client", 2)
+    manager = RoomManager()
+    manager.get_or_create_room(ROOM_A, creator=CLIENT_A)
+    manager.get_or_create_room(ROOM_B, creator=CLIENT_A)
+
+    with pytest.raises(ClientRoomLimitError):
+        manager.get_or_create_room(ROOM_C, creator=CLIENT_A)
+    assert manager.get_or_create_room(ROOM_A, creator=CLIENT_A).room_id == ROOM_A
+    assert manager.get_or_create_room(ROOM_D, creator=CLIENT_B).room_id == ROOM_D
+
+
+def test_client_network_groups_ipv6_by_64() -> None:
+    """Addresses in one IPv6 /64 count as one client; IPv4 and other ids pass through."""
+    assert client_network("2001:db8:1:2::1") == client_network("2001:db8:1:2:ffff::9")
+    assert client_network("2001:db8:1:2::1") != client_network("2001:db8:1:3::1")
+    assert client_network(CLIENT_A) == CLIENT_A
+    assert client_network(NON_IP_CLIENT) == NON_IP_CLIENT

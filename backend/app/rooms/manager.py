@@ -86,6 +86,10 @@ class RoomCapacityError(Exception):
     """Raised when the global room cap is reached and a new room cannot be created."""
 
 
+class ClientRoomLimitError(RoomCapacityError):
+    """Raised when one client already holds its share of open rooms."""
+
+
 @dataclass
 class PlayerInfo:
     """Information about a player in a game room."""
@@ -119,6 +123,8 @@ class GameRoom:
 
     def __init__(self, room_id: str):
         self.room_id = room_id
+        # Network that opened the room, for the per-client room cap. In-memory only.
+        self.creator: str | None = None
         self.players: dict[str, PlayerInfo] = {}
         self.host_id: str | None = None
         self.metadata = RoomMetadataState()
@@ -732,17 +738,25 @@ class RoomManager:
         """Run cleanup and hibernation checks on all rooms."""
         await room_lifecycle.run_cleanup(self)
 
-    def get_or_create_room(self, room_id: str) -> GameRoom:
+    def get_or_create_room(self, room_id: str, *, creator: str | None = None) -> GameRoom:
         """Get an existing room or create a new one.
 
         Raises ``RoomCapacityError`` when a *new* room would exceed the global
-        cap. Existing rooms are always returned.
+        cap, and ``ClientRoomLimitError`` when ``creator`` already opened
+        ``max_rooms_per_client`` rooms that are still open, so one client cannot
+        fill the global cap. Existing rooms are always returned.
         """
         if room_id not in self.rooms:
             if len(self.rooms) >= settings.max_total_rooms:
                 msg = f"Global room cap reached (maximum {settings.max_total_rooms} rooms)"
                 raise RoomCapacityError(msg)
+            if creator is not None:
+                held = sum(1 for room in self.rooms.values() if room.creator == creator)
+                if held >= settings.max_rooms_per_client:
+                    msg = f"Client room cap reached (maximum {settings.max_rooms_per_client} rooms)"
+                    raise ClientRoomLimitError(msg)
             room = GameRoom(room_id)
+            room.creator = creator
             self.rooms[room_id] = room
             room.scheduler.start_idle_check()
             logger.info("[RoomManager] Created new room: %s (total rooms: %s)", room_id, len(self.rooms))

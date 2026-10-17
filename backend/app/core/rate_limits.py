@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -11,6 +12,8 @@ from app.core.redis import increment_rate_limit
 
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection
+
+IPV6 = 6
 
 
 def get_client_identifier(conn: HTTPConnection) -> str:
@@ -51,3 +54,18 @@ async def enforce_rate_limit(
             detail=f"Rate limit exceeded. Try again in {retry_after or window_seconds} seconds.",
             headers={"Retry-After": str(retry_after or window_seconds)},
         )
+
+
+def client_network(identifier: str) -> str:
+    """Group an IPv6 client by its /64, the block one subscriber usually gets.
+
+    Without this, one connection could rotate through its /64 to look like many
+    clients. IPv4 addresses and non-IP identifiers are returned unchanged.
+    """
+    try:
+        address = ipaddress.ip_address(identifier)
+    except ValueError:
+        return identifier
+    if address.version == IPV6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return identifier

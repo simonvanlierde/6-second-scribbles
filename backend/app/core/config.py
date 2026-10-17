@@ -97,6 +97,9 @@ class Settings(BaseSettings):
     # throttles, so it stays off unless explicitly enabled.
     rate_limit_trust_forwarded_for: bool = IS_PROD
     max_total_rooms: int = 500
+    # Open rooms one network may have created at once. Households share one IP,
+    # so this counts rooms, not players or sockets.
+    max_rooms_per_client: int = 5
     ws_max_message_bytes: int = 64 * 1024
     ws_draw_messages_per_window: int = 60
     ws_draw_window_seconds: int = 1
