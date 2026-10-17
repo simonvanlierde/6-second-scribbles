@@ -166,12 +166,19 @@ async def remove_player(
     *,
     host_transfer_delay_ms: int,
     schedule_host_transfer: Callable[[str], asyncio.Task[object]],
+    forget_identity: bool = False,
 ) -> None:
-    """Remove a player and trigger delayed host transfer when required."""
+    """Remove a player and trigger delayed host transfer when required.
+
+    The seat's identity binding (account and rejoin key) outlives a dropped
+    connection, so nobody can claim the player_id while its owner refreshes.
+    Only an explicit leave or a kick (`forget_identity`) releases it.
+    """
     room.players.pop(player_id, None)
     room.metadata.player_locales.pop(player_id, None)
-    room.metadata.player_user_ids.pop(player_id, None)
-    room.metadata.player_rejoin_keys.pop(player_id, None)
+    if forget_identity:
+        room.metadata.player_user_ids.pop(player_id, None)
+        room.metadata.player_rejoin_keys.pop(player_id, None)
     # Forget all per-player round state so a removed player (left/kicked/pruned)
     # is no longer treated as a current participant. In particular this drops them
     # from player_assignments, which the rejoin gate uses to recognise reconnecting

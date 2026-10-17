@@ -319,7 +319,7 @@ async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None
     del event
     if not session.player_id:
         return
-    await session.room.remove_player(session.player_id)
+    await session.room.remove_player(session.player_id, forget_identity=True)
     await broadcast_and_persist(session, PlayerLeftEvent(playerId=session.player_id))
 
 

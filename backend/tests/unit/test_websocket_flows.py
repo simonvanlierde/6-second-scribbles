@@ -264,6 +264,36 @@ def test_guest_seat_needs_its_rejoin_key(test_client: TestClient) -> None:
         assert join_player(owner_again, PLAYER_1, ALICE, rejoin_key="owner-key")["type"] == PLAYER_JOINED
 
 
+def test_lobby_refresh_keeps_the_seat_bound_to_its_key(test_client: TestClient) -> None:
+    """A lobby refresh removes the player, but nobody else can claim their id until they leave on purpose."""
+    room_id = "RECONNECT03"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as host:
+        receive_json(host)
+        join_player(host, PLAYER_1, ALICE, rejoin_key="host-key")
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest:
+            receive_json(guest)
+            join_player(guest, PLAYER_2, BOB, rejoin_key="guest-key")
+        # The guest's socket is gone (a refresh); in the lobby that removes the player.
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as intruder:
+            receive_json(intruder)
+            reply = join_player(intruder, PLAYER_2, "Mallory", rejoin_key="other-key")
+            assert reply["type"] == JOIN_ERROR
+            assert reply["error"] == IDENTITY_CONFLICT_ERROR
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest_again:
+            receive_json(guest_again)
+            assert join_player(guest_again, PLAYER_2, BOB, rejoin_key="guest-key")["type"] == PLAYER_JOINED
+            send_json(guest_again, {"type": "leave", "playerId": PLAYER_2})
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as newcomer:
+            receive_json(newcomer)
+            reply = join_player(newcomer, PLAYER_2, "Newcomer", rejoin_key="new-key")
+            assert reply["type"] == PLAYER_JOINED
+
+
 def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> None:
     """Separate rooms can progress independently."""
     with ExitStack() as stack:

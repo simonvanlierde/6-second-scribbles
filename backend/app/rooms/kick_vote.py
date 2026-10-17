@@ -203,7 +203,7 @@ async def kick_player(room: GameRoom, player_id: str, reason: str = "Kicked") ->
     except Exception:
         logger.exception("[GameRoom %s] Error closing websocket for kicked player", room.room_id)
 
-    await room.remove_player(player_id)
+    await room.remove_player(player_id, forget_identity=True)
     room.active_kick_votes.pop(player_id, None)
 
 

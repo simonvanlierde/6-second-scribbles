@@ -342,13 +342,14 @@ class GameRoom:
         if self.metadata.game_phase == GamePhase.GUESSING and rounds.all_expected_guesses_submitted(self):
             create_logged_task(self.score_and_broadcast_round(), name=f"auto_score_{self.room_id}")
 
-    async def remove_player(self, player_id: str) -> None:
-        """Remove a player from the room."""
+    async def remove_player(self, player_id: str, *, forget_identity: bool = False) -> None:
+        """Remove a player from the room; see player_lifecycle.remove_player for `forget_identity`."""
         await player_lifecycle.remove_player(
             self,
             player_id,
             host_transfer_delay_ms=settings.host_transfer_delay_ms,
             schedule_host_transfer=self._new_host_transfer_task,
+            forget_identity=forget_identity,
         )
         self._maybe_auto_score()
 

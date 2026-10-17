@@ -175,7 +175,7 @@ class TestGameRoom:
         await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws_bob), user_id="user-bob")
 
         # Host leaves explicitly; a transfer is pending and host_id still lingers.
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await game_room.remove_player(PLAYER_ONE_ID, forget_identity=True)
         assert game_room.pending_host_transfer is not None
 
         # Mallory grabs the freed player_id under a different account. She joins as a
