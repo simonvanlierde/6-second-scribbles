@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -33,6 +35,7 @@ async def add_player(
     preferred_locale: str | None = None,
     user_id: str | None = None,
     preferred_color: str | None = None,
+    rejoin_key: str | None = None,
     max_players: int,
     player_info_factory: type[PlayerInfo],
 ) -> tuple[PlayerInfo, bool]:
@@ -46,6 +49,13 @@ async def add_player(
     # different user. This blocks seat/host takeover via a spoofed player_id.
     existing_owner = room.metadata.player_user_ids.get(player_id)
     if existing_owner is not None and existing_owner != user_id:
+        raise ValueError(IDENTITY_CONFLICT_ERROR)
+
+    # Guests have no user_id, so the rejoin key is what stops a seat takeover:
+    # a join for a known player_id must present the key its first join used.
+    key_hash = hashlib.sha256(rejoin_key.encode()).hexdigest() if rejoin_key else None
+    stored_hash = room.metadata.player_rejoin_keys.get(player_id)
+    if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
         raise ValueError(IDENTITY_CONFLICT_ERROR)
 
     if room.is_hibernated:
@@ -87,6 +97,8 @@ async def add_player(
             (max(room.metadata.player_seats.values()) + 1) if room.metadata.player_seats else 0
         )
     room.metadata.player_locales[player_id] = preferred_locale or room.metadata.default_locale
+    if stored_hash is None and key_hash is not None:
+        room.metadata.player_rejoin_keys[player_id] = key_hash
     if user_id is not None:
         room.metadata.player_user_ids[player_id] = user_id
     else:
@@ -159,6 +171,7 @@ async def remove_player(
     room.players.pop(player_id, None)
     room.metadata.player_locales.pop(player_id, None)
     room.metadata.player_user_ids.pop(player_id, None)
+    room.metadata.player_rejoin_keys.pop(player_id, None)
     # Forget all per-player round state so a removed player (left/kicked/pruned)
     # is no longer treated as a current participant. In particular this drops them
     # from player_assignments, which the rejoin gate uses to recognise reconnecting

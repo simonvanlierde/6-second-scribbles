@@ -37,6 +37,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
 - Rooms nobody ever joined, such as a created code left unused, and rooms restored from Redis after a restart never expired, so they piled up until the 500-room cap refused new rooms. Both now expire after the normal 5-minute empty-room TTL.
 - Room-creation and login rate limits in production counted every visitor as one client: the backend read the last `X-Forwarded-For` entry, which Caddy filled with the Cloudflare tunnel container's address. Caddy now forwards the visitor's own IP.
+- Any player could take over a guest's seat, and with it their score and prompts, by joining with that guest's player id, which every roster shows. The browser now keeps a private rejoin key next to its player id, and the server refuses a join for a known seat unless it carries the key the seat's first join used.
+- Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
+- In Safari the favicon lost its colours: the page's Content Security Policy was also sent with the SVG favicon and blocked the `<style>` inside it. SVG files now get their own policy that allows only inline styles.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
 
 ## [0.2.1] - 2026-07-06

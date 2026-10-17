@@ -36,6 +36,19 @@
       ],
       "default": null,
       "title": "Preferredcolor"
+    },
+    "rejoinKey": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rejoinkey"
     }
   },
   "required": ["name", "playerId", "type"],

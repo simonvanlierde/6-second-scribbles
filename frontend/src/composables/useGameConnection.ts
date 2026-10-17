@@ -12,6 +12,7 @@ import { BACKEND_HOST, UI_TIMINGS } from "@/config/gameConfig";
 import { type ClientEvent, ClientEventSchema, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
 import { i18n } from "@/i18n";
 import { createLogger } from "@/shared/logger";
+import { getRejoinKey } from "@/shared/playerIdentity";
 import { useGameStore } from "@/stores/game";
 
 const log = createLogger("WebSocket");
@@ -103,6 +104,7 @@ export function useGameConnection() {
           name: store.localPlayerName,
           preferredLocale: store.localPlayerLocale,
           preferredColor: store.localAvatarColor,
+          rejoinKey: getRejoinKey(),
         });
       } else {
         store.setSpectatorMode(true);

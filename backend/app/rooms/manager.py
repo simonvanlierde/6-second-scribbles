@@ -205,16 +205,13 @@ class GameRoom:
             return
         next_round = round_number or (self.metadata.current_round + 1)
         round_start_time = self.start_round(round_number=next_round, cards=assignments)
-        await self.broadcast(
-            StartRoundServerEvent(
-                type="start_round",
-                round=next_round,
-                cards={
-                    player_id: PlayerCardPayload.model_validate(assignment.model_dump())
-                    for player_id, assignment in assignments.items()
-                },
-                roundStartTime=round_start_time,
-            ),
+        await self.send_round_start(
+            next_round,
+            {
+                player_id: PlayerCardPayload.model_validate(assignment.model_dump())
+                for player_id, assignment in assignments.items()
+            },
+            round_start_time,
         )
         await self.persist()
         self.scheduler.schedule_guessing_start(self.metadata.drawing_time_limit or 30)
@@ -301,6 +298,7 @@ class GameRoom:
         preferred_locale: LanguageCode | None = None,
         user_id: str | None = None,
         preferred_color: str | None = None,
+        rejoin_key: str | None = None,
     ) -> tuple[PlayerInfo, bool]:
         """Add a player to the room.
 
@@ -315,6 +313,7 @@ class GameRoom:
             preferred_locale=preferred_locale,
             user_id=user_id,
             preferred_color=preferred_color,
+            rejoin_key=rejoin_key,
             max_players=settings.max_players,
             player_info_factory=PlayerInfo,
         )
@@ -532,15 +531,36 @@ class GameRoom:
         for player_id, player in list(self.players.items()):
             if (exclude and player_id == exclude) or not player.connected:
                 continue
-            try:
-                await player.websocket.send_text(text)
-            except Exception:
-                # A failed send on a still-"connected" socket means we missed the
-                # close. Mark them disconnected so we stop trying; the websocket's
-                # receive loop will raise next and run disconnect_player, which
-                # broadcasts presence and handles host/scoring/cleanup.
-                logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-                player.connected = False
+            await self._deliver(player, text)
+
+    async def _deliver(self, player: PlayerInfo, text: str) -> None:
+        try:
+            await player.websocket.send_text(text)
+        except Exception:
+            # A failed send on a still-"connected" socket means we missed the
+            # close. Mark them disconnected so we stop trying; the websocket's
+            # receive loop will raise next and run disconnect_player, which
+            # broadcasts presence and handles host/scoring/cleanup.
+            logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
+            player.connected = False
+
+    async def send_round_start(
+        self,
+        round_number: int | None,
+        cards: dict[str, PlayerCardPayload],
+        round_start_time: int,
+    ) -> None:
+        """Send each connected player a start_round holding only their own card.
+
+        A broadcast would hand every player everyone's prompts. A player who is
+        offline now gets their card from room_state when they reconnect.
+        """
+        for player_id, player in list(self.players.items()):
+            if not player.connected:
+                continue
+            own = {player_id: cards[player_id]} if player_id in cards else {}
+            event = StartRoundServerEvent(round=round_number, cards=own, roundStartTime=round_start_time)
+            await self._deliver(player, encode_ws_message(event))
 
     async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""
