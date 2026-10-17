@@ -78,7 +78,7 @@ const cards = computed(() => {
   align-items: flex-start;
 }
 .highlight__label {
-  color: var(--color-marker-red);
+  color: var(--color-primary-text);
   border-color: var(--color-marker-red);
   font-weight: 700;
 }

@@ -40,6 +40,10 @@
    * value both modes because white text needs a dark background either way. */
   --color-primary-strong: #d23c3c;
 
+  /* Text-safe red — for red text on the paper or card. Clears 4.5:1 on both in
+   * each mode; keep --color-marker-red for strokes, borders and fills. */
+  --color-primary-text: light-dark(#c53030, #f06a6a);
+
   /* Semantic aliases */
   --color-bg: var(--color-paper);
   --color-surface: var(--color-card);

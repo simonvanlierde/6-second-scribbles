@@ -331,7 +331,7 @@ watch(
   font-family: var(--font-body);
   font-size: var(--text-label-md);
   font-weight: 600;
-  color: var(--color-marker-red);
+  color: var(--color-primary-text);
   cursor: pointer;
 }
 .advanced-toggle svg {

@@ -276,7 +276,11 @@ onUnmounted(() => {
   min-width: 1.25rem;
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--color-marker-red);
+  color: var(--color-primary-text);
+}
+/* The highlighter row stays light in dark mode, where the text red is too pale. */
+.final-standings__row--you .final-standings__rank {
+  color: inherit;
 }
 .final-standings__name {
   flex: 1;
