@@ -29,6 +29,11 @@
    * always be dark. */
   --color-ink-fixed: #3a332c;
 
+  /* Drawing surface — light paper in both modes, so the dark default pen shows
+   * and every player sees the same drawing. Keep in sync with DRAWING_PAPER in
+   * config/drawing.ts, which paints the same colour into the sent image. */
+  --color-drawing-paper: #fdfbf7;
+
   /* Strong marker red — for red surfaces that carry white text (primary button,
    * toast, timer, winner card). The bright --color-marker-red only reaches ~3:1
    * against white; this darker red clears WCAG AA (4.5:1) in both modes. Same

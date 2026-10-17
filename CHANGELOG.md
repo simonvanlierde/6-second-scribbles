@@ -41,6 +41,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
 - In Safari the favicon lost its colours: the page's Content Security Policy was also sent with the SVG favicon and blocked the `<style>` inside it. SVG files now get their own policy that allows only inline styles.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
+- In dark mode the drawing canvas was dark, so the default black pen was nearly invisible, and drawings made in dark mode showed up as dark tiles for everyone else. The canvas is now light paper in both themes, so every drawing looks the same to every player. The white pen now draws in paper colour in both themes.
 
 ## [0.2.1] - 2026-07-06
 
