@@ -103,10 +103,20 @@ async def load_all_room_states() -> list[RoomState]:
         if not keys:
             return []
         results = await r.mget(keys)
-        return [RoomState.model_validate_json(value) for value in results if value]
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load all rooms")
         return []
+    # One room saved by an older or newer schema must not cost every other room
+    # its restore. The skipped key still expires on its own TTL.
+    states: list[RoomState] = []
+    for key, value in zip(keys, results, strict=True):
+        if not value:
+            continue
+        try:
+            states.append(RoomState.model_validate_json(value))
+        except ValueError:
+            logger.exception("[Redis] Skipped unreadable room state %s", key)
+    return states
 
 
 async def create_session(user_id: str) -> str:

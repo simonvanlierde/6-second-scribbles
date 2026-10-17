@@ -172,6 +172,18 @@ async def test_load_all_room_states_and_rate_limits(monkeypatch: pytest.MonkeyPa
     assert retry_after == 30
 
 
+async def test_load_all_room_states_skips_an_unreadable_room(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A room saved in another schema is skipped; the readable rooms still load."""
+    fake_redis = _FakeRedis()
+    fake_redis.store["room:ROOM01"] = RoomState(room_id="ROOM01").model_dump_json()
+    fake_redis.store["room:OLD01"] = '{"room_id": "OLD01", "field_from_another_version": 1}'
+    monkeypatch.setattr(redis_module, "get_redis", AsyncMock(return_value=fake_redis))
+
+    states = await redis_module.load_all_room_states()
+
+    assert [state.room_id for state in states] == ["ROOM01"]
+
+
 async def test_redis_helpers_fall_back_cleanly_on_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     """Error paths log and return safe defaults."""
     failing = AsyncMock(side_effect=RedisError("boom"))
