@@ -43,6 +43,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
 - In dark mode the drawing canvas was dark, so the default black pen was nearly invisible, and drawings made in dark mode showed up as dark tiles for everyone else. The canvas is now light paper in both themes, so every drawing looks the same to every player. The white pen now draws in paper colour in both themes.
 - In dark mode the lobby player list was unreadable: names sat on a light grey row, and the host's Kick player button had no background, so it showed only as faint white text. The list now uses the game's own cards, labels and buttons in both themes.
+- On phones the settings button covered the round number and score in the game header. The header now leaves room for it.
 
 ## [0.2.1] - 2026-07-06
 
