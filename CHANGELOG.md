@@ -26,6 +26,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Backend dependency updates.
 - The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
 
+### Removed
+
+- The unused `POST /api/rooms/{room_id}/category-selection` endpoint. It needed no login, had no rate limit, and could return the whole prompt bank.
+
 ### Fixed
 
 - After a round, guessers could wait forever on "Waiting for drawing…". The finished drawing was sent as a full-resolution PNG, often over 1 MB on a high-density screen, and the server drops messages over 64 KiB. Drawings are now scaled to at most 1024 px and sent as WebP (JPEG in browsers such as Safari that cannot encode WebP), stepping down until they fit. A player whose message is still too large sees an error instead of nothing.
@@ -41,6 +45,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Any player could take over a guest's seat, and with it their score and prompts, by joining with that guest's player id, which every roster shows. The browser now keeps a private rejoin key next to its player id, and the server refuses a join for a known seat unless it carries the key the seat's first join used.
 - Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
 - A restart dropped every saved room when a single one could not be read, for example a room saved by an older release. Unreadable rooms are now skipped one at a time and the rest are restored.
+- A round started by the server's timer cancelled itself as it started: the round was not saved after it began, and the server's own drawing timer was never set. Rounds still moved on because each browser presses Finish when its timer runs out, but a player whose browser stayed connected without doing that, such as a locked phone, held the whole room in the drawing phase.
+- A modified client could deal its own cards or force the guessing phase: the host-only `start_round` and `start_guessing` commands still worked, although the app never sends them. They are removed, together with the unused `round_complete` and `game_complete` client events, and rounds are now dealt by the server only.
 - In Safari the favicon lost its colours: the page's Content Security Policy was also sent with the SVG favicon and blocked the `<style>` inside it. SVG files now get their own policy that allows only inline styles.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
 

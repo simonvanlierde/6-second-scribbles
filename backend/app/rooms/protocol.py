@@ -87,24 +87,11 @@ class PlayerCardPayload(BaseModel):
     alternatives: dict[str, list[str]] | None = None
 
 
-class StartRoundEvent(ClientEventModel):
-    type: Literal["start_round"]
-    round: int | None = None
-    cards: dict[str, PlayerCardPayload]
-
-
-class RoundCompleteEvent(ClientEventModel):
-    type: Literal["round_complete"]
-
-
-class GameCompleteEvent(ClientEventModel):
-    type: Literal["game_complete"]
-
-
 class PlayerReadyEvent(ClientPlayerEventModel):
     type: Literal["player_ready"]
 
 
+# Server-only: the server moves rounds into guessing, clients never send this.
 class StartGuessingEvent(ClientEventModel):
     type: Literal["start_guessing"]
     guessing_start_time: int | None = Field(default=None, alias="guessingStartTime")
@@ -237,11 +224,7 @@ class ReactionSendEvent(ClientEventModel):
 ClientEvent = Annotated[
     JoinEvent
     | StartGameEvent
-    | StartRoundEvent
-    | RoundCompleteEvent
-    | GameCompleteEvent
     | PlayerReadyEvent
-    | StartGuessingEvent
     | SubmitGuessEvent
     | RestartGameEvent
     | HeartbeatEvent
@@ -578,14 +561,10 @@ CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "join": {"group": "connection", "summary": "Join a room with the local player identity."},
     "leave": {"group": "connection", "summary": "Explicitly leave the room (immediate removal)."},
     "request_game_state": {"group": "connection", "summary": "Request the latest room snapshot."},
-    "game_complete": {"group": "gameFlow", "summary": "Signal that the game is complete."},
     "player_ready": {"group": "gameFlow", "summary": "Mark the current player as ready."},
     "restart_game": {"group": "gameFlow", "summary": "Restart the game from the lobby state."},
-    "round_complete": {"group": "gameFlow", "summary": "Signal that the current round is complete."},
     "settings_update": {"group": "gameFlow", "summary": "Update shared game settings."},
     "start_game": {"group": "gameFlow", "summary": "Host starts a game with room settings."},
-    "start_guessing": {"group": "gameFlow", "summary": "Host transitions the room into guessing."},
-    "start_round": {"group": "gameFlow", "summary": "Host starts a drawing round with assigned cards."},
     "submit_guess": {"group": "gameFlow", "summary": "Submit guesses for another player's drawing."},
     "default_locale_update": {"group": "roomSettings", "summary": "Change the room default locale."},
     "room_custom_categories_update": {

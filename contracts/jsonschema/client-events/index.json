@@ -1,11 +1,7 @@
 {
   "join": "join.schema.json",
   "start_game": "start_game.schema.json",
-  "start_round": "start_round.schema.json",
-  "round_complete": "round_complete.schema.json",
-  "game_complete": "game_complete.schema.json",
   "player_ready": "player_ready.schema.json",
-  "start_guessing": "start_guessing.schema.json",
   "submit_guess": "submit_guess.schema.json",
   "restart_game": "restart_game.schema.json",
   "heartbeat": "heartbeat.schema.json",

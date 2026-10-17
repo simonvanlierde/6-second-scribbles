@@ -173,7 +173,7 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
       store.gamePhase = "round_results";
       store.readyCount = 0;
       store.totalPlayers = store.playersList.length;
-      // RoundResultsView owns the 5-second countdown and calls startRound from there.
+      // The server starts the next round after its countdown and sends start_round.
       break;
 
     case "game_complete":

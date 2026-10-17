@@ -26,16 +26,6 @@ class SelectedCategorySet(BaseModel):
     alternatives: dict[str, list[str]]
 
 
-class CategorySelectionRequest(BaseModel):
-    """Parameters for selecting category sets for a room/game."""
-
-    difficulty: Difficulty
-    count: int = Field(default=1, ge=1)
-    player_count: int = Field(default=2, ge=1)
-    locale: LanguageCode = "en"
-    locales: list[LanguageCode] = Field(default_factory=list)
-
-
 class CategorySelectionResponse(BaseModel):
     """Response for room-scoped category selection."""
 

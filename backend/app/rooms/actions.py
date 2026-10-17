@@ -17,10 +17,8 @@ from app.rooms.protocol import (
     PlayerLeftEvent,
     ReactionReceivedServerEvent,
     RoomCustomCategoriesUpdateServerEvent,
-    StartGuessingEvent,
     send_ws_message,
 )
-from app.rooms.state import PlayerPromptAssignmentState
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -43,7 +41,6 @@ if TYPE_CHECKING:
         RoomCustomCategoriesUpdateEvent,
         SettingsUpdateEvent,
         StartGameEvent,
-        StartRoundEvent,
         SubmitGuessEvent,
         WebSocketMessage,
     )
@@ -141,28 +138,6 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
     session.room.scheduler.schedule_first_round()
 
 
-async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEvent) -> None:
-    """Handle a start-round event."""
-    if not await require_host(session, "start a round"):
-        return
-    round_start_time = session.room.start_round(
-        round_number=event.round,
-        cards={
-            player_id: PlayerPromptAssignmentState(
-                category_id=card.category_id,
-                category=card.category,
-                item_ids=card.item_ids or [],
-                items=card.items,
-                alternatives=card.alternatives or {},
-            )
-            for player_id, card in event.cards.items()
-        },
-    )
-    await session.room.send_round_start(event.round, event.cards, round_start_time)
-    await session.room.persist()
-    session.room.scheduler.schedule_guessing_start(session.room.metadata.drawing_time_limit or 30)
-
-
 async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyEvent) -> None:
     """Handle a player-ready event."""
     if event.player_id != session.player_id:
@@ -174,15 +149,6 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
         session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
         await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
-
-
-async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuessingEvent) -> None:
-    """Handle a start-guessing event."""
-    del event
-    if not await require_host(session, "start guessing"):
-        return
-    session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
-    await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
 
 
 async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessEvent) -> None:
@@ -364,9 +330,7 @@ _HANDLERS: dict[str, _Handler] = {
     "join": handle_join,
     "leave": handle_leave,
     "start_game": handle_start_game,
-    "start_round": handle_start_round,
     "player_ready": handle_player_ready,
-    "start_guessing": handle_start_guessing,
     "submit_guess": handle_submit_guess,
     "restart_game": handle_restart_game,
     "settings_update": handle_settings_update,

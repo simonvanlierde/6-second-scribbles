@@ -6,10 +6,7 @@ import secrets
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.categories.schemas import CategorySelectionRequest, CategorySelectionResponse
-from app.categories.service import select_category_sets
 from app.core.config import settings
-from app.core.database import AsyncSessionDep
 from app.core.rate_limits import enforce_rate_limit, get_client_identifier
 from app.core.redis import get_redis
 from app.rooms.manager import RoomCapacityError, room_manager
@@ -39,29 +36,6 @@ async def get_random_room() -> RandomRoomResponse:
 async def room_status(room_id: str) -> RoomStatusResponse:
     """Get the status of a room."""
     return get_room_status(room_id=room_id)
-
-
-@router.post("/{room_id}/category-selection", response_model=CategorySelectionResponse)
-async def select_room_categories(
-    room_id: str,
-    request: CategorySelectionRequest,
-    db: AsyncSessionDep,
-) -> CategorySelectionResponse:
-    """Select category sets for a specific room/game setup."""
-    room = room_manager.get_room(room_id)
-    if room is None:
-        raise HTTPException(status_code=404, detail="Room not found")
-
-    requested_locales = request.locales or [room.get_player_locale(player_id) for player_id in room.players]
-
-    return await select_category_sets(
-        db,
-        difficulty=request.difficulty,
-        count=request.count,
-        player_count=request.player_count,
-        locale=request.locale,
-        locales=requested_locales,
-    )
 
 
 async def get_random_joinable_room() -> RandomRoomResponse:

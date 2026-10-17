@@ -1,6 +1,7 @@
 """Tests for game room management functionality."""
 # cspell: ignore rejoiner
 
+import asyncio
 import json
 import time
 from typing import TYPE_CHECKING, cast
@@ -945,3 +946,34 @@ class TestReviewRegressions:
         assert PLAYER_THREE_ID not in game_room.metadata.guess_targets
         assert PLAYER_ONE_ID in game_room.metadata.guess_targets
         assert PLAYER_TWO_ID in game_room.metadata.guess_targets
+
+
+async def test_scheduled_round_start_survives_its_own_round_reset(
+    make_ws: Callable[..., TestWebSocket],
+    monkeypatch: pytest.MonkeyPatch,
+    dealt_cards: dict[str, list[str]],
+) -> None:
+    """The timer task that starts a round must still persist it and arm the guessing timer.
+
+    start_round cancels the round timers, and the round-start task is one of them.
+    """
+    _ = dealt_cards
+    room = GameRoom("SELFCANCEL")
+    for player_id, name in ((PLAYER_ONE_ID, PLAYER_ONE_NAME), (PLAYER_TWO_ID, PLAYER_TWO_NAME)):
+        room.players[player_id] = PlayerInfo(id=player_id, name=name, websocket=as_websocket(make_ws()))
+    persisted: list[GamePhase] = []
+
+    async def persist() -> None:
+        await asyncio.sleep(0)  # a real Redis write suspends here
+        persisted.append(room.metadata.game_phase)
+
+    monkeypatch.setattr(room, "persist", persist)
+
+    room.scheduler.schedule_next_round(0, round_number=1)
+    task = room.scheduler._next_round_start_task  # noqa: SLF001
+    assert task is not None
+    await asyncio.wait_for(asyncio.shield(task), timeout=2)
+
+    assert persisted == [GamePhase.DRAWING]
+    assert room.scheduler._guessing_start_task is not None  # noqa: SLF001
+    await room.scheduler.shutdown()
