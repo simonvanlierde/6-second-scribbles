@@ -28,6 +28,7 @@ const { t } = useI18n({ useScope: "global" });
         </template>
       </i18n-t>
     </p>
+    <p class="about-text">{{ t("home.privacyNote") }}</p>
   </HdDialog>
 </template>
 

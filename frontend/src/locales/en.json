@@ -36,7 +36,8 @@
     "step2": "Draw as many as you can in {time} seconds",
     "step3": "Guess what other players drew",
     "step4": "Both drawer and guesser earn points for correct matches!",
-    "footerText": "A multiplayer web version of {original} by Gamely Games · Inspired by {inspiration} · {source}"
+    "footerText": "A multiplayer web version of {original} by Gamely Games · Inspired by {inspiration} · {source}",
+    "privacyNote": "Privacy: a guest account keeps only your name and language, and is deleted 30 days after its session ends. Server logs keep a shortened network address, not your full IP, to stop abuse, and old logs are overwritten as new ones come in."
   },
   "settings": {
     "enterValidNumber": "Please enter a valid number",

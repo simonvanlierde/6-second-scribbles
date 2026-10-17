@@ -30,6 +30,7 @@
     "step3": "Adivina qué dibujaron los otros jugadores",
     "step4": "¡Tanto el dibujante como el adivinador ganan puntos por los aciertos!",
     "footerText": "Una versión web multijugador de {original} de Gamely Games · Inspirado en {inspiration} · {source}",
+    "privacyNote": "Privacidad: una cuenta de invitado solo guarda tu nombre y tu idioma, y se borra 30 días después de que termine su sesión. Los registros del servidor guardan una dirección de red acortada, no tu IP completa, para frenar abusos, y los registros antiguos se sobrescriben a medida que llegan otros nuevos.",
     "tagline": "Dibuja. Adivina. Ríe.",
     "roomCodeLabel": "Código de sala",
     "quickPlayHeading": "Juega ya.",

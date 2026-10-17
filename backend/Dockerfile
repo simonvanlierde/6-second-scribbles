@@ -99,7 +99,9 @@ ENV SERVER_HOST=0.0.0.0
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# No access log: Caddy already logs each request (with masked IPs), and uvicorn's
+# would add the visitor's full forwarded IP.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
 
 # ── DB Ops ────────────────────────────────────────────────────────────────────
 FROM runtime-base AS db-migrations

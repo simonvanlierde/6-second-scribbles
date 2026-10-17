@@ -1,8 +1,9 @@
 # compose.prod.yml - Docker Compose overrides for production environment
 name: 6ss-prod
 
-# Rotate container logs: Docker keeps json-file logs forever by default, and
-# Caddy's access log holds visitor IPs. 3 x 10 MB per container.
+# Rotate container logs: Docker keeps json-file logs forever by default. Caddy's
+# access log holds visitor networks (IPs masked in frontend/Caddyfile). 3 x 10 MB
+# per container.
 x-logging: &logging
   driver: json-file
   options:

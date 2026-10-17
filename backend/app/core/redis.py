@@ -171,7 +171,7 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
         retry_after = max(int(ttl), 0)
         return int(count), retry_after
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to increment rate limit %s for %s", bucket, identifier)
+        logger.exception("[Redis] Failed to increment rate limit %s", bucket)
         # Fail closed: if Redis is unavailable we cannot count attempts, so treat
         # the request as over-limit rather than silently disabling every throttle
         # (login/register/room-creation) during the outage. Availability trade-off:
