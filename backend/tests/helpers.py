@@ -32,9 +32,11 @@ def send_json(websocket: WebSocketTestSession, payload: dict[str, object]) -> No
     websocket.send_text(json.dumps(payload))
 
 
-def join_player(websocket: WebSocketTestSession, player_id: str, name: str) -> dict[str, object]:
+def join_player(
+    websocket: WebSocketTestSession, player_id: str, name: str, *, rejoin_key: str | None = None
+) -> dict[str, object]:
     """Join a player to a websocket room and return the immediate response."""
-    send_json(websocket, {"type": "join", "playerId": player_id, "name": name})
+    send_json(websocket, {"type": "join", "playerId": player_id, "name": name, "rejoinKey": rejoin_key})
     return receive_json(websocket)
 
 

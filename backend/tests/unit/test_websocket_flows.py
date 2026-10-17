@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast
 
 from app.core.config import settings
 from app.core.types import GamePhase
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
 from tests.constants import (
     ALICE,
     BOB,
@@ -66,6 +67,9 @@ def test_full_game_flow(test_client: TestClient) -> None:
         assert round_messages[0]["type"] == START_ROUND
         assert round_messages[1]["type"] == START_ROUND
         assert cast("int", round_messages[0]["roundStartTime"]) > 0
+        # Each player sees only their own prompts, never the other players'.
+        assert list(cast("dict[str, object]", round_messages[0]["cards"])) == [PLAYER_1]
+        assert list(cast("dict[str, object]", round_messages[1]["cards"])) == [PLAYER_2]
 
         send_json(
             ws1,
@@ -259,6 +263,26 @@ def test_reconnecting_player_can_rejoin_same_room(test_client: TestClient) -> No
     with test_client.websocket_connect(f"/ws/{room_id}") as websocket:
         assert receive_json(websocket)["type"] == ROOM_STATE
         assert join_player(websocket, PLAYER_1, ALICE)["type"] == PLAYER_JOINED
+
+
+def test_guest_seat_needs_its_rejoin_key(test_client: TestClient) -> None:
+    """A guest's player_id is public, so taking over the seat needs the key its first join used."""
+    room_id = "RECONNECT02"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as owner:
+        receive_json(owner)
+        assert join_player(owner, PLAYER_1, ALICE, rejoin_key="owner-key")["type"] == PLAYER_JOINED
+
+        for key in ("someone-else", None):
+            with test_client.websocket_connect(f"/ws/{room_id}") as intruder:
+                receive_json(intruder)
+                reply = join_player(intruder, PLAYER_1, "Mallory", rejoin_key=key)
+                assert reply["type"] == JOIN_ERROR
+                assert reply["error"] == IDENTITY_CONFLICT_ERROR
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as owner_again:
+        assert receive_json(owner_again)["type"] == ROOM_STATE
+        assert join_player(owner_again, PLAYER_1, ALICE, rejoin_key="owner-key")["type"] == PLAYER_JOINED
 
 
 def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> None:

@@ -18,7 +18,6 @@ from app.rooms.protocol import (
     ReactionReceivedServerEvent,
     RoomCustomCategoriesUpdateServerEvent,
     StartGuessingEvent,
-    StartRoundServerEvent,
     send_ws_message,
 )
 from app.rooms.state import PlayerPromptAssignmentState
@@ -94,11 +93,12 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
             preferred_locale=session.resolve_join_locale(event.preferred_locale),
             user_id=session.current_user.id if session.current_user is not None else None,
             preferred_color=event.preferred_color,
+            rejoin_key=event.rejoin_key,
         )
     except ValueError as exc:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
         if str(exc) == IDENTITY_CONFLICT_ERROR:
-            error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use by another account."
+            error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use in another browser or account."
         else:
             error, message = "room_full", str(exc)
         await send_ws_message(
@@ -158,15 +158,8 @@ async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEve
             for player_id, card in event.cards.items()
         },
     )
-    await broadcast_and_persist(
-        session,
-        StartRoundServerEvent(
-            type="start_round",
-            round=event.round,
-            cards=event.cards,
-            roundStartTime=round_start_time,
-        ),
-    )
+    await session.room.send_round_start(event.round, event.cards, round_start_time)
+    await session.room.persist()
     session.room.scheduler.schedule_guessing_start(session.room.metadata.drawing_time_limit or 30)
 
 

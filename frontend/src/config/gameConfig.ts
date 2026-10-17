@@ -33,6 +33,7 @@ export const GAME_TIMINGS = {
 export const STORAGE_KEYS = {
   GAME_STATE: "gameState",
   PLAYER_ID: "player_id",
+  REJOIN_KEY: "rejoin_key",
   DRAWING_STATE: "drawingState",
   GUESSING_STATE: "guessingState",
 } as const;

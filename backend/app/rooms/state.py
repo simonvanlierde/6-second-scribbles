@@ -51,6 +51,8 @@ class RoomMetadataState(BaseModel):
     default_locale: LanguageCode = "en"
     player_locales: dict[str, LanguageCode] = Field(default_factory=dict)
     player_user_ids: dict[str, str] = Field(default_factory=dict)
+    # sha256 of each player's rejoin key, set on first join and checked on every later one.
+    player_rejoin_keys: dict[str, str] = Field(default_factory=dict)
     custom_category_ids: list[int] | None = None
     player_assignments: dict[str, PlayerPromptAssignmentState] = Field(default_factory=dict)
     guess_targets: dict[str, str] = Field(default_factory=dict)
