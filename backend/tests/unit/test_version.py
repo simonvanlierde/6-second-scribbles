@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -26,3 +28,17 @@ def test_version_falls_back_when_project_version_is_absent(tmp_path: Path) -> No
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text("[tool.uv]\npackage = false\n")
     assert app._read_version(pyproject) == UNKNOWN  # noqa: SLF001
+
+
+def test_version_matches_changelog_and_package_files() -> None:
+    """pyproject.toml, both package.json files and the latest dated CHANGELOG release agree."""
+    root = Path(app.__file__).parents[2]
+    latest = re.search(
+        r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$",
+        (root / "CHANGELOG.md").read_text(),
+        re.MULTILINE,
+    )
+    assert latest is not None
+    for package in ("package.json", "frontend/package.json"):
+        assert json.loads((root / package).read_text())["version"] == app.__version__, package
+    assert latest[1] == app.__version__

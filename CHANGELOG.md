@@ -20,7 +20,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
 - **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
-- The health endpoint and the OpenAPI document report the release version (0.2.1) instead of a hardcoded 2.0.0.
+- The health endpoint and the OpenAPI document report the release version instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
 - Backend dependency updates.
 - The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
@@ -83,6 +83,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Docker Compose stack.
 
 [Unreleased]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.2.1
-[0.2.0]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.2.0
+[0.2.1]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.1.0
