@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 # Sentinel raised by add_player when a player_id is claimed by a different user;
 # handle_join matches on it to send the right join error.
 IDENTITY_CONFLICT_ERROR = "identity_conflict"
+# Identity bindings kept for players who dropped without leaving. Each visitor who
+# closes the tab leaves one, and every persist() writes them all, so the oldest
+# go once a room has seen this many departures.
+MAX_ABSENT_BINDINGS = 40
 
 
 async def add_player(
@@ -108,6 +112,14 @@ async def add_player(
     return player, is_reconnecting_host
 
 
+def _trim_absent_bindings(room: GameRoom) -> None:
+    """Drop the oldest bindings of players no longer in the room, past MAX_ABSENT_BINDINGS."""
+    for bindings in (room.metadata.player_rejoin_keys, room.metadata.player_user_ids):
+        absent = [pid for pid in bindings if pid not in room.players]  # dicts keep join order
+        for pid in absent[: max(0, len(absent) - MAX_ABSENT_BINDINGS)]:
+            del bindings[pid]
+
+
 def _owns_last_host(room: GameRoom, user_id: str | None) -> bool:
     """Return whether `user_id` is the authenticated owner of the last host.
 
@@ -179,6 +191,8 @@ async def remove_player(
     if forget_identity:
         room.metadata.player_user_ids.pop(player_id, None)
         room.metadata.player_rejoin_keys.pop(player_id, None)
+    else:
+        _trim_absent_bindings(room)
     # Forget all per-player round state so a removed player (left/kicked/pruned)
     # is no longer treated as a current participant. In particular this drops them
     # from player_assignments, which the rejoin gate uses to recognise reconnecting
