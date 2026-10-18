@@ -104,6 +104,28 @@ class RoomMetadataState(BaseModel):
     # so a reconnect doesn't shuffle them to the end of the roster.
     player_seats: dict[str, int] = Field(default_factory=dict)
 
+    def forget_player(self, player_id: str, *, forget_identity: bool) -> None:
+        """Drop a player from every seat and round field.
+
+        The identity binding (account and rejoin key) is kept unless
+        `forget_identity` is set, so nobody can claim the player_id while its
+        owner reconnects. Scores are kept so a player who left still shows up in
+        the results. Guess submissions stay too: they are a record of the round
+        and still credit the player whose drawing was guessed.
+        """
+        self.player_locales.pop(player_id, None)
+        self.player_seats.pop(player_id, None)
+        if forget_identity:
+            self.player_user_ids.pop(player_id, None)
+            self.player_rejoin_keys.pop(player_id, None)
+        # Dropping the assignment matters most: the rejoin gate uses it to
+        # recognise round participants, so a kicked player could otherwise
+        # rejoin the active round.
+        self.player_assignments.pop(player_id, None)
+        self.guess_targets.pop(player_id, None)
+        self.submitted_players.discard(player_id)
+        self.ready_players.discard(player_id)
+
 
 class RoomState(BaseModel):
     """Serializable room snapshot stored in Redis."""

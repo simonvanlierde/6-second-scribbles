@@ -186,19 +186,9 @@ async def remove_player(
     Only an explicit leave or a kick (`forget_identity`) releases it.
     """
     room.players.pop(player_id, None)
-    room.metadata.player_locales.pop(player_id, None)
-    if forget_identity:
-        room.metadata.player_user_ids.pop(player_id, None)
-        room.metadata.player_rejoin_keys.pop(player_id, None)
-    # Forget all per-player round state so a removed player (left/kicked/pruned)
-    # is no longer treated as a current participant. In particular this drops them
-    # from player_assignments, which the rejoin gate uses to recognise reconnecting
-    # participants — without it a kicked player could rejoin the active round.
-    room.metadata.player_assignments.pop(player_id, None)
-    room.metadata.guess_targets.pop(player_id, None)
-    room.metadata.submitted_players.discard(player_id)
-    room.metadata.ready_players.discard(player_id)
-    room.metadata.player_seats.pop(player_id, None)
+    # Also drops them from the round, so a removed player (left/kicked/pruned)
+    # is no longer treated as a current participant.
+    room.metadata.forget_player(player_id, forget_identity=forget_identity)
 
     # Drop any kick vote targeting the leaver (otherwise it lingers with its
     # accumulated voters and would kick them the instant they rejoin) and remove
