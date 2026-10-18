@@ -89,7 +89,7 @@ jobs:
       - name: Run betterleaks
         run: >-
           docker run --rm --user "$(id -u):$(id -g)"
-          -v "$PWD":/repo -w /repo ghcr.io/betterleaks/betterleaks:v1.9.0
+          -v "$PWD":/repo -w /repo ghcr.io/betterleaks/betterleaks:v1.9.0@sha256:e3b95b0db6c2735db17165c009b0ad6d9cef34fb4578659232b98f69d7346cac
           git --config .betterleaks.toml --redact --no-banner
 
       - name: Run root checks
@@ -173,7 +173,7 @@ jobs:
     # these credentials, so the services need no extra backend config.
     services:
       database:
-        image: postgres:18-alpine
+        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_DB: scribbles_dev
@@ -185,7 +185,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       cache:
-        image: redis:8-alpine
+        image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
         ports:
           - 6379:6379
         options: >-
@@ -284,6 +284,9 @@ jobs:
 
       - name: Setup just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+        with:
+          # A set version, not whatever is newest. Dependabot can't move this input: bump it by hand.
+          just-version: "1.58.0"
 
       - name: Install root/frontend deps
         run: pnpm install --frozen-lockfile

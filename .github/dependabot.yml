@@ -7,13 +7,15 @@ updates:
     groups:
       actions:
         patterns: [ "*" ]
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       npm-deps:
         patterns: [ "*" ]
@@ -41,3 +43,5 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [ "version-update:semver-major" ]
+    cooldown:
+      default-days: 7
