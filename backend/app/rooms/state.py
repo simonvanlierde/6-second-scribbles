@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from time import time
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.types import Difficulty, GamePhase, LanguageCode
+
+if TYPE_CHECKING:
+    from typing import ClassVar
 
 
 class PlayerPromptAssignmentState(BaseModel):
@@ -33,9 +37,46 @@ class GuessSubmissionState(BaseModel):
 
 
 class RoomMetadataState(BaseModel):
-    """Serializable room metadata stored in Redis."""
+    """Serializable room metadata stored in Redis.
+
+    The fields stay flat, under their original names, because rooms saved by one
+    deploy must load in the next one and in a rollback. Every field belongs to
+    exactly one of the groups below, which says which writer resets it.
+    """
 
     model_config = ConfigDict(extra="forbid")
+
+    # Per-player bindings kept for as long as the player holds a seat.
+    SEAT_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"player_locales", "player_user_ids", "player_rejoin_keys", "player_seats"},
+    )
+    # Cleared at the start of every round.
+    ROUND_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "round_start_time",
+            "guessing_start_time",
+            "ready_players",
+            "player_assignments",
+            "guess_targets",
+            "guess_submissions",
+            "submitted_players",
+        },
+    )
+    # Cleared when a new game starts or the room returns to the lobby.
+    GAME_FIELDS: ClassVar[frozenset[str]] = frozenset({"game_phase", "current_round", "player_scores"})
+    # Host-chosen options; they survive across games.
+    SETTINGS_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "drawing_time_limit",
+            "guessing_time_limit",
+            "difficulty",
+            "max_rounds",
+            "pad_visibility",
+            "is_private",
+            "default_locale",
+            "custom_category_ids",
+        },
+    )
 
     game_phase: GamePhase = GamePhase.LOBBY
     round_start_time: int | None = None
