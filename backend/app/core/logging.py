@@ -61,3 +61,9 @@ def configure_logging() -> None:
     # continues to capture log output during tests.
     for name in logging.Logger.manager.loggerDict:
         logging.getLogger(name).propagate = True
+
+    # In prod Caddy logs each request with the visitor IP masked. Uvicorn's access
+    # log would add the full forwarded IP, and the propagate loop above undoes
+    # `--no-access-log`, so switch that logger off here.
+    if is_prod:
+        logging.getLogger("uvicorn.access").disabled = True
