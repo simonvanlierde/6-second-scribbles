@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.rooms.manager import MAX_LOBBY_POINTS
 from app.rooms.protocol import StrokeDelta, StrokePoint, encode_ws_message, parse_client_event
 from app.rooms.session import RoomWebSocketSession
-from tests.constants import PLAYER_ONE_ID
+from tests.constants import PLAYER_ONE_ID, PLAYER_TWO_ID
 from tests.support import as_websocket
 
 if TYPE_CHECKING:
@@ -121,3 +121,19 @@ def test_oversized_fields_are_rejected() -> None:
     for payload in too_long:
         with pytest.raises(ValidationError):
             parse_client_event(json.dumps(payload))
+
+
+def test_trimming_the_doodle_keeps_in_progress_strokes_attached(game_room: GameRoom) -> None:
+    """When old strokes are trimmed, a player mid-stroke keeps extending the same stroke."""
+    dot = StrokeDelta(color="#000000", width=2, points=[StrokePoint(x=0, y=0)])
+    big = StrokeDelta(color="#000000", width=2, points=[StrokePoint(x=i, y=i) for i in range(1000)])
+    for _ in range(MAX_LOBBY_POINTS // 1000):
+        game_room.apply_lobby_partial(PLAYER_TWO_ID, big, is_start=True)
+    game_room.apply_lobby_partial(PLAYER_ONE_ID, big, is_start=True)  # pushes the doodle past the cap
+    own = game_room.lobby_strokes[-1]
+
+    for _ in range(2):  # the fragment after a trim used to start a new stroke
+        game_room.apply_lobby_partial(PLAYER_ONE_ID, dot, is_start=False)
+
+    assert game_room.lobby_strokes[-1] is own
+    assert len(own.points) == len(big.points) + 2
