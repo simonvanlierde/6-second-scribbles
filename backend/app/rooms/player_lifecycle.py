@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 # handle_join matches on it to send the right join error.
 IDENTITY_CONFLICT_ERROR = "identity_conflict"
 KICKED_ERROR = "kicked"
+# Identity bindings kept for players who dropped without leaving. Each visitor who
+# closes the tab leaves one, and every persist() writes them all, so the oldest
+# go once a room has seen this many departures.
+MAX_ABSENT_BINDINGS = 40
 
 
 async def add_player(
@@ -181,6 +185,8 @@ async def remove_player(
     # Also drops them from the round, so a removed player (left/kicked/pruned)
     # is no longer treated as a current participant.
     room.metadata.forget_player(player_id, forget_identity=forget_identity)
+    if not forget_identity:
+        room.metadata.trim_absent_identities(set(room.players), keep=MAX_ABSENT_BINDINGS)
 
     # Drop any kick vote targeting the leaver (otherwise it lingers with its
     # accumulated voters and would kick them the instant they rejoin) and remove

@@ -18,6 +18,7 @@ from app.rooms import manager as manager_module
 from app.rooms import rounds
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
+from app.rooms.player_lifecycle import MAX_ABSENT_BINDINGS
 from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
@@ -976,4 +977,24 @@ async def test_scheduled_round_start_survives_its_own_round_reset(
 
     assert persisted == [GamePhase.DRAWING]
     assert room.scheduler._guessing_start_task is not None  # noqa: SLF001
+    await room.scheduler.shutdown()
+
+
+HOST_ID = "host"
+FIRST_VISITOR = "visitor-0"
+
+
+async def test_absent_player_bindings_are_bounded(make_ws: Callable[..., TestWebSocket]) -> None:
+    """Visitors who drop without leaving keep their binding, but only the newest MAX_ABSENT_BINDINGS stay."""
+    room = GameRoom("BINDINGS01")
+    await room.add_player(HOST_ID, "Host", as_websocket(make_ws()), rejoin_key="host-key")
+    for i in range(MAX_ABSENT_BINDINGS + 25):
+        await room.add_player(f"visitor-{i}", "Visitor", as_websocket(make_ws()), rejoin_key=f"key-{i}")
+        await room.remove_player(f"visitor-{i}")
+
+    keys = room.metadata.player_rejoin_keys
+    assert HOST_ID in keys
+    assert len(keys) == MAX_ABSENT_BINDINGS + 1
+    assert f"visitor-{MAX_ABSENT_BINDINGS + 24}" in keys
+    assert FIRST_VISITOR not in keys
     await room.scheduler.shutdown()

@@ -127,6 +127,16 @@ class RoomMetadataState(BaseModel):
         self.submitted_players.discard(player_id)
         self.ready_players.discard(player_id)
 
+    def trim_absent_identities(self, present: set[str], *, keep: int) -> None:
+        """Keep the identity bindings of at most `keep` players not in `present`, the newest ones.
+
+        Dicts keep insertion order, which is first-join order here.
+        """
+        for bindings in (self.player_rejoin_keys, self.player_user_ids):
+            absent = [pid for pid in bindings if pid not in present]
+            for pid in absent[: max(0, len(absent) - keep)]:
+                del bindings[pid]
+
     def reset_round(self, *, cards: dict[str, PlayerPromptAssignmentState] | None = None) -> None:
         """Clear every round field; `cards` become the new round's prompts."""
         self.round_start_time = None
