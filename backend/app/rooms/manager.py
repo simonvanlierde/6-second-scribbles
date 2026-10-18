@@ -461,20 +461,20 @@ class GameRoom:
             room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points)
             if room > 0:
                 self.lobby_strokes[idx].points.extend(stroke.points[:room])
-        # NOTE: bound the shared doodle so a marathon lobby can't grow unbounded.
-        # Trim oldest strokes past the cap; indices shift, so reset the partial map
-        # (an in-progress stroke at most restarts on its next fragment).
-        if len(self.lobby_strokes) > MAX_LOBBY_STROKES:
-            self.lobby_strokes = self.lobby_strokes[-MAX_LOBBY_STROKES:]
-            self._lobby_partial_index.clear()
-        total = sum(len(s.points) for s in self.lobby_strokes)
-        if total > MAX_LOBBY_POINTS:
-            drop = 0
-            while total > MAX_LOBBY_POINTS and drop < len(self.lobby_strokes) - 1:
-                total -= len(self.lobby_strokes[drop].points)
-                drop += 1
-            self.lobby_strokes = self.lobby_strokes[drop:]
-            self._lobby_partial_index.clear()
+        # NOTE: bound the shared doodle by stroke count and total points so a
+        # marathon lobby can't grow unbounded; the oldest strokes go first.
+        drop = max(0, len(self.lobby_strokes) - MAX_LOBBY_STROKES)
+        total = sum(len(s.points) for s in self.lobby_strokes[drop:])
+        while total > MAX_LOBBY_POINTS and drop < len(self.lobby_strokes) - 1:
+            total -= len(self.lobby_strokes[drop].points)
+            drop += 1
+        if drop:
+            self._trim_lobby_strokes(drop)
+
+    def _trim_lobby_strokes(self, drop: int) -> None:
+        """Drop the oldest `drop` strokes, keeping in-progress strokes attached to theirs."""
+        self.lobby_strokes = self.lobby_strokes[drop:]
+        self._lobby_partial_index = {pid: i - drop for pid, i in self._lobby_partial_index.items() if i >= drop}
 
     def clear_lobby_strokes(self) -> None:
         """Reset the shared lobby doodle (host clear, or leaving the lobby)."""

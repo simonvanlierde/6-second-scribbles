@@ -98,7 +98,7 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         if str(exc) == IDENTITY_CONFLICT_ERROR:
             error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use in another browser or account."
         elif str(exc) == KICKED_ERROR:
-            error, message = KICKED_ERROR, "You were voted out of this room."
+            error, message = KICKED_ERROR, "You were removed from this room."
         else:
             error, message = "room_full", str(exc)
         await send_ws_message(

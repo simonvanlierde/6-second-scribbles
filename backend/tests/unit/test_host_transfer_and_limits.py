@@ -13,6 +13,7 @@ from fastapi import WebSocketDisconnect
 from app.core.config import settings
 from app.core.rate_limits import client_network
 from app.rooms import kick_vote
+from app.rooms import router as room_router
 from app.rooms.manager import ClientRoomLimitError, GameRoom, PlayerInfo, RoomCapacityError, RoomManager, room_manager
 from app.rooms.player_lifecycle import KICKED_ERROR
 from tests.constants import FULL, JOIN_ERROR, ROOM_FULL
@@ -23,6 +24,7 @@ WS_TRY_AGAIN_LATER = 1013
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from fakeredis.aioredis import FakeRedis
     from fastapi.testclient import TestClient
 
 HOST_PLAYER_ID = "host_123"
@@ -247,6 +249,8 @@ async def test_kicked_player_cannot_rejoin(make_ws: Callable[..., TestWebSocket]
     await room.scheduler.shutdown()
 
 
+HTTP_OK = 200
+HTTP_TOO_MANY_REQUESTS = 429
 CLIENT_A = "203.0.113.7"
 CLIENT_B = "198.51.100.1"
 NON_IP_CLIENT = "testclient"
@@ -272,3 +276,15 @@ def test_client_network_groups_ipv6_by_64() -> None:
     assert client_network("2001:db8:1:2::1") != client_network("2001:db8:1:3::1")
     assert client_network(CLIENT_A) == CLIENT_A
     assert client_network(NON_IP_CLIENT) == NON_IP_CLIENT
+
+
+def test_created_rooms_count_toward_the_network_cap(
+    test_client: TestClient, monkeypatch: pytest.MonkeyPatch, fake_redis: FakeRedis
+) -> None:
+    """POST /api/rooms, the app's own create path, counts against the per-network room cap."""
+    monkeypatch.setattr(settings, "max_rooms_per_client", 2)
+    monkeypatch.setattr(room_router, "get_redis", AsyncMock(return_value=fake_redis))
+
+    statuses = [test_client.post("/api/rooms/").status_code for _ in range(3)]
+
+    assert statuses == [HTTP_OK, HTTP_OK, HTTP_TOO_MANY_REQUESTS]
