@@ -2,6 +2,7 @@
 
 import pytest
 
+from app.core.types import GamePhase
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState, RoomMetadataState
 
 LEAVER = "leaver"
@@ -60,3 +61,50 @@ def test_forget_player_leaves_no_seat_or_round_trace(*, forget_identity: bool) -
     assert metadata.guess_targets == {STAYER: LEAVER}
     assert [s.player_id for s in metadata.guess_submissions] == [LEAVER]
     assert metadata.player_scores == {LEAVER: 10, STAYER: 20}
+
+
+def _mid_game_metadata() -> RoomMetadataState:
+    """Metadata in the middle of a guessing round with non-default settings."""
+    metadata = _metadata_with_both_players()
+    metadata.game_phase = GamePhase.GUESSING
+    metadata.current_round = 2
+    metadata.round_start_time = 1_700_000_000_000
+    metadata.guessing_start_time = 1_700_000_030_000
+    metadata.max_rounds = 3
+    metadata.is_private = True
+    return metadata
+
+
+def _fields(metadata: RoomMetadataState, names: frozenset[str]) -> dict[str, object]:
+    return {name: getattr(metadata, name) for name in names}
+
+
+def test_reset_round_clears_only_round_fields() -> None:
+    """Every round field goes back to its default; the cards become the new prompts."""
+    metadata = _mid_game_metadata()
+    before = metadata.model_copy(deep=True)
+    cards = {STAYER: PlayerPromptAssignmentState(category="Food", items=["pie"])}
+
+    metadata.reset_round(cards=cards)
+
+    defaults = RoomMetadataState()
+    expected = _fields(defaults, RoomMetadataState.ROUND_FIELDS) | {"player_assignments": cards}
+    assert _fields(metadata, RoomMetadataState.ROUND_FIELDS) == expected
+    others = RoomMetadataState.SEAT_FIELDS | RoomMetadataState.GAME_FIELDS | RoomMetadataState.SETTINGS_FIELDS
+    assert _fields(metadata, others) == _fields(before, others)
+
+
+def test_reset_game_starts_scores_at_zero_for_the_given_players() -> None:
+    """Round and game fields reset; earlier scores, also of players who left, are dropped."""
+    metadata = _mid_game_metadata()
+    metadata.player_scores["departed"] = 30
+    before = metadata.model_copy(deep=True)
+
+    metadata.reset_game([LEAVER, STAYER])
+
+    defaults = RoomMetadataState()
+    reset = RoomMetadataState.ROUND_FIELDS | RoomMetadataState.GAME_FIELDS
+    expected = _fields(defaults, reset) | {"player_scores": {LEAVER: 0, STAYER: 0}}
+    assert _fields(metadata, reset) == expected
+    kept = RoomMetadataState.SEAT_FIELDS | RoomMetadataState.SETTINGS_FIELDS
+    assert _fields(metadata, kept) == _fields(before, kept)

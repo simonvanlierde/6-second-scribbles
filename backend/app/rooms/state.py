@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.types import Difficulty, GamePhase, LanguageCode
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import ClassVar
 
 
@@ -125,6 +126,27 @@ class RoomMetadataState(BaseModel):
         self.guess_targets.pop(player_id, None)
         self.submitted_players.discard(player_id)
         self.ready_players.discard(player_id)
+
+    def reset_round(self, *, cards: dict[str, PlayerPromptAssignmentState] | None = None) -> None:
+        """Clear every round field; `cards` become the new round's prompts."""
+        self.round_start_time = None
+        self.guessing_start_time = None
+        self.ready_players = set()
+        self.player_assignments = cards or {}
+        self.guess_targets = {}
+        self.guess_submissions = []
+        self.submitted_players = set()
+
+    def reset_game(self, player_ids: Iterable[str]) -> None:
+        """Return to the lobby with no round and a zero score for each given player.
+
+        Scores from an earlier game are dropped, including those of players who
+        have left. Anyone who joins later gets a score when a round is scored.
+        """
+        self.reset_round()
+        self.game_phase = GamePhase.LOBBY
+        self.current_round = 0
+        self.player_scores = dict.fromkeys(player_ids, 0)
 
 
 class RoomState(BaseModel):
