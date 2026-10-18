@@ -121,6 +121,12 @@ class LeaveEvent(ClientEventModel):
     type: Literal["leave"]
 
 
+class WatchEvent(ClientEventModel):
+    """Follow the room as a spectator: get its broadcasts without joining."""
+
+    type: Literal["watch"]
+
+
 class SettingsUpdateEvent(GameSettingsEventModel):
     type: Literal["settings_update"]
 
@@ -230,6 +236,7 @@ ClientEvent = Annotated[
     | RestartGameEvent
     | HeartbeatEvent
     | LeaveEvent
+    | WatchEvent
     | SettingsUpdateEvent
     | DefaultLocaleUpdateEvent
     | RoomCustomCategoriesUpdateEvent
@@ -562,6 +569,7 @@ CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "join": {"group": "connection", "summary": "Join a room with the local player identity."},
     "leave": {"group": "connection", "summary": "Explicitly leave the room (immediate removal)."},
     "request_game_state": {"group": "connection", "summary": "Request the latest room snapshot."},
+    "watch": {"group": "connection", "summary": "Watch the room as a spectator without joining."},
     "player_ready": {"group": "gameFlow", "summary": "Mark the current player as ready."},
     "restart_game": {"group": "gameFlow", "summary": "Restart the game from the lobby state."},
     "settings_update": {"group": "gameFlow", "summary": "Update shared game settings."},

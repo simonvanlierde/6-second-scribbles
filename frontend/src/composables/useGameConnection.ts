@@ -24,7 +24,6 @@ const lastJoinError = ref<{ error: string; message: string } | null>(null);
 const currentRoomCode = ref<string | null>(null);
 const isObserverConnection = ref(false);
 let heartbeatInterval: number | null = null;
-let stateRefreshInterval: number | null = null;
 
 // Auto-reconnect state. The client treats a dropped socket as recoverable and
 // re-runs the join handshake with exponential backoff, so transient drops and
@@ -56,7 +55,6 @@ export function useGameConnection() {
     showNotification,
     send,
     isObserverConnection,
-    stopStateRefresh,
   };
 
   function connect(roomCode: string, options: ConnectOptions = {}) {
@@ -106,21 +104,17 @@ export function useGameConnection() {
           preferredColor: store.localAvatarColor,
           rejoinKey: getRejoinKey(),
         });
+        send({
+          type: "request_game_state",
+          playerId: store.localPlayerId || null,
+        });
       } else {
         store.setSpectatorMode(true);
+        // The server answers with a fresh room_state, then pushes every room event.
+        send({ type: "watch" });
       }
-
-      send({
-        type: "request_game_state",
-        playerId: store.localPlayerId || null,
-      });
 
       startHeartbeat();
-      if (observeOnly) {
-        startStateRefresh(normalizedRoomCode);
-      } else {
-        stopStateRefresh();
-      }
     };
 
     socket.onmessage = (event: MessageEvent) => {
@@ -149,7 +143,6 @@ export function useGameConnection() {
       // or an in-flight retry superseded this one).
       if (ws !== socket) return;
       stopHeartbeat();
-      stopStateRefresh();
       currentRoomCode.value = null;
       isObserverConnection.value = false;
       ws = null;
@@ -256,27 +249,6 @@ export function useGameConnection() {
     }
   }
 
-  function startStateRefresh(roomCode: string) {
-    stopStateRefresh();
-    stateRefreshInterval = window.setInterval(() => {
-      if (!ws || ws.readyState !== WebSocket.OPEN || currentRoomCode.value !== roomCode) {
-        stopStateRefresh();
-        return;
-      }
-      send({
-        type: "request_game_state",
-        playerId: store.localPlayerId || null,
-      });
-    }, 2000);
-  }
-
-  function stopStateRefresh() {
-    if (stateRefreshInterval) {
-      clearInterval(stateRefreshInterval);
-      stateRefreshInterval = null;
-    }
-  }
-
   function disconnect() {
     // User-initiated leave: stop any pending auto-reconnect and stay closed.
     intentionalClose = true;
@@ -292,7 +264,6 @@ export function useGameConnection() {
       send({ type: "leave" });
     }
     stopHeartbeat();
-    stopStateRefresh();
     if (ws) {
       ws.close();
       ws = null;

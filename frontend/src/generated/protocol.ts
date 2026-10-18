@@ -420,6 +420,9 @@ export const ClientEventSchema = z.union([
   z.object({ type: z.literal("restart_game") }),
   z.object({ type: z.literal("heartbeat") }),
   z.object({ type: z.literal("leave") }).describe("An explicit, intentional leave — remove the player immediately."),
+  z
+    .object({ type: z.literal("watch") })
+    .describe("Follow the room as a spectator: get its broadcasts without joining."),
   z.object({
     type: z.literal("settings_update"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
@@ -499,9 +502,10 @@ export const clientEventTypes = [
   "settings_update",
   "start_game",
   "submit_guess",
+  "watch",
 ] as const satisfies readonly ClientEventType[];
 export const clientEventGroups = {
-  connection: ["heartbeat", "join", "leave", "request_game_state"],
+  connection: ["heartbeat", "join", "leave", "request_game_state", "watch"],
   gameFlow: ["player_ready", "restart_game", "settings_update", "start_game", "submit_guess"],
   roomSettings: ["default_locale_update", "privacy_changed", "room_custom_categories_update"],
   drawing: ["draw_stroke", "draw_stroke_partial", "drawpad_clear", "pad_visibility"],
@@ -528,6 +532,7 @@ export const clientEventSummaries = {
   settings_update: "Update shared game settings.",
   start_game: "Host starts a game with room settings.",
   submit_guess: "Submit guesses for another player's drawing.",
+  watch: "Watch the room as a spectator without joining.",
 } as const satisfies Record<ClientEventType, string>;
 export type ClientEventGroupName = keyof typeof clientEventGroups;
 export type ClientEventGroup<TGroup extends ClientEventGroupName> = ClientEventOf<

@@ -27,7 +27,6 @@ describe("connection handlers translations", () => {
       showNotification,
       send: vi.fn(),
       isObserverConnection: ref(false),
-      stopStateRefresh: vi.fn(),
     };
   });
 

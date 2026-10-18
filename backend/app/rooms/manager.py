@@ -126,6 +126,9 @@ class GameRoom:
         # Network that opened the room, for the per-client room cap. In-memory only.
         self.creator: str | None = None
         self.players: dict[str, PlayerInfo] = {}
+        # Spectator sockets: they get every broadcast but never a card, and do not
+        # count as players. In-memory only; a spectator re-sends watch on reconnect.
+        self.observers: list[PlayerInfo] = []
         self.host_id: str | None = None
         self.metadata = RoomMetadataState()
         self.scheduler = RoomTaskScheduler(self)
@@ -334,6 +337,17 @@ class GameRoom:
             max_players=settings.max_players,
             player_info_factory=PlayerInfo,
         )
+
+    def add_observer(self, websocket: WebSocket) -> bool:
+        """Register a spectator socket; return False when the room has no spectator seats left."""
+        if len(self.observers) >= settings.max_observers:
+            return False
+        self.observers.append(PlayerInfo(id="observer", name="observer", websocket=websocket))
+        return True
+
+    def remove_observer(self, websocket: WebSocket) -> None:
+        """Forget a spectator socket."""
+        self.observers = [observer for observer in self.observers if observer.websocket is not websocket]
 
     def _new_host_transfer_task(self, old_host_id: str) -> asyncio.Task[object]:
         """Create the delayed host-transfer task (shared by remove/disconnect paths)."""
@@ -558,6 +572,12 @@ class GameRoom:
             if (exclude and player_id == exclude) or not player.connected:
                 continue
             await self._deliver(player, text)
+        await self._deliver_to_observers(text)
+
+    async def _deliver_to_observers(self, text: str) -> None:
+        for observer in list(self.observers):
+            if observer.connected:
+                await self._deliver(observer, text)
 
     async def _deliver(self, player: PlayerInfo, text: str) -> None:
         try:
@@ -585,6 +605,7 @@ class GameRoom:
 
         A broadcast would hand every player everyone's prompts. A player who is
         offline now gets their card from room_state when they reconnect.
+        Spectators get the same event with no cards.
         """
         for player_id, player in list(self.players.items()):
             if not player.connected:
@@ -592,6 +613,9 @@ class GameRoom:
             own = {player_id: cards[player_id]} if player_id in cards else {}
             event = StartRoundServerEvent(round=round_number, cards=own, roundStartTime=round_start_time)
             await self._deliver(player, encode_ws_message(event))
+        if self.observers:
+            event = StartRoundServerEvent(round=round_number, cards={}, roundStartTime=round_start_time)
+            await self._deliver_to_observers(encode_ws_message(event))
 
     async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""

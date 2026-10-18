@@ -30,6 +30,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# A spectator only watches: anything else it sends is refused.
+OBSERVER_EVENT_TYPES = frozenset({"heartbeat", "leave", "request_game_state", "watch"})
+
 
 class RoomWebSocketSession:
     """Own a single accepted websocket connection for a room."""
@@ -38,6 +41,7 @@ class RoomWebSocketSession:
         self.room = room
         self.websocket = websocket
         self.player_id: str | None = None
+        self.is_observer = False
         self.current_user = current_user
         self._draw_window_start: float = 0.0
         self._draw_count: int = 0
@@ -77,7 +81,7 @@ class RoomWebSocketSession:
         """Return whether another full room_state fits the per-connection rate window.
 
         Each reply carries every drawing of the game, so unthrottled requests are
-        an easy way to keep the worker busy. Spectators poll every 2 s.
+        an easy way to keep the worker busy.
         """
         now = time.monotonic()
         if now - self._state_window_start >= settings.ws_state_window_seconds:
@@ -94,6 +98,9 @@ class RoomWebSocketSession:
             # so a legitimate fast drawer is never disconnected.
             if event.type in {"draw_stroke", "draw_stroke_partial"} and not self._draw_allowed():
                 return
+            if self.is_observer and event.type not in OBSERVER_EVENT_TYPES:
+                await self.send_error("permission_error", "spectator", "Spectators cannot take part in the game.")
+                return
             if event.type != JOIN_EVENT_TYPE and self.player_id:
                 self.room.update_player_activity(self.player_id)
             await dispatch_event(self, event)
@@ -104,7 +111,7 @@ class RoomWebSocketSession:
             logger.exception("[Server] Error processing websocket message")
 
     async def on_disconnect(self) -> None:
-        """Remove the session player from the room and broadcast departure."""
+        """Remove the session player or spectator from the room and broadcast departure."""
         await handle_disconnect(self)
 
     def is_host(self) -> bool:

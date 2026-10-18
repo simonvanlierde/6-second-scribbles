@@ -364,6 +364,41 @@ describe("client message handlers", () => {
     expect(socket?.sent).not.toContain(JSON.stringify({ type: "submit_guess", playerId: "p1" }));
   });
 
+  it("a spectator sends watch once and never polls for room_state", () => {
+    vi.useFakeTimers();
+    try {
+      const store = useGameStore();
+      const { connect, disconnect } = useGameConnection();
+
+      connect("ROOM01", { observeOnly: true });
+      const socket = MockWebSocket.instances[0];
+      socket?.onopen?.();
+      vi.advanceTimersByTime(10_000);
+
+      const types = socket?.sent.map((payload) => JSON.parse(payload).type);
+      expect(types?.filter((type) => type !== "heartbeat")).toEqual(["watch"]);
+      expect(store.isSpectatorMode).toBe(true);
+      disconnect();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a player joins and does not send watch", () => {
+    const store = useGameStore();
+    store.localPlayerId = "p1";
+    store.localPlayerName = "Alice";
+    const { connect, disconnect } = useGameConnection();
+
+    connect("ROOM01");
+    const socket = MockWebSocket.instances[0];
+    socket?.onopen?.();
+
+    const types = socket?.sent.map((payload) => JSON.parse(payload).type);
+    expect(types).toEqual(["join", "request_game_state"]);
+    disconnect();
+  });
+
   it("does not open a websocket for an empty room code", () => {
     const { connect } = useGameConnection();
 
