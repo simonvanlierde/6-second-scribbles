@@ -74,14 +74,12 @@ def start_guessing(room: GameRoom) -> int:
     """
     if room.metadata.game_phase == GamePhase.GUESSING:
         return room.metadata.guessing_time_limit or 60
-    room.metadata.guessing_start_time = int(time.time() * 1000)
-    room.metadata.game_phase = GamePhase.GUESSING
     # Only connected players take part in guessing; a disconnected player should
     # not be assigned a (possibly blank) drawing to guess, nor be expected to submit.
-    room.metadata.guess_targets = assign_guess_targets(
-        [player_id for player_id, player in room.players.items() if player.connected],
+    room.metadata.start_guessing(
+        assign_guess_targets([player_id for player_id, player in room.players.items() if player.connected]),
+        started_at=int(time.time() * 1000),
     )
-    room.metadata.ready_players.clear()
     return room.metadata.guessing_time_limit or 60
 
 
@@ -139,7 +137,7 @@ def reset_game(room: GameRoom) -> None:
 
 def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
     """Record that a player is ready and return the shared ready-status payload."""
-    room.metadata.ready_players.add(player_id)
+    room.metadata.mark_ready(player_id)
     return ReadyStatusEvent(
         readyCount=len(room.metadata.ready_players),
         totalPlayers=len(room.players),
@@ -172,8 +170,7 @@ def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id:
         guesses=guesses,
         submitted_at=int(time.time() * 1000),
     )
-    room.metadata.guess_submissions.append(submission)
-    room.metadata.submitted_players.add(player_id)
+    room.metadata.record_guess(submission)
     logger.info(
         "[Server] Guess submitted by %s: %s/%s connected players submitted",
         player_id,
@@ -321,8 +318,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             ),
         )
 
-    for player_id, points in round_points.items():
-        room.metadata.player_scores[player_id] = room.metadata.player_scores.get(player_id, 0) + points
+    room.metadata.add_round_points(round_points)
 
     room.metadata.game_phase = GamePhase.ROUND_RESULTS
     return RoundCompleteServerEvent(

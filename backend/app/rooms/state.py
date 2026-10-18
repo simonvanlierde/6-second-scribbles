@@ -148,6 +148,47 @@ class RoomMetadataState(BaseModel):
         self.current_round = 0
         self.player_scores = dict.fromkeys(player_ids, 0)
 
+    def seat_player(
+        self,
+        player_id: str,
+        *,
+        locale: LanguageCode,
+        user_id: str | None,
+        rejoin_key_hash: str | None,
+    ) -> None:
+        """Record a join: seat, locale, account, and the rejoin key on first use."""
+        # Reconnects keep their original seat, so the roster order holds for everyone.
+        if player_id not in self.player_seats:
+            self.player_seats[player_id] = (max(self.player_seats.values()) + 1) if self.player_seats else 0
+        self.player_locales[player_id] = locale
+        if rejoin_key_hash is not None:
+            self.player_rejoin_keys.setdefault(player_id, rejoin_key_hash)
+        if user_id is not None:
+            self.player_user_ids[player_id] = user_id
+        else:
+            self.player_user_ids.pop(player_id, None)
+
+    def mark_ready(self, player_id: str) -> None:
+        """Record that a player is done drawing."""
+        self.ready_players.add(player_id)
+
+    def start_guessing(self, guess_targets: dict[str, str], *, started_at: int) -> None:
+        """Enter the guessing phase with each guesser's target drawing."""
+        self.guessing_start_time = started_at
+        self.game_phase = GamePhase.GUESSING
+        self.guess_targets = guess_targets
+        self.ready_players = set()
+
+    def record_guess(self, submission: GuessSubmissionState) -> None:
+        """Store a player's guesses; the caller checks for duplicates and the target."""
+        self.guess_submissions.append(submission)
+        self.submitted_players.add(submission.player_id)
+
+    def add_round_points(self, round_points: dict[str, int]) -> None:
+        """Add one round's points to each player's running score."""
+        for player_id, points in round_points.items():
+            self.player_scores[player_id] = self.player_scores.get(player_id, 0) + points
+
 
 class RoomState(BaseModel):
     """Serializable room snapshot stored in Redis."""

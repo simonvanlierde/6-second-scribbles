@@ -46,7 +46,6 @@ async def add_player(
         raise ValueError(msg)
 
     key_hash = _check_identity(room, player_id, user_id, rejoin_key)
-    stored_hash = room.metadata.player_rejoin_keys.get(player_id)
 
     if room.is_hibernated:
         logger.info("[GameRoom %s] Waking from hibernation", room.room_id)
@@ -80,19 +79,12 @@ async def add_player(
         connected=True,
     )
     room.players[player_id] = player
-    # Assign a stable seat on first join; reconnects keep their original slot so
-    # the roster order is preserved for everyone.
-    if player_id not in room.metadata.player_seats:
-        room.metadata.player_seats[player_id] = (
-            (max(room.metadata.player_seats.values()) + 1) if room.metadata.player_seats else 0
-        )
-    room.metadata.player_locales[player_id] = preferred_locale or room.metadata.default_locale
-    if stored_hash is None and key_hash is not None:
-        room.metadata.player_rejoin_keys[player_id] = key_hash
-    if user_id is not None:
-        room.metadata.player_user_ids[player_id] = user_id
-    else:
-        room.metadata.player_user_ids.pop(player_id, None)
+    room.metadata.seat_player(
+        player_id,
+        locale=preferred_locale or room.metadata.default_locale,
+        user_id=user_id,
+        rejoin_key_hash=key_hash,
+    )
 
     _settle_host_on_join(room, player_id, name, user_id=user_id, is_reconnecting_host=is_reconnecting_host)
     return player, is_reconnecting_host
