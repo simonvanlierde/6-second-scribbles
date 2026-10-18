@@ -40,7 +40,7 @@ function seedGuessing() {
   ]);
   store.localPlayerId = "p1";
   store.setPlayerDrawing("p2", "data:image/png;base64,BBBB");
-  store.startGuessing(Date.now(), { p1: "p2" });
+  store.onStartGuessing({ guessingStartTime: Date.now(), guessTargets: { p1: "p2" } });
   return store;
 }
 

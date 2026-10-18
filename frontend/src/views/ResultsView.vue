@@ -101,8 +101,7 @@ function clearAutoRestartTimeout() {
 function playAgain() {
   if (store.isHost) {
     send({ type: "restart_game" });
-    store.resetRound();
-    store.gamePhase = "lobby";
+    store.onRestartGame();
   } else {
     isReady.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });

@@ -76,10 +76,13 @@ function seedDrawing() {
   const store = useGameStore();
   store.setPlayers([{ id: "p1", name: "Alice" }]);
   store.localPlayerId = "p1";
-  store.startRound(1, {
-    p1: {
-      category: "Animals",
-      items: ["cat", "dog"],
+  store.onStartRound({
+    round: 1,
+    cards: {
+      p1: {
+        category: "Animals",
+        items: ["cat", "dog"],
+      },
     },
   });
   return store;

@@ -11,6 +11,7 @@ import type {
   Difficulty,
   DrawStroke,
   GalleryDrawing,
+  GamePhase,
   KickVote,
   Player,
   RoundHighlights,
@@ -229,62 +230,79 @@ export const useGameStore = defineStore(
     }
 
     // --- Actions: game flow ---
-    function startGame(
-      gameDifficulty: Difficulty,
-      gameRounds: number,
-      drawingTimeLimitSec: number,
-      guessingTimeLimitSec: number,
+    // One action per server event that moves the game along, named after the
+    // event. The connection handlers only route to these.
+
+    // Every phase change except the return to the lobby opens a fresh ready
+    // count. room_state hydration passes the server's counters instead, so live
+    // events and reconnects set the phase through the same path.
+    function enterPhase(phase: GamePhase, ready = 0, total = players.value.size) {
+      gamePhase.value = phase;
+      readyCount.value = ready;
+      totalPlayers.value = total;
+    }
+
+    function onStartGame(
+      event: Pick<ServerEventOf<"start_game">, "difficulty" | "rounds" | "drawingTimeLimit" | "guessingTimeLimit">,
     ) {
-      difficulty.value = gameDifficulty;
-      maxRounds.value = gameRounds;
-      drawingTimeLimit.value = drawingTimeLimitSec;
-      guessingTimeLimit.value = guessingTimeLimitSec;
+      difficulty.value = event.difficulty || GAME_SETTINGS.difficulty.DEFAULT;
+      maxRounds.value = event.rounds || GAME_SETTINGS.rounds.DEFAULT;
+      drawingTimeLimit.value = event.drawingTimeLimit || GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT;
+      guessingTimeLimit.value = event.guessingTimeLimit || GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT;
+      onRestartGame();
+    }
+
+    function onStartRound(event: { round?: number | null; cards: Record<string, Card>; roundStartTime?: number }) {
+      roundStartTime.value = event.roundStartTime;
+      currentRound.value = event.round ?? 1;
+      enterPhase("drawing");
+      guessingStartTime.value = undefined;
+      guessTargets.value = {};
+      clearStrokes();
+      localPlayerCard.value = undefined;
+      for (const [playerId, player] of players.value) {
+        player.currentCard = event.cards[playerId];
+        player.drawing = undefined;
+        if (playerId === localPlayerId.value) {
+          localPlayerCard.value = event.cards[playerId];
+        }
+      }
+    }
+
+    function onStartGuessing(event: Pick<ServerEventOf<"start_guessing">, "guessingStartTime" | "guessTargets">) {
+      enterPhase("guessing");
+      guessingStartTime.value = event.guessingStartTime ?? Date.now();
+      guessTargets.value = event.guessTargets ?? {};
+    }
+
+    function onRoundComplete(event: {
+      results: RoundResult[];
+      scores: Record<string, number>;
+      highlights?: RoundHighlights | null;
+    }) {
+      setRoundResults(event.results);
+      setRoundHighlights(event.highlights ?? null);
+      updateScores(event.scores);
+      // Snapshot this round's drawings for the end-of-game gallery before the
+      // next start_round clears them. currentRound still names the finished round.
+      captureRoundDrawings(currentRound.value);
+      enterPhase("round_results");
+      // The server starts the next round after its countdown and sends start_round.
+    }
+
+    function onGameComplete(event: Pick<ServerEventOf<"game_complete">, "finalScores">) {
+      updateScores(event.finalScores);
+      enterPhase("final_results");
+    }
+
+    // Also applied optimistically by the host when it sends restart_game.
+    function onRestartGame() {
       currentRound.value = 0;
       gamePhase.value = "lobby";
       for (const p of players.value.values()) p.score = 0;
       drawingHistory.value = [];
       totalGuessesMade.value = 0;
       lastCapturedRound.value = 0;
-    }
-
-    function startRound(roundNumber: number, cards: Record<string, Card>) {
-      currentRound.value = roundNumber;
-      gamePhase.value = "drawing";
-      readyCount.value = 0;
-      totalPlayers.value = players.value.size;
-      guessingStartTime.value = undefined;
-      guessTargets.value = {};
-      clearStrokes();
-      localPlayerCard.value = undefined;
-      for (const [playerId, player] of players.value) {
-        player.currentCard = cards[playerId];
-        player.drawing = undefined;
-        if (playerId === localPlayerId.value) {
-          localPlayerCard.value = cards[playerId];
-        }
-      }
-    }
-
-    function resetRound() {
-      currentRound.value = 0;
-      for (const p of players.value.values()) p.score = 0;
-      drawingHistory.value = [];
-      totalGuessesMade.value = 0;
-      lastCapturedRound.value = 0;
-    }
-
-    function startGuessing(startTime?: number | null, targets?: Record<string, string>) {
-      gamePhase.value = "guessing";
-      guessingStartTime.value = startTime ?? Date.now();
-      guessTargets.value = targets ?? {};
-      readyCount.value = 0;
-      totalPlayers.value = players.value.size;
-    }
-
-    function endGame() {
-      gamePhase.value = "final_results";
-      readyCount.value = 0;
-      totalPlayers.value = players.value.size;
     }
 
     function setReadyStatus(ready: number, total: number) {
@@ -377,7 +395,11 @@ export const useGameStore = defineStore(
     function applyRoomState(roomState: ServerEventOf<"room_state">) {
       setPlayers(roomState.players);
       hostId.value = roomState.hostId ?? null;
-      gamePhase.value = normalizeGamePhase(roomState.gamePhase);
+      enterPhase(
+        normalizeGamePhase(roomState.gamePhase),
+        roomState.readyCount ?? readyCount.value,
+        roomState.totalPlayers ?? totalPlayers.value,
+      );
       if (roomState.currentRound !== undefined) currentRound.value = roomState.currentRound;
       applySettingsUpdate({
         difficulty: roomState.difficulty,
@@ -394,8 +416,6 @@ export const useGameStore = defineStore(
       // Server is authoritative for the round prompt and progress counters, so a
       // mid-round reconnect rehydrates them here rather than from localStorage.
       if (roomState.card) localPlayerCard.value = roomState.card;
-      if (roomState.readyCount !== undefined) readyCount.value = roomState.readyCount;
-      if (roomState.totalPlayers !== undefined) totalPlayers.value = roomState.totalPlayers;
       // Rebuild the end-of-game gallery from the server only when we don't already
       // have it (a freshly reconnected client that missed the round_complete
       // events). A fully-connected client builds it incrementally instead.
@@ -546,11 +566,12 @@ export const useGameStore = defineStore(
       startKickVote,
       updateKickVote,
       removeKickVote,
-      startGame,
-      startRound,
-      resetRound,
-      startGuessing,
-      endGame,
+      onStartGame,
+      onStartRound,
+      onStartGuessing,
+      onRoundComplete,
+      onGameComplete,
+      onRestartGame,
       setReadyStatus,
       setRoundResults,
       captureRoundDrawings,
