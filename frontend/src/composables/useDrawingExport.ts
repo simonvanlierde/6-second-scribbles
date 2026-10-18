@@ -1,14 +1,12 @@
 /**
  * Export a single drawing as a downloadable PNG.
  *
- * New drawings arrive as opaque WebP over the drawer's card colour
+ * New drawings arrive as opaque WebP over the drawing paper colour
  * (lib/drawingImage.ts); older or fallback ones can be transparent PNGs. The
- * cream fill gives those a paper background in the exported file.
+ * paper fill gives those the same background in the exported file.
  */
 
-// Hardcoded, NOT var(--color-paper): the paper token resolves to a dark value in
-// dark mode, but an exported drawing should always be cream.
-const CREAM = "#FDFBF7";
+import { DRAWING_PAPER } from "@/config/drawing";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -30,7 +28,7 @@ export function useDrawingExport() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = CREAM;
+    ctx.fillStyle = DRAWING_PAPER;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
 

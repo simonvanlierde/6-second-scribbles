@@ -137,7 +137,7 @@ function onBlur() {
   padding: 8px 14px;
   line-height: 1;
   font-weight: 700;
-  color: var(--color-marker-red);
+  color: var(--color-primary-text);
   transition: background var(--motion-fast) var(--ease-out);
 }
 .stepper__btn--lg {
@@ -182,6 +182,6 @@ function onBlur() {
 .stepper-field__error {
   margin: 0;
   font-size: var(--text-label-sm);
-  color: var(--color-marker-red);
+  color: var(--color-primary-text);
 }
 </style>

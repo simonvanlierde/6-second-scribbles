@@ -133,8 +133,9 @@ const avatarColor = computed(() => store.localAvatarColor);
   color: var(--color-paper);
   border-bottom: 2.5px solid var(--color-ink);
   padding: var(--space-2) var(--space-4);
-  /* Reserve space at the right for the global settings gear (fixed, top-right). */
-  padding-right: calc(var(--space-4) + 52px);
+  /* Reserve space at the right for the global settings gear: App.vue fixes it
+   * 44px wide at max(20px, safe-area) from the right edge. */
+  padding-right: calc(max(20px, env(safe-area-inset-right)) + 44px + var(--space-2));
 }
 .game-header__cluster {
   display: flex;
@@ -199,8 +200,8 @@ const avatarColor = computed(() => store.localAvatarColor);
 @media (max-width: 768px) {
   .game-header {
     gap: var(--space-2);
-    padding: var(--space-1) var(--space-3);
-    padding-right: calc(var(--space-3) + 48px);
+    padding-block: var(--space-1);
+    padding-left: var(--space-3);
   }
   .game-header__avatar {
     display: none;

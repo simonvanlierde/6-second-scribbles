@@ -57,6 +57,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - One visitor could fill all 500 rooms and lock everyone else out with "Server at capacity". A network may now hold at most 5 open rooms it created (IPv6 addresses count per /64); players and sockets are not limited, so a household on one Wi-Fi can still play together.
 - In Safari the favicon lost its colours: the page's Content Security Policy was also sent with the SVG favicon and blocked the `<style>` inside it. SVG files now get their own policy that allows only inline styles.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
+- In dark mode the drawing canvas was dark, so the default black pen was nearly invisible, and drawings made in dark mode showed up as dark tiles for everyone else. The canvas is now light paper in both themes, so every drawing looks the same to every player. The white pen now draws in paper colour in both themes.
+- In dark mode the lobby player list was unreadable: names sat on a light grey row, and the host's Kick player button had no background, so it showed only as faint white text. The list now uses the game's own cards, labels and buttons in both themes.
+- On phones the settings button covered the round number and score in the game header. The header now leaves room for it.
+- Red text, such as the stepper buttons, the Advanced Settings link, highlight labels and standings ranks, was hard to read in light mode. It now uses a darker red that is easy to read in both themes.
+- In dark mode your own score in the standings and the name and detail on the yellow highlight card were pale text on yellow. They now use dark ink there.
 
 ## [0.2.1] - 2026-07-06
 
