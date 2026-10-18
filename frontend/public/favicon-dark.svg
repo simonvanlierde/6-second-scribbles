@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>Six Second Scribbles</title>
+  <!-- Dark colours from tokens.css. No <style>: Safari checks a favicon's styles against the page CSP. -->
+  <!-- Wobbly card: four distinct corner radii, matching the r-card token. -->
+  <path d="M8 1 H22 A9 9 0 0 1 31 10 V25 A6 6 0 0 1 25 31 H9 A8 8 0 0 1 1 23 V8 A7 7 0 0 1 8 1 Z"
+        fill="#231e1b" stroke="#e6ddcb" stroke-width="2" />
+  <!-- A "6" drawn as one loose marker stroke; the tail overshoots like a real doodle. -->
+  <path d="M21.5 5 C 13.5 7.5, 8.8 13, 8.8 19.5 C 8.8 25, 12.5 28, 17 27.4 C 21.4 26.8, 24 23.3, 22.4 20 C 20.9 16.6, 15.4 15.2, 11.6 18.2"
+        fill="none" stroke="#f06a6a" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
