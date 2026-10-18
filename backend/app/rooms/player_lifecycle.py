@@ -50,7 +50,6 @@ async def add_player(
         raise ValueError(msg)
 
     key_hash = _check_identity(room, player_id, user_id, rejoin_key)
-    stored_hash = room.metadata.player_rejoin_keys.get(player_id)
 
     if room.is_hibernated:
         logger.info("[GameRoom %s] Waking from hibernation", room.room_id)
@@ -84,19 +83,12 @@ async def add_player(
         connected=True,
     )
     room.players[player_id] = player
-    # Assign a stable seat on first join; reconnects keep their original slot so
-    # the roster order is preserved for everyone.
-    if player_id not in room.metadata.player_seats:
-        room.metadata.player_seats[player_id] = (
-            (max(room.metadata.player_seats.values()) + 1) if room.metadata.player_seats else 0
-        )
-    room.metadata.player_locales[player_id] = preferred_locale or room.metadata.default_locale
-    if stored_hash is None and key_hash is not None:
-        room.metadata.player_rejoin_keys[player_id] = key_hash
-    if user_id is not None:
-        room.metadata.player_user_ids[player_id] = user_id
-    else:
-        room.metadata.player_user_ids.pop(player_id, None)
+    room.metadata.seat_player(
+        player_id,
+        locale=preferred_locale or room.metadata.default_locale,
+        user_id=user_id,
+        rejoin_key_hash=key_hash,
+    )
 
     _settle_host_on_join(room, player_id, name, user_id=user_id, is_reconnecting_host=is_reconnecting_host)
     return player, is_reconnecting_host
@@ -121,14 +113,6 @@ def _check_identity(room: GameRoom, player_id: str, user_id: str | None, rejoin_
     if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
         raise ValueError(IDENTITY_CONFLICT_ERROR)
     return key_hash
-
-
-def _trim_absent_bindings(room: GameRoom) -> None:
-    """Drop the oldest bindings of players no longer in the room, past MAX_ABSENT_BINDINGS."""
-    for bindings in (room.metadata.player_rejoin_keys, room.metadata.player_user_ids):
-        absent = [pid for pid in bindings if pid not in room.players]  # dicts keep join order
-        for pid in absent[: max(0, len(absent) - MAX_ABSENT_BINDINGS)]:
-            del bindings[pid]
 
 
 def _owns_last_host(room: GameRoom, user_id: str | None) -> bool:
@@ -198,21 +182,11 @@ async def remove_player(
     Only an explicit leave or a kick (`forget_identity`) releases it.
     """
     room.players.pop(player_id, None)
-    room.metadata.player_locales.pop(player_id, None)
-    if forget_identity:
-        room.metadata.player_user_ids.pop(player_id, None)
-        room.metadata.player_rejoin_keys.pop(player_id, None)
-    else:
-        _trim_absent_bindings(room)
-    # Forget all per-player round state so a removed player (left/kicked/pruned)
-    # is no longer treated as a current participant. In particular this drops them
-    # from player_assignments, which the rejoin gate uses to recognise reconnecting
-    # participants — without it a kicked player could rejoin the active round.
-    room.metadata.player_assignments.pop(player_id, None)
-    room.metadata.guess_targets.pop(player_id, None)
-    room.metadata.submitted_players.discard(player_id)
-    room.metadata.ready_players.discard(player_id)
-    room.metadata.player_seats.pop(player_id, None)
+    # Also drops them from the round, so a removed player (left/kicked/pruned)
+    # is no longer treated as a current participant.
+    room.metadata.forget_player(player_id, forget_identity=forget_identity)
+    if not forget_identity:
+        room.metadata.trim_absent_identities(set(room.players), keep=MAX_ABSENT_BINDINGS)
 
     # Drop any kick vote targeting the leaver (otherwise it lingers with its
     # accumulated voters and would kick them the instant they rejoin) and remove
