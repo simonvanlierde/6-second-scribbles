@@ -78,6 +78,8 @@ class Settings(BaseSettings):
 
     # Game configuration
     max_players: int = 10
+    # Every broadcast is sent to each spectator too, so cap them per room.
+    max_observers: int = 20
     # Grace period before transferring host after a disconnect. Must comfortably
     # exceed a page refresh round-trip so a reconnecting host keeps the role.
     host_transfer_delay_ms: int = 5000

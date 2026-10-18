@@ -18,6 +18,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Spectators now see a game live, the moment something happens, instead of catching up every 2 seconds. A room takes up to 20 spectators, and they never count toward the player limit.
 - Server logs no longer keep full visitor IPs: Caddy masks them to the /24 (IPv4) or /48 (IPv6) network, and the backend no longer writes its own access log. The About dialog now says what is stored and for how long.
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
 - Guest accounts are deleted once their login session has expired (30 days by default), on backend startup and once a day after that. Registered accounts are kept.

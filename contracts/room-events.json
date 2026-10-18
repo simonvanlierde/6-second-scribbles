@@ -16,6 +16,10 @@
       "group": "connection",
       "summary": "Request the latest room snapshot."
     },
+    "watch": {
+      "group": "connection",
+      "summary": "Watch the room as a spectator without joining."
+    },
     "player_ready": {
       "group": "gameFlow",
       "summary": "Mark the current player as ready."

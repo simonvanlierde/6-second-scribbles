@@ -27,7 +27,6 @@ export type HandlerContext = {
   showNotification: ShowNotification;
   send: (message: ClientEvent) => void;
   isObserverConnection: Ref<boolean>;
-  stopStateRefresh: () => void;
 };
 
 // ── Event type aliases ────────────────────────────────────────────────────────
@@ -56,7 +55,7 @@ function isReactionKey(key: string): key is ReactionKey {
 // ── Connection & player events ────────────────────────────────────────────────
 
 export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerContext): void {
-  const { store, router, showNotification, isObserverConnection, stopStateRefresh } = ctx;
+  const { store, router, showNotification, isObserverConnection } = ctx;
 
   switch (message.type) {
     case "join_error":
@@ -91,7 +90,6 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
         store.confirmPendingLocalPlayer(message.playerId);
         store.setSpectatorMode(false);
         isObserverConnection.value = false;
-        stopStateRefresh();
       }
       break;
 

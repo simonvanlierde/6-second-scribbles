@@ -42,6 +42,7 @@ if TYPE_CHECKING:
         SettingsUpdateEvent,
         StartGameEvent,
         SubmitGuessEvent,
+        WatchEvent,
         WebSocketMessage,
     )
     from app.rooms.session import RoomWebSocketSession
@@ -265,6 +266,21 @@ async def handle_request_game_state(session: RoomWebSocketSession, event: Reques
     await send_ws_message(session.websocket, session.room.room_state_event(for_player_id=session.player_id))
 
 
+async def handle_watch(session: RoomWebSocketSession, event: WatchEvent) -> None:
+    """Register the connection as a spectator, then send it a fresh snapshot."""
+    del event
+    if session.player_id or session.is_observer:
+        return
+    if not session.room.add_observer(session.websocket):
+        message = "This room has as many spectators as it allows."
+        await send_ws_message(session.websocket, JoinErrorEvent(error="spectators_full", message=message))
+        await session.websocket.close(code=1008, reason=message)
+        return
+    session.is_observer = True
+    # The connect-time snapshot may predate broadcasts this socket missed before now.
+    await send_ws_message(session.websocket, session.room.room_state_event())
+
+
 async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEvent | DrawStrokePartialEvent) -> None:
     """Handle a draw-stroke event (broadcast as-is).
 
@@ -310,6 +326,9 @@ async def handle_disconnect(session: RoomWebSocketSession) -> None:
     Mark the player reconnecting (mid-game) or remove them (lobby); an explicit
     leave goes through handle_leave instead.
     """
+    if session.is_observer:
+        session.room.remove_observer(session.websocket)
+        return
     if not session.player_id:
         return
     # On reconnect (e.g. a page refresh) a newer socket may already have re-added
@@ -351,6 +370,7 @@ _HANDLERS: dict[str, _Handler] = {
     "initiate_kick": handle_initiate_kick,
     "cast_kick_vote": handle_cast_kick_vote,
     "request_game_state": handle_request_game_state,
+    "watch": handle_watch,
     "reaction_send": handle_reaction_send,
 }
 

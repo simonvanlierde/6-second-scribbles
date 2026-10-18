@@ -51,6 +51,7 @@ class _Session:
     def __init__(self, room: GameRoom, *, player_id: str | None, host: bool = True) -> None:
         self.room = room
         self.player_id = player_id
+        self.is_observer = False
         self.websocket = AsyncMock()
         self.current_user = None
         self._host = host
