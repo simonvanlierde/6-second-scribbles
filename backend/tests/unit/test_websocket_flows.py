@@ -6,6 +6,8 @@ from __future__ import annotations
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, cast
 
+import pytest
+
 from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
@@ -25,6 +27,7 @@ from tests.constants import (
     PLAYER_3,
     PLAYER_JOINED,
     PLAYER_KICKED,
+    PROTOCOL_ERROR,
     READY_STATUS,
     ROOM_STATE,
     ROUND_COMPLETE,
@@ -36,11 +39,11 @@ from tests.constants import (
 from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
-    import pytest
     from fastapi.testclient import TestClient
     from starlette.testclient import WebSocketTestSession
 
 
+@pytest.mark.usefixtures("dealt_cards")
 def test_full_game_flow(test_client: TestClient) -> None:
     """End-to-end game flow covers start, draw, ready, guessing, and scoring."""
     with joined_players(
@@ -52,17 +55,6 @@ def test_full_game_flow(test_client: TestClient) -> None:
         start_messages = (receive_json(ws1), receive_json(ws2))
         assert [message["type"] for message in start_messages] == [START_GAME, START_GAME]
 
-        send_json(
-            ws1,
-            {
-                "type": START_ROUND,
-                "round": 1,
-                "cards": {
-                    PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
-                    PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
-                },
-            },
-        )
         round_messages = (receive_json(ws1), receive_json(ws2))
         assert round_messages[0]["type"] == START_ROUND
         assert round_messages[1]["type"] == START_ROUND
@@ -120,9 +112,10 @@ def test_full_game_flow(test_client: TestClient) -> None:
 def test_server_starts_guessing_after_round_timer(
     test_client: TestClient,
     immediate_guessing_transition: None,
+    dealt_cards: dict[str, list[str]],
 ) -> None:
     """Timer expiry transitions the room into guessing automatically."""
-    _ = immediate_guessing_transition
+    _ = immediate_guessing_transition, dealt_cards
     with joined_players(
         test_client,
         "AUTO_GUESS_01",
@@ -131,17 +124,6 @@ def test_server_starts_guessing_after_round_timer(
         send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 1})
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GAME, START_GAME]
 
-        send_json(
-            ws1,
-            {
-                "type": START_ROUND,
-                "round": 1,
-                "cards": {
-                    PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
-                    PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
-                },
-            },
-        )
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_ROUND, START_ROUND]
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GUESSING, START_GUESSING]
 
@@ -174,20 +156,17 @@ def test_waiting_room_drawpad_controls_are_shared(test_client: TestClient) -> No
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == ["drawpad_clear", "drawpad_clear"]
 
 
-def test_non_host_cannot_start_round(test_client: TestClient) -> None:
-    """Only the host can start a round."""
+def test_clients_cannot_deal_a_round(test_client: TestClient) -> None:
+    """Rounds are dealt by the server only: a client start_round, even from the host, is rejected."""
     with joined_players(
         test_client,
         "AUTH01",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws2, {"type": START_ROUND, "round": 1, "cards": {}})
+        _ = ws2
+        send_json(ws1, {"type": START_ROUND, "round": 1, "cards": {PLAYER_1: {"category": "X", "items": ["a"]}}})
 
-        assert receive_json(ws2) == {
-            "type": "permission_error",
-            "error": "host_only",
-            "message": "Only the host can start a round.",
-        }
+        assert receive_json(ws1)["type"] == PROTOCOL_ERROR
 
         send_json(ws1, {"type": "request_game_state", "playerId": PLAYER_1})
         room_state = receive_json(ws1)
@@ -285,6 +264,36 @@ def test_guest_seat_needs_its_rejoin_key(test_client: TestClient) -> None:
         assert join_player(owner_again, PLAYER_1, ALICE, rejoin_key="owner-key")["type"] == PLAYER_JOINED
 
 
+def test_lobby_refresh_keeps_the_seat_bound_to_its_key(test_client: TestClient) -> None:
+    """A lobby refresh removes the player, but nobody else can claim their id until they leave on purpose."""
+    room_id = "RECONNECT03"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as host:
+        receive_json(host)
+        join_player(host, PLAYER_1, ALICE, rejoin_key="host-key")
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest:
+            receive_json(guest)
+            join_player(guest, PLAYER_2, BOB, rejoin_key="guest-key")
+        # The guest's socket is gone (a refresh); in the lobby that removes the player.
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as intruder:
+            receive_json(intruder)
+            reply = join_player(intruder, PLAYER_2, "Mallory", rejoin_key="other-key")
+            assert reply["type"] == JOIN_ERROR
+            assert reply["error"] == IDENTITY_CONFLICT_ERROR
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest_again:
+            receive_json(guest_again)
+            assert join_player(guest_again, PLAYER_2, BOB, rejoin_key="guest-key")["type"] == PLAYER_JOINED
+            send_json(guest_again, {"type": "leave", "playerId": PLAYER_2})
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as newcomer:
+            receive_json(newcomer)
+            reply = join_player(newcomer, PLAYER_2, "Newcomer", rejoin_key="new-key")
+            assert reply["type"] == PLAYER_JOINED
+
+
 def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> None:
     """Separate rooms can progress independently."""
     with ExitStack() as stack:
@@ -312,13 +321,14 @@ def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> N
             assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GAME, START_GAME]
 
 
-def test_three_player_full_round(test_client: TestClient) -> None:
+def test_three_player_full_round(test_client: TestClient, dealt_cards: dict[str, list[str]]) -> None:
     """Three players complete a full drawing and guessing round together."""
     drawn_items: dict[str, list[str]] = {
         PLAYER_1: ["cat", "dog"],
         PLAYER_2: ["pizza", "burger"],
         PLAYER_3: ["tennis", "soccer"],
     }
+    dealt_cards.update(drawn_items)
 
     with joined_players(
         test_client,
@@ -331,14 +341,6 @@ def test_three_player_full_round(test_client: TestClient) -> None:
         for ws in (ws1, ws2, ws3):
             assert receive_json(ws)["type"] == START_GAME
 
-        send_json(
-            ws1,
-            {
-                "type": START_ROUND,
-                "round": 1,
-                "cards": {pid: {"category": "Test", "items": items} for pid, items in drawn_items.items()},
-            },
-        )
         for ws in (ws1, ws2, ws3):
             assert receive_json(ws)["type"] == START_ROUND
 
@@ -374,6 +376,7 @@ def test_three_player_full_round(test_client: TestClient) -> None:
             assert len(cast("dict[str, object]", msg["scores"])) == 3
 
 
+@pytest.mark.usefixtures("dealt_cards")
 def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> None:
     """Joining while a drawing round is active is rejected."""
     room_id = "RECONNECT_MID_GAME"
@@ -387,17 +390,6 @@ def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> No
         assert receive_json(ws1)["type"] == START_GAME
         assert receive_json(ws2)["type"] == START_GAME
 
-        send_json(
-            ws1,
-            {
-                "type": START_ROUND,
-                "round": 1,
-                "cards": {
-                    PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
-                    PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
-                },
-            },
-        )
         assert receive_json(ws1)["type"] == START_ROUND
         assert receive_json(ws2)["type"] == START_ROUND
 
@@ -411,6 +403,7 @@ def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> No
         assert join_response["error"] == GAME_IN_PROGRESS
 
 
+@pytest.mark.usefixtures("dealt_cards")
 def test_existing_participant_can_rejoin_active_round(test_client: TestClient) -> None:
     """A round participant who refreshes mid-drawing can reconnect, unlike a new player.
 
@@ -428,17 +421,8 @@ def test_existing_participant_can_rejoin_active_round(test_client: TestClient) -
             join_player(ws_guest, PLAYER_2, BOB)
 
             send_json(ws_host, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 60})
-            send_json(
-                ws_host,
-                {
-                    "type": START_ROUND,
-                    "round": 1,
-                    "cards": {
-                        PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
-                        PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
-                    },
-                },
-            )
+            while receive_json(ws_guest)["type"] != START_ROUND:
+                pass  # leave only once the server has dealt the round
         # ws_guest is now disconnected (the refresh); the host remains connected.
 
         with test_client.websocket_connect(f"/ws/{room_id}") as ws_rejoin:
@@ -486,6 +470,7 @@ def test_reconnecting_host_keeps_role(test_client: TestClient) -> None:
             assert snapshot["hostId"] == PLAYER_1
 
 
+@pytest.mark.usefixtures("dealt_cards")
 def test_round_complete_includes_highlights(test_client: TestClient) -> None:
     """The round-complete payload carries computed highlights, broadcast identically."""
     with joined_players(
@@ -497,17 +482,6 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
         receive_json(ws1)
         receive_json(ws2)
 
-        send_json(
-            ws1,
-            {
-                "type": START_ROUND,
-                "round": 1,
-                "cards": {
-                    PLAYER_1: {"category": "Animals", "items": ["cat", "dog"]},
-                    PLAYER_2: {"category": "Foods", "items": ["pizza", "burger"]},
-                },
-            },
-        )
         receive_json(ws1)
         receive_json(ws2)
 

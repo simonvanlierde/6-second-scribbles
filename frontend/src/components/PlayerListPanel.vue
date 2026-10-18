@@ -2,7 +2,9 @@
 import { computed, ref } from "vue";
 
 import HdAvatar from "@/components/ui/HdAvatar.vue";
+import HdButton from "@/components/ui/HdButton.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
+import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { i18n } from "@/i18n";
@@ -71,69 +73,48 @@ function colorFor(player: Player): string {
 
 <template>
   <div>
-    <ul class="my-4 list-none p-0">
-      <li
-        v-for="player in store.playersList"
-        :key="player.id"
-        class="my-2 flex items-center justify-between gap-3 rounded bg-gray-50 p-3"
-      >
-        <div class="flex flex-1 items-center gap-2">
+    <ul class="player-list">
+      <li v-for="player in store.playersList" :key="player.id" class="player-row">
+        <div class="player-row__who">
           <HdAvatar
             :initial="getAvatarInitial(player.name)"
             :color="colorFor(player)"
             size="sm"
             :disconnected="!player.connected"
           />
-          <span class="font-medium" :class="{ 'text-gray-400': !player.connected }">{{ player.name }}</span>
-          <span
-            v-if="!player.connected"
-            class="rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-500"
-          >
-            {{ $t("common.reconnecting") }}
-          </span>
-          <span v-if="player.id === store.localPlayerId" class="rounded bg-gray-200 px-2 py-1 text-sm text-gray-600">
-            ({{ $t("common.you") }})
-          </span>
-          <span v-if="store.hostId === player.id" class="rounded bg-yellow-400 px-2 py-1 text-sm text-black">
-            {{ $t("common.host") }}
-          </span>
-          <span
-            v-if="activeKickVotes.has(player.id)"
-            class="rounded-full border border-yellow-300 bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-900"
-          >
+          <span class="player-row__name" :class="{ 'player-row__name--away': !player.connected }">{{
+            player.name
+          }}</span>
+          <HdPill v-if="!player.connected" class="player-row__muted">{{ $t("common.reconnecting") }}</HdPill>
+          <HdPill v-if="player.id === store.localPlayerId">({{ $t("common.you") }})</HdPill>
+          <HdPill v-if="store.hostId === player.id" variant="info">{{ $t("common.host") }}</HdPill>
+          <HdPill v-if="activeKickVotes.has(player.id)">
             {{ $t("moderation.voteLabel") }}
             {{ activeKickVotes.get(player.id)?.currentVotes }}/{{ activeKickVotes.get(player.id)?.requiredVotes }}
-          </span>
+          </HdPill>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button
-            v-if="activeKickVotes.has(player.id) && player.id !== store.localPlayerId"
-            type="button"
-            class="cursor-pointer rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100"
-            @click="voteToKick(player.id)"
-          >
-            {{ $t("moderation.voteKick") }}
-          </button>
+        <HdButton
+          v-if="activeKickVotes.has(player.id) && player.id !== store.localPlayerId"
+          variant="secondary"
+          class="player-row__action"
+          @click="voteToKick(player.id)"
+        >
+          {{ $t("moderation.voteKick") }}
+        </HdButton>
 
-          <button
-            v-else-if="canHostKick(player.id)"
-            type="button"
-            class="cursor-pointer rounded bg-danger px-3 py-1.5 text-sm font-semibold text-white hover:bg-danger-dark"
-            @click="openKickConfirm(player.id)"
-          >
-            {{ $t("moderation.kickPlayer") }}
-          </button>
+        <HdButton v-else-if="canHostKick(player.id)" class="player-row__action" @click="openKickConfirm(player.id)">
+          {{ $t("moderation.kickPlayer") }}
+        </HdButton>
 
-          <button
-            v-else-if="canVoteKick(player.id)"
-            type="button"
-            class="cursor-pointer rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-100"
-            @click="openKickConfirm(player.id)"
-          >
-            {{ $t("moderation.voteKick") }}
-          </button>
-        </div>
+        <HdButton
+          v-else-if="canVoteKick(player.id)"
+          variant="secondary"
+          class="player-row__action"
+          @click="openKickConfirm(player.id)"
+        >
+          {{ $t("moderation.voteKick") }}
+        </HdButton>
       </li>
     </ul>
 
@@ -149,3 +130,43 @@ function colorFor(player: Player): string {
     />
   </div>
 </template>
+
+<style scoped>
+.player-list {
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+}
+.player-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-card);
+  color: var(--color-ink);
+  border: var(--border-input) solid var(--color-ink);
+  border-radius: var(--r-input);
+}
+.player-row__who {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.player-row__name {
+  font-weight: 600;
+}
+.player-row__name--away,
+.player-row .player-row__muted {
+  color: var(--color-ink-muted);
+}
+.player-row .player-row__action {
+  padding: 8px 14px;
+  font-size: var(--text-label-md);
+}
+</style>

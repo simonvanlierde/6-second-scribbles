@@ -281,8 +281,8 @@ export const ServerEventSchema = z.union([
       .union([
         z
           .object({
-            color: z.string(),
-            width: z.number(),
+            color: z.string().max(32),
+            width: z.number().gt(0).lte(64),
             points: z
               .array(z.object({ x: z.number(), y: z.number() }))
               .max(1000)
@@ -397,8 +397,8 @@ export type ServerEventGroup<TGroup extends ServerEventGroupName> = ServerEventO
 export const ClientEventSchema = z.union([
   z.object({
     type: z.literal("join"),
-    playerId: z.string(),
-    name: z.string(),
+    playerId: z.string().max(64),
+    name: z.string().max(80),
     preferredLocale: z.union([z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/), z.null()]).default(null),
     preferredColor: z.union([z.string(), z.null()]).default(null),
     rejoinKey: z.union([z.string().max(128), z.null()]).default(null),
@@ -410,37 +410,19 @@ export const ClientEventSchema = z.union([
     drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
     guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
   }),
-  z.object({
-    type: z.literal("start_round"),
-    round: z.union([z.number().int(), z.null()]).default(null),
-    cards: z.record(
-      z.string(),
-      z.object({
-        categoryId: z.union([z.number().int(), z.null()]).default(null),
-        category: z.string(),
-        itemIds: z.union([z.array(z.number().int()), z.null()]).default(null),
-        items: z.array(z.string()),
-        alternatives: z.union([z.record(z.string(), z.array(z.string())), z.null()]).default(null),
-      }),
-    ),
-  }),
-  z.object({ type: z.literal("round_complete") }),
-  z.object({ type: z.literal("game_complete") }),
-  z.object({ type: z.literal("player_ready"), playerId: z.string() }),
-  z.object({
-    type: z.literal("start_guessing"),
-    guessingStartTime: z.union([z.number().int(), z.null()]).default(null),
-    guessTargets: z.record(z.string(), z.string()).optional(),
-  }),
+  z.object({ type: z.literal("player_ready"), playerId: z.string().max(64) }),
   z.object({
     type: z.literal("submit_guess"),
     targetPlayerId: z.string(),
-    playerId: z.string(),
+    playerId: z.string().max(64),
     guesses: z.array(z.string().max(100)).max(50).optional(),
   }),
   z.object({ type: z.literal("restart_game") }),
   z.object({ type: z.literal("heartbeat") }),
   z.object({ type: z.literal("leave") }).describe("An explicit, intentional leave — remove the player immediately."),
+  z
+    .object({ type: z.literal("watch") })
+    .describe("Follow the room as a spectator: get its broadcasts without joining."),
   z.object({
     type: z.literal("settings_update"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
@@ -469,8 +451,8 @@ export const ClientEventSchema = z.union([
       .union([
         z
           .object({
-            color: z.string(),
-            width: z.number(),
+            color: z.string().max(32),
+            width: z.number().gt(0).lte(64),
             points: z
               .array(z.object({ x: z.number(), y: z.number() }))
               .max(1000)
@@ -506,7 +488,6 @@ export const clientEventTypes = [
   "draw_stroke",
   "draw_stroke_partial",
   "drawpad_clear",
-  "game_complete",
   "heartbeat",
   "initiate_kick",
   "join",
@@ -518,26 +499,14 @@ export const clientEventTypes = [
   "request_game_state",
   "restart_game",
   "room_custom_categories_update",
-  "round_complete",
   "settings_update",
   "start_game",
-  "start_guessing",
-  "start_round",
   "submit_guess",
+  "watch",
 ] as const satisfies readonly ClientEventType[];
 export const clientEventGroups = {
-  connection: ["heartbeat", "join", "leave", "request_game_state"],
-  gameFlow: [
-    "game_complete",
-    "player_ready",
-    "restart_game",
-    "round_complete",
-    "settings_update",
-    "start_game",
-    "start_guessing",
-    "start_round",
-    "submit_guess",
-  ],
+  connection: ["heartbeat", "join", "leave", "request_game_state", "watch"],
+  gameFlow: ["player_ready", "restart_game", "settings_update", "start_game", "submit_guess"],
   roomSettings: ["default_locale_update", "privacy_changed", "room_custom_categories_update"],
   drawing: ["draw_stroke", "draw_stroke_partial", "drawpad_clear", "pad_visibility"],
   moderation: ["cast_kick_vote", "initiate_kick"],
@@ -549,7 +518,6 @@ export const clientEventSummaries = {
   draw_stroke: "Broadcast a completed draw stroke.",
   draw_stroke_partial: "Broadcast an in-progress draw stroke.",
   drawpad_clear: "Clear the shared drawpad.",
-  game_complete: "Signal that the game is complete.",
   heartbeat: "Keep the websocket session alive.",
   initiate_kick: "Start a kick vote for a target player.",
   join: "Join a room with the local player identity.",
@@ -561,12 +529,10 @@ export const clientEventSummaries = {
   request_game_state: "Request the latest room snapshot.",
   restart_game: "Restart the game from the lobby state.",
   room_custom_categories_update: "Override the host's private category selection for this room.",
-  round_complete: "Signal that the current round is complete.",
   settings_update: "Update shared game settings.",
   start_game: "Host starts a game with room settings.",
-  start_guessing: "Host transitions the room into guessing.",
-  start_round: "Host starts a drawing round with assigned cards.",
   submit_guess: "Submit guesses for another player's drawing.",
+  watch: "Watch the room as a spectator without joining.",
 } as const satisfies Record<ClientEventType, string>;
 export type ClientEventGroupName = keyof typeof clientEventGroups;
 export type ClientEventGroup<TGroup extends ClientEventGroupName> = ClientEventOf<

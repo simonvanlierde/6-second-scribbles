@@ -101,8 +101,7 @@ function clearAutoRestartTimeout() {
 function playAgain() {
   if (store.isHost) {
     send({ type: "restart_game" });
-    store.resetRound();
-    store.gamePhase = "lobby";
+    store.onRestartGame();
   } else {
     isReady.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
@@ -276,7 +275,7 @@ onUnmounted(() => {
   min-width: 1.25rem;
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--color-marker-red);
+  color: var(--color-primary-text);
 }
 .final-standings__name {
   flex: 1;
@@ -291,6 +290,11 @@ onUnmounted(() => {
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--color-ink);
+}
+/* The highlighter row stays light in dark mode, where the light text red and ink are too pale. */
+.final-standings__row--you .final-standings__rank,
+.final-standings__row--you .final-standings__score {
+  color: inherit;
 }
 .final-stats__title {
   margin: 0 0 var(--space-3);

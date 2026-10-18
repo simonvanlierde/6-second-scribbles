@@ -32,7 +32,7 @@ type StoreMock = {
   drawingHistory: GalleryDrawing[];
   totalGuessesMade: number;
   getFinalScores: ReturnType<typeof vi.fn>;
-  resetRound: ReturnType<typeof vi.fn>;
+  onRestartGame: ReturnType<typeof vi.fn>;
   reset: ReturnType<typeof vi.fn>;
 };
 
@@ -80,7 +80,7 @@ function createStoreMock(finalScores: FinalScore[], overrides: Partial<StoreMock
     drawingHistory: [],
     totalGuessesMade: 0,
     getFinalScores: vi.fn(() => finalScores),
-    resetRound: vi.fn(),
+    onRestartGame: vi.fn(),
     reset: vi.fn(),
     ...overrides,
   };
@@ -175,7 +175,7 @@ describe("ResultsView", () => {
     const wrapper = mount(ResultsView);
     await wrapper.find(".final-cta__again").trigger("click");
     expect(sendMock).toHaveBeenCalledWith({ type: "restart_game" });
-    expect(storeMock.resetRound).toHaveBeenCalled();
+    expect(storeMock.onRestartGame).toHaveBeenCalled();
   });
 
   it("non-host play-again sends player_ready", async () => {

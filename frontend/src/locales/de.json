@@ -30,6 +30,7 @@
     "step3": "Errate, was die anderen Spieler gezeichnet haben",
     "step4": "Sowohl der Zeichner als auch der Rater erhalten Punkte für richtige Antworten!",
     "footerText": "Eine Multiplayer-Web-Version von {original} von Gamely Games · Inspiriert durch {inspiration} · {source}",
+    "privacyNote": "Datenschutz: Ein Gastkonto speichert nur deinen Namen und deine Sprache und wird 30 Tage nach Ende der Sitzung gelöscht. Serverprotokolle speichern eine gekürzte Netzwerkadresse, nicht deine vollständige IP, um Missbrauch zu verhindern, und alte Protokolle werden überschrieben, sobald neue hinzukommen.",
     "tagline": "Malen. Raten. Lachen.",
     "roomCodeLabel": "Raumcode",
     "quickPlayHeading": "Einfach spielen.",

@@ -30,6 +30,7 @@
     "step3": "Raad wat andere spelers hebben getekend",
     "step4": "Zowel de tekenaar als de rader verdienen punten voor juiste antwoorden!",
     "footerText": "Een multiplayer webversie van {original} van Gamely Games · Geïnspireerd door {inspiration} · {source}",
+    "privacyNote": "Privacy: een gastaccount bewaart alleen je naam en taal, en wordt 30 dagen na het einde van de sessie verwijderd. Serverlogs bewaren een ingekort netwerkadres, niet je volledige IP-adres, om misbruik te stoppen, en oude logs worden overschreven zodra er nieuwe binnenkomen.",
     "tagline": "Tekenen. Raden. Lachen.",
     "roomCodeLabel": "Kamercode",
     "quickPlayHeading": "Gewoon spelen.",

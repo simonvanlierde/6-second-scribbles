@@ -6,7 +6,6 @@
       "draw_stroke": "#/$defs/DrawStrokeEvent",
       "draw_stroke_partial": "#/$defs/DrawStrokePartialEvent",
       "drawpad_clear": "#/$defs/DrawpadClearEvent",
-      "game_complete": "#/$defs/GameCompleteEvent",
       "heartbeat": "#/$defs/HeartbeatEvent",
       "initiate_kick": "#/$defs/InitiateKickEvent",
       "join": "#/$defs/JoinEvent",
@@ -18,12 +17,10 @@
       "request_game_state": "#/$defs/RequestGameStateEvent",
       "restart_game": "#/$defs/RestartGameEvent",
       "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateEvent",
-      "round_complete": "#/$defs/RoundCompleteEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
       "start_game": "#/$defs/StartGameEvent",
-      "start_guessing": "#/$defs/StartGuessingEvent",
-      "start_round": "#/$defs/StartRoundEvent",
-      "submit_guess": "#/$defs/SubmitGuessEvent"
+      "submit_guess": "#/$defs/SubmitGuessEvent",
+      "watch": "#/$defs/WatchEvent"
     },
     "propertyName": "type"
   },
@@ -36,10 +33,12 @@
           "type": "string"
         },
         "playerId": {
+          "maxLength": 64,
           "title": "Playerid",
           "type": "string"
         },
         "name": {
+          "maxLength": 80,
           "title": "Name",
           "type": "string"
         },
@@ -148,163 +147,18 @@
     {
       "properties": {
         "type": {
-          "const": "start_round",
-          "title": "Type",
-          "type": "string"
-        },
-        "round": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Round"
-        },
-        "cards": {
-          "additionalProperties": {
-            "properties": {
-              "categoryId": {
-                "anyOf": [
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Categoryid"
-              },
-              "category": {
-                "title": "Category",
-                "type": "string"
-              },
-              "itemIds": {
-                "anyOf": [
-                  {
-                    "items": {
-                      "type": "integer"
-                    },
-                    "type": "array"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Itemids"
-              },
-              "items": {
-                "items": {
-                  "type": "string"
-                },
-                "title": "Items",
-                "type": "array"
-              },
-              "alternatives": {
-                "anyOf": [
-                  {
-                    "additionalProperties": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Alternatives"
-              }
-            },
-            "required": ["category", "items"],
-            "title": "PlayerCardPayload",
-            "type": "object"
-          },
-          "title": "Cards",
-          "type": "object"
-        }
-      },
-      "required": ["cards", "type"],
-      "title": "StartRoundEvent",
-      "type": "object"
-    },
-    {
-      "properties": {
-        "type": {
-          "const": "round_complete",
-          "title": "Type",
-          "type": "string"
-        }
-      },
-      "required": ["type"],
-      "title": "RoundCompleteEvent",
-      "type": "object"
-    },
-    {
-      "properties": {
-        "type": {
-          "const": "game_complete",
-          "title": "Type",
-          "type": "string"
-        }
-      },
-      "required": ["type"],
-      "title": "GameCompleteEvent",
-      "type": "object"
-    },
-    {
-      "properties": {
-        "type": {
           "const": "player_ready",
           "title": "Type",
           "type": "string"
         },
         "playerId": {
+          "maxLength": 64,
           "title": "Playerid",
           "type": "string"
         }
       },
       "required": ["playerId", "type"],
       "title": "PlayerReadyEvent",
-      "type": "object"
-    },
-    {
-      "properties": {
-        "type": {
-          "const": "start_guessing",
-          "title": "Type",
-          "type": "string"
-        },
-        "guessingStartTime": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Guessingstarttime"
-        },
-        "guessTargets": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Guesstargets",
-          "type": "object"
-        }
-      },
-      "required": ["type"],
-      "title": "StartGuessingEvent",
       "type": "object"
     },
     {
@@ -319,6 +173,7 @@
           "type": "string"
         },
         "playerId": {
+          "maxLength": 64,
           "title": "Playerid",
           "type": "string"
         },
@@ -371,6 +226,19 @@
       },
       "required": ["type"],
       "title": "LeaveEvent",
+      "type": "object"
+    },
+    {
+      "description": "Follow the room as a spectator: get its broadcasts without joining.",
+      "properties": {
+        "type": {
+          "const": "watch",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": ["type"],
+      "title": "WatchEvent",
       "type": "object"
     },
     {
@@ -526,10 +394,13 @@
               "description": "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
               "properties": {
                 "color": {
+                  "maxLength": 32,
                   "title": "Color",
                   "type": "string"
                 },
                 "width": {
+                  "exclusiveMinimum": 0,
+                  "maximum": 64,
                   "title": "Width",
                   "type": "number"
                 },

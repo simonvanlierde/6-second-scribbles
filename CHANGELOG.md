@@ -18,12 +18,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Spectators now see a game live, the moment something happens, instead of catching up every 2 seconds. A room takes up to 20 spectators, and they never count toward the player limit.
+- Server logs no longer keep full visitor IPs: Caddy masks them to the /24 (IPv4) or /48 (IPv6) network, and the backend no longer writes its own access log. The About dialog now says what is stored and for how long.
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
+- Guest accounts are deleted once their login session has expired (30 days by default), on backend startup and once a day after that. Registered accounts are kept.
 - **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
 - The health endpoint and the OpenAPI document report the release version (0.2.1) instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
 - Backend dependency updates.
 - The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
+
+### Removed
+
+- The unused `POST /api/rooms/{room_id}/category-selection` endpoint. It needed no login, had no rate limit, and could return the whole prompt bank.
 
 ### Fixed
 
@@ -39,8 +46,22 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Room-creation and login rate limits in production counted every visitor as one client: the backend read the last `X-Forwarded-For` entry, which Caddy filled with the Cloudflare tunnel container's address. Caddy now forwards the visitor's own IP.
 - Any player could take over a guest's seat, and with it their score and prompts, by joining with that guest's player id, which every roster shows. The browser now keeps a private rejoin key next to its player id, and the server refuses a join for a known seat unless it carries the key the seat's first join used.
 - Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
+- A restart dropped every saved room when a single one could not be read, for example a room saved by an older release. Unreadable rooms are now skipped one at a time and the rest are restored.
+- A round started by the server's timer cancelled itself as it started: the round was not saved after it began, and the server's own drawing timer was never set. Rounds still moved on because each browser presses Finish when its timer runs out, but a player whose browser stayed connected without doing that, such as a locked phone, held the whole room in the drawing phase.
+- A modified client could deal its own cards or force the guessing phase: the host-only `start_round` and `start_guessing` commands still worked, although the app never sends them. They are removed, together with the unused `round_complete` and `game_complete` client events, and rounds are now dealt by the server only.
+- A refresh in the lobby released the player's seat, so someone else could claim their player id with a new rejoin key in the moment they were gone, and lock them out. The seat stays bound to its owner's key until they leave on purpose or are kicked; a room keeps these bindings for at most 40 departed players.
+- During a Redis outage the backend wrote session ids, which work as 30-day login tokens, into its error log. It no longer logs them.
+- One player could freeze the server for every room by filling the lobby drawpad: each room snapshot could grow to tens of MB. The shared doodle now keeps at most 20,000 points (the oldest strokes go first), names, ids and stroke styles have length limits, and each connection gets at most 5 full room snapshots per 5 seconds.
+- One player whose connection stopped reading could hold up every message and timer in their room. A send now gives up after 5 seconds, and that player is disconnected so their browser reconnects.
+- A player voted out of a public room, or removed by the host, could rejoin straight away. The room now refuses that player, and their account if they were signed in, until it closes.
+- One visitor could fill all 500 rooms and lock everyone else out with "Server at capacity". A network may now hold at most 5 open rooms it created (IPv6 addresses count per /64); players and sockets are not limited, so a household on one Wi-Fi can still play together.
 - In Safari the favicon lost its colours: the page's Content Security Policy was also sent with the SVG favicon and blocked the `<style>` inside it. SVG files now get their own policy that allows only inline styles.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
+- In dark mode the drawing canvas was dark, so the default black pen was nearly invisible, and drawings made in dark mode showed up as dark tiles for everyone else. The canvas is now light paper in both themes, so every drawing looks the same to every player. The white pen now draws in paper colour in both themes.
+- In dark mode the lobby player list was unreadable: names sat on a light grey row, and the host's Kick player button had no background, so it showed only as faint white text. The list now uses the game's own cards, labels and buttons in both themes.
+- On phones the settings button covered the round number and score in the game header. The header now leaves room for it.
+- Red text, such as the stepper buttons, the Advanced Settings link, highlight labels and standings ranks, was hard to read in light mode. It now uses a darker red that is easy to read in both themes.
+- In dark mode your own score in the standings and the name and detail on the yellow highlight card were pale text on yellow. They now use dark ink there.
 
 ## [0.2.1] - 2026-07-06
 

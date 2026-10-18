@@ -13,16 +13,19 @@ import app.main as main_module
 from app.categories import service as category_service
 from app.core import database
 from app.core import redis as redis_module
+from app.core.config import settings
 from app.rooms.manager import GameRoom, RoomManager
 from app.rooms.scheduler import create_logged_task
+from app.rooms.state import PlayerPromptAssignmentState
 from tests.constants import (
     MEDIUM,
+    PLAYER_1,
+    PLAYER_2,
     PLAYER_ONE_ID,
     PLAYER_ONE_NAME,
     PLAYER_TWO_ID,
     PLAYER_TWO_NAME,
     START_GAME,
-    START_ROUND,
     TEST_ROOM_ID,
 )
 from tests.support import TestWebSocket, as_websocket
@@ -164,11 +167,6 @@ def sample_messages() -> dict[str, object]:
     return {
         "join": {"type": "join", "playerId": "player-123", "name": "Test Player"},
         START_GAME: {"type": START_GAME, "difficulty": MEDIUM, "rounds": 5, "drawingTimeLimit": 60},
-        "start_round": {
-            "type": START_ROUND,
-            "round": 1,
-            "Prompts": {PLAYER_ONE_ID: {"category": "Animals", "items": ["cat", "dog", "bird"]}},
-        },
         "draw_stroke": {
             "type": "draw_stroke",
             "playerId": PLAYER_ONE_ID,
@@ -195,3 +193,22 @@ def immediate_guessing_transition(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
     monkeypatch.setattr("app.rooms.scheduler.RoomTaskScheduler.schedule_guessing_start", schedule_immediately)
+
+
+@pytest.fixture
+def dealt_cards(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]:
+    """Start round 1 as soon as the host starts the game, dealing these items instead of reading the database.
+
+    Tests may change the returned mapping (player id -> items) before starting the game.
+    """
+    cards = {PLAYER_1: ["cat", "dog"], PLAYER_2: ["pizza", "burger"]}
+
+    async def deal(room: GameRoom) -> dict[str, PlayerPromptAssignmentState]:
+        return {
+            player_id: PlayerPromptAssignmentState(category="Test", items=cards.get(player_id, ["sun", "moon"]))
+            for player_id in room.players
+        }
+
+    monkeypatch.setattr(GameRoom, "_build_server_round_assignments", deal)
+    monkeypatch.setattr(settings, "game_start_delay_seconds", 0)
+    return cards

@@ -45,18 +45,7 @@ def configure_game(
     room.metadata.guessing_time_limit = guessing_time_limit or 60
     room.metadata.difficulty = difficulty or room.metadata.difficulty
     room.metadata.max_rounds = max_rounds or 5
-    room.metadata.game_phase = GamePhase.LOBBY
-    room.metadata.current_round = 0
-    room.metadata.round_start_time = None
-    room.metadata.player_assignments = {}
-    room.metadata.guess_targets = {}
-    room.metadata.guess_submissions = []
-    room.metadata.submitted_players = set()
-    room.metadata.player_scores = dict.fromkeys(room.players, 0)
-    room.metadata.ready_players.clear()
-    room.round_drawings.clear()
-    room.drawing_history.clear()
-    room.clear_lobby_strokes()
+    reset_game(room)
 
 
 def start_round(
@@ -67,19 +56,12 @@ def start_round(
 ) -> int:
     """Transition the room into a new drawing round and return the start timestamp."""
     round_start_time = int(time.time() * 1000)
+    room.metadata.reset_round(cards=cards)
     room.metadata.round_start_time = round_start_time
-    room.metadata.guessing_start_time = None
     room.metadata.game_phase = GamePhase.DRAWING
     room.metadata.current_round = round_number or (room.metadata.current_round + 1)
-    room.metadata.player_assignments = cards or {}
-    room.metadata.guess_targets = {}
     room.round_drawings.clear()
     room.clear_lobby_strokes()
-    room.metadata.guess_submissions = []
-    room.metadata.submitted_players = set()
-    for player_id in room.players:
-        room.metadata.player_scores.setdefault(player_id, 0)
-    room.metadata.ready_players.clear()
     return round_start_time
 
 
@@ -92,14 +74,12 @@ def start_guessing(room: GameRoom) -> int:
     """
     if room.metadata.game_phase == GamePhase.GUESSING:
         return room.metadata.guessing_time_limit or 60
-    room.metadata.guessing_start_time = int(time.time() * 1000)
-    room.metadata.game_phase = GamePhase.GUESSING
     # Only connected players take part in guessing; a disconnected player should
     # not be assigned a (possibly blank) drawing to guess, nor be expected to submit.
-    room.metadata.guess_targets = assign_guess_targets(
-        [player_id for player_id, player in room.players.items() if player.connected],
+    room.metadata.start_guessing(
+        assign_guess_targets([player_id for player_id, player in room.players.items() if player.connected]),
+        started_at=int(time.time() * 1000),
     )
-    room.metadata.ready_players.clear()
     return room.metadata.guessing_time_limit or 60
 
 
@@ -149,16 +129,7 @@ def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
 
 def reset_game(room: GameRoom) -> None:
     """Reset mutable game state back to the lobby."""
-    room.metadata.player_scores = {}
-    room.metadata.current_round = 0
-    room.metadata.guess_submissions = []
-    room.metadata.submitted_players = set()
-    room.metadata.player_assignments = {}
-    room.metadata.guess_targets = {}
-    room.metadata.ready_players.clear()
-    room.metadata.round_start_time = None
-    room.metadata.guessing_start_time = None
-    room.metadata.game_phase = GamePhase.LOBBY
+    room.metadata.reset_game(room.players)
     room.round_drawings.clear()
     room.drawing_history.clear()
     room.clear_lobby_strokes()
@@ -166,7 +137,7 @@ def reset_game(room: GameRoom) -> None:
 
 def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
     """Record that a player is ready and return the shared ready-status payload."""
-    room.metadata.ready_players.add(player_id)
+    room.metadata.mark_ready(player_id)
     return ReadyStatusEvent(
         readyCount=len(room.metadata.ready_players),
         totalPlayers=len(room.players),
@@ -199,8 +170,7 @@ def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id:
         guesses=guesses,
         submitted_at=int(time.time() * 1000),
     )
-    room.metadata.guess_submissions.append(submission)
-    room.metadata.submitted_players.add(player_id)
+    room.metadata.record_guess(submission)
     logger.info(
         "[Server] Guess submitted by %s: %s/%s connected players submitted",
         player_id,
@@ -348,8 +318,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             ),
         )
 
-    for player_id, points in round_points.items():
-        room.metadata.player_scores[player_id] = room.metadata.player_scores.get(player_id, 0) + points
+    room.metadata.add_round_points(round_points)
 
     room.metadata.game_phase = GamePhase.ROUND_RESULTS
     return RoundCompleteServerEvent(

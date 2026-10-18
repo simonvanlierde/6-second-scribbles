@@ -46,9 +46,9 @@ export default defineConfig({
           command: "cd ../backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000",
           url: "http://127.0.0.1:8000/api/health",
           timeout: 60 * 1000,
-          // The suite creates several rooms per run, and retries add more, so the
-          // default 10 rooms/min per IP would answer 429.
-          env: { ROOM_CREATION_RATE_LIMIT: "1000" },
+          // The suite creates many rooms from one IP, and retries add more, so the
+          // defaults (10 rooms/min, 5 open rooms per network) would answer 429.
+          env: { ROOM_CREATION_RATE_LIMIT: "1000", MAX_ROOMS_PER_CLIENT: "1000" },
         },
         {
           command: "pnpm run build && pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort",

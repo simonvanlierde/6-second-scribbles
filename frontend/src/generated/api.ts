@@ -31,38 +31,6 @@ export const CategoryListItemSchema = z
   .describe("Compact localized category representation used by list endpoints.");
 export type CategoryListItem = z.infer<typeof CategoryListItemSchema>;
 
-export const CategorySelectionRequestSchema = z
-  .object({
-    count: z.number().int().gte(1).default(1),
-    difficulty: z.enum(["easy", "medium", "hard"]),
-    locale: z
-      .string()
-      .regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/)
-      .optional(),
-    locales: z.array(z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/)).optional(),
-    player_count: z.number().int().gte(1).default(2),
-  })
-  .describe("Parameters for selecting category sets for a room/game.");
-export type CategorySelectionRequest = z.infer<typeof CategorySelectionRequestSchema>;
-
-export const CategorySelectionResponseSchema = z
-  .object({
-    difficulty: z.enum(["easy", "medium", "hard"]),
-    selections: z.array(
-      z
-        .object({
-          alternatives: z.record(z.string(), z.array(z.string())),
-          category_id: z.number().int(),
-          category_name: z.string(),
-          item_ids: z.array(z.number().int()),
-          items: z.array(z.string()),
-        })
-        .describe("One selected localized category set for game setup."),
-    ),
-  })
-  .describe("Response for room-scoped category selection.");
-export type CategorySelectionResponse = z.infer<typeof CategorySelectionResponseSchema>;
-
 export const CreateRoomResponseSchema = z
   .object({ room_code: z.string() })
   .describe("Response for newly created room.");
@@ -163,17 +131,6 @@ export const RoomStatusResponseSchema = z
   .describe("Response for room status checks.");
 export type RoomStatusResponse = z.infer<typeof RoomStatusResponseSchema>;
 
-export const SelectedCategorySetSchema = z
-  .object({
-    alternatives: z.record(z.string(), z.array(z.string())),
-    category_id: z.number().int(),
-    category_name: z.string(),
-    item_ids: z.array(z.number().int()),
-    items: z.array(z.string()),
-  })
-  .describe("One selected localized category set for game setup.");
-export type SelectedCategorySet = z.infer<typeof SelectedCategorySetSchema>;
-
 export const StatsResponseSchema = z
   .object({
     active_rooms: z.number().int(),
@@ -217,8 +174,6 @@ export type ValidationError = z.infer<typeof ValidationErrorSchema>;
 export const apiSchemaNames = [
   "AppInfoResponse",
   "CategoryListItem",
-  "CategorySelectionRequest",
-  "CategorySelectionResponse",
   "CreateRoomResponse",
   "Difficulty",
   "GamePhase",
@@ -231,7 +186,6 @@ export const apiSchemaNames = [
   "RandomRoomResponse",
   "RegisterRequest",
   "RoomStatusResponse",
-  "SelectedCategorySet",
   "StatsResponse",
   "UpdatePreferencesRequest",
   "UserResponse",

@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 # Sentinel raised by add_player when a player_id is claimed by a different user;
 # handle_join matches on it to send the right join error.
 IDENTITY_CONFLICT_ERROR = "identity_conflict"
+KICKED_ERROR = "kicked"
+# Identity bindings kept for players who dropped without leaving. Each visitor who
+# closes the tab leaves one, and every persist() writes them all, so the oldest
+# go once a room has seen this many departures.
+MAX_ABSENT_BINDINGS = 40
 
 
 async def add_player(
@@ -44,19 +49,7 @@ async def add_player(
         msg = f"Room is full (maximum {max_players} players)"
         raise ValueError(msg)
 
-    # Bind player identity to the authenticated session: a player_id already
-    # owned by one user cannot be claimed by a connection authenticated as a
-    # different user. This blocks seat/host takeover via a spoofed player_id.
-    existing_owner = room.metadata.player_user_ids.get(player_id)
-    if existing_owner is not None and existing_owner != user_id:
-        raise ValueError(IDENTITY_CONFLICT_ERROR)
-
-    # Guests have no user_id, so the rejoin key is what stops a seat takeover:
-    # a join for a known player_id must present the key its first join used.
-    key_hash = hashlib.sha256(rejoin_key.encode()).hexdigest() if rejoin_key else None
-    stored_hash = room.metadata.player_rejoin_keys.get(player_id)
-    if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
-        raise ValueError(IDENTITY_CONFLICT_ERROR)
+    key_hash = _check_identity(room, player_id, user_id, rejoin_key)
 
     if room.is_hibernated:
         logger.info("[GameRoom %s] Waking from hibernation", room.room_id)
@@ -90,22 +83,36 @@ async def add_player(
         connected=True,
     )
     room.players[player_id] = player
-    # Assign a stable seat on first join; reconnects keep their original slot so
-    # the roster order is preserved for everyone.
-    if player_id not in room.metadata.player_seats:
-        room.metadata.player_seats[player_id] = (
-            (max(room.metadata.player_seats.values()) + 1) if room.metadata.player_seats else 0
-        )
-    room.metadata.player_locales[player_id] = preferred_locale or room.metadata.default_locale
-    if stored_hash is None and key_hash is not None:
-        room.metadata.player_rejoin_keys[player_id] = key_hash
-    if user_id is not None:
-        room.metadata.player_user_ids[player_id] = user_id
-    else:
-        room.metadata.player_user_ids.pop(player_id, None)
+    room.metadata.seat_player(
+        player_id,
+        locale=preferred_locale or room.metadata.default_locale,
+        user_id=user_id,
+        rejoin_key_hash=key_hash,
+    )
 
     _settle_host_on_join(room, player_id, name, user_id=user_id, is_reconnecting_host=is_reconnecting_host)
     return player, is_reconnecting_host
+
+
+def _check_identity(room: GameRoom, player_id: str, user_id: str | None, rejoin_key: str | None) -> str | None:
+    """Refuse a join that may not take this player_id, and return the rejoin key's hash."""
+    if player_id in room.kicked_ids or (user_id is not None and user_id in room.kicked_ids):
+        raise ValueError(KICKED_ERROR)
+
+    # Bind player identity to the authenticated session: a player_id already
+    # owned by one user cannot be claimed by a connection authenticated as a
+    # different user. This blocks seat/host takeover via a spoofed player_id.
+    existing_owner = room.metadata.player_user_ids.get(player_id)
+    if existing_owner is not None and existing_owner != user_id:
+        raise ValueError(IDENTITY_CONFLICT_ERROR)
+
+    # Guests have no user_id, so the rejoin key is what stops a seat takeover:
+    # a join for a known player_id must present the key its first join used.
+    key_hash = hashlib.sha256(rejoin_key.encode()).hexdigest() if rejoin_key else None
+    stored_hash = room.metadata.player_rejoin_keys.get(player_id)
+    if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
+        raise ValueError(IDENTITY_CONFLICT_ERROR)
+    return key_hash
 
 
 def _owns_last_host(room: GameRoom, user_id: str | None) -> bool:
@@ -166,21 +173,20 @@ async def remove_player(
     *,
     host_transfer_delay_ms: int,
     schedule_host_transfer: Callable[[str], asyncio.Task[object]],
+    forget_identity: bool = False,
 ) -> None:
-    """Remove a player and trigger delayed host transfer when required."""
+    """Remove a player and trigger delayed host transfer when required.
+
+    The seat's identity binding (account and rejoin key) outlives a dropped
+    connection, so nobody can claim the player_id while its owner refreshes.
+    Only an explicit leave or a kick (`forget_identity`) releases it.
+    """
     room.players.pop(player_id, None)
-    room.metadata.player_locales.pop(player_id, None)
-    room.metadata.player_user_ids.pop(player_id, None)
-    room.metadata.player_rejoin_keys.pop(player_id, None)
-    # Forget all per-player round state so a removed player (left/kicked/pruned)
-    # is no longer treated as a current participant. In particular this drops them
-    # from player_assignments, which the rejoin gate uses to recognise reconnecting
-    # participants — without it a kicked player could rejoin the active round.
-    room.metadata.player_assignments.pop(player_id, None)
-    room.metadata.guess_targets.pop(player_id, None)
-    room.metadata.submitted_players.discard(player_id)
-    room.metadata.ready_players.discard(player_id)
-    room.metadata.player_seats.pop(player_id, None)
+    # Also drops them from the round, so a removed player (left/kicked/pruned)
+    # is no longer treated as a current participant.
+    room.metadata.forget_player(player_id, forget_identity=forget_identity)
+    if not forget_identity:
+        room.metadata.trim_absent_identities(set(room.players), keep=MAX_ABSENT_BINDINGS)
 
     # Drop any kick vote targeting the leaver (otherwise it lingers with its
     # accumulated voters and would kick them the instant they rejoin) and remove

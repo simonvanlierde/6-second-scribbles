@@ -10,7 +10,7 @@ import type { Router } from "vue-router";
 
 import type { NotificationType } from "@/composables/notifications";
 import { REACTION_KEYS, type ReactionKey, useReactions } from "@/composables/useReactions";
-import { GAME_SETTINGS, UI_TIMINGS } from "@/config/gameConfig";
+import { UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEventGroup, ServerEventOf } from "@/generated/protocol";
 import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
@@ -27,7 +27,6 @@ export type HandlerContext = {
   showNotification: ShowNotification;
   send: (message: ClientEvent) => void;
   isObserverConnection: Ref<boolean>;
-  stopStateRefresh: () => void;
 };
 
 // ── Event type aliases ────────────────────────────────────────────────────────
@@ -56,7 +55,7 @@ function isReactionKey(key: string): key is ReactionKey {
 // ── Connection & player events ────────────────────────────────────────────────
 
 export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerContext): void {
-  const { store, router, showNotification, isObserverConnection, stopStateRefresh } = ctx;
+  const { store, router, showNotification, isObserverConnection } = ctx;
 
   switch (message.type) {
     case "join_error":
@@ -91,7 +90,6 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
         store.confirmPendingLocalPlayer(message.playerId);
         store.setSpectatorMode(false);
         isObserverConnection.value = false;
-        stopStateRefresh();
       }
       break;
 
@@ -131,59 +129,32 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
 
   switch (message.type) {
     case "start_game":
-      store.startGame(
-        message.difficulty || GAME_SETTINGS.difficulty.DEFAULT,
-        message.rounds || GAME_SETTINGS.rounds.DEFAULT,
-        message.drawingTimeLimit || GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT,
-        message.guessingTimeLimit || GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT,
-      );
+      store.onStartGame(message);
       break;
 
     case "start_round":
       if (typeof message.cards === "object" && message.cards !== null) {
-        store.roundStartTime = message.roundStartTime;
-        store.startRound(message.round ?? 1, message.cards);
+        store.onStartRound(message);
       } else {
         log.error("Invalid cards in start_round message:", message);
       }
       break;
 
     case "start_guessing":
-      if (typeof store.startGuessing === "function") {
-        store.startGuessing(message.guessingStartTime, message.guessTargets ?? {});
-      } else {
-        // HMR can briefly keep an older Pinia store instance alive while this
-        // module has already reloaded, so fall back to direct state updates.
-        store.gamePhase = "guessing";
-        store.guessingStartTime = message.guessingStartTime ?? Date.now();
-        store.guessTargets = message.guessTargets ?? {};
-        store.readyCount = 0;
-        store.totalPlayers = store.playersList.length;
-      }
+      store.onStartGuessing(message);
       break;
 
     case "round_complete":
       useReactions().clear(); // drop the previous round's reactions before showing this one
-      store.setRoundResults(message.results);
-      store.setRoundHighlights(message.highlights ?? null);
-      store.updateScores(message.scores);
-      // Snapshot this round's drawings for the end-of-game gallery before the
-      // next start_round clears them. currentRound still names the finished round.
-      store.captureRoundDrawings(store.currentRound);
-      store.gamePhase = "round_results";
-      store.readyCount = 0;
-      store.totalPlayers = store.playersList.length;
-      // RoundResultsView owns the 5-second countdown and calls startRound from there.
+      store.onRoundComplete(message);
       break;
 
     case "game_complete":
-      store.updateScores(message.finalScores);
-      store.endGame();
+      store.onGameComplete(message);
       break;
 
     case "restart_game":
-      store.resetRound();
-      store.gamePhase = "lobby";
+      store.onRestartGame();
       break;
 
     case "ready_status":

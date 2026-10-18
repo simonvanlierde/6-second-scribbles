@@ -39,7 +39,7 @@ e2e-dev:
     docker compose --project-directory .. -f ../compose.yml -f ../compose.dev.yml down --remove-orphans
     docker compose --project-directory .. -f ../compose.yml -f ../compose.dev.yml up -d database cache
     docker compose --project-directory .. -f ../compose.yml -f ../compose.dev.yml run --rm --build database-migrations
-    sh -c 'cd ../backend && uv run uvicorn app.main:app --host localhost --port 8000 & backend_pid=$$!; trap "kill $$backend_pid" EXIT INT TERM; until curl -sf http://localhost:8000/api/health >/dev/null; do sleep 1; done; pnpm run dev -- --host localhost --port 3001'
+    sh -c 'cd ../backend && ROOM_CREATION_RATE_LIMIT=1000 MAX_ROOMS_PER_CLIENT=1000 uv run uvicorn app.main:app --host localhost --port 8000 & backend_pid=$$!; trap "kill $$backend_pid" EXIT INT TERM; until curl -sf http://localhost:8000/api/health >/dev/null; do sleep 1; done; pnpm run dev -- --host localhost --port 3001'
 
 # ── Check & Format ────────────────────────────────────────────────────────────
 

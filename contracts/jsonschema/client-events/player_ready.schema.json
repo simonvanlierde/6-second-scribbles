@@ -6,6 +6,7 @@
       "type": "string"
     },
     "playerId": {
+      "maxLength": 64,
       "title": "Playerid",
       "type": "string"
     }

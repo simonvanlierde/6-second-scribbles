@@ -257,8 +257,11 @@ class RoomTaskScheduler:
         if self._guessing_start_task and not self._guessing_start_task.done():
             self._guessing_start_task.cancel()
         self._guessing_start_task = None
-        if self._next_round_start_task and not self._next_round_start_task.done():
-            self._next_round_start_task.cancel()
+        # The scheduled round start runs start_round itself; cancelling it here would
+        # kill it at its next await, before it persists and arms the guessing timer.
+        task = self._next_round_start_task
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
         self._next_round_start_task = None
         if self._round_scoring_task and not self._round_scoring_task.done():
             self._round_scoring_task.cancel()

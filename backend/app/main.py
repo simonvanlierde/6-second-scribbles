@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
@@ -13,13 +14,15 @@ from redis.exceptions import RedisError
 import app.users.models as _user_models  # noqa: F401
 from app import __version__
 from app.auth.router import router as auth_router
+from app.auth.service import prune_expired_guests
 from app.categories.router import router as categories_router
 from app.core.config import settings
-from app.core.database import close_db
+from app.core.database import close_db, get_session_maker
 from app.core.logging import configure_logging
 from app.core.redis import close_redis, get_redis
 from app.rooms.manager import room_manager
 from app.rooms.router import router as rooms_router
+from app.rooms.scheduler import cancel_task, create_logged_task
 from app.rooms.ws_router import router as ws_router
 from app.system.router import router as system_router
 from app.users.router import router as users_router
@@ -29,6 +32,20 @@ if TYPE_CHECKING:
 
 configure_logging()
 logger = logging.getLogger(__name__)
+
+GUEST_PRUNE_INTERVAL_SECONDS = 60 * 60 * 24
+
+
+async def _prune_guests_daily() -> None:
+    """Delete expired guest users now, then once a day."""
+    while True:
+        try:
+            async with get_session_maker()() as db:
+                deleted = await prune_expired_guests(db)
+            logger.info("Pruned %d expired guest users", deleted)
+        except Exception:
+            logger.exception("Failed to prune expired guest users")
+        await asyncio.sleep(GUEST_PRUNE_INTERVAL_SECONDS)
 
 
 @asynccontextmanager
@@ -44,8 +61,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
 
     await room_manager.start()
     logger.info("Room manager started")
+    guest_prune_task = create_logged_task(_prune_guests_daily(), name="guest_prune")
     yield
     logger.info("Shutting down...")
+    await cancel_task(guest_prune_task)
     await room_manager.stop()
     logger.info("Room manager stopped")
     await close_db()

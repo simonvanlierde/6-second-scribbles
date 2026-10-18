@@ -197,6 +197,9 @@ class _FakeSession:
     def is_host(self) -> bool:
         return self.room.is_host(self.player_id)
 
+    def state_request_allowed(self) -> bool:
+        return True
+
     async def send_error(self, event_type: str, error: str, message: str) -> None:
         self.error_calls.append((event_type, error, message))
 

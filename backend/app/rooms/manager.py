@@ -77,10 +77,17 @@ MAX_LOBBY_STROKES = 500
 # strokeStart) would extend that one stroke forever — MAX_LOBBY_STROKES bounds the
 # count of strokes, not points inside one. Generous vs any real freehand stroke.
 MAX_STROKE_POINTS = 4000
+# Cap on points across the whole doodle. The two caps above still allow 500 x 4000
+# points, a room_state of tens of MB that freezes the single worker to build.
+MAX_LOBBY_POINTS = 20_000
 
 
 class RoomCapacityError(Exception):
     """Raised when the global room cap is reached and a new room cannot be created."""
+
+
+class ClientRoomLimitError(RoomCapacityError):
+    """Raised when one client already holds its share of open rooms."""
 
 
 @dataclass
@@ -106,12 +113,22 @@ class RoomStats:
     total_players: int
 
 
+async def _close_quietly(websocket: WebSocket) -> None:
+    with contextlib.suppress(Exception):
+        await websocket.close(code=1011)
+
+
 class GameRoom:
     """Manages a single game room with multiple players."""
 
     def __init__(self, room_id: str):
         self.room_id = room_id
+        # Network that opened the room, for the per-client room cap. In-memory only.
+        self.creator: str | None = None
         self.players: dict[str, PlayerInfo] = {}
+        # Spectator sockets: they get every broadcast but never a card, and do not
+        # count as players. In-memory only; a spectator re-sends watch on reconnect.
+        self.observers: list[PlayerInfo] = []
         self.host_id: str | None = None
         self.metadata = RoomMetadataState()
         self.scheduler = RoomTaskScheduler(self)
@@ -126,6 +143,9 @@ class GameRoom:
         self.emptied_at: float | None = self.created_at
         self.is_hibernated = False
         self.active_kick_votes: dict[str, KickVote] = {}  # target_player_id -> KickVote
+        # Player ids and accounts voted out of this room; add_player refuses them.
+        # In-memory only: a restart forgives, and a cleared browser gets a new id.
+        self.kicked_ids: set[str] = set()
         # Latest drawing PNG (data URL) per player for the current round. Kept in
         # memory only (deliberately not in the Redis-persisted RoomState) so
         # reconnecting players can recover drawings without bloating persistence.
@@ -318,6 +338,17 @@ class GameRoom:
             player_info_factory=PlayerInfo,
         )
 
+    def add_observer(self, websocket: WebSocket) -> bool:
+        """Register a spectator socket; return False when the room has no spectator seats left."""
+        if len(self.observers) >= settings.max_observers:
+            return False
+        self.observers.append(PlayerInfo(id="observer", name="observer", websocket=websocket))
+        return True
+
+    def remove_observer(self, websocket: WebSocket) -> None:
+        """Forget a spectator socket."""
+        self.observers = [observer for observer in self.observers if observer.websocket is not websocket]
+
     def _new_host_transfer_task(self, old_host_id: str) -> asyncio.Task[object]:
         """Create the delayed host-transfer task (shared by remove/disconnect paths)."""
         return create_logged_task(
@@ -342,13 +373,14 @@ class GameRoom:
         if self.metadata.game_phase == GamePhase.GUESSING and rounds.all_expected_guesses_submitted(self):
             create_logged_task(self.score_and_broadcast_round(), name=f"auto_score_{self.room_id}")
 
-    async def remove_player(self, player_id: str) -> None:
-        """Remove a player from the room."""
+    async def remove_player(self, player_id: str, *, forget_identity: bool = False) -> None:
+        """Remove a player from the room; see player_lifecycle.remove_player for `forget_identity`."""
         await player_lifecycle.remove_player(
             self,
             player_id,
             host_transfer_delay_ms=settings.host_transfer_delay_ms,
             schedule_host_transfer=self._new_host_transfer_task,
+            forget_identity=forget_identity,
         )
         self._maybe_auto_score()
 
@@ -429,12 +461,20 @@ class GameRoom:
             room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points)
             if room > 0:
                 self.lobby_strokes[idx].points.extend(stroke.points[:room])
-        # NOTE: bound the shared doodle so a marathon lobby can't grow unbounded.
-        # Trim oldest strokes past the cap; indices shift, so reset the partial map
-        # (an in-progress stroke at most restarts on its next fragment).
-        if len(self.lobby_strokes) > MAX_LOBBY_STROKES:
-            self.lobby_strokes = self.lobby_strokes[-MAX_LOBBY_STROKES:]
-            self._lobby_partial_index.clear()
+        # NOTE: bound the shared doodle by stroke count and total points so a
+        # marathon lobby can't grow unbounded; the oldest strokes go first.
+        drop = max(0, len(self.lobby_strokes) - MAX_LOBBY_STROKES)
+        total = sum(len(s.points) for s in self.lobby_strokes[drop:])
+        while total > MAX_LOBBY_POINTS and drop < len(self.lobby_strokes) - 1:
+            total -= len(self.lobby_strokes[drop].points)
+            drop += 1
+        if drop:
+            self._trim_lobby_strokes(drop)
+
+    def _trim_lobby_strokes(self, drop: int) -> None:
+        """Drop the oldest `drop` strokes, keeping in-progress strokes attached to theirs."""
+        self.lobby_strokes = self.lobby_strokes[drop:]
+        self._lobby_partial_index = {pid: i - drop for pid, i in self._lobby_partial_index.items() if i >= drop}
 
     def clear_lobby_strokes(self) -> None:
         """Reset the shared lobby doodle (host clear, or leaving the lobby)."""
@@ -532,10 +572,18 @@ class GameRoom:
             if (exclude and player_id == exclude) or not player.connected:
                 continue
             await self._deliver(player, text)
+        await self._deliver_to_observers(text)
+
+    async def _deliver_to_observers(self, text: str) -> None:
+        for observer in list(self.observers):
+            if observer.connected:
+                await self._deliver(observer, text)
 
     async def _deliver(self, player: PlayerInfo, text: str) -> None:
         try:
-            await player.websocket.send_text(text)
+            # A client that stops reading would otherwise hold this await, and with
+            # it every broadcast and timer in the room.
+            await asyncio.wait_for(player.websocket.send_text(text), settings.ws_send_timeout_seconds)
         except Exception:
             # A failed send on a still-"connected" socket means we missed the
             # close. Mark them disconnected so we stop trying; the websocket's
@@ -543,6 +591,9 @@ class GameRoom:
             # broadcasts presence and handles host/scoring/cleanup.
             logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
             player.connected = False
+            # Close so the client reconnects instead of sitting on a socket that gets
+            # nothing; in the background, because a stuck socket may not close quickly.
+            create_logged_task(_close_quietly(player.websocket), name=f"close_{self.room_id}_{player.id}")
 
     async def send_round_start(
         self,
@@ -554,6 +605,7 @@ class GameRoom:
 
         A broadcast would hand every player everyone's prompts. A player who is
         offline now gets their card from room_state when they reconnect.
+        Spectators get the same event with no cards.
         """
         for player_id, player in list(self.players.items()):
             if not player.connected:
@@ -561,6 +613,9 @@ class GameRoom:
             own = {player_id: cards[player_id]} if player_id in cards else {}
             event = StartRoundServerEvent(round=round_number, cards=own, roundStartTime=round_start_time)
             await self._deliver(player, encode_ws_message(event))
+        if self.observers:
+            event = StartRoundServerEvent(round=round_number, cards={}, roundStartTime=round_start_time)
+            await self._deliver_to_observers(encode_ws_message(event))
 
     async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
         """Send a message to a specific player."""
@@ -707,17 +762,25 @@ class RoomManager:
         """Run cleanup and hibernation checks on all rooms."""
         await room_lifecycle.run_cleanup(self)
 
-    def get_or_create_room(self, room_id: str) -> GameRoom:
+    def get_or_create_room(self, room_id: str, *, creator: str | None = None) -> GameRoom:
         """Get an existing room or create a new one.
 
         Raises ``RoomCapacityError`` when a *new* room would exceed the global
-        cap. Existing rooms are always returned.
+        cap, and ``ClientRoomLimitError`` when ``creator`` already opened
+        ``max_rooms_per_client`` rooms that are still open, so one client cannot
+        fill the global cap. Existing rooms are always returned.
         """
         if room_id not in self.rooms:
             if len(self.rooms) >= settings.max_total_rooms:
                 msg = f"Global room cap reached (maximum {settings.max_total_rooms} rooms)"
                 raise RoomCapacityError(msg)
+            if creator is not None:
+                held = sum(1 for room in self.rooms.values() if room.creator == creator)
+                if held >= settings.max_rooms_per_client:
+                    msg = f"Client room cap reached (maximum {settings.max_rooms_per_client} rooms)"
+                    raise ClientRoomLimitError(msg)
             room = GameRoom(room_id)
+            room.creator = creator
             self.rooms[room_id] = room
             room.scheduler.start_idle_check()
             logger.info("[RoomManager] Created new room: %s (total rooms: %s)", room_id, len(self.rooms))

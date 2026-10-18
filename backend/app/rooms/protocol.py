@@ -41,7 +41,7 @@ class ClientEventModel(BaseModel):
 class ClientPlayerEventModel(ClientEventModel):
     """Client event with a required player id."""
 
-    player_id: str = Field(alias="playerId")
+    player_id: str = Field(alias="playerId", max_length=64)
 
 
 class ClientTargetPlayerEventModel(ClientEventModel):
@@ -52,7 +52,8 @@ class ClientTargetPlayerEventModel(ClientEventModel):
 
 class JoinEvent(ClientPlayerEventModel):
     type: Literal["join"]
-    name: str
+    # Same bound as users.display_name, which a signed-in player joins with.
+    name: str = Field(max_length=80)
     preferred_locale: LanguageCode | None = Field(default=None, alias="preferredLocale")
     preferred_color: str | None = Field(default=None, alias="preferredColor")
     # Client-held secret for this player_id. player_ids are public (every roster
@@ -87,24 +88,11 @@ class PlayerCardPayload(BaseModel):
     alternatives: dict[str, list[str]] | None = None
 
 
-class StartRoundEvent(ClientEventModel):
-    type: Literal["start_round"]
-    round: int | None = None
-    cards: dict[str, PlayerCardPayload]
-
-
-class RoundCompleteEvent(ClientEventModel):
-    type: Literal["round_complete"]
-
-
-class GameCompleteEvent(ClientEventModel):
-    type: Literal["game_complete"]
-
-
 class PlayerReadyEvent(ClientPlayerEventModel):
     type: Literal["player_ready"]
 
 
+# Server-only: the server moves rounds into guessing, clients never send this.
 class StartGuessingEvent(ClientEventModel):
     type: Literal["start_guessing"]
     guessing_start_time: int | None = Field(default=None, alias="guessingStartTime")
@@ -131,6 +119,12 @@ class LeaveEvent(ClientEventModel):
     """An explicit, intentional leave — remove the player immediately."""
 
     type: Literal["leave"]
+
+
+class WatchEvent(ClientEventModel):
+    """Follow the room as a spectator: get its broadcasts without joining."""
+
+    type: Literal["watch"]
 
 
 class SettingsUpdateEvent(GameSettingsEventModel):
@@ -169,8 +163,8 @@ class StrokeDelta(BaseModel):
     an in-progress stroke's relayed payload O(new points) instead of O(n^2).
     """
 
-    color: str
-    width: float
+    color: str = Field(max_length=32)
+    width: float = Field(gt=0, le=64)
     points: list[StrokePoint] = Field(default_factory=list, max_length=1000)
 
 
@@ -237,15 +231,12 @@ class ReactionSendEvent(ClientEventModel):
 ClientEvent = Annotated[
     JoinEvent
     | StartGameEvent
-    | StartRoundEvent
-    | RoundCompleteEvent
-    | GameCompleteEvent
     | PlayerReadyEvent
-    | StartGuessingEvent
     | SubmitGuessEvent
     | RestartGameEvent
     | HeartbeatEvent
     | LeaveEvent
+    | WatchEvent
     | SettingsUpdateEvent
     | DefaultLocaleUpdateEvent
     | RoomCustomCategoriesUpdateEvent
@@ -578,14 +569,11 @@ CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "join": {"group": "connection", "summary": "Join a room with the local player identity."},
     "leave": {"group": "connection", "summary": "Explicitly leave the room (immediate removal)."},
     "request_game_state": {"group": "connection", "summary": "Request the latest room snapshot."},
-    "game_complete": {"group": "gameFlow", "summary": "Signal that the game is complete."},
+    "watch": {"group": "connection", "summary": "Watch the room as a spectator without joining."},
     "player_ready": {"group": "gameFlow", "summary": "Mark the current player as ready."},
     "restart_game": {"group": "gameFlow", "summary": "Restart the game from the lobby state."},
-    "round_complete": {"group": "gameFlow", "summary": "Signal that the current round is complete."},
     "settings_update": {"group": "gameFlow", "summary": "Update shared game settings."},
     "start_game": {"group": "gameFlow", "summary": "Host starts a game with room settings."},
-    "start_guessing": {"group": "gameFlow", "summary": "Host transitions the room into guessing."},
-    "start_round": {"group": "gameFlow", "summary": "Host starts a drawing round with assigned cards."},
     "submit_guess": {"group": "gameFlow", "summary": "Submit guesses for another player's drawing."},
     "default_locale_update": {"group": "roomSettings", "summary": "Change the room default locale."},
     "room_custom_categories_update": {

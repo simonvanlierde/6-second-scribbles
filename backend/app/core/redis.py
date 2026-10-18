@@ -103,10 +103,20 @@ async def load_all_room_states() -> list[RoomState]:
         if not keys:
             return []
         results = await r.mget(keys)
-        return [RoomState.model_validate_json(value) for value in results if value]
     except _PERSISTENCE_ERRORS:
         logger.exception("[Redis] Failed to load all rooms")
         return []
+    # One room saved by an older or newer schema must not cost every other room
+    # its restore. The skipped key still expires on its own TTL.
+    states: list[RoomState] = []
+    for key, value in zip(keys, results, strict=True):
+        if not value:
+            continue
+        try:
+            states.append(RoomState.model_validate_json(value))
+        except ValueError:
+            logger.exception("[Redis] Skipped unreadable room state %s", key)
+    return states
 
 
 async def create_session(user_id: str) -> str:
@@ -129,7 +139,7 @@ async def get_session_user_id(session_id: str) -> str | None:
         # awaited value needs a cast to satisfy the type checker.
         return cast("str | None", await r.get(_session_key(session_id)))
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to read session %s", session_id)
+        logger.exception("[Redis] Failed to read a session")
         return None
 
 
@@ -139,7 +149,7 @@ async def delete_session(session_id: str) -> None:
         r = await get_redis()
         await r.delete(_session_key(session_id))
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to delete session %s", session_id)
+        logger.exception("[Redis] Failed to delete a session")
 
 
 async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: int) -> tuple[int, int]:
@@ -161,7 +171,7 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
         retry_after = max(int(ttl), 0)
         return int(count), retry_after
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to increment rate limit %s for %s", bucket, identifier)
+        logger.exception("[Redis] Failed to increment rate limit %s", bucket)
         # Fail closed: if Redis is unavailable we cannot count attempts, so treat
         # the request as over-limit rather than silently disabling every throttle
         # (login/register/room-creation) during the outage. Availability trade-off:

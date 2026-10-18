@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 
 import DrawingPhase from "@/components/DrawingPhase.vue";
+import { DRAWING_PAPER } from "@/config/drawing";
 import { useGameStore } from "@/stores/game";
 
 const canvasMocks = vi.hoisted(() => ({
@@ -76,10 +77,13 @@ function seedDrawing() {
   const store = useGameStore();
   store.setPlayers([{ id: "p1", name: "Alice" }]);
   store.localPlayerId = "p1";
-  store.startRound(1, {
-    p1: {
-      category: "Animals",
-      items: ["cat", "dog"],
+  store.onStartRound({
+    round: 1,
+    cards: {
+      p1: {
+        category: "Animals",
+        items: ["cat", "dog"],
+      },
     },
   });
   return store;
@@ -150,21 +154,11 @@ describe("DrawingPhase", () => {
     expect(draftClearMock).toHaveBeenCalledTimes(1);
   });
 
-  it("encodes the drawing over the card colour the drawer saw", async () => {
-    const stage = document.createElement("div");
-    stage.style.backgroundColor = "rgb(35, 30, 27)";
-    const canvasEl = document.createElement("canvas");
-    stage.append(canvasEl);
-    const original = canvasMocks.canvasRef.value;
-    canvasMocks.canvasRef.value = canvasEl as unknown as typeof original;
-    try {
-      const wrapper = mountPhase();
-      await wrapper.find(".drawing-phase__finish-desktop").trigger("click");
+  it("encodes the drawing over the fixed paper colour, whatever the theme", async () => {
+    const wrapper = mountPhase();
+    await wrapper.find(".drawing-phase__finish-desktop").trigger("click");
 
-      expect(encodeDrawingMock).toHaveBeenCalledWith(canvasEl, "rgb(35, 30, 27)");
-    } finally {
-      canvasMocks.canvasRef.value = original;
-    }
+    expect(encodeDrawingMock).toHaveBeenCalledWith(canvasMocks.canvasRef.value, DRAWING_PAPER);
   });
 
   it("still marks the player ready when the canvas is gone", async () => {

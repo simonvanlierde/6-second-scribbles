@@ -30,6 +30,7 @@
     "step3": "다른 플레이어가 무엇을 그렸는지 맞혀 보세요",
     "step4": "그린 사람과 맞힌 사람 모두 정답마다 점수를 얻습니다!",
     "footerText": "Gamely Games의 {original}을 웹에서 즐기는 멀티플레이 버전 · {inspiration}에서 영감 · {source}",
+    "privacyNote": "개인정보: 게스트 계정은 이름과 언어만 저장하며, 세션이 끝나고 30일 후에 삭제됩니다. 서버 로그는 악용을 막기 위해 전체 IP가 아닌 줄인 네트워크 주소만 남기며, 오래된 로그는 새 로그가 쌓이면서 덮어써집니다.",
     "tagline": "그려요. 맞춰요. 웃어요.",
     "roomCodeLabel": "방 코드",
     "quickPlayHeading": "바로 플레이.",

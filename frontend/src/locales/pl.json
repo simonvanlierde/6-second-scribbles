@@ -30,6 +30,7 @@
     "step3": "Odgadnij, co narysowali inni gracze",
     "step4": "Zarówno rysujący, jak i zgadujący zdobywają punkty za poprawne odpowiedzi!",
     "footerText": "Wieloosobowa wersja webowa {original} od Gamely Games · Zainspirowane przez {inspiration} · {source}",
+    "privacyNote": "Prywatność: konto gościa przechowuje tylko twoje imię i język i jest usuwane 30 dni po zakończeniu sesji. Logi serwera przechowują skrócony adres sieciowy, a nie twój pełny adres IP, aby powstrzymać nadużycia, a stare logi są nadpisywane, gdy pojawiają się nowe.",
     "tagline": "Rysuj. Zgaduj. Śmiej się.",
     "roomCodeLabel": "Kod pokoju",
     "quickPlayHeading": "Po prostu graj.",

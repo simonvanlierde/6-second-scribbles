@@ -78,6 +78,8 @@ class Settings(BaseSettings):
 
     # Game configuration
     max_players: int = 10
+    # Every broadcast is sent to each spectator too, so cap them per room.
+    max_observers: int = 20
     # Grace period before transferring host after a disconnect. Must comfortably
     # exceed a page refresh round-trip so a reconnecting host keeps the role.
     host_transfer_delay_ms: int = 5000
@@ -97,9 +99,15 @@ class Settings(BaseSettings):
     # throttles, so it stays off unless explicitly enabled.
     rate_limit_trust_forwarded_for: bool = IS_PROD
     max_total_rooms: int = 500
+    # Open rooms one network may have created at once. Households share one IP,
+    # so this counts rooms, not players or sockets.
+    max_rooms_per_client: int = 5
     ws_max_message_bytes: int = 64 * 1024
     ws_draw_messages_per_window: int = 60
     ws_draw_window_seconds: int = 1
+    ws_state_requests_per_window: int = 5
+    ws_send_timeout_seconds: float = 5.0
+    ws_state_window_seconds: int = 5
     room_creation_rate_limit: int = 10
     room_creation_rate_window_seconds: int = 60
 

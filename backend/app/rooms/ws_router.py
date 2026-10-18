@@ -9,8 +9,8 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from app.auth.service import get_user_by_session
 from app.core.config import settings
 from app.core.database import get_session_maker
-from app.core.rate_limits import enforce_rate_limit, get_client_identifier
-from app.rooms.manager import RoomCapacityError, room_manager
+from app.core.rate_limits import client_network, enforce_rate_limit, get_client_identifier
+from app.rooms.manager import ClientRoomLimitError, RoomCapacityError, room_manager
 from app.rooms.session import RoomWebSocketSession
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
             return
 
     try:
-        room = room_manager.get_or_create_room(room_id)
+        room = room_manager.get_or_create_room(room_id, creator=client_network(get_client_identifier(websocket)))
+    except ClientRoomLimitError:
+        logger.warning("[WebSocket] Room %s rejected: client holds too many rooms", room_id)
+        await websocket.close(code=1013, reason="Too many open rooms")
+        return
     except RoomCapacityError:
         logger.warning("[WebSocket] Room %s rejected: server at capacity", room_id)
         await websocket.close(code=1013, reason="Server at capacity")

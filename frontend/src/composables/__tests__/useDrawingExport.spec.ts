@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import { useDrawingExport } from "@/composables/useDrawingExport";
+import { DRAWING_PAPER } from "@/config/drawing";
 
 class FakeImage {
   onload: (() => void) | null = null;
@@ -51,7 +51,7 @@ describe("useDrawingExport", () => {
     expect(canvas.width).toBe(400);
     expect(canvas.height).toBe(300);
     // Cream fill happens across the whole canvas, BEFORE the strokes are drawn.
-    expect(ctx.fillStyle).toBe("#FDFBF7");
+    expect(ctx.fillStyle).toBe(DRAWING_PAPER);
     expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 400, 300);
     expect(ctx.fillRect.mock.invocationCallOrder[0]).toBeLessThan(ctx.drawImage.mock.invocationCallOrder[0]);
     // Downloads via an anchor with the requested filename.

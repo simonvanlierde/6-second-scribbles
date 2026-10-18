@@ -60,58 +60,6 @@
         "title": "CategoryListItem",
         "type": "object"
       },
-      "CategorySelectionRequest": {
-        "description": "Parameters for selecting category sets for a room/game.",
-        "properties": {
-          "count": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "Count",
-            "type": "integer"
-          },
-          "difficulty": {
-            "$ref": "#/components/schemas/Difficulty"
-          },
-          "locale": {
-            "$ref": "#/components/schemas/LanguageCode",
-            "default": "en"
-          },
-          "locales": {
-            "items": {
-              "$ref": "#/components/schemas/LanguageCode"
-            },
-            "title": "Locales",
-            "type": "array"
-          },
-          "player_count": {
-            "default": 2,
-            "minimum": 1.0,
-            "title": "Player Count",
-            "type": "integer"
-          }
-        },
-        "required": ["difficulty"],
-        "title": "CategorySelectionRequest",
-        "type": "object"
-      },
-      "CategorySelectionResponse": {
-        "description": "Response for room-scoped category selection.",
-        "properties": {
-          "difficulty": {
-            "$ref": "#/components/schemas/Difficulty"
-          },
-          "selections": {
-            "items": {
-              "$ref": "#/components/schemas/SelectedCategorySet"
-            },
-            "title": "Selections",
-            "type": "array"
-          }
-        },
-        "required": ["difficulty", "selections"],
-        "title": "CategorySelectionResponse",
-        "type": "object"
-      },
       "CreateRoomResponse": {
         "description": "Response for newly created room.",
         "properties": {
@@ -326,46 +274,6 @@
         },
         "required": ["exists"],
         "title": "RoomStatusResponse",
-        "type": "object"
-      },
-      "SelectedCategorySet": {
-        "description": "One selected localized category set for game setup.",
-        "properties": {
-          "alternatives": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "title": "Alternatives",
-            "type": "object"
-          },
-          "category_id": {
-            "title": "Category Id",
-            "type": "integer"
-          },
-          "category_name": {
-            "title": "Category Name",
-            "type": "string"
-          },
-          "item_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "title": "Item Ids",
-            "type": "array"
-          },
-          "items": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Items",
-            "type": "array"
-          }
-        },
-        "required": ["category_id", "category_name", "item_ids", "items", "alternatives"],
-        "title": "SelectedCategorySet",
         "type": "object"
       },
       "StatsResponse": {
@@ -992,57 +900,6 @@
           }
         },
         "summary": "Get Random Room",
-        "tags": ["rooms"]
-      }
-    },
-    "/api/rooms/{room_id}/category-selection": {
-      "post": {
-        "description": "Select category sets for a specific room/game setup.",
-        "operationId": "select_room_categories_api_rooms__room_id__category_selection_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "room_id",
-            "required": true,
-            "schema": {
-              "title": "Room Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CategorySelectionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategorySelectionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Select Room Categories",
         "tags": ["rooms"]
       }
     },

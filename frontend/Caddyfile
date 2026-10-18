@@ -14,9 +14,19 @@
 
 :80 {
 	# JSON to stderr so the Docker log driver picks it up; no volume to manage.
+	# Visitor IPs are masked to their /24 (IPv4) or /48 (IPv6) network: enough to
+	# spot abuse from one network, not enough to name a household.
 	log {
 		output stderr
-		format json
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip ip_mask 24 48
+				request>client_ip ip_mask 24 48
+				request>headers>Cf-Connecting-Ip ip_mask 24 48
+				request>headers>X-Forwarded-For ip_mask 24 48
+			}
+		}
 	}
 
 	encode zstd gzip

@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import secrets
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
 from app.auth.security import hash_password, verify_password
+from app.core.config import settings
 from app.core.redis import create_session, delete_session, get_session_user_id
 from app.users.models import User
 from app.users.schemas import UserResponse
@@ -128,6 +130,22 @@ async def get_user_by_session(db: AsyncSession, session_id: str | None) -> User 
 
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
+
+
+async def prune_expired_guests(db: AsyncSession) -> int:
+    """Delete guest users whose session cookie has expired, and return how many went.
+
+    A guest gets its only session when it is created, and that session never
+    renews, so once ``updated_at`` is older than the session TTL nobody can act
+    as that guest again. Registered users always have a password hash and are
+    never touched.
+    """
+    cutoff = datetime.now(UTC) - timedelta(seconds=settings.auth_session_ttl_seconds)
+    result = await db.execute(
+        delete(User).where(User.password_hash.is_(None), User.updated_at < cutoff).returning(User.id)
+    )
+    await db.commit()
+    return len(result.all())
 
 
 def to_user_response(user: User) -> UserResponse:

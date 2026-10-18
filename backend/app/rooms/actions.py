@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
 from app.rooms import rounds
-from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
     DrawStrokePartialEvent,
@@ -17,10 +17,8 @@ from app.rooms.protocol import (
     PlayerLeftEvent,
     ReactionReceivedServerEvent,
     RoomCustomCategoriesUpdateServerEvent,
-    StartGuessingEvent,
     send_ws_message,
 )
-from app.rooms.state import PlayerPromptAssignmentState
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -43,8 +41,8 @@ if TYPE_CHECKING:
         RoomCustomCategoriesUpdateEvent,
         SettingsUpdateEvent,
         StartGameEvent,
-        StartRoundEvent,
         SubmitGuessEvent,
+        WatchEvent,
         WebSocketMessage,
     )
     from app.rooms.session import RoomWebSocketSession
@@ -99,6 +97,8 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         logger.warning("[Server] Player %s (%s) cannot join: %s", event.name, event.player_id, exc)
         if str(exc) == IDENTITY_CONFLICT_ERROR:
             error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use in another browser or account."
+        elif str(exc) == KICKED_ERROR:
+            error, message = KICKED_ERROR, "You were removed from this room."
         else:
             error, message = "room_full", str(exc)
         await send_ws_message(
@@ -141,28 +141,6 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
     session.room.scheduler.schedule_first_round()
 
 
-async def handle_start_round(session: RoomWebSocketSession, event: StartRoundEvent) -> None:
-    """Handle a start-round event."""
-    if not await require_host(session, "start a round"):
-        return
-    round_start_time = session.room.start_round(
-        round_number=event.round,
-        cards={
-            player_id: PlayerPromptAssignmentState(
-                category_id=card.category_id,
-                category=card.category,
-                item_ids=card.item_ids or [],
-                items=card.items,
-                alternatives=card.alternatives or {},
-            )
-            for player_id, card in event.cards.items()
-        },
-    )
-    await session.room.send_round_start(event.round, event.cards, round_start_time)
-    await session.room.persist()
-    session.room.scheduler.schedule_guessing_start(session.room.metadata.drawing_time_limit or 30)
-
-
 async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyEvent) -> None:
     """Handle a player-ready event."""
     if event.player_id != session.player_id:
@@ -174,15 +152,6 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
         session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
         await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
-
-
-async def handle_start_guessing(session: RoomWebSocketSession, event: StartGuessingEvent) -> None:
-    """Handle a start-guessing event."""
-    del event
-    if not await require_host(session, "start guessing"):
-        return
-    session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
-    await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
 
 
 async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessEvent) -> None:
@@ -292,7 +261,24 @@ async def handle_cast_kick_vote(session: RoomWebSocketSession, event: CastKickVo
 async def handle_request_game_state(session: RoomWebSocketSession, event: RequestGameStateEvent) -> None:
     """Handle a request-game-state event."""
     del event
+    if not session.state_request_allowed():
+        return
     await send_ws_message(session.websocket, session.room.room_state_event(for_player_id=session.player_id))
+
+
+async def handle_watch(session: RoomWebSocketSession, event: WatchEvent) -> None:
+    """Register the connection as a spectator, then send it a fresh snapshot."""
+    del event
+    if session.player_id or session.is_observer:
+        return
+    if not session.room.add_observer(session.websocket):
+        message = "This room has as many spectators as it allows."
+        await send_ws_message(session.websocket, JoinErrorEvent(error="spectators_full", message=message))
+        await session.websocket.close(code=1008, reason=message)
+        return
+    session.is_observer = True
+    # The connect-time snapshot may predate broadcasts this socket missed before now.
+    await send_ws_message(session.websocket, session.room.room_state_event())
 
 
 async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEvent | DrawStrokePartialEvent) -> None:
@@ -309,6 +295,9 @@ async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEve
     # the sender's own: a forged id would overwrite another player's drawing.
     event.player_id = session.player_id
     if isinstance(event, DrawStrokePartialEvent):
+        # Only the lobby's shared drawpad sends fragments.
+        if session.room.metadata.game_phase != GamePhase.LOBBY:
+            return
         if event.stroke is not None:
             session.room.apply_lobby_partial(session.player_id, event.stroke, is_start=event.stroke_start)
     else:
@@ -337,6 +326,9 @@ async def handle_disconnect(session: RoomWebSocketSession) -> None:
     Mark the player reconnecting (mid-game) or remove them (lobby); an explicit
     leave goes through handle_leave instead.
     """
+    if session.is_observer:
+        session.room.remove_observer(session.websocket)
+        return
     if not session.player_id:
         return
     # On reconnect (e.g. a page refresh) a newer socket may already have re-added
@@ -353,7 +345,7 @@ async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None
     del event
     if not session.player_id:
         return
-    await session.room.remove_player(session.player_id)
+    await session.room.remove_player(session.player_id, forget_identity=True)
     await broadcast_and_persist(session, PlayerLeftEvent(playerId=session.player_id))
 
 
@@ -364,9 +356,7 @@ _HANDLERS: dict[str, _Handler] = {
     "join": handle_join,
     "leave": handle_leave,
     "start_game": handle_start_game,
-    "start_round": handle_start_round,
     "player_ready": handle_player_ready,
-    "start_guessing": handle_start_guessing,
     "submit_guess": handle_submit_guess,
     "restart_game": handle_restart_game,
     "settings_update": handle_settings_update,
@@ -380,6 +370,7 @@ _HANDLERS: dict[str, _Handler] = {
     "initiate_kick": handle_initiate_kick,
     "cast_kick_vote": handle_cast_kick_vote,
     "request_game_state": handle_request_game_state,
+    "watch": handle_watch,
     "reaction_send": handle_reaction_send,
 }
 

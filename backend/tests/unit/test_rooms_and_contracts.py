@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from fastapi import HTTPException
 
-from app.categories.schemas import CategorySelectionRequest
 from app.core.types import GamePhase
 from app.rooms import actions as room_actions
 from app.rooms import router as room_router
@@ -44,7 +43,6 @@ if TYPE_CHECKING:
 DEFAULT_LOCALE = "nl"
 DIFFICULTY_HARD = "hard"
 GENERATED_ROOM_CODE = "BBBBBB"
-SELECTED_RESULT = "selected"
 SCHEMA_ANY_OF_KEY = "anyOf"
 SCHEMA_DEFS_KEY = "$defs"
 
@@ -53,6 +51,7 @@ class _Session:
     def __init__(self, room: GameRoom, *, player_id: str | None, host: bool = True) -> None:
         self.room = room
         self.player_id = player_id
+        self.is_observer = False
         self.websocket = AsyncMock()
         self.current_user = None
         self._host = host
@@ -210,7 +209,6 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
     monkeypatch.setattr(room_router.room_manager, "get_or_create_room", Mock(return_value=fake_room))
     monkeypatch.setattr(room_router.room_manager, "find_random_public_room", Mock(return_value=None))
     monkeypatch.setattr(room_router.secrets, "choice", lambda _chars: next(choice_values))
-    monkeypatch.setattr(room_router, "select_category_sets", AsyncMock(return_value=SELECTED_RESULT))
 
     fake_request = SimpleNamespace(headers={}, client=None)
     created = await room_router.create_room(cast("Request", fake_request))
@@ -222,26 +220,10 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
     with pytest.raises(HTTPException, match="No available public rooms found"):
         await room_router.get_random_joinable_room()
 
-    monkeypatch.setattr(room_router.room_manager, "get_room", Mock(return_value=None))
-    with pytest.raises(HTTPException, match="Room not found"):
-        await room_router.select_room_categories(
-            room_id="ROOM03",
-            request=CategorySelectionRequest(difficulty="easy", count=1, player_count=2, locale="en", locales=[]),
-            db=AsyncMock(),
-        )
-
-    monkeypatch.setattr(room_router.room_manager, "get_room", Mock(return_value=fake_room))
-    selected = await room_router.select_room_categories(
-        room_id="ROOM04",
-        request=CategorySelectionRequest(difficulty="easy", count=1, player_count=2, locale="en", locales=[]),
-        db=AsyncMock(),
-    )
-
     assert created.room_code == GENERATED_ROOM_CODE
     assert existing_status.exists is True
     assert existing_status.players == 2
     assert missing_status.exists is False
-    assert selected == SELECTED_RESULT
 
 
 def test_generate_contract_helpers_cover_normalization_and_split(tmp_path: Path) -> None:

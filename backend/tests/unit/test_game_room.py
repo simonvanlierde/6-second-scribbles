@@ -1,6 +1,7 @@
 """Tests for game room management functionality."""
 # cspell: ignore rejoiner
 
+import asyncio
 import json
 import time
 from typing import TYPE_CHECKING, cast
@@ -17,6 +18,7 @@ from app.rooms import manager as manager_module
 from app.rooms import rounds
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
+from app.rooms.player_lifecycle import MAX_ABSENT_BINDINGS
 from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
@@ -174,7 +176,7 @@ class TestGameRoom:
         await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws_bob), user_id="user-bob")
 
         # Host leaves explicitly; a transfer is pending and host_id still lingers.
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await game_room.remove_player(PLAYER_ONE_ID, forget_identity=True)
         assert game_room.pending_host_transfer is not None
 
         # Mallory grabs the freed player_id under a different account. She joins as a
@@ -945,3 +947,54 @@ class TestReviewRegressions:
         assert PLAYER_THREE_ID not in game_room.metadata.guess_targets
         assert PLAYER_ONE_ID in game_room.metadata.guess_targets
         assert PLAYER_TWO_ID in game_room.metadata.guess_targets
+
+
+async def test_scheduled_round_start_survives_its_own_round_reset(
+    make_ws: Callable[..., TestWebSocket],
+    monkeypatch: pytest.MonkeyPatch,
+    dealt_cards: dict[str, list[str]],
+) -> None:
+    """The timer task that starts a round must still persist it and arm the guessing timer.
+
+    start_round cancels the round timers, and the round-start task is one of them.
+    """
+    _ = dealt_cards
+    room = GameRoom("SELFCANCEL")
+    for player_id, name in ((PLAYER_ONE_ID, PLAYER_ONE_NAME), (PLAYER_TWO_ID, PLAYER_TWO_NAME)):
+        room.players[player_id] = PlayerInfo(id=player_id, name=name, websocket=as_websocket(make_ws()))
+    persisted: list[GamePhase] = []
+
+    async def persist() -> None:
+        await asyncio.sleep(0)  # a real Redis write suspends here
+        persisted.append(room.metadata.game_phase)
+
+    monkeypatch.setattr(room, "persist", persist)
+
+    room.scheduler.schedule_next_round(0, round_number=1)
+    task = room.scheduler._next_round_start_task  # noqa: SLF001
+    assert task is not None
+    await asyncio.wait_for(asyncio.shield(task), timeout=2)
+
+    assert persisted == [GamePhase.DRAWING]
+    assert room.scheduler._guessing_start_task is not None  # noqa: SLF001
+    await room.scheduler.shutdown()
+
+
+HOST_ID = "host"
+FIRST_VISITOR = "visitor-0"
+
+
+async def test_absent_player_bindings_are_bounded(make_ws: Callable[..., TestWebSocket]) -> None:
+    """Visitors who drop without leaving keep their binding, but only the newest MAX_ABSENT_BINDINGS stay."""
+    room = GameRoom("BINDINGS01")
+    await room.add_player(HOST_ID, "Host", as_websocket(make_ws()), rejoin_key="host-key")
+    for i in range(MAX_ABSENT_BINDINGS + 25):
+        await room.add_player(f"visitor-{i}", "Visitor", as_websocket(make_ws()), rejoin_key=f"key-{i}")
+        await room.remove_player(f"visitor-{i}")
+
+    keys = room.metadata.player_rejoin_keys
+    assert HOST_ID in keys
+    assert len(keys) == MAX_ABSENT_BINDINGS + 1
+    assert f"visitor-{MAX_ABSENT_BINDINGS + 24}" in keys
+    assert FIRST_VISITOR not in keys
+    await room.scheduler.shutdown()

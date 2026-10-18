@@ -30,6 +30,7 @@
     "step3": "猜猜你其他玩家畫了什麼",
     "step4": "畫畫者和猜題者在答對時都能得分！",
     "footerText": "{original} 的多人網頁版 · 靈感來自 {inspiration} · {source}",
+    "privacyNote": "隱私：訪客帳戶只保存你的名字和語言，並在工作階段結束 30 天後刪除。伺服器日誌為防止濫用只記錄縮短後的網路位址，而不是你的完整 IP，舊日誌會隨著新日誌寫入而被覆蓋。",
     "tagline": "塗鴉。猜謎。歡笑。",
     "roomCodeLabel": "房間碼",
     "quickPlayHeading": "直接開玩。",
