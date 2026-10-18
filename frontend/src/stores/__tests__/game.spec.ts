@@ -195,13 +195,13 @@ describe("player locale state", () => {
 // Game flow actions
 // ---------------------------------------------------------------------------
 
-describe("startGame", () => {
+describe("onStartGame", () => {
   it("resets scores and round counter", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
     store.addPlayer("p2", "Bob");
     store.updateScores({ p1: 10, p2: 5 });
-    store.startGame("hard", 8, 90, 60);
+    store.onStartGame({ difficulty: "hard", rounds: 8, drawingTimeLimit: 90, guessingTimeLimit: 60 });
     expect(store.playersList.every((p) => p.score === 0)).toBe(true);
     expect(store.currentRound).toBe(0);
     expect(store.difficulty).toBe("hard");
@@ -209,9 +209,19 @@ describe("startGame", () => {
     expect(store.drawingTimeLimit).toBe(90);
     expect(store.guessingTimeLimit).toBe(60);
   });
+
+  it("falls back to the default settings for missing fields", () => {
+    const store = useGameStore();
+    store.onStartGame({ difficulty: null, rounds: null, drawingTimeLimit: null, guessingTimeLimit: null });
+    expect(store.gamePhase).toBe("lobby");
+    expect(store.difficulty).toBe(GAME_SETTINGS.difficulty.DEFAULT);
+    expect(store.maxRounds).toBe(GAME_SETTINGS.rounds.DEFAULT);
+    expect(store.drawingTimeLimit).toBe(GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT);
+    expect(store.guessingTimeLimit).toBe(GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT);
+  });
 });
 
-describe("startRound", () => {
+describe("onStartRound", () => {
   it("sets phase to drawing and clears strokes", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
@@ -219,10 +229,15 @@ describe("startRound", () => {
     store.setReadyStatus(2, 2);
     store.setPlayerDrawing("p1", "data:image/png;base64,old");
     store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 0, y: 0 }] }, true);
-    store.startRound(1, { p1: { category: "Animals", items: ["cat", "dog"] } });
+    store.onStartRound({
+      round: 1,
+      cards: { p1: { category: "Animals", items: ["cat", "dog"] } },
+      roundStartTime: 500,
+    });
     expect(store.gamePhase).toBe("drawing");
     expect(store.currentStrokes).toHaveLength(0);
     expect(store.currentRound).toBe(1);
+    expect(store.roundStartTime).toBe(500);
     expect(store.readyCount).toBe(0);
     expect(store.totalPlayers).toBe(2);
     expect(store.playersList[0]?.drawing).toBeUndefined();
@@ -233,19 +248,25 @@ describe("startRound", () => {
     store.addPlayer("p1", "Alice");
     store.localPlayerId = "p1";
     const card = { category: "Animals", items: ["dog", "cat"] };
-    store.startRound(1, { p1: card });
+    store.onStartRound({ round: 1, cards: { p1: card } });
     expect(store.localPlayerCard).toEqual(card);
+  });
+
+  it("treats a missing round number as round 1", () => {
+    const store = useGameStore();
+    store.onStartRound({ round: null, cards: {} });
+    expect(store.currentRound).toBe(1);
   });
 });
 
-describe("startGuessing", () => {
+describe("onStartGuessing", () => {
   it("resets ready status and stores the server start time", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
     store.addPlayer("p2", "Bob");
     store.setReadyStatus(2, 2);
 
-    store.startGuessing(12345, { p1: "p2", p2: "p1" });
+    store.onStartGuessing({ guessingStartTime: 12345, guessTargets: { p1: "p2", p2: "p1" } });
 
     expect(store.gamePhase).toBe("guessing");
     expect(store.guessingStartTime).toBe(12345);
@@ -253,30 +274,92 @@ describe("startGuessing", () => {
     expect(store.readyCount).toBe(0);
     expect(store.totalPlayers).toBe(2);
   });
+
+  it("falls back to the local clock and no targets", () => {
+    const store = useGameStore();
+    const before = Date.now();
+    store.onStartGuessing({ guessingStartTime: null });
+    expect(store.guessingStartTime).toBeGreaterThanOrEqual(before);
+    expect(store.guessTargets).toEqual({});
+  });
 });
 
-describe("resetRound", () => {
-  it("resets round counter and all scores to 0", () => {
+describe("onRoundComplete", () => {
+  it("stores results and scores, captures drawings and shows round results", () => {
+    const store = useGameStore();
+    store.setPlayers([
+      { id: "p1", name: "Alice" },
+      { id: "p2", name: "Bob" },
+    ]);
+    store.currentRound = 2;
+    store.setPlayerDrawing("p1", "data:image/png;base64,A");
+    store.setReadyStatus(1, 2);
+    const results = [{ playerId: "p1", targetPlayerId: "p2", correctGuesses: 1, totalItems: 3, pointsEarned: 10 }];
+
+    store.onRoundComplete({ results, scores: { p1: 10, p2: 0 }, highlights: null });
+
+    expect(store.gamePhase).toBe("round_results");
+    expect(store.lastRoundResults).toEqual(results);
+    expect(store.lastHighlights).toBeNull();
+    expect(store.players.get("p1")?.score).toBe(10);
+    expect(store.drawingHistory.map((d) => [d.round, d.playerId])).toEqual([[2, "p1"]]);
+    expect(store.readyCount).toBe(0);
+    expect(store.totalPlayers).toBe(2);
+  });
+});
+
+describe("onGameComplete", () => {
+  it("applies final scores, sets phase to final results and resets ready status", () => {
+    const store = useGameStore();
+    store.addPlayer("p1", "Alice");
+    store.addPlayer("p2", "Bob");
+    store.setReadyStatus(2, 2);
+    store.onGameComplete({ finalScores: { p1: 30, p2: 20 } });
+    expect(store.gamePhase).toBe("final_results");
+    expect(store.getWinner()?.playerId).toBe("p1");
+    expect(store.readyCount).toBe(0);
+    expect(store.totalPlayers).toBe(2);
+  });
+});
+
+describe("onRestartGame", () => {
+  it("returns to the lobby and resets round counter and all scores to 0", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
     store.updateScores({ p1: 99 });
     store.currentRound = 3;
-    store.resetRound();
+    store.gamePhase = "final_results";
+    store.onRestartGame();
+    expect(store.gamePhase).toBe("lobby");
     expect(store.currentRound).toBe(0);
     expect(store.playersList[0]?.score).toBe(0);
   });
 });
 
-describe("endGame", () => {
-  it("sets phase to final results and resets ready status", () => {
+describe("applyRoomState", () => {
+  const snapshot = {
+    type: "room_state",
+    players: [{ id: "p1", name: "Alice", color: null, connected: true }],
+    hostId: "p1",
+    difficulty: "medium",
+    maxRounds: 3,
+  } as const;
+
+  it("hydrates the phase with the server's ready counters", () => {
     const store = useGameStore();
-    store.addPlayer("p1", "Alice");
-    store.addPlayer("p2", "Bob");
-    store.setReadyStatus(2, 2);
-    store.endGame();
-    expect(store.gamePhase).toBe("final_results");
-    expect(store.readyCount).toBe(0);
-    expect(store.totalPlayers).toBe(2);
+    store.applyRoomState({ ...snapshot, gamePhase: "guessing", readyCount: 1, totalPlayers: 4 } as never);
+    expect(store.gamePhase).toBe("guessing");
+    expect(store.readyCount).toBe(1);
+    expect(store.totalPlayers).toBe(4);
+  });
+
+  it("keeps the current counters when the snapshot omits them", () => {
+    const store = useGameStore();
+    store.setReadyStatus(2, 3);
+    store.applyRoomState({ ...snapshot, gamePhase: "drawing" } as never);
+    expect(store.gamePhase).toBe("drawing");
+    expect(store.readyCount).toBe(2);
+    expect(store.totalPlayers).toBe(3);
   });
 });
 
@@ -373,7 +456,7 @@ describe("captureRoundDrawings", () => {
     expect(store.totalGuessesMade).toBe(5);
   });
 
-  it("is cleared by resetRound and reset", () => {
+  it("is cleared by onRestartGame and reset", () => {
     const store = useGameStore();
     store.setPlayers([{ id: "p1", name: "Alice" }]);
     store.setPlayerDrawing("p1", "data:image/png;base64,AAA");
@@ -388,7 +471,7 @@ describe("captureRoundDrawings", () => {
     ]);
     store.captureRoundDrawings(1);
 
-    store.resetRound();
+    store.onRestartGame();
     expect(store.drawingHistory).toHaveLength(0);
     expect(store.totalGuessesMade).toBe(0);
 
