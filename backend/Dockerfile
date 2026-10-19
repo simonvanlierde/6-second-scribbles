@@ -1,9 +1,13 @@
 # spell-checker: ignore healthchecks, PYTHONUNBUFFERED, PYTHONDONTWRITEBYTECODE
 
-FROM python:3.14-slim AS runtime-base
+# The Debian release is in the tag so a rebuild never moves to the next one by itself.
+FROM python:3.14-slim-trixie AS runtime-base
 
-# Install curl for healthchecks, create non-root user for all runtime stages
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && \
+# Install curl for healthchecks, create non-root user for all runtime stages.
+# The upgrade takes Debian security fixes the base image has not been rebuilt with yet.
+# Docker caches this layer, so it reruns only when the base image changes: deploy with
+# `docker compose build --pull` so a new base image reaches it.
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && \
     useradd --create-home --home-dir /home/appuser --shell /bin/false appuser
 
 ENV VIRTUAL_ENV=/opt/.venv \
@@ -16,7 +20,8 @@ WORKDIR /app
 
 FROM runtime-base AS uv-base
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.3 /uv /uvx /bin/
+# Tag plus digest: a tag alone can move. No bot updates this line, bump it by hand.
+COPY --from=ghcr.io/astral-sh/uv:0.11.3@sha256:90bbb3c16635e9627f49eec6539f956d70746c409209041800a0280b93152823 /uv /uvx /bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
