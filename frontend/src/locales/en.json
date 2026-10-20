@@ -87,7 +87,7 @@
     "invalidCode": "Invalid room code",
     "roomNotFound": "Room not found",
     "roomInProgress": "The room is in progress. You can watch now and join when it returns to the lobby.",
-    "playersInRoom": "{count} player | {count} players in room",
+    "playersInRoom": "{count} player in room | {count} players in room",
     "invalidCodeText": "Room codes are 6 characters using A–Z and 0–9. Check the code and try again.",
     "tryGoBack": "Try going back to the lobby and re-entering the code.",
     "enterYourName": "Enter your name",

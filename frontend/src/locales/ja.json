@@ -87,7 +87,7 @@
     "invalidCode": "無効なルームコード",
     "roomNotFound": "ルームが見つかりません",
     "roomInProgress": "このルームは進行中です。今は観戦でき、ロビーに戻ったら参加できます。",
-    "playersInRoom": "{count}人のプレイヤー | ルーム内に{count}人のプレイヤー",
+    "playersInRoom": "ルーム内に{count}人のプレイヤー | ルーム内に{count}人のプレイヤー",
     "invalidCodeText": "ルームコードは A–Z と 0–9 を使う 6 文字です。コードを確認してもう一度試してください。",
     "tryGoBack": "ロビーに戻ってコードをもう一度入力してください。",
     "enterYourName": "名前を入力",

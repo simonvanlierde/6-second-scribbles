@@ -58,6 +58,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The message for a room that briefly turns away new players, after many players left it in a short time, is translated into every language.
 - A category without a translation in the room's language is now dealt in the next language it has, so the round still starts.
 - Two players could get the same avatar colour. Colours are now unique within a room; a colour picked in settings is kept unless another player already has it.
+- A translation review covered the 11 non-English languages. Wrong machine translations in category names, word cards and accepted guesses are corrected (Korean and Japanese had many), French uses "tu" throughout, and Korean uses the polite 해요체. Production picks up the new categories and words only after `seed_data --overwrite`.
+- "Connecting…" and "Reconnecting…" were shown in English in every language. A test now fails when a language file misses a key.
+- The player count on the room entry page reads "1 player in room", not "1 player", in every language.
+- `auto_translate_seed_data` no longer refills an alias list that a reviewer emptied on purpose.
 - After a round, guessers could wait forever on "Waiting for drawing…". The finished drawing was sent as a full-resolution PNG, often over 1 MB on a high-density screen, and the server drops messages over 64 KiB. Drawings are now scaled to at most 1024 px and sent as WebP (JPEG in browsers such as Safari that cannot encode WebP), stepping down until they fit. A player whose message is still too large sees an error instead of nothing.
 - Creating a room from the home page failed in production: the backend redirected `POST /api/rooms` to an `http://` URL, which the browser blocked on the HTTPS site. The backend now trusts the forwarded scheme from Caddy.
 - Rooms could split in production: the backend ran four worker processes, each with its own in-memory rooms, so a player could create a room on one worker and connect to another. It now runs a single worker.
@@ -84,7 +88,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - In dark mode the winner's name and the "Game stats" heading were unreadable on the results screen, the selected brush size showed no dot, the lobby's "Room code" label was faint, and drawing thumbnails had dark bars around them.
 - The ready tick in the game header wrapped onto its own line.
 - The home page "How to Play" and "About" links and the settings language picker were 40 px tall; they are now 44 px.
-- The "Connecting…" and "Reconnecting…" banner was English in every language.
 
 ### Security
 

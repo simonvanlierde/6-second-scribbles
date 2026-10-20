@@ -87,7 +87,7 @@
     "invalidCode": "Ongeldige kamercode",
     "roomNotFound": "Kamer niet gevonden",
     "roomInProgress": "De kamer is bezig. Je kunt nu meekijken en meedoen als die terugkeert naar de lobby.",
-    "playersInRoom": "{count} speler | {count} spelers in de kamer",
+    "playersInRoom": "{count} speler in de kamer | {count} spelers in de kamer",
     "invalidCodeText": "Kamercodes zijn 6 tekens met A-Z en 0-9. Controleer de code en probeer opnieuw.",
     "tryGoBack": "Probeer terug te gaan naar de lobby en de code opnieuw in te voeren.",
     "enterYourName": "Voer je naam in",
