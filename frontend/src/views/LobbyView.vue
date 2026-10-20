@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useClipboard } from "@vueuse/core";
 import { computed, useTemplateRef } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -22,7 +21,6 @@ const route = useRoute();
 const store = useGameStore();
 const { send } = useGameConnection();
 const { showNotification } = useNotifications();
-const { copy } = useClipboard();
 
 const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 
@@ -71,7 +69,11 @@ function startGame() {
 }
 
 async function copyRoomCode() {
-  await copy(roomCode.value);
+  try {
+    await navigator.clipboard.writeText(roomCode.value);
+  } catch {
+    return; // no clipboard access (insecure context or denied permission)
+  }
   showNotification(t("common.copied"));
 }
 

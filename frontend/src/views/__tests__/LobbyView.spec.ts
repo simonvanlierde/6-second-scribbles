@@ -11,14 +11,6 @@ const copyMock = vi.fn();
 const showNotificationMock = vi.fn();
 const leaveRoomMock = vi.fn();
 
-vi.mock("@vueuse/core", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@vueuse/core")>();
-  return {
-    ...actual,
-    useClipboard: () => ({ copy: copyMock }),
-  };
-});
-
 vi.mock("@/composables/useGameConnection", () => ({
   useGameConnection: () => ({ send: sendMock }),
 }));
@@ -70,6 +62,7 @@ describe("LobbyView", () => {
     setActivePinia(createPinia());
     sendMock.mockReset();
     copyMock.mockReset();
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: copyMock }, configurable: true });
     showNotificationMock.mockReset();
     leaveRoomMock.mockReset();
   });

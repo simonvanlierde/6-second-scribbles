@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useTimeoutFn, watchDebounced } from "@vueuse/core";
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import StepperInput from "@/components/StepperInput.vue";
@@ -28,9 +27,14 @@ const difficultyOptions = computed(() => DIFFICULTIES.map((d) => ({ value: d, la
 
 void fetchLocaleAvailability();
 
-const { start: startFlash } = useTimeoutFn(() => {
-  settingsFlash.value = false;
-}, UI_TIMINGS.SETTINGS_FLASH_MS);
+let flashTimer: number | undefined;
+function startFlash() {
+  clearTimeout(flashTimer);
+  flashTimer = window.setTimeout(() => {
+    settingsFlash.value = false;
+  }, UI_TIMINGS.SETTINGS_FLASH_MS);
+}
+onUnmounted(() => clearTimeout(flashTimer));
 
 function broadcastSettings() {
   if (store.isHost) {
@@ -81,8 +85,11 @@ watch([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], ([d, r, dl, gl]
   if (Number.isFinite(gl)) store.guessingTimeLimit = gl;
 });
 
-watchDebounced([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], broadcastSettings, {
-  debounce: 300,
+// Send once the host stops changing settings for 300 ms, not on every stepper click.
+let broadcastTimer: number | undefined;
+watch([difficulty, rounds, drawingTimeLimit, guessingTimeLimit], () => {
+  clearTimeout(broadcastTimer);
+  broadcastTimer = window.setTimeout(broadcastSettings, 300);
 });
 
 watch(

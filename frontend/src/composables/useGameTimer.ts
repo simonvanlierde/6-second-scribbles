@@ -1,6 +1,5 @@
-import { useIntervalFn } from "@vueuse/core";
 import type { MaybeRefOrGetter } from "vue";
-import { computed, ref, toValue, watch } from "vue";
+import { computed, getCurrentScope, onScopeDispose, ref, toValue, watch } from "vue";
 
 interface UseGameTimerOptions {
   startTime: MaybeRefOrGetter<number | null | undefined>;
@@ -24,16 +23,15 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
     timeLeft.value = computeTimeLeft(toValue(startTime), toValue(duration));
     if (timeLeft.value <= 0 && !expired) {
       expired = true;
-      pause();
+      stop();
       onExpire?.();
     }
   }
 
-  const { pause } = useIntervalFn(refresh, 1000, { immediate: true });
-
-  function stop() {
-    pause();
-  }
+  const interval = window.setInterval(refresh, 1000);
+  const stop = () => clearInterval(interval);
+  // Outside a component (as in unit tests) nothing disposes the timer.
+  if (getCurrentScope()) onScopeDispose(stop);
 
   refresh();
 
@@ -47,5 +45,5 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
 
   const isWarning = computed(() => timeLeft.value <= warningThreshold);
 
-  return { timeLeft, isWarning, stop };
+  return { timeLeft, isWarning };
 }

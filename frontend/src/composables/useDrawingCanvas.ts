@@ -1,4 +1,3 @@
-import { useEventListener, useResizeObserver } from "@vueuse/core";
 import { ref } from "vue";
 
 import type { DrawStroke } from "@/shared/types";
@@ -39,22 +38,24 @@ export function useDrawingCanvas() {
     // PointerEvent unifies mouse, touch, and stylus in one API.
     // touch-action: none on the canvas CSS element prevents scroll interference.
     // setPointerCapture in startDrawing keeps events flowing outside the canvas.
-    const cleanups = [
-      useEventListener(canvas, "pointerdown", startDrawing),
-      useEventListener(canvas, "pointermove", draw),
-      useEventListener(canvas, "pointerup", stopDrawing),
-      useEventListener(canvas, "pointercancel", stopDrawing),
-    ];
+    const listeners = [
+      ["pointerdown", startDrawing],
+      ["pointermove", draw],
+      ["pointerup", stopDrawing],
+      ["pointercancel", stopDrawing],
+    ] as const;
+    for (const [type, listener] of listeners) canvas.addEventListener(type, listener);
     stopEventListeners = () => {
-      for (const fn of cleanups) fn();
+      for (const [type, listener] of listeners) canvas.removeEventListener(type, listener);
     };
 
     // ResizeObserver fires immediately with the initial size and handles all
     // future layout changes: window resize, orientation change, flex reflow.
     const parent = canvas.parentElement;
     if (parent) {
-      const { stop } = useResizeObserver(parent, () => resize());
-      stopResizeObserver = stop;
+      const observer = new ResizeObserver(() => resize());
+      observer.observe(parent);
+      stopResizeObserver = () => observer.disconnect();
     } else {
       resize();
     }
