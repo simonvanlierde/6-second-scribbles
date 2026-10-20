@@ -111,7 +111,8 @@ def _translate_prompt(
             stats["prompts_translated"] += 1
 
         target_aliases = target_translation.get("aliases")
-        has_aliases = isinstance(target_aliases, list) and len(target_aliases) > 0
+        # An explicit [] means a reviewer removed the aliases; only a missing or null list is a gap.
+        has_aliases = isinstance(target_aliases, list)
         if source_aliases and (overwrite_existing or not has_aliases):
             translated = [service.translate(normalized_source, target_locale, alias) for alias in source_aliases]
             target_translation["aliases"] = _dedupe_translated_aliases(translated)

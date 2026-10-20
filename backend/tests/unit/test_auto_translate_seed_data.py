@@ -115,6 +115,33 @@ class TestAutoTranslateSeedData:
         total_updates = stats["prompts_translated"] + stats["categories_translated"] + stats["aliases_translated"]
         assert total_updates == 0
 
+    def test_apply_auto_translations_keeps_an_empty_alias_list(self) -> None:
+        """An explicit empty alias list is a reviewed answer, not a gap to fill."""
+        seed_data = {
+            "prompts": [
+                {
+                    "id": "cat",
+                    "translations": [
+                        {"locale": LOCALE_EN, "label": "cat", "aliases": ["kitty"]},
+                        {"locale": LOCALE_ES, "label": GATO, "aliases": []},
+                        {"locale": LOCALE_FR, "label": "chat"},
+                    ],
+                }
+            ]
+        }
+
+        apply_auto_translations(
+            seed_data,
+            source_locale=LOCALE_EN,
+            target_locales=[LOCALE_ES, LOCALE_FR],
+            service=MockTranslationService(),
+            overwrite_existing=False,
+        )
+
+        by_locale = {t["locale"]: t for t in seed_data["prompts"][0]["translations"]}
+        assert by_locale[LOCALE_ES]["aliases"] == []
+        assert by_locale[LOCALE_FR]["aliases"] == ["kitty<en->fr>"]
+
     def test_apply_auto_translations_overwrites_when_requested(self) -> None:
         """Overwrite existing translations when requested."""
         seed_data = {
