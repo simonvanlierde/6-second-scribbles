@@ -192,12 +192,12 @@ async def test_room_action_handlers_cover_restart_drawpad_and_kick_errors(
     monkeypatch.setattr(
         room,
         "initiate_kick_vote",
-        AsyncMock(return_value=SimpleNamespace(success=False, error="vote_failed")),
+        AsyncMock(return_value="vote_failed"),
     )
     monkeypatch.setattr(
         room,
         "cast_kick_vote",
-        AsyncMock(return_value=SimpleNamespace(success=False, error="cast_failed")),
+        AsyncMock(return_value="cast_failed"),
     )
 
     await room_actions.handle_restart_game(

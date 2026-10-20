@@ -487,7 +487,7 @@ class TestGameRoom:
 
         result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
 
-        assert result.success
+        assert result is None
         messages = [json.loads(message) for message in ws1.sent_texts]
         assert messages[-1]["type"] == KICK_VOTE_STARTED
         assert messages[-1]["targetPlayerId"] == PLAYER_THREE_ID
@@ -511,11 +511,11 @@ class TestGameRoom:
         await game_room.add_player(PLAYER_FOUR_ID, PLAYER_FOUR_NAME, as_websocket(ws4))
 
         start_result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_FOUR_ID)
-        assert start_result.success
+        assert start_result is None
 
         vote_result = await game_room.cast_kick_vote(PLAYER_THREE_ID, PLAYER_FOUR_ID)
 
-        assert vote_result.success
+        assert vote_result is None
         update = [json.loads(m) for m in ws1.sent_texts if json.loads(m)["type"] == KICK_VOTE_UPDATED][-1]
         assert update["targetPlayerId"] == PLAYER_FOUR_ID
         assert update["currentVotes"] == 2
@@ -535,8 +535,7 @@ class TestGameRoom:
 
         result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_ONE_ID)
 
-        assert not result.success
-        assert result.error == HOST_CANNOT_BE_VOTE_KICKED_ERROR
+        assert result == HOST_CANNOT_BE_VOTE_KICKED_ERROR
 
     async def test_players_cannot_vote_kick_in_private_rooms(
         self,
@@ -553,8 +552,7 @@ class TestGameRoom:
 
         result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
 
-        assert not result.success
-        assert result.error == VOTE_KICK_PUBLIC_ONLY_ERROR
+        assert result == VOTE_KICK_PUBLIC_ONLY_ERROR
 
     async def test_room_state_round_trips_through_persistence_model(self, game_room: GameRoom) -> None:
         """Test persisted room state preserves structured metadata."""
@@ -876,9 +874,9 @@ class TestReviewRegressions:
         ):
             await game_room.add_player(pid, name, as_websocket(make_ws()))
 
-        required_all_connected = get_required_votes(game_room, target_is_host=False)
+        required_all_connected = get_required_votes(game_room)
         game_room.players[PLAYER_FOUR_ID].connected = False
-        required_one_disconnected = get_required_votes(game_room, target_is_host=False)
+        required_one_disconnected = get_required_votes(game_room)
 
         assert required_all_connected == 3  # 4 players -> eligible 3 -> ceil 2/3 + 1
         assert required_one_disconnected == 2  # 3 connected -> eligible 2 -> reachable

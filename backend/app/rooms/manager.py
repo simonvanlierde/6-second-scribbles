@@ -63,7 +63,6 @@ if TYPE_CHECKING:
     from fastapi import WebSocket
 
     from app.rooms.kick_vote import KickVote
-    from app.rooms.results import KickVoteResult
     from app.rooms.state import RoomState
 
 logger = logging.getLogger(__name__)
@@ -625,14 +624,14 @@ class GameRoom:
             PlayerListItem(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
         ]
 
-    async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> KickVoteResult:
+    async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> str | None:
         """Initiate a vote to kick a player.
 
         Returns a JSON-safe status payload with info about the vote.
         """
         return await kick_vote.initiate_kick_vote(self, initiator_id, target_player_id)
 
-    async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> KickVoteResult:
+    async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> str | None:
         """Cast a vote to kick a player."""
         return await kick_vote.cast_kick_vote(self, voter_id, target_player_id)
 

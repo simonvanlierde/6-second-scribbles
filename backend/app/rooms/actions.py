@@ -242,18 +242,16 @@ async def handle_initiate_kick(session: RoomWebSocketSession, event: InitiateKic
     """Handle initiating a kick vote."""
     if not session.player_id:
         return
-    result = await session.room.initiate_kick_vote(session.player_id, event.target_player_id)
-    if not result.success:
-        await session.send_error("kick_error", result.error or "Failed to initiate kick vote", "")
+    if error := await session.room.initiate_kick_vote(session.player_id, event.target_player_id):
+        await session.send_error("kick_error", error, "")
 
 
 async def handle_cast_kick_vote(session: RoomWebSocketSession, event: CastKickVoteEvent) -> None:
     """Handle casting a kick vote."""
     if not session.player_id:
         return
-    result = await session.room.cast_kick_vote(session.player_id, event.target_player_id)
-    if not result.success:
-        await session.send_error("kick_error", result.error or "Failed to cast vote", "")
+    if error := await session.room.cast_kick_vote(session.player_id, event.target_player_id):
+        await session.send_error("kick_error", error, "")
 
 
 async def handle_request_game_state(session: RoomWebSocketSession, event: RequestGameStateEvent) -> None:
