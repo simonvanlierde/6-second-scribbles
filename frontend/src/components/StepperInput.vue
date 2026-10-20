@@ -134,6 +134,8 @@ function onBlur() {
   cursor: pointer;
   border: 0;
   background: var(--color-card);
+  min-width: 44px;
+  min-height: 44px;
   padding: 8px 14px;
   line-height: 1;
   font-weight: 700;

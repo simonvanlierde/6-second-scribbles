@@ -167,7 +167,16 @@ const { t } = useI18n();
 .toolbar--compact .swatch,
 .toolbar--compact .brush,
 .toolbar--compact .toolbar__icon-btn {
+  position: relative;
   width: 38px;
   height: 38px;
+}
+/* Grow the touch target to 44px without widening the row. */
+.toolbar--compact .swatch::after,
+.toolbar--compact .brush::after,
+.toolbar--compact .toolbar__icon-btn::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
 }
 </style>
