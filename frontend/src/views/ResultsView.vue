@@ -9,7 +9,7 @@ import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
 import HdPill from "@/components/ui/HdPill.vue";
-import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useSound } from "@/composables/useSound";
 import { i18n } from "@/i18n";
@@ -53,11 +53,7 @@ const winnerIsTie = computed(() => winners.value.length > 1);
 const winnerNames = computed(() => formatNames(winners.value.map((player) => player.playerName)));
 const winnerScore = computed(() => winners.value[0]?.score ?? 0);
 const winnerInitial = computed(() => getAvatarInitial(winners.value[0]?.playerName ?? "?"));
-const winnerColor = computed(() => avatarColorFor(winners.value[0]?.playerId ?? ""));
-
-function avatarColorFor(playerId: string): string {
-  return store.players.get(playerId)?.color ?? getAvatarColor(playerId);
-}
+const winnerColor = computed(() => winners.value[0]?.color ?? "");
 
 function formatNames(names: string[]) {
   if (names.length <= 1) return names[0] || i18n.global.t("common.unknown");
@@ -111,7 +107,7 @@ onMounted(() => {
               <span class="final-standings__rank">{{ player.rank }}</span>
               <HdAvatar
                 :initial="getAvatarInitial(player.playerName)"
-                :color="avatarColorFor(player.playerId)"
+                :color="player.color"
                 size="sm"
               />
               <span class="final-standings__name">{{ player.playerName }}</span>

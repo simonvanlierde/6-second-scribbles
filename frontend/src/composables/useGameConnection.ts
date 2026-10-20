@@ -87,7 +87,7 @@ export function useGameConnection() {
           playerId: store.localPlayerId,
           name: store.localPlayerName,
           preferredLocale: store.localPlayerLocale,
-          preferredColor: store.localAvatarColor,
+          preferredColor: store.localPlayerColor,
           rejoinKey: getRejoinKey(),
         });
         send({

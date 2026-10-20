@@ -64,8 +64,8 @@ export const useGameStore = defineStore(
     const localPlayerId = ref<string>("");
     const localPlayerName = ref<string>("");
     const localPlayerLocale = ref<string>(getBrowserLocale());
-    // Null until chosen or derived: setLocalPlayer fills it with a deterministic
-    // per-id colour so fresh players don't all default to the same one.
+    // Null until the player picks one in settings; until then the server picks a
+    // colour nobody else in the room has.
     const localPlayerColor = ref<AvatarColor | null>(null);
     const isSpectatorMode = ref<boolean>(false);
 
@@ -109,9 +109,14 @@ export const useGameStore = defineStore(
 
     // --- Computed ---
     const localPlayer = computed(() => players.value.get(localPlayerId.value));
-    // Resolved avatar colour: the chosen colour, or a deterministic per-id one.
-    // Centralised so consumers don't each re-hardcode the `?? getAvatarColor` fallback.
-    const localAvatarColor = computed(() => localPlayerColor.value ?? getAvatarColor(localPlayerId.value));
+    // The local player's avatar colour: picked, else the one the room assigned, else a per-id one.
+    const localAvatarColor = computed(
+      // The server only assigns colour tokens, so a room colour is an AvatarColor.
+      () =>
+        localPlayerColor.value ??
+        (localPlayer.value?.color as AvatarColor | undefined) ??
+        getAvatarColor(localPlayerId.value),
+    );
     const playersList = computed(() => Array.from(players.value.values()));
     const canStartGame = computed(() => players.value.size >= 2 && gamePhase.value === "lobby");
     const isHost = computed(() => hostId.value === localPlayerId.value);
@@ -120,9 +125,6 @@ export const useGameStore = defineStore(
     function setLocalPlayer(id: string, name: string) {
       localPlayerId.value = id;
       localPlayerName.value = name;
-      if (!localPlayerColor.value) {
-        localPlayerColor.value = getAvatarColor(id);
-      }
     }
 
     function setLocalPlayerColor(color: AvatarColor) {
@@ -145,7 +147,7 @@ export const useGameStore = defineStore(
 
     function addPlayer(id: string, name: string) {
       if (!players.value.has(id)) {
-        players.value.set(id, { id, name, score: 0, connected: true });
+        players.value.set(id, { id, name, score: 0, color: getAvatarColor(id), connected: true });
       }
       if (players.value.size === 1 && !hostId.value) {
         hostId.value = id;
@@ -167,7 +169,8 @@ export const useGameStore = defineStore(
           id: incoming.id,
           name: incoming.name,
           score: existing?.score ?? 0,
-          color: incoming.color ?? existing?.color ?? null,
+          // The server always sends a colour; the per-id one only fills the nullable contract field.
+          color: incoming.color ?? existing?.color ?? getAvatarColor(incoming.id),
           currentCard: existing?.currentCard,
           drawing: existing?.drawing,
           connected: incoming.connected ?? existing?.connected ?? true,
@@ -306,7 +309,7 @@ export const useGameStore = defineStore(
             round,
             playerId: player.id,
             name: player.name,
-            color: player.color ?? getAvatarColor(player.id),
+            color: player.color,
             drawing: player.drawing,
           });
         }
@@ -327,7 +330,7 @@ export const useGameStore = defineStore(
 
     function getFinalScores() {
       return playersList.value
-        .map((p) => ({ playerId: p.id, playerName: p.name, score: p.score }))
+        .map((p) => ({ playerId: p.id, playerName: p.name, score: p.score, color: p.color }))
         .sort((a, b) => b.score - a.score);
     }
 

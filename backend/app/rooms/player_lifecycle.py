@@ -80,16 +80,15 @@ async def add_player(
         player_id == room.last_host_id and player_id not in room.players and _owns_last_host(room, user_id)
     )
 
-    # Reuse an existing player's colour on reconnect; otherwise prefer the
-    # client-supplied colour if valid; otherwise pick one not taken by another
-    # player in the room.
+    # Colours are unique per room while there are enough: keep a reconnecting
+    # player's colour, then the one the player picked if nobody has it, else the first free one.
     existing = room.players.get(player_id)
+    used = {p.color for p in room.players.values() if p.color and p.id != player_id}
     if existing is not None and existing.color:
         color = existing.color
-    elif preferred_color and preferred_color in AVATAR_COLOR_TOKENS:
+    elif preferred_color in AVATAR_COLOR_TOKENS and preferred_color not in used:
         color = preferred_color
     else:
-        used = [p.color for p in room.players.values() if p.color and p.id != player_id]
         color = pick_avatar_color(player_id, used)
 
     player = PlayerInfo(

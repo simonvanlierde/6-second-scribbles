@@ -18,7 +18,7 @@ export interface Player {
   id: string;
   name: string;
   score: number;
-  color?: string | null;
+  color: string;
   currentCard?: Card;
   drawing?: string; // Base64 data URL of canvas drawing
   connected: boolean; // false while disconnected/"reconnecting"

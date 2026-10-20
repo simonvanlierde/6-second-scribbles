@@ -8,7 +8,7 @@ import RoundHighlights from "@/components/results/RoundHighlights.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdCard from "@/components/ui/HdCard.vue";
 import HdPill from "@/components/ui/HdPill.vue";
-import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarInitial } from "@/composables/useAvatar";
 import { useSound } from "@/composables/useSound";
 import { GAME_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
@@ -21,15 +21,7 @@ const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
 const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 let countdownInterval: number | null = null;
 
-function avatarColorFor(playerId: string): string {
-  return store.players.get(playerId)?.color ?? getAvatarColor(playerId);
-}
-
-const currentScores = computed(() =>
-  store.playersList
-    .map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected }))
-    .sort((a, b) => b.score - a.score),
-);
+const currentScores = computed(() => [...store.playersList].sort((a, b) => b.score - a.score));
 
 const resultsByPlayer = computed(() => {
   const grouped: Record<
@@ -95,7 +87,7 @@ onUnmounted(() => {
               <div class="performance__head">
                 <HdAvatar
                   :initial="getAvatarInitial(player.name)"
-                  :color="avatarColorFor(player.id)"
+                  :color="player.color"
                   size="sm"
                   :disconnected="!player.connected"
                 />
@@ -127,7 +119,7 @@ onUnmounted(() => {
               <span class="standings__rank">{{ index + 1 }}</span>
               <HdAvatar
                 :initial="getAvatarInitial(player.name)"
-                :color="avatarColorFor(player.id)"
+                :color="player.color"
                 size="sm"
                 :disconnected="!player.connected"
               />

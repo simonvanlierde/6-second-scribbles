@@ -9,7 +9,7 @@ import HdCard from "@/components/ui/HdCard.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
 import HdInput from "@/components/ui/HdInput.vue";
 import HdPill from "@/components/ui/HdPill.vue";
-import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
 import { useRoundDraft } from "@/composables/useRoundDraft";
@@ -39,11 +39,6 @@ const { timeLeft } = useGameTimer({
   duration: () => store.guessingTimeLimit,
   onExpire: () => autoSubmitGuesses(),
 });
-
-function avatarColorFor(playerId: string): string {
-  const player = store.playersList.find((p) => p.id === playerId);
-  return player?.color ?? getAvatarColor(playerId);
-}
 
 // Typed guesses are client-only until submitted, so they're drafted locally and
 // restored on reconnect — mirroring the drawing-phase stroke recovery.
@@ -153,7 +148,7 @@ function handleImageError(playerId: string) {
           <h2 class="drawing-frame__title">
             <HdAvatar
               :initial="getAvatarInitial(assignedTargetPlayer.name)"
-              :color="avatarColorFor(assignedTargetPlayer.id)"
+              :color="assignedTargetPlayer.color"
               size="sm"
               :disconnected="!assignedTargetPlayer.connected"
             />

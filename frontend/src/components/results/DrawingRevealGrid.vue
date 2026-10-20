@@ -3,10 +3,8 @@ import { computed } from "vue";
 
 import DrawingThumbnail from "@/components/results/DrawingThumbnail.vue";
 import HdReactionPad from "@/components/ui/HdReactionPad.vue";
-import { getAvatarColor } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { REACTION_EMOJI, REACTION_KEYS, type ReactionKey, useReactions } from "@/composables/useReactions";
-import type { Player } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -14,10 +12,6 @@ const { send } = useGameConnection();
 const reactions = useReactions();
 
 const drawings = computed(() => store.playersList.filter((p) => p.drawing));
-
-function colorFor(player: Player): string {
-  return player.color ?? getAvatarColor(player.id);
-}
 
 function badgesFor(drawingId: string) {
   const counts = reactions.countsFor(drawingId);
@@ -43,7 +37,7 @@ function react(drawingId: string, key: ReactionKey): void {
         <DrawingThumbnail
           :drawing="player.drawing"
           :name="player.name"
-          :color="colorFor(player)"
+          :color="player.color"
           :alt="$t('roundResults.drawingAlt', { name: player.name })"
         >
           <template #overlay>
