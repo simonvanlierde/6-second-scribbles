@@ -19,9 +19,6 @@ const log = createLogger("WebSocket");
 
 // Singleton WebSocket connection shared across all components
 let ws: WebSocket | null = null;
-const connectionError = ref<string | null>(null);
-const lastJoinError = ref<{ error: string; message: string } | null>(null);
-const currentRoomCode = ref<string | null>(null);
 const isObserverConnection = ref(false);
 let heartbeatInterval: number | null = null;
 
@@ -84,14 +81,11 @@ export function useGameConnection() {
     const url = `${BACKEND_HOST}/ws/${normalizedRoomCode}`;
     const socket = new WebSocket(url);
     ws = socket;
-    currentRoomCode.value = normalizedRoomCode;
 
     socket.onopen = () => {
       if (ws !== socket) return;
       connectionStatus.value = "connected";
       reconnectAttempts = 0;
-      connectionError.value = null;
-      lastJoinError.value = null;
 
       if (!observeOnly) {
         store.addPlayer(store.localPlayerId, store.localPlayerName);
@@ -127,13 +121,11 @@ export function useGameConnection() {
         handleMessage(result.data);
       } catch (error) {
         log.error("Failed to parse message:", error, "Raw:", event.data);
-        connectionError.value = "Failed to process server message";
       }
     };
 
     socket.onerror = (error) => {
       log.error("Connection error:", error);
-      connectionError.value = "Connection error occurred";
     };
 
     socket.onclose = (event) => {
@@ -142,7 +134,6 @@ export function useGameConnection() {
       // or an in-flight retry superseded this one).
       if (ws !== socket) return;
       stopHeartbeat();
-      currentRoomCode.value = null;
       isObserverConnection.value = false;
       ws = null;
 
@@ -267,16 +258,12 @@ export function useGameConnection() {
       ws = null;
     }
     connectionStatus.value = "disconnected";
-    currentRoomCode.value = null;
     isObserverConnection.value = false;
     store.setSpectatorMode(false);
   }
 
   return {
     connectionStatus,
-    connectionError,
-    lastJoinError,
-    currentRoomCode,
     connect,
     send,
     disconnect,
