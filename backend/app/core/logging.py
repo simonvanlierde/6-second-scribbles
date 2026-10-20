@@ -62,8 +62,18 @@ def configure_logging() -> None:
     for name in logging.Logger.manager.loggerDict:
         logging.getLogger(name).propagate = True
 
+    # Uvicorn's own handlers would print every propagated line a second time.
+    for name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+        logging.getLogger(name).handlers.clear()
+
     # In prod Caddy logs each request with the visitor IP masked. Uvicorn's access
     # log would add the full forwarded IP, and the propagate loop above undoes
-    # `--no-access-log`, so switch that logger off here.
+    # `--no-access-log`, so switch that logger off here. The WebSocket handshake
+    # line carries the same IP but goes to the error logger, so filter it there.
     if is_prod:
         logging.getLogger("uvicorn.access").disabled = True
+        logging.getLogger("uvicorn.error").addFilter(_drop_websocket_handshake)
+
+
+def _drop_websocket_handshake(record: logging.LogRecord) -> bool:
+    return not str(record.msg).startswith('%s - "WebSocket ')
