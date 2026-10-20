@@ -4,8 +4,7 @@ Writes JSON Schema files under contracts/jsonschema/:
   - server-event.schema.json  (server -> client messages we parse)
   - client-event.schema.json  (client -> server messages we send)
 
-Also writes the canonical OpenAPI document to contracts/openapi.json and the
-shared websocket event catalog to contracts/room-events.json.
+Also writes the canonical OpenAPI document to contracts/openapi.json.
 
 Run from the backend directory:
     uv run python -m scripts.generate_contracts
@@ -143,12 +142,6 @@ def union_event_types(union_schema: JsonObject) -> list[str]:
     return [_event_type_for_schema(variant) for variant in variants if isinstance(variant, dict)]
 
 
-def write_event_catalog(path: Path) -> None:
-    """Write the generated websocket event catalog for frontend metadata."""
-    path.write_text(f"{json.dumps(CONTRACT_EVENT_CATALOG, indent=2)}\n")
-    logger.info("wrote %s", path)
-
-
 def write_openapi(path: Path) -> None:
     """Write the canonical OpenAPI document."""
     path.write_text(f"{json.dumps(application.openapi(), indent=2, sort_keys=True)}\n")
@@ -174,7 +167,6 @@ def main() -> None:
 
     write_schema(server_schema, out_dir / "server-event.schema.json")
     write_schema(client_schema, out_dir / "client-event.schema.json")
-    write_event_catalog(CONTRACTS_ROOT / "room-events.json")
     write_openapi(CONTRACTS_ROOT / "openapi.json")
 
 

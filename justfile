@@ -173,7 +173,7 @@ build:
 [group('contracts')]
 generate-contracts:
     just backend/generate-contracts
-    pnpm exec biome format --write --config-path . contracts/openapi.json contracts/room-events.json contracts/jsonschema
+    pnpm exec biome format --write --config-path . contracts/openapi.json contracts/jsonschema
     just frontend/generate-contracts
 
 # Validate that all tracked contract artifacts are reproducible.

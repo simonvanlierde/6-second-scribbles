@@ -296,14 +296,12 @@ def test_generate_contract_helpers_cover_errors_and_main(tmp_path: Path, monkeyp
         },
     )
     write_schema = Mock()
-    write_catalog = Mock()
     write_openapi = Mock()
     monkeypatch.setattr(generate_contracts, "write_schema", write_schema)
-    monkeypatch.setattr(generate_contracts, "write_event_catalog", write_catalog)
     monkeypatch.setattr(generate_contracts, "write_openapi", write_openapi)
 
     generate_contracts.main()
 
     assert write_schema.call_count == 2
-    write_catalog.assert_called_once()
+    assert not (tmp_path / "room-events.json").exists()
     write_openapi.assert_called_once()

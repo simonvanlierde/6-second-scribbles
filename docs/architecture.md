@@ -46,7 +46,7 @@ flowchart LR
     subgraph Backend
         Protocol["Room protocol +<br/>route schemas"]
     end
-    Contracts["contracts/<br/>openapi.json<br/>room-events.json<br/>jsonschema/"]
+    Contracts["contracts/<br/>openapi.json<br/>jsonschema/"]
     subgraph Frontend
         Generated["src/generated/<br/>api.ts + protocol.ts"]
     end
