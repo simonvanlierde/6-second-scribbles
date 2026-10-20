@@ -191,7 +191,7 @@
     "roomDoesNotExist": "That room doesn't exist. Join a different room or create a new one!",
     "connectFailed": "Failed to connect. Please try again.",
     "roundInProgressJoinLater": "This round is already in progress. You can join next round.",
-    "roomFullWatchOnly": "This room is full, but you can keep watching.",
+    "spectatorsFull": "This room can't take any more spectators.",
     "unableToJoinRoom": "Unable to join room",
     "hostStatusRestored": "Host status restored",
     "youAreNowHost": "You are now the host",

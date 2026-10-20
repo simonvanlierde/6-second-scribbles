@@ -189,7 +189,7 @@
     "roomDoesNotExist": "Essa sala não existe. Entre em outra sala ou crie uma nova!",
     "connectFailed": "Falha ao conectar. Tente novamente.",
     "roundInProgressJoinLater": "Esta rodada já está em andamento. Você pode entrar na próxima rodada.",
-    "roomFullWatchOnly": "Esta sala está cheia, mas você pode continuar assistindo.",
+    "spectatorsFull": "Esta sala não aceita mais espectadores.",
     "unableToJoinRoom": "Não foi possível entrar na sala",
     "hostStatusRestored": "Status de anfitrião restaurado",
     "youAreNowHost": "Agora você é o anfitrião",

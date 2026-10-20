@@ -64,6 +64,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - In dark mode your own score in the standings and the name and detail on the yellow highlight card were pale text on yellow. They now use dark ink there.
 - Every line uvicorn logged, such as startup messages, appeared twice in the backend log, once as plain text and once as JSON.
 - In a short browser window on a laptop, the Finish button sat below the word card, out of view, until the player scrolled the card. It now stays at the bottom of the card column.
+- Someone turned away because a room already had 20 spectators saw the server's English message whatever their language. The message is now translated.
 - On a phone the Finish button sat below the screen during drawing, under the word list and the canvas. It now stays pinned to the bottom. Buttons that were small to tap on a touch screen (the lobby doodle colours and sizes, the settings steppers, Kick player and Advanced Settings) are now at least 44 px, and so are the words on the drawing card on larger screens.
 
 ## [0.2.1] - 2026-07-06

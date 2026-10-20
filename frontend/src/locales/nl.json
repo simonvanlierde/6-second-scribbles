@@ -189,7 +189,7 @@
     "roomDoesNotExist": "Die room bestaat niet. Sluit je aan bij een andere room of maak een nieuwe aan!",
     "connectFailed": "Verbinden mislukt. Probeer het opnieuw.",
     "roundInProgressJoinLater": "Deze ronde is al bezig. Je kunt meedoen in de volgende ronde.",
-    "roomFullWatchOnly": "Deze room is vol, maar je kunt blijven kijken.",
+    "spectatorsFull": "Deze room kan geen extra kijkers meer hebben.",
     "unableToJoinRoom": "Kan niet deelnemen aan de room",
     "hostStatusRestored": "Hoststatus hersteld",
     "youAreNowHost": "Jij bent nu de host",

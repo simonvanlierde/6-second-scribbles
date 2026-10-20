@@ -44,6 +44,15 @@ describe("connection handlers translations", () => {
     expect(showNotification).toHaveBeenNthCalledWith(2, "Room language changed to Français");
   });
 
+  it("translates a full spectator list instead of showing the server's English", () => {
+    handleConnectionEvent(
+      { type: "join_error", error: "spectators_full", message: "This room has as many spectators as it allows." },
+      ctx,
+    );
+
+    expect(showNotification).toHaveBeenCalledWith("This room can't take any more spectators.", "error");
+  });
+
   it("uses translated moderation notifications with interpolation", () => {
     store.localPlayerId = "p1";
 

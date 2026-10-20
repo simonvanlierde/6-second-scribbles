@@ -189,7 +189,7 @@
     "roomDoesNotExist": "そのルームは存在しません。別のルームに参加するか、新しく作りましょう！",
     "connectFailed": "接続に失敗しました。もう一度お試しください。",
     "roundInProgressJoinLater": "このラウンドはすでに進行中です。次のラウンドから参加できます。",
-    "roomFullWatchOnly": "このルームは満員ですが、観戦は続けられます。",
+    "spectatorsFull": "このルームはこれ以上観戦者を受け入れられません。",
     "unableToJoinRoom": "ルームに参加できません",
     "hostStatusRestored": "ホスト権限が復元されました",
     "youAreNowHost": "あなたがホストになりました",

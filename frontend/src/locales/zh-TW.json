@@ -189,7 +189,7 @@
     "roomDoesNotExist": "那個房間不存在，加入其他房間或建立一個新房間吧！",
     "connectFailed": "連線失敗，請再試一次。",
     "roundInProgressJoinLater": "這個回合已經開始，你可以加入下一回合。",
-    "roomFullWatchOnly": "這個房間已滿，但你仍可以繼續觀戰。",
+    "spectatorsFull": "這個房間無法再容納更多觀眾。",
     "unableToJoinRoom": "無法加入房間",
     "hostStatusRestored": "房主身分已恢復",
     "youAreNowHost": "你現在是房主了",

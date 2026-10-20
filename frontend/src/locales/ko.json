@@ -189,7 +189,7 @@
     "roomDoesNotExist": "존재하지 않는 방이에요. 다른 방에 들어가거나 새 방을 만들어 보세요!",
     "connectFailed": "연결에 실패했어요. 다시 시도해 주세요.",
     "roundInProgressJoinLater": "이 라운드는 이미 진행 중이에요. 다음 라운드에 참여할 수 있어요.",
-    "roomFullWatchOnly": "이 방은 가득 찼지만 계속 구경할 수 있어요.",
+    "spectatorsFull": "이 방은 더 이상 관전자를 받을 수 없어요.",
     "unableToJoinRoom": "방에 들어갈 수 없어요",
     "hostStatusRestored": "방장 권한이 복구됐어요",
     "youAreNowHost": "이제 당신이 방장이에요",

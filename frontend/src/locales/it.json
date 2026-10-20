@@ -189,7 +189,7 @@
     "roomDoesNotExist": "Quella stanza non esiste. Entra in un’altra stanza o creane una nuova!",
     "connectFailed": "Connessione non riuscita. Riprova.",
     "roundInProgressJoinLater": "Questo round è già in corso. Puoi entrare al prossimo round.",
-    "roomFullWatchOnly": "Questa stanza è piena, ma puoi continuare a guardare.",
+    "spectatorsFull": "Questa stanza non può accogliere altri spettatori.",
     "unableToJoinRoom": "Impossibile entrare nella stanza",
     "hostStatusRestored": "Stato di host ripristinato",
     "youAreNowHost": "Ora sei l’host",
