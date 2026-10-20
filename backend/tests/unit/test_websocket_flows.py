@@ -118,7 +118,7 @@ def test_server_starts_guessing_after_round_timer(
     _ = immediate_guessing_transition, dealt_cards
     with joined_players(
         test_client,
-        "AUTO_GUESS_01",
+        "AUTO00",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
         send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 1})
@@ -202,7 +202,7 @@ def test_public_room_players_cannot_vote_kick_the_host(test_client: TestClient) 
     """Host removal is not part of the public-room vote flow."""
     with joined_players(
         test_client,
-        "NOHOSTK",
+        "NOHO15",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "initiate_kick", "playerId": PLAYER_2, "targetPlayerId": PLAYER_1})
@@ -218,7 +218,7 @@ def test_private_room_players_cannot_start_vote_kick(test_client: TestClient) ->
     """Vote-kick is hidden and rejected for private rooms."""
     with joined_players(
         test_client,
-        "PRIVATE",
+        "PRIV18",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB), JoinedPlayer(PLAYER_3, CHARLIE)],
     ) as (ws1, ws2, _ws3):
         send_json(ws1, {"type": "privacy_changed", "isPrivate": True})
@@ -233,7 +233,7 @@ def test_private_room_players_cannot_start_vote_kick(test_client: TestClient) ->
 
 def test_reconnecting_player_can_rejoin_same_room(test_client: TestClient) -> None:
     """A reconnecting player can rejoin the same room."""
-    room_id = "RECONNECT01"
+    room_id = "RECO26"
 
     with test_client.websocket_connect(f"/ws/{room_id}") as websocket:
         receive_json(websocket)
@@ -246,7 +246,7 @@ def test_reconnecting_player_can_rejoin_same_room(test_client: TestClient) -> No
 
 def test_guest_seat_needs_its_rejoin_key(test_client: TestClient) -> None:
     """A guest's player_id is public, so taking over the seat needs the key its first join used."""
-    room_id = "RECONNECT02"
+    room_id = "RECO27"
 
     with test_client.websocket_connect(f"/ws/{room_id}") as owner:
         receive_json(owner)
@@ -266,7 +266,7 @@ def test_guest_seat_needs_its_rejoin_key(test_client: TestClient) -> None:
 
 def test_lobby_refresh_keeps_the_seat_bound_to_its_key(test_client: TestClient) -> None:
     """A lobby refresh removes the player, but nobody else can claim their id until they leave on purpose."""
-    room_id = "RECONNECT03"
+    room_id = "RECO28"
 
     with test_client.websocket_connect(f"/ws/{room_id}") as host:
         receive_json(host)
@@ -300,7 +300,7 @@ def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> N
         room_sockets: list[tuple[WebSocketTestSession, WebSocketTestSession]] = []
 
         for index in range(3):
-            room_id = f"CONCURRENT0{index + 1}"
+            room_id = f"MULTI{index + 1}"
             joined = cast(
                 "tuple[WebSocketTestSession, WebSocketTestSession]",
                 stack.enter_context(
@@ -332,7 +332,7 @@ def test_three_player_full_round(test_client: TestClient, dealt_cards: dict[str,
 
     with joined_players(
         test_client,
-        "GAME_3P",
+        "GAME07",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB), JoinedPlayer(PLAYER_3, CHARLIE)],
     ) as (ws1, ws2, ws3):
         sockets = {PLAYER_1: ws1, PLAYER_2: ws2, PLAYER_3: ws3}
@@ -379,7 +379,7 @@ def test_three_player_full_round(test_client: TestClient, dealt_cards: dict[str,
 @pytest.mark.usefixtures("dealt_cards")
 def test_join_blocked_during_active_drawing_round(test_client: TestClient) -> None:
     """Joining while a drawing round is active is rejected."""
-    room_id = "RECONNECT_MID_GAME"
+    room_id = "RECO30"
 
     with joined_players(
         test_client,
@@ -410,7 +410,7 @@ def test_existing_participant_can_rejoin_active_round(test_client: TestClient) -
     The host (PLAYER_1) stays connected throughout, mirroring a real refresh where
     only one client drops.
     """
-    room_id = "REJOIN_MID_ROUND"
+    room_id = "REJO32"
 
     with test_client.websocket_connect(f"/ws/{room_id}") as ws_host:
         receive_json(ws_host)  # initial room_state
@@ -450,7 +450,7 @@ def test_reconnecting_host_keeps_role(test_client: TestClient) -> None:
     The guest stays connected throughout, so the host-transfer grace window is
     what protects the role until the host's rejoin cancels the pending transfer.
     """
-    room_id = "HOST_REJOIN"
+    room_id = "HOST11"
 
     with test_client.websocket_connect(f"/ws/{room_id}") as ws_guest:
         receive_json(ws_guest)  # initial room_state
@@ -475,7 +475,7 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
     """The round-complete payload carries computed highlights, broadcast identically."""
     with joined_players(
         test_client,
-        "HIGHLIGHT01",
+        "HIGH09",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
         send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
@@ -517,7 +517,7 @@ def test_oversized_payload_rejected_without_closing(
     protocol_error = "protocol_error"
     payload_too_large = "payload_too_large"
     monkeypatch.setattr(settings, "ws_max_message_bytes", 10)
-    with joined_players(test_client, "BIG01", [JoinedPlayer(PLAYER_1, ALICE)]) as (ws1,):
+    with joined_players(test_client, "BIGZ01", [JoinedPlayer(PLAYER_1, ALICE)]) as (ws1,):
         ws1.send_text("x" * 50)
         first = receive_json(ws1)
         assert first["type"] == protocol_error
@@ -535,7 +535,7 @@ def test_reaction_send_broadcasts_to_all_players(test_client: TestClient) -> Non
     reaction_received = "reaction_received"
     with joined_players(
         test_client,
-        "REACT01",
+        "REAC24",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
         send_json(ws1, {"type": "reaction_send", "drawingId": PLAYER_2, "reactionKey": reaction_key})
