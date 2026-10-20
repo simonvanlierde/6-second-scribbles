@@ -11,9 +11,10 @@ x-logging: &logging
     max-size: 10m
     max-file: "3"
 
-# For the containers built from backend/: they run as appuser and write nothing to disk,
-# so the root filesystem is read-only and every Linux capability is dropped. A hijacked
-# process then cannot regain root through a setuid binary or change the image.
+# For every container below except the database: the root filesystem is read-only and
+# every Linux capability is dropped. A hijacked process then cannot regain root through a
+# setuid binary or change the image. Postgres keeps its defaults: its entrypoint starts as
+# root and needs SETUID, SETGID and CHOWN to switch user and run initdb.
 x-hardening: &hardening
   read_only: true
   tmpfs:
@@ -55,7 +56,15 @@ services:
           memory: 1g
 
   cache:
+    <<: *hardening
     logging: *logging
+    # Started as the image's redis user, the entrypoint skips its switch from root,
+    # which is what needed capabilities.
+    user: redis
+    # Room state and sessions live here. The volume keeps Redis's snapshot through a
+    # host reboot or a recreated container.
+    volumes:
+      - cache_data:/data
     restart: unless-stopped
     deploy:
       resources:
@@ -110,9 +119,18 @@ services:
       - db-seed
 
   frontend:
+    <<: *hardening
     logging: *logging
     build:
       target: prod
+    # Caddy runs as root to bind port 80, the tunnel's target, so it keeps that one
+    # capability. It writes its autosaved config and state to /config and /data.
+    cap_add:
+      - NET_BIND_SERVICE
+    tmpfs:
+      - /tmp
+      - /config
+      - /data
     restart: unless-stopped
     # Bind to loopback only: the Cloudflare tunnel reaches the frontend over the
     # internal Docker network (service name `frontend`), so the host port does not
@@ -129,6 +147,7 @@ services:
           memory: 128m
 
   cloudflared:
+    <<: *hardening
     logging: *logging
     # Pinned by digest for reproducible, supply-chain-safe deploys instead of the
     # mutable `latest` tag. Resolved from cloudflare/cloudflared:latest on 2026-06-27.
@@ -143,3 +162,6 @@ services:
     command: [ "tunnel", "--no-autoupdate", "run" ]
     profiles:
       - tunnel
+
+volumes:
+  cache_data:
