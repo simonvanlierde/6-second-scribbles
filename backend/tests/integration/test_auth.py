@@ -16,6 +16,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="session")
 PRELOADED_LOCALE = "es"
 DISPLAY_NAME = "Sketch Friend"
 SESSION_COOKIE_PREFIX = "scribbles_session="
+SAME_SITE_LAX = "samesite=lax"
 LOCALE_EN = "en"
 
 
@@ -35,7 +36,7 @@ async def test_guest_auth_creates_session_and_me_endpoint(async_client: AsyncCli
 
     set_cookie = guest_response.headers["set-cookie"]
     assert SESSION_COOKIE_PREFIX in set_cookie
-    assert f"samesite={settings.session_cookie_same_site.lower()}" in set_cookie.lower()
+    assert SAME_SITE_LAX in set_cookie.lower()
 
     me_response = await async_client.get("/api/me")
 

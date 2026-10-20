@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, Response
 
 from app.auth.schemas import GuestAuthRequest
 from app.auth.service import create_guest_user, create_user_session, to_user_response
-from app.core.config import settings
+from app.core.config import IS_PROD, settings
 from app.core.database import AsyncSessionDep
 from app.core.rate_limits import enforce_rate_limit, get_client_identifier
 from app.users.schemas import UserResponse
@@ -20,8 +20,9 @@ def _set_session_cookie(response: Response, session_id: str) -> None:
         value=session_id,
         max_age=settings.auth_session_ttl_seconds,
         httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite=settings.session_cookie_same_site,
+        # Local development runs over plain HTTP, where a Secure cookie is never sent.
+        secure=IS_PROD,
+        samesite="lax",
         path="/",
     )
 
