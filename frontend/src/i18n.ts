@@ -13,13 +13,13 @@ export const i18n = createI18n({
 
 const loaded = new Set<AppLocale>(["en"]);
 
-export function isSupportedLocale(code: string): code is AppLocale {
+function isSupportedLocale(code: string): code is AppLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(code);
 }
 
 const localeLoaders = import.meta.glob<{ default: typeof en }>(["./locales/*.json", "!./locales/en.json"]);
 
-export async function loadLocale(code: AppLocale): Promise<void> {
+async function loadLocale(code: AppLocale): Promise<void> {
   if (loaded.has(code)) return;
   const loader = localeLoaders[`./locales/${code}.json`];
   if (!loader) return;
