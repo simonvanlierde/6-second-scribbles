@@ -37,7 +37,7 @@ from tests.constants import (
     START_ROUND,
     VOTE_KICK_PUBLIC_ONLY_ERROR,
 )
-from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
+from tests.support import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient

@@ -26,7 +26,7 @@ from tests.constants import (
     ROOM_STATE,
     TEST_ROOM_ID,
 )
-from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
+from tests.support import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from httpx import AsyncClient

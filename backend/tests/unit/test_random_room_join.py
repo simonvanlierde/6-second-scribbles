@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms.manager import GameRoom, PlayerInfo, room_manager
 from tests.constants import MEDIUM, START_GAME
-from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
+from tests.support import JoinedPlayer, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient

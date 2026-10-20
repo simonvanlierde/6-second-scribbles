@@ -27,7 +27,7 @@ from tests.constants import (
     START_GAME,
     START_ROUND,
 )
-from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
+from tests.support import JoinedPlayer, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
