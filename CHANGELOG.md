@@ -30,6 +30,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A finished game goes back to the lobby by itself 3 minutes after the final results, so a room whose host left can play again. Operators can change the delay with `FINAL_RESULTS_RESTART_SECONDS`. (The host's browser had a timer for this that never fired.)
 - Spectators now see a game live, the moment something happens, instead of catching up every 2 seconds. A room takes up to 20 spectators, and they never count toward the player limit.
 - Server logs no longer keep full visitor IPs: Caddy masks them to the /24 (IPv4) or /48 (IPv6) network, and the backend no longer writes its own access log or the visitor IP of each WebSocket connection. The About dialog now says what is stored and for how long.
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
@@ -43,6 +44,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `start_game` and `settings_update` broadcast the room's stored settings instead of echoing the client's message, so a partial settings change shows everyone the full settings.
 - When a network already has too many open rooms or creates rooms too fast, Create room and Quick play say so and suggest closing one, joining a friend's room or waiting a few minutes, instead of "Please try again".
 - Contract generation writes one JSON Schema file per direction instead of one per event.
+- The frontend no longer depends on `@vueuse/core`.
 
 ### Removed
 
@@ -53,6 +55,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The message for a room that briefly turns away new players, after many players left it in a short time, is translated into every language.
+- A category without a translation in the room's language is now dealt in the next language it has, so the round still starts.
+- Two players could get the same avatar colour. Colours are now unique within a room; a colour picked in settings is kept unless another player already has it.
 - After a round, guessers could wait forever on "Waiting for drawing…". The finished drawing was sent as a full-resolution PNG, often over 1 MB on a high-density screen, and the server drops messages over 64 KiB. Drawings are now scaled to at most 1024 px and sent as WebP (JPEG in browsers such as Safari that cannot encode WebP), stepping down until they fit. A player whose message is still too large sees an error instead of nothing.
 - Creating a room from the home page failed in production: the backend redirected `POST /api/rooms` to an `http://` URL, which the browser blocked on the HTTPS site. The backend now trusts the forwarded scheme from Caddy.
 - Rooms could split in production: the backend ran four worker processes, each with its own in-memory rooms, so a player could create a room on one worker and connect to another. It now runs a single worker.

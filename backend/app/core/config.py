@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     round_results_countdown_seconds: int = 15
     game_complete_delay_seconds: int = 5
     # How long the final results stay up before the server sends the room back to the lobby.
-    final_results_restart_seconds: int = 60
+    final_results_restart_seconds: int = 180
     kick_vote_timeout_seconds: int = 60
 
     # Abuse / overload protection
