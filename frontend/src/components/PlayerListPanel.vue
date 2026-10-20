@@ -166,6 +166,7 @@ function colorFor(player: Player): string {
   color: var(--color-ink-muted);
 }
 .player-row .player-row__action {
+  min-height: 44px;
   padding: 8px 14px;
   font-size: var(--text-label-md);
 }

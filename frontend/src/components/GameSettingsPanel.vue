@@ -325,6 +325,7 @@ watch(
   align-self: flex-start;
   align-items: center;
   gap: 6px;
+  min-height: 44px;
   padding: 4px 0;
   border: 0;
   background: transparent;

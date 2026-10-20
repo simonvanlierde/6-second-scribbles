@@ -193,17 +193,18 @@ function confirmLeave() {
         />
 
         <DrawingCanvasStage class="drawing-phase__stage"><canvas ref="canvasElement" /></DrawingCanvasStage>
-
-        <HdButton
-          variant="success"
-          class="drawing-phase__finish-mobile"
-          :disabled="hasSubmittedDrawing"
-          @click="finishDrawing"
-        >
-          {{ hasSubmittedDrawing ? $t("drawing.waiting") : $t("drawing.finish") }}
-        </HdButton>
       </div>
     </div>
+
+    <!-- Outside the scrolling body, so it stays on screen however tall the card is. -->
+    <HdButton
+      variant="success"
+      class="drawing-phase__finish-mobile"
+      :disabled="hasSubmittedDrawing"
+      @click="finishDrawing"
+    >
+      {{ hasSubmittedDrawing ? $t("drawing.waiting") : $t("drawing.finish") }}
+    </HdButton>
 
     <HdDialog
       v-model:open="leaveDialogOpen"
@@ -270,6 +271,7 @@ function confirmLeave() {
   cursor: pointer;
   text-align: left;
   border-radius: 6px;
+  min-height: 44px;
 }
 .category-card__item:hover {
   background: color-mix(in srgb, var(--color-ink) 6%, transparent);
@@ -344,7 +346,9 @@ function confirmLeave() {
     break-inside: avoid;
     margin-bottom: var(--space-1);
   }
+  /* Phones keep the shorter rows, so the canvas keeps the vertical space. */
   .category-card__item {
+    min-height: auto;
     font-size: var(--text-body-lg);
   }
   .drawing-phase__finish-desktop {
@@ -352,6 +356,8 @@ function confirmLeave() {
   }
   .drawing-phase__finish-mobile {
     display: inline-flex;
+    flex-shrink: 0;
+    margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
   }
   .canvas-stage {
     min-height: 260px;
