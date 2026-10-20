@@ -1,30 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, useTemplateRef } from "vue";
 
 import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
 import AllDrawingsGallery from "@/components/results/AllDrawingsGallery.vue";
 import WinnerCard from "@/components/results/WinnerCard.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
 import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { useLeaveRoom } from "@/composables/useLeaveRoom";
-import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useSound } from "@/composables/useSound";
 import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
 const { send } = useGameConnection();
-const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const { play } = useSound();
-const { leaveRoom } = useLeaveRoom();
 
 const isReady = ref(false);
-const leaveDialogOpen = ref(false);
+const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 
 const finalScores = computed(() => store.getFinalScores());
 
@@ -79,14 +75,6 @@ function playAgain() {
   }
 }
 
-function showLeaveDialog() {
-  if (!shouldConfirm.value) {
-    leaveRoom();
-    return;
-  }
-  leaveDialogOpen.value = true;
-}
-
 onMounted(() => {
   play("winner");
 });
@@ -98,7 +86,7 @@ onMounted(() => {
       variant="final"
       :title="$t('finalResults.gameOver')"
       :status="$t('finalResults.playersReady', { count: store.readyCount, total: store.totalPlayers })"
-      @leave="showLeaveDialog"
+      @leave="leaveDialog?.request()"
     />
 
     <div class="final-results__body">
@@ -168,21 +156,13 @@ onMounted(() => {
         <HdButton class="final-cta__again" variant="primary" @click="playAgain">
           {{ store.isHost ? $t("finalResults.playAgain") : isReady ? $t("finalResults.readyWaiting") : $t("finalResults.readyForNext") }}
         </HdButton>
-        <HdButton class="final-cta__home" variant="success" @click="showLeaveDialog">
+        <HdButton class="final-cta__home" variant="success" @click="leaveDialog?.request()">
           {{ $t("finalResults.backHome") }}
         </HdButton>
       </div>
     </div>
 
-    <HdDialog
-      v-model:open="leaveDialogOpen"
-      :title="leaveDialog.title"
-      :message="leaveDialog.message"
-      :confirm-label="leaveDialog.confirmLabel"
-      :cancel-label="leaveDialog.cancelLabel"
-      variant="danger"
-      @confirm="leaveRoom"
-    />
+    <LeaveRoomDialog ref="leaveDialog" />
   </div>
 </template>
 

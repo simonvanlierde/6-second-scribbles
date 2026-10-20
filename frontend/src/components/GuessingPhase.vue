@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, useTemplateRef } from "vue";
 
 import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
@@ -11,8 +12,6 @@ import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
-import { useLeaveRoom } from "@/composables/useLeaveRoom";
-import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useRoundDraft } from "@/composables/useRoundDraft";
 import { useSound } from "@/composables/useSound";
 import { STORAGE_KEYS } from "@/config/gameConfig";
@@ -21,13 +20,11 @@ import { useGameStore } from "@/stores/game";
 const store = useGameStore();
 const { send } = useGameConnection();
 const { play } = useSound();
-const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
-const { leaveRoom } = useLeaveRoom();
 
 const playerGuesses = ref<Record<string, string[]>>({});
 const submittedPlayers = ref<string[]>([]);
 const allGuessesSubmitted = ref(false);
-const leaveDialogOpen = ref(false);
+const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 const skipDialogOpen = ref(false);
 const emptyGuessDialogTarget = ref<string | null>(null);
 
@@ -143,23 +140,11 @@ function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
 function handleImageError(playerId: string) {
   brokenImages.value = new Set([...brokenImages.value, playerId]);
 }
-
-function showLeaveDialog() {
-  if (!shouldConfirm.value) {
-    confirmLeave();
-    return;
-  }
-  leaveDialogOpen.value = true;
-}
-
-function confirmLeave() {
-  leaveRoom();
-}
 </script>
 
 <template>
   <div class="guessing-phase">
-    <GameHeader :time-left="timeLeft" @leave="showLeaveDialog" />
+    <GameHeader :time-left="timeLeft" @leave="leaveDialog?.request()" />
 
     <div class="guessing-phase__body">
       <template v-if="assignedTargetPlayer">
@@ -246,15 +231,7 @@ function confirmLeave() {
       </div>
     </div>
 
-    <HdDialog
-      v-model:open="leaveDialogOpen"
-      :title="leaveDialog.title"
-      :message="leaveDialog.message"
-      :confirm-label="leaveDialog.confirmLabel"
-      :cancel-label="leaveDialog.cancelLabel"
-      variant="danger"
-      @confirm="confirmLeave"
-    />
+    <LeaveRoomDialog ref="leaveDialog" />
 
     <HdDialog
       v-model:open="skipDialogOpen"

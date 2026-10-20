@@ -1,28 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 
 import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
 import DrawingRevealGrid from "@/components/results/DrawingRevealGrid.vue";
 import RoundHighlights from "@/components/results/RoundHighlights.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdCard from "@/components/ui/HdCard.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
 import HdPill from "@/components/ui/HdPill.vue";
 import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
-import { useLeaveRoom } from "@/composables/useLeaveRoom";
-import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useSound } from "@/composables/useSound";
 import { GAME_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
-const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const { play } = useSound();
-const { leaveRoom } = useLeaveRoom();
 
 const countdown = ref(GAME_TIMINGS.ROUND_RESULTS_COUNTDOWN_S);
-const leaveDialogOpen = ref(false);
+const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 let countdownInterval: number | null = null;
 
 function avatarColorFor(playerId: string): string {
@@ -58,14 +54,6 @@ const resultsByPlayer = computed(() => {
 
 const isLastRound = computed(() => store.currentRound >= store.maxRounds);
 
-function showLeaveDialog() {
-  if (!shouldConfirm.value) {
-    leaveRoom();
-    return;
-  }
-  leaveDialogOpen.value = true;
-}
-
 onMounted(() => {
   play("reveal");
   countdownInterval = window.setInterval(() => {
@@ -87,7 +75,7 @@ onUnmounted(() => {
 
 <template>
   <div class="round-results">
-    <GameHeader :time-left="countdown" @leave="showLeaveDialog" />
+    <GameHeader :time-left="countdown" @leave="leaveDialog?.request()" />
 
     <div class="round-results__body">
       <p class="round-results__lead">
@@ -154,15 +142,7 @@ onUnmounted(() => {
       <DrawingRevealGrid />
     </div>
 
-    <HdDialog
-      v-model:open="leaveDialogOpen"
-      :title="leaveDialog.title"
-      :message="leaveDialog.message"
-      :confirm-label="leaveDialog.confirmLabel"
-      :cancel-label="leaveDialog.cancelLabel"
-      variant="danger"
-      @confirm="leaveRoom"
-    />
+    <LeaveRoomDialog ref="leaveDialog" />
   </div>
 </template>
 

@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { useClipboard } from "@vueuse/core";
-import { computed, ref } from "vue";
+import { computed, useTemplateRef } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 
 import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
 import PlayerListPanel from "@/components/PlayerListPanel.vue";
 import SharedDrawpad from "@/components/SharedDrawpad.vue";
 import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdToggle from "@/components/ui/HdToggle.vue";
 import { useNotifications } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
-import { useLeaveRoom } from "@/composables/useLeaveRoom";
-import { useRoomLeave } from "@/composables/useRoomLeave";
 import { GAME_SETTINGS } from "@/config/gameConfig";
 import { useGameStore } from "@/stores/game";
 
@@ -25,10 +23,8 @@ const store = useGameStore();
 const { send } = useGameConnection();
 const { showNotification } = useNotifications();
 const { copy } = useClipboard();
-const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
-const { leaveRoom } = useLeaveRoom();
 
-const leaveDialogOpen = ref(false);
+const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 
 const localPadVisible = computed({
   get: () => store.localPadVisible,
@@ -79,14 +75,6 @@ async function copyRoomCode() {
   showNotification(t("common.copied"));
 }
 
-function showLeaveDialog() {
-  if (!shouldConfirm.value) {
-    leaveRoom();
-    return;
-  }
-  leaveDialogOpen.value = true;
-}
-
 function toggleRoomPadVisibility() {
   const visible = !store.roomPadVisible;
   store.setRoomPadVisible(visible);
@@ -97,7 +85,7 @@ function toggleRoomPadVisibility() {
 <template>
   <div class="lobby-page">
     <div class="lobby-topbar">
-      <HdButton variant="secondary" @click="showLeaveDialog"> ← {{ t('lobby.leaveRoom') }} </HdButton>
+      <HdButton variant="secondary" @click="leaveDialog?.request()"> ← {{ t('lobby.leaveRoom') }} </HdButton>
       <button type="button" class="lobby-code" :title="t('common.copyRoomCode')" @click="copyRoomCode">
         <span class="lobby-code__label">{{ t('home.roomCodeLabel') }}</span>
         <span class="lobby-code__value">{{ roomCode }}</span>
@@ -317,15 +305,7 @@ function toggleRoomPadVisibility() {
       </HdCard>
     </div>
 
-    <HdDialog
-      v-model:open="leaveDialogOpen"
-      :title="leaveDialog.title"
-      :message="leaveDialog.message"
-      :confirm-label="leaveDialog.confirmLabel"
-      :cancel-label="leaveDialog.cancelLabel"
-      variant="danger"
-      @confirm="leaveRoom"
-    />
+    <LeaveRoomDialog ref="leaveDialog" />
   </div>
 </template>
 
