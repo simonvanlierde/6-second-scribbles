@@ -10,6 +10,7 @@ from pathlib import Path
 import app
 
 UNKNOWN = "0.0.0+unknown"
+LOCK_PACKAGE = "backend"
 
 
 def test_version_matches_pyproject() -> None:
@@ -42,3 +43,20 @@ def test_version_matches_changelog_and_package_files() -> None:
     for package in ("package.json", "frontend/package.json"):
         assert json.loads((root / package).read_text())["version"] == app.__version__, package
     assert latest[1] == app.__version__
+
+
+def test_version_matches_lock_and_changelog_links() -> None:
+    """uv.lock and the CHANGELOG compare links follow the release too.
+
+    `uv sync --frozen` in CI and the images never rewrites uv.lock, so a bump that skips
+    `uv lock` would otherwise ship a lock that names the old version.
+    """
+    root = Path(app.__file__).parents[2]
+    lock = tomllib.loads((root / "backend/uv.lock").read_text())
+    backend = next(package for package in lock["package"] if package["name"] == LOCK_PACKAGE)
+    assert backend["version"] == app.__version__
+
+    changelog = (root / "CHANGELOG.md").read_text()
+    version = re.escape(app.__version__)
+    assert re.search(rf"^\[Unreleased\]: \S+/compare/v{version}\.\.\.HEAD$", changelog, re.MULTILINE)
+    assert re.search(rf"^\[{version}\]: \S+", changelog, re.MULTILINE)

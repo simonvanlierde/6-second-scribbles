@@ -157,10 +157,9 @@ services:
   cloudflared:
     <<: *hardening
     logging: *logging
-    # Pinned by digest for reproducible, supply-chain-safe deploys instead of the
-    # mutable `latest` tag. Resolved from cloudflare/cloudflared:latest on 2026-06-27.
-    # To bump: `docker buildx imagetools inspect cloudflare/cloudflared:latest`.
-    image: cloudflare/cloudflared@sha256:6d91c121b803126f7a5344005d17a9324788fc09d305b6e2560ec6040a7ae283
+    # Pinned by tag and digest, so a deploy is reproducible and Dependabot has a
+    # version to compare when it proposes the next release.
+    image: cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07
     restart: unless-stopped
     depends_on:
       frontend:
