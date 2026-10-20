@@ -291,14 +291,14 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             prompt_ids=target_assignment.item_ids,
             preferred_locale=room.get_player_locale(player_id),
         )
-        scoring_result = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
-        correct_count = scoring_result.score
+        matched_guesses = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
+        correct_count = len(matched_guesses)
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
         _collect_miss_candidates(
             player_id=player_id,
             guesses=guesses,
-            matched_guesses={match.guess for match in scoring_result.matches},
+            matched_guesses=set(matched_guesses),
             targets=scoring_targets.targets,
             miss_candidates=miss_candidates,
         )
