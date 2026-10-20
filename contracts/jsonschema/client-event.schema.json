@@ -16,7 +16,6 @@
       "reaction_send": "#/$defs/ReactionSendEvent",
       "request_game_state": "#/$defs/RequestGameStateEvent",
       "restart_game": "#/$defs/RestartGameEvent",
-      "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
       "start_game": "#/$defs/StartGameEvent",
       "submit_guess": "#/$defs/SubmitGuessEvent",
@@ -321,33 +320,6 @@
       },
       "required": ["type"],
       "title": "DefaultLocaleUpdateEvent",
-      "type": "object"
-    },
-    {
-      "properties": {
-        "type": {
-          "const": "room_custom_categories_update",
-          "title": "Type",
-          "type": "string"
-        },
-        "categoryIds": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Categoryids"
-        }
-      },
-      "required": ["type"],
-      "title": "RoomCustomCategoriesUpdateEvent",
       "type": "object"
     },
     {

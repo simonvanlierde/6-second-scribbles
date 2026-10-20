@@ -49,8 +49,6 @@ class Settings(BaseSettings):
     auth_register_rate_window_seconds: int = 60
     auth_login_rate_limit: int = 10
     auth_login_rate_window_seconds: int = 60
-    category_mutation_rate_limit: int = 30
-    category_mutation_rate_window_seconds: int = 60
     category_locale_availability_ttl_seconds: int = 120
     category_cache_ttl_seconds: int = 60 * 60 * 24
 

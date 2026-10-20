@@ -108,7 +108,6 @@ export const useGameStore = defineStore(
 
     // --- Room settings ---
     const defaultLocale = ref<string>("en");
-    const customCategoryIds = ref<number[] | null>(null);
     const isPrivateRoom = ref<boolean>(false);
 
     // --- Computed ---
@@ -368,10 +367,6 @@ export const useGameStore = defineStore(
       defaultLocale.value = nextLocale;
     }
 
-    function setCustomCategoryIds(nextCategoryIds: number[] | null) {
-      customCategoryIds.value = nextCategoryIds ? [...nextCategoryIds] : null;
-    }
-
     function setPrivacy(isPrivate: boolean) {
       isPrivateRoom.value = isPrivate;
     }
@@ -444,7 +439,6 @@ export const useGameStore = defineStore(
       }
       if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
-      customCategoryIds.value = roomState.customCategoryIds ?? null;
       if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
       // Only treat a snapshot that reflects our own membership (i.e. the one sent
       // after our join completes) as authoritative hydration. A spectator has no
@@ -500,7 +494,6 @@ export const useGameStore = defineStore(
       setLocalPadVisible(true);
       setRoomPadVisible(true);
       defaultLocale.value = "en";
-      customCategoryIds.value = null;
       localPlayerLocale.value = getBrowserLocale();
       isPrivateRoom.value = false;
     }
@@ -537,7 +530,6 @@ export const useGameStore = defineStore(
       readyCount,
       totalPlayers,
       defaultLocale,
-      customCategoryIds,
       localPlayerLocale,
       localPlayerColor,
       localAvatarColor,
@@ -580,7 +572,6 @@ export const useGameStore = defineStore(
       getFinalScores,
       getWinner,
       setDefaultLocale,
-      setCustomCategoryIds,
       setPrivacy,
       applySettingsUpdate,
       applyRoomState,

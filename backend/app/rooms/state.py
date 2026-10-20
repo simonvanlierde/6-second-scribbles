@@ -95,6 +95,7 @@ class RoomMetadataState(BaseModel):
     player_user_ids: dict[str, str] = Field(default_factory=dict)
     # sha256 of each player's rejoin key, set on first join and checked on every later one.
     player_rejoin_keys: dict[str, str] = Field(default_factory=dict)
+    # Unused; stays until 0.4 because extra="forbid" would reject rooms saved in Redis with it.
     custom_category_ids: list[int] | None = None
     player_assignments: dict[str, PlayerPromptAssignmentState] = Field(default_factory=dict)
     guess_targets: dict[str, str] = Field(default_factory=dict)

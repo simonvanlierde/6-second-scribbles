@@ -23,8 +23,6 @@ from app.rooms.protocol import (
     PlayerReadyEvent,
     PrivacyChangedEvent,
     RestartGameEvent,
-    RoomCustomCategoriesUpdateEvent,
-    RoomCustomCategoriesUpdateServerEvent,
     SettingsUpdateEvent,
     StartGameEvent,
     SubmitGuessEvent,
@@ -99,10 +97,6 @@ async def test_room_action_handlers_cover_validation_and_updates(
         cast("RoomWebSocketSession", session),
         DefaultLocaleUpdateEvent(type="default_locale_update", locale="nl"),
     )
-    await room_actions.handle_room_custom_categories_update(
-        cast("RoomWebSocketSession", session),
-        RoomCustomCategoriesUpdateEvent(type="room_custom_categories_update", categoryIds=[5, 3, 3]),
-    )
     await room_actions.handle_pad_visibility(
         cast("RoomWebSocketSession", session),
         PadVisibilityEvent(type="pad_visibility", visible=False),
@@ -128,11 +122,9 @@ async def test_room_action_handlers_cover_validation_and_updates(
     assert room.metadata.drawing_time_limit == 40
     assert room.metadata.guessing_time_limit == 25
     assert room.metadata.default_locale == DEFAULT_LOCALE
-    assert room.metadata.custom_category_ids == [3, 5]
     assert room.metadata.pad_visibility is False
     assert room.metadata.is_private is True
     assert any(isinstance(call.args[0], DefaultLocaleUpdateServerEvent) for call in broadcast.await_args_list)
-    assert any(isinstance(call.args[0], RoomCustomCategoriesUpdateServerEvent) for call in broadcast.await_args_list)
     assert invalid_ready.error_calls == [
         ("player_ready_error", "invalid_player", "Ready updates must match your connection."),
     ]

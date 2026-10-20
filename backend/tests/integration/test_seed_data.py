@@ -53,10 +53,6 @@ class TestSeedDataScript:
         prompts = prompts_result.scalars().all()
         assert len(prompts) > 0
 
-        users = await db_session.execute(select(User))
-        seeded_users = users.scalars().all()
-        assert seeded_users == []
-
         system_categories = [category for category in categories if category.source == SYSTEM_SOURCE]
         assert len(system_categories) == len(categories)
         assert all(isinstance(category.translations, dict) and category.translations for category in system_categories)

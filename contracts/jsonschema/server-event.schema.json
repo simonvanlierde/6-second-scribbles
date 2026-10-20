@@ -24,7 +24,6 @@
       "reaction_received": "#/$defs/ReactionReceivedServerEvent",
       "ready_status": "#/$defs/ReadyStatusEvent",
       "restart_game": "#/$defs/RestartGameEvent",
-      "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateServerEvent",
       "room_state": "#/$defs/RoomStateEvent",
       "round_complete": "#/$defs/RoundCompleteServerEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
@@ -347,21 +346,6 @@
         "defaultLocale": {
           "pattern": "^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$",
           "type": "string"
-        },
-        "customCategoryIds": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Customcategoryids"
         }
       },
       "required": [
@@ -780,34 +764,6 @@
       "required": ["locale", "type"],
       "title": "DefaultLocaleUpdateServerEvent",
       "type": "object"
-    },
-    {
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "const": "room_custom_categories_update",
-          "title": "Type",
-          "type": "string"
-        },
-        "categoryIds": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Categoryids"
-        }
-      },
-      "title": "RoomCustomCategoriesUpdateServerEvent",
-      "type": "object",
-      "required": ["type"]
     },
     {
       "additionalProperties": false,

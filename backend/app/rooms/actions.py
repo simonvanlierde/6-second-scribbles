@@ -16,7 +16,6 @@ from app.rooms.protocol import (
     PlayerJoinedEvent,
     PlayerLeftEvent,
     ReactionReceivedServerEvent,
-    RoomCustomCategoriesUpdateServerEvent,
     send_ws_message,
 )
 
@@ -40,7 +39,6 @@ if TYPE_CHECKING:
         ReactionSendEvent,
         RequestGameStateEvent,
         RestartGameEvent,
-        RoomCustomCategoriesUpdateEvent,
         SettingsUpdateEvent,
         StartGameEvent,
         SubmitGuessEvent,
@@ -216,21 +214,6 @@ async def handle_default_locale_update(session: RoomWebSocketSession, event: Def
     await broadcast_and_persist(session, DefaultLocaleUpdateServerEvent(locale=event.locale))
 
 
-async def handle_room_custom_categories_update(
-    session: RoomWebSocketSession,
-    event: RoomCustomCategoriesUpdateEvent,
-) -> None:
-    """Handle a host updating room-level private category overrides."""
-    if not await require_host(session, "update room categories"):
-        return
-    category_ids = event.category_ids
-    session.room.metadata.custom_category_ids = sorted(set(category_ids)) if category_ids is not None else None
-    await broadcast_and_persist(
-        session,
-        RoomCustomCategoriesUpdateServerEvent(categoryIds=session.room.metadata.custom_category_ids),
-    )
-
-
 async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClearEvent) -> None:
     """Handle a drawpad-clear event."""
     if not await require_host(session, "clear the drawpad"):
@@ -376,7 +359,6 @@ _HANDLERS: dict[str, _Handler] = {
     "restart_game": handle_restart_game,
     "settings_update": handle_settings_update,
     "default_locale_update": handle_default_locale_update,
-    "room_custom_categories_update": handle_room_custom_categories_update,
     "draw_stroke": handle_draw_stroke,
     "draw_stroke_partial": handle_draw_stroke,
     "drawpad_clear": handle_drawpad_clear,

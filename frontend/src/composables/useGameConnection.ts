@@ -202,7 +202,6 @@ export function useGameConnection() {
       case "ready_status":
       case "settings_update":
       case "default_locale_update":
-      case "room_custom_categories_update":
         handleGameFlowEvent(message, ctx);
         break;
 

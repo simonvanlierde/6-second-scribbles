@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 SEED_DATA_PATH = Path(__file__).parent / "seed_data.yaml"
 SEED_DATA = yaml.safe_load(SEED_DATA_PATH.read_text())
 
-SEEDED_USERS_KEY = "seeded_users"
 SYSTEM_CATEGORIES_KEY = "system_categories"
 PROMPTS_KEY = "prompts"
 

@@ -44,10 +44,6 @@
       "group": "roomSettings",
       "summary": "Change the room default locale."
     },
-    "room_custom_categories_update": {
-      "group": "roomSettings",
-      "summary": "Override the host's private category selection for this room."
-    },
     "privacy_changed": {
       "group": "roomSettings",
       "summary": "Change the room privacy setting."
@@ -141,10 +137,6 @@
     "default_locale_update": {
       "group": "roomSettings",
       "summary": "Room default locale updated."
-    },
-    "room_custom_categories_update": {
-      "group": "roomSettings",
-      "summary": "Room-level private category selection changed."
     },
     "draw_stroke": {
       "group": "drawing",

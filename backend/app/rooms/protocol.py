@@ -137,11 +137,6 @@ class DefaultLocaleUpdateEvent(ClientEventModel):
     locale: LanguageCode = "en"
 
 
-class RoomCustomCategoriesUpdateEvent(ClientEventModel):
-    type: Literal["room_custom_categories_update"]
-    category_ids: list[int] | None = Field(default=None, alias="categoryIds")
-
-
 class DrawEventModel(ClientEventModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
@@ -240,7 +235,6 @@ ClientEvent = Annotated[
     | WatchEvent
     | SettingsUpdateEvent
     | DefaultLocaleUpdateEvent
-    | RoomCustomCategoriesUpdateEvent
     | DrawStrokeEvent
     | DrawStrokePartialEvent
     | DrawpadClearEvent
@@ -343,7 +337,6 @@ class RoomStateEvent(ServerEventModel):
     pad_visibility: bool = Field(alias="padVisibility")
     is_private: bool = Field(alias="isPrivate")
     default_locale: LanguageCode = Field(alias="defaultLocale")
-    custom_category_ids: list[int] | None = Field(default=None, alias="customCategoryIds")
 
 
 class PlayerJoinedEvent(ServerPlayerEventModel):
@@ -410,11 +403,6 @@ class HostChangedEvent(ServerEventModel):
 class DefaultLocaleUpdateServerEvent(ServerEventModel):
     type: Literal["default_locale_update"] = "default_locale_update"
     locale: LanguageCode
-
-
-class RoomCustomCategoriesUpdateServerEvent(ServerEventModel):
-    type: Literal["room_custom_categories_update"] = "room_custom_categories_update"
-    category_ids: list[int] | None = Field(default=None, alias="categoryIds")
 
 
 class PlayerLeftEvent(ServerPlayerEventModel):
@@ -531,7 +519,6 @@ ServerEvent = Annotated[
     | ReadyStatusEvent
     | HostChangedEvent
     | DefaultLocaleUpdateServerEvent
-    | RoomCustomCategoriesUpdateServerEvent
     | PlayerLeftEvent
     | PlayerPresenceEvent
     | KickVoteStartedEvent
@@ -577,10 +564,6 @@ CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "start_game": {"group": "gameFlow", "summary": "Host starts a game with room settings."},
     "submit_guess": {"group": "gameFlow", "summary": "Submit guesses for another player's drawing."},
     "default_locale_update": {"group": "roomSettings", "summary": "Change the room default locale."},
-    "room_custom_categories_update": {
-        "group": "roomSettings",
-        "summary": "Override the host's private category selection for this room.",
-    },
     "privacy_changed": {"group": "roomSettings", "summary": "Change the room privacy setting."},
     "draw_stroke": {"group": "drawing", "summary": "Broadcast a completed draw stroke."},
     "draw_stroke_partial": {"group": "drawing", "summary": "Broadcast an in-progress draw stroke."},
@@ -607,10 +590,6 @@ SERVER_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
     "start_guessing": {"group": "gameFlow", "summary": "Guessing phase started."},
     "start_round": {"group": "gameFlow", "summary": "Round start broadcast with assigned cards."},
     "default_locale_update": {"group": "roomSettings", "summary": "Room default locale updated."},
-    "room_custom_categories_update": {
-        "group": "roomSettings",
-        "summary": "Room-level private category selection changed.",
-    },
     "draw_stroke": {"group": "drawing", "summary": "A completed draw stroke relay."},
     "draw_stroke_partial": {"group": "drawing", "summary": "An in-progress draw stroke relay."},
     "drawpad_clear": {"group": "drawing", "summary": "Drawpad cleared."},

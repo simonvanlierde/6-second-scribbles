@@ -514,7 +514,6 @@ class GameRoom:
                 "padVisibility": self.metadata.pad_visibility,
                 "isPrivate": self.metadata.is_private,
                 "defaultLocale": self.metadata.default_locale,
-                "customCategoryIds": self.metadata.custom_category_ids,
             },
         )
 

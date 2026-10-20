@@ -78,7 +78,6 @@ export const ServerEventSchema = z.union([
       padVisibility: z.boolean(),
       isPrivate: z.boolean(),
       defaultLocale: z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/),
-      customCategoryIds: z.union([z.array(z.number().int()), z.null()]).default(null),
     })
     .strict(),
   z
@@ -165,12 +164,6 @@ export const ServerEventSchema = z.union([
     .object({
       type: z.literal("default_locale_update"),
       locale: z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("room_custom_categories_update"),
-      categoryIds: z.union([z.array(z.number().int()), z.null()]).default(null),
     })
     .strict(),
   z.object({ type: z.literal("player_left"), playerId: z.string() }).strict(),
@@ -328,7 +321,6 @@ export const serverEventTypes = [
   "reaction_received",
   "ready_status",
   "restart_game",
-  "room_custom_categories_update",
   "room_state",
   "round_complete",
   "settings_update",
@@ -350,7 +342,7 @@ export const serverEventGroups = {
     "start_guessing",
     "start_round",
   ],
-  roomSettings: ["default_locale_update", "room_custom_categories_update"],
+  roomSettings: ["default_locale_update"],
   drawing: ["draw_stroke", "draw_stroke_partial", "drawpad_clear", "pad_visibility"],
   moderation: ["kick_error", "kick_vote_expired", "kick_vote_started", "kick_vote_updated", "player_kicked"],
   errors: ["permission_error", "player_ready_error", "protocol_error", "submit_guess_error"],
@@ -380,7 +372,6 @@ export const serverEventSummaries = {
   reaction_received: "A drawing reaction broadcast to the room.",
   ready_status: "Current ready-player counts.",
   restart_game: "Game restart broadcast.",
-  room_custom_categories_update: "Room-level private category selection changed.",
   room_state: "Current room snapshot.",
   round_complete: "Round completion results broadcast.",
   settings_update: "Game settings updated.",
@@ -436,10 +427,6 @@ export const ClientEventSchema = z.union([
       .string()
       .regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/)
       .optional(),
-  }),
-  z.object({
-    type: z.literal("room_custom_categories_update"),
-    categoryIds: z.union([z.array(z.number().int()), z.null()]).default(null),
   }),
   z
     .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
@@ -498,7 +485,6 @@ export const clientEventTypes = [
   "reaction_send",
   "request_game_state",
   "restart_game",
-  "room_custom_categories_update",
   "settings_update",
   "start_game",
   "submit_guess",
@@ -507,7 +493,7 @@ export const clientEventTypes = [
 export const clientEventGroups = {
   connection: ["heartbeat", "join", "leave", "request_game_state", "watch"],
   gameFlow: ["player_ready", "restart_game", "settings_update", "start_game", "submit_guess"],
-  roomSettings: ["default_locale_update", "privacy_changed", "room_custom_categories_update"],
+  roomSettings: ["default_locale_update", "privacy_changed"],
   drawing: ["draw_stroke", "draw_stroke_partial", "drawpad_clear", "pad_visibility"],
   moderation: ["cast_kick_vote", "initiate_kick"],
   results: ["reaction_send"],
@@ -528,7 +514,6 @@ export const clientEventSummaries = {
   reaction_send: "Send a reaction to a drawing during round results.",
   request_game_state: "Request the latest room snapshot.",
   restart_game: "Restart the game from the lobby state.",
-  room_custom_categories_update: "Override the host's private category selection for this room.",
   settings_update: "Update shared game settings.",
   start_game: "Host starts a game with room settings.",
   submit_guess: "Submit guesses for another player's drawing.",

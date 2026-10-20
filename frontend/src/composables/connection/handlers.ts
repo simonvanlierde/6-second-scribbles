@@ -42,7 +42,6 @@ type GameFlowEvent = ServerEventOf<
   | "ready_status"
   | "settings_update"
   | "default_locale_update"
-  | "room_custom_categories_update"
 >;
 type DrawingEvent = ServerEventGroup<"drawing">;
 type KickEvent = ServerEventGroup<"moderation">;
@@ -179,10 +178,6 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
           );
         }
       }
-      break;
-
-    case "room_custom_categories_update":
-      store.setCustomCategoryIds(message.categoryIds ?? null);
       break;
   }
 }
