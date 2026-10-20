@@ -1,10 +1,14 @@
+# spell-checker: ignore aquasec, Rootfs
 name: CI
 
 # No push trigger: main only advances through a PR, so a push run repeats
-# the check that already passed on the PR head.
+# the check that already passed on the PR head. The weekly schedule runs only the
+# image job, to catch new advisories in images whose code has not changed.
 on:
   pull_request:
-    types: [ opened, synchronize, reopened, ready_for_review ]
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "0 5 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -20,12 +24,16 @@ jobs:
     name: Detect changed areas
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
+    # Skipped on schedule, which skips every job that needs it except `images`.
+    if: >-
+      github.event_name != 'schedule' &&
+      (github.event.pull_request.draft == false || github.event_name != 'pull_request')
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       contracts: ${{ steps.filter.outputs.contracts }}
       root: ${{ steps.filter.outputs.root }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -58,6 +66,13 @@ jobs:
               - '.github/**'
               - 'justfile'
               - 'scripts/**'
+            docker:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'compose*.yml'
+              - '.dockerignore'
+              - '.trivyignore.yaml'
+              - '.github/workflows/ci.yml'
 
   root-checks:
     name: Root checks (betterleaks, cspell, biome)
@@ -216,6 +231,11 @@ jobs:
         working-directory: backend
         run: uv run alembic upgrade head
 
+      # Fails when the models have changes no migration covers.
+      - name: Check migrations match the models
+        working-directory: backend
+        run: uv run alembic check
+
       # The drawing-submit test plays a round, which deals server-side cards.
       - name: Seed the card decks
         working-directory: backend
@@ -321,3 +341,88 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./backend/coverage.xml
           flags: backend-integration
+
+  images:
+    name: Docker images (build, smoke test, Trivy)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    # !cancelled() lets this run when detect-changes is skipped on schedule.
+    if: >-
+      !cancelled() && (
+        github.event_name == 'schedule' ||
+        github.event_name == 'workflow_dispatch' ||
+        needs.detect-changes.outputs.docker == 'true'
+      )
+    timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: 6ss-ci
+      COMPOSE_FILE: compose.yml:compose.prod.yml
+      # Tag plus digest: a tag alone can move. No bot updates this line, bump it by hand.
+      TRIVY_IMAGE: aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c
+      # New advisories fail only the weekly run, not an unrelated pull request.
+      TRIVY_EXIT_CODE: ${{ github.event_name == 'schedule' && '1' || '0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Throwaway values: the stack only lives for this job. The password is random so
+      # no literal credential sits in the repo for the secret scan to flag.
+      - name: Write a throwaway backend/.env.prod
+        run: |
+          cat > backend/.env.prod <<EOF
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=$(openssl rand -hex 16)
+          POSTGRES_DB=scribbles_ci
+          ALLOWED_ORIGINS=http://localhost
+          EOF
+
+      - name: Build the prod images
+        run: docker compose build --pull
+
+      - name: Start the prod stack
+        run: docker compose up -d --wait --wait-timeout 180
+
+      - name: Smoke test
+        run: |
+          curl -fsS http://127.0.0.1/healthz
+          curl -fsS http://127.0.0.1/api/health | jq -e '.status == "ok"'
+
+      - name: Check container hardening
+        run: |
+          for service in backend frontend cache; do
+            docker inspect "$(docker compose ps -q "$service")" \
+              | jq -e '.[0].HostConfig | .ReadonlyRootfs == true and .CapDrop == ["ALL"]' \
+              || { echo "::error::$service is not read-only with all capabilities dropped"; exit 1; }
+          done
+
+      - name: Print container logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Scan own images with Trivy
+        run: |
+          status=0
+          for image in 6ss-ci-backend 6ss-ci-database-migrations 6ss-ci-frontend; do
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$RUNNER_TEMP/trivy-cache:/root/.cache" \
+              -v "$PWD/.trivyignore.yaml:/.trivyignore.yaml:ro" \
+              "$TRIVY_IMAGE" image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+              --ignorefile /.trivyignore.yaml --exit-code "$TRIVY_EXIT_CODE" "$image" \
+              || status=1
+          done
+          exit "$status"
+
+      # Report only: a fix here means waiting for upstream or bumping a tag or digest.
+      - name: Scan third-party images with Trivy
+        run: |-
+          docker compose --profile tunnel config --images | grep -v '^6ss-ci-' \
+            | while read -r image; do
+                docker run --rm \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  -v "$RUNNER_TEMP/trivy-cache:/root/.cache" \
+                  "$TRIVY_IMAGE" image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+                  --exit-code 0 "$image"
+              done
