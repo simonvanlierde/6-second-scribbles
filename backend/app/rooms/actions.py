@@ -23,12 +23,14 @@ from app.rooms.protocol import (
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+    from app.rooms.manager import GameRoom
     from app.rooms.protocol import (
         CastKickVoteEvent,
         ClientEventModel,
         DefaultLocaleUpdateEvent,
         DrawpadClearEvent,
         DrawStrokeEvent,
+        GameSettingsEventModel,
         InitiateKickEvent,
         JoinEvent,
         LeaveEvent,
@@ -65,6 +67,19 @@ async def broadcast_and_persist(session: RoomWebSocketSession, event: WebSocketM
     """Broadcast an event to the room and persist the updated state."""
     await session.room.broadcast(event)
     await session.room.persist()
+
+
+def _with_stored_settings[T: GameSettingsEventModel](event: T, room: GameRoom) -> T:
+    """Return a copy of a settings event that carries the room's stored settings."""
+    metadata = room.metadata
+    return event.model_copy(
+        update={
+            "difficulty": metadata.difficulty,
+            "rounds": metadata.max_rounds,
+            "drawing_time_limit": metadata.drawing_time_limit,
+            "guessing_time_limit": metadata.guessing_time_limit,
+        },
+    )
 
 
 async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
@@ -137,7 +152,7 @@ async def handle_start_game(session: RoomWebSocketSession, event: StartGameEvent
         difficulty=event.difficulty,
         max_rounds=event.rounds,
     )
-    await broadcast_and_persist(session, event)
+    await broadcast_and_persist(session, _with_stored_settings(event, session.room))
     session.room.scheduler.schedule_first_round()
 
 
@@ -190,7 +205,7 @@ async def handle_settings_update(session: RoomWebSocketSession, event: SettingsU
     room.metadata.max_rounds = event.rounds or room.metadata.max_rounds
     room.metadata.drawing_time_limit = event.drawing_time_limit or room.metadata.drawing_time_limit
     room.metadata.guessing_time_limit = event.guessing_time_limit or room.metadata.guessing_time_limit
-    await broadcast_and_persist(session, event)
+    await broadcast_and_persist(session, _with_stored_settings(event, room))
 
 
 async def handle_default_locale_update(session: RoomWebSocketSession, event: DefaultLocaleUpdateEvent) -> None:

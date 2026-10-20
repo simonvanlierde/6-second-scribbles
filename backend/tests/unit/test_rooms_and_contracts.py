@@ -26,6 +26,7 @@ from app.rooms.protocol import (
     RoomCustomCategoriesUpdateEvent,
     RoomCustomCategoriesUpdateServerEvent,
     SettingsUpdateEvent,
+    StartGameEvent,
     SubmitGuessEvent,
 )
 from scripts import generate_contracts
@@ -139,6 +140,47 @@ async def test_room_action_handlers_cover_validation_and_updates(
         ("submit_guess_error", "invalid_player", "Guess submissions must match your connection."),
     ]
     assert persist.await_count >= 4
+
+
+async def test_settings_broadcasts_carry_stored_room_settings(
+    make_ws: Callable[..., TestWebSocket],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """start_game and settings_update broadcast the room's stored settings, not the client's echo."""
+    room = GameRoom("ROOM-SETTINGS")
+    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
+    await room.add_player("guest", "Guest", cast("WebSocket", make_ws()))
+    session = cast("RoomWebSocketSession", _Session(room, player_id="host", host=True))
+    broadcast = AsyncMock()
+    monkeypatch.setattr(room, "broadcast", broadcast)
+    monkeypatch.setattr(room, "persist", AsyncMock())
+    monkeypatch.setattr(room.scheduler, "schedule_first_round", Mock())
+
+    await room_actions.handle_settings_update(
+        session,
+        SettingsUpdateEvent(type="settings_update", rounds=7, drawingTimeLimit=40, guessingTimeLimit=20),
+    )
+    # A partial update keeps the other stored settings, and the broadcast says so.
+    await room_actions.handle_settings_update(session, SettingsUpdateEvent(type="settings_update", difficulty="hard"))
+    assert broadcast.await_args is not None
+    assert broadcast.await_args.args[0] == SettingsUpdateEvent(
+        type="settings_update",
+        difficulty="hard",
+        rounds=7,
+        drawingTimeLimit=40,
+        guessingTimeLimit=20,
+    )
+
+    # The server fills in defaults for omitted start settings; clients must see them.
+    await room_actions.handle_start_game(session, StartGameEvent(type="start_game"))
+    assert broadcast.await_args is not None
+    assert broadcast.await_args.args[0] == StartGameEvent(
+        type="start_game",
+        difficulty="hard",
+        rounds=5,
+        drawingTimeLimit=None,
+        guessingTimeLimit=60,
+    )
 
 
 async def test_room_action_handlers_cover_restart_drawpad_and_kick_errors(
