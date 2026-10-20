@@ -114,6 +114,7 @@ const aboutOpen = ref(false);
   text-decoration: underline wavy;
   text-underline-offset: 4px;
   cursor: pointer;
+  min-height: 44px;
   padding: 8px 12px;
 }
 .home-footer__sep {

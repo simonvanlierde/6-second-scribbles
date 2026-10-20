@@ -185,6 +185,7 @@ const avatarColor = computed(() => store.localAvatarColor);
   opacity: 0.65;
 }
 .game-header__check {
+  display: inline-block;
   width: 13px;
   height: 13px;
   vertical-align: -1px;

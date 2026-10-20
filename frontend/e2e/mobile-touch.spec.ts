@@ -60,6 +60,14 @@ test("touch targets are 44 px and Finish stays on a phone screen", async ({ brow
   await expect(finish).toBeInViewport({ ratio: 1 });
 });
 
+test("home footer links and the language picker are 44 px", async ({ browser }) => {
+  const page = await (await browser.newContext(PHONE)).newPage();
+  await page.goto("/");
+  for (const link of await page.locator(".home-footer__link").all()) await expectTarget(link);
+  await page.getByRole("button", { name: /^settings$/i }).click();
+  await expectTarget(page.getByRole("button", { name: /^language$/i }));
+});
+
 test("Finish stays in a short laptop window", async ({ browser }) => {
   test.setTimeout(60_000);
   const host = await openRoom(browser, LAPTOP);
