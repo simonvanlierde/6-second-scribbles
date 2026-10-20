@@ -1095,7 +1095,7 @@
           "type": "string"
         },
         "reactionKey": {
-          "title": "Reactionkey",
+          "enum": ["laugh", "shock", "art", "mind-blown", "think"],
           "type": "string"
         },
         "senderId": {

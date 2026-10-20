@@ -475,7 +475,7 @@ class GameCompleteServerEvent(ServerEventModel):
 class ReactionReceivedServerEvent(ServerEventModel):
     type: Literal["reaction_received"] = "reaction_received"
     drawing_id: str = Field(alias="drawingId")
-    reaction_key: str = Field(alias="reactionKey")
+    reaction_key: ReactionKey = Field(alias="reactionKey")
     sender_id: str = Field(alias="senderId")
 
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type HandlerContext, handleServerEvent } from "@/composables/connection/handlers";
 import { useReactions } from "@/composables/useReactions";
+import { ServerEventSchema } from "@/generated/protocol";
 import { useGameStore } from "@/stores/game";
 
 describe("connection handlers translations", () => {
@@ -175,7 +176,7 @@ describe("connection handlers translations", () => {
     expect(store.drawingHistory).toHaveLength(2);
   });
 
-  it("records a received reaction and ignores unknown reaction keys", () => {
+  it("records a received reaction; the protocol schema refuses unknown reaction keys", () => {
     const reactions = useReactions();
     reactions.clear();
 
@@ -188,16 +189,9 @@ describe("connection handlers translations", () => {
       },
       ctx,
     );
-    handleServerEvent(
-      {
-        type: "reaction_received",
-        drawingId: "p2",
-        reactionKey: "bogus",
-        senderId: "p1",
-      } as never,
-      ctx,
-    );
+    const bogus = { type: "reaction_received", drawingId: "p2", reactionKey: "bogus", senderId: "p1" };
 
     expect(reactions.countsFor("p2").laugh).toBe(1);
+    expect(ServerEventSchema.safeParse(bogus).success).toBe(false);
   });
 });

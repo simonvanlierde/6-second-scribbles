@@ -8,7 +8,7 @@
 import type { Router } from "vue-router";
 
 import type { NotificationType } from "@/composables/notifications";
-import { REACTION_KEYS, type ReactionKey, useReactions } from "@/composables/useReactions";
+import { useReactions } from "@/composables/useReactions";
 import { UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEvent } from "@/generated/protocol";
 import { i18n } from "@/i18n";
@@ -26,10 +26,6 @@ export type HandlerContext = {
   showNotification: ShowNotification;
   send: (message: ClientEvent) => void;
 };
-
-function isReactionKey(key: string): key is ReactionKey {
-  return (REACTION_KEYS as readonly string[]).includes(key);
-}
 
 /** Apply one validated server event to the store; events the client does not act on are ignored. */
 export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): void {
@@ -191,9 +187,7 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
     // ── Reactions ──
 
     case "reaction_received":
-      if (isReactionKey(message.reactionKey)) {
-        useReactions().add(message.drawingId, message.reactionKey);
-      }
+      useReactions().add(message.drawingId, message.reactionKey);
       break;
 
     // ── Kick votes & moderation ──

@@ -240,7 +240,7 @@ export const ServerEventSchema = z.union([
     .object({
       type: z.literal("reaction_received"),
       drawingId: z.string(),
-      reactionKey: z.string(),
+      reactionKey: z.enum(["laugh", "shock", "art", "mind-blown", "think"]),
       senderId: z.string(),
     })
     .strict(),
