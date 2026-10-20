@@ -171,53 +171,44 @@ def _cat_targets_key(category_id: int, locale: str, prompt_ids: list[int]) -> st
     return f"cat_targets:{category_id}:{locale}:{digest}"
 
 
-async def cache_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int], data: dict) -> None:
-    """Cache the localized scoring targets dictionary for 24 hours."""
+async def _set_json(key: str, ttl_seconds: int, data: object) -> None:
+    """Cache a JSON value; a Redis failure only costs the cache entry."""
     try:
         r = await get_redis()
-        await r.setex(
-            _cat_targets_key(category_id, locale, prompt_ids),
-            settings.category_cache_ttl_seconds,
-            json.dumps(data),
-        )
+        await r.setex(key, ttl_seconds, json.dumps(data, separators=(",", ":")))
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to cache scoring targets for %s locale %s", category_id, locale)
+        logger.exception("[Redis] Failed to cache %s", key)
+
+
+async def _get_json(key: str) -> object | None:
+    """Load a cached JSON value; None when it is missing or Redis fails."""
+    try:
+        r = await get_redis()
+        raw = await r.get(key)
+        return json.loads(raw) if raw else None
+    except _PERSISTENCE_ERRORS:
+        logger.exception("[Redis] Failed to load cached %s", key)
+        return None
+
+
+async def cache_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int], data: dict) -> None:
+    """Cache the localized scoring targets dictionary for 24 hours."""
+    await _set_json(_cat_targets_key(category_id, locale, prompt_ids), settings.category_cache_ttl_seconds, data)
 
 
 async def get_cached_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int]) -> dict | None:
     """Load cached localized scoring targets dictionary from Redis."""
-    try:
-        r = await get_redis()
-        data = await r.get(_cat_targets_key(category_id, locale, prompt_ids))
-        return json.loads(data) if data else None
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to load cached scoring targets for %s locale %s", category_id, locale)
-        return None
+    payload = await _get_json(_cat_targets_key(category_id, locale, prompt_ids))
+    return payload if isinstance(payload, dict) else None
 
 
 async def cache_category_locale_availability(difficulty: str | None, items: list[dict]) -> None:
     """Cache locale-availability endpoint payload."""
-    try:
-        r = await get_redis()
-        payload = json.dumps(items, separators=(",", ":"))
-        await r.setex(
-            _category_locale_availability_key(difficulty),
-            settings.category_locale_availability_ttl_seconds,
-            payload,
-        )
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to cache locale availability for difficulty=%s", difficulty)
+    key = _category_locale_availability_key(difficulty)
+    await _set_json(key, settings.category_locale_availability_ttl_seconds, items)
 
 
 async def get_cached_category_locale_availability(difficulty: str | None) -> list[dict] | None:
     """Load cached locale-availability endpoint payload."""
-    try:
-        r = await get_redis()
-        raw = await r.get(_category_locale_availability_key(difficulty))
-        if not raw:
-            return None
-        payload = json.loads(raw)
-        return payload if isinstance(payload, list) else None
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to load locale availability cache for difficulty=%s", difficulty)
-        return None
+    payload = await _get_json(_category_locale_availability_key(difficulty))
+    return payload if isinstance(payload, list) else None
