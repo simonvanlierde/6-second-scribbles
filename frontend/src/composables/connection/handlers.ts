@@ -1,8 +1,8 @@
 /**
- * Pure WebSocket message handlers.
+ * Pure WebSocket message handler.
  *
- * Each function receives the store and necessary callbacks so they are
- * testable in isolation without needing a live WebSocket connection.
+ * It receives the store and the callbacks it needs, so it is testable in
+ * isolation without a live WebSocket connection.
  */
 
 import type { Router } from "vue-router";
@@ -10,7 +10,7 @@ import type { Router } from "vue-router";
 import type { NotificationType } from "@/composables/notifications";
 import { REACTION_KEYS, type ReactionKey, useReactions } from "@/composables/useReactions";
 import { UI_TIMINGS } from "@/config/gameConfig";
-import type { ClientEvent, ServerEventGroup, ServerEventOf } from "@/generated/protocol";
+import type { ClientEvent, ServerEvent } from "@/generated/protocol";
 import { i18n } from "@/i18n";
 import { formatLocaleLabel } from "@/shared/locales";
 import { createLogger } from "@/shared/logger";
@@ -18,7 +18,7 @@ import type { useGameStore } from "@/stores/game";
 
 const log = createLogger("WebSocket");
 
-export type ShowNotification = (text: string, type?: NotificationType, duration?: number) => void;
+type ShowNotification = (text: string, type?: NotificationType, duration?: number) => void;
 
 export type HandlerContext = {
   store: ReturnType<typeof useGameStore>;
@@ -27,34 +27,17 @@ export type HandlerContext = {
   send: (message: ClientEvent) => void;
 };
 
-// ── Event type aliases ────────────────────────────────────────────────────────
-
-type ConnectionEvent = ServerEventGroup<"connection"> | ServerEventOf<"host_changed">;
-type GameFlowEvent = ServerEventOf<
-  | "start_game"
-  | "start_round"
-  | "start_guessing"
-  | "round_complete"
-  | "game_complete"
-  | "restart_game"
-  | "ready_status"
-  | "settings_update"
-  | "default_locale_update"
->;
-type DrawingEvent = ServerEventGroup<"drawing">;
-type KickEvent = ServerEventGroup<"moderation">;
-type ResultsEvent = ServerEventGroup<"results">;
-
 function isReactionKey(key: string): key is ReactionKey {
   return (REACTION_KEYS as readonly string[]).includes(key);
 }
 
-// ── Connection & player events ────────────────────────────────────────────────
-
-export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerContext): void {
+/** Apply one validated server event to the store; events the client does not act on are ignored. */
+export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): void {
   const { store, router, showNotification } = ctx;
 
   switch (message.type) {
+    // ── Connection & players ──
+
     case "join_error":
       if (message.error === "game_in_progress") {
         showNotification(message.message || i18n.global.t("notifications.roundInProgressJoinLater"), "info");
@@ -111,15 +94,9 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
         );
       }
       break;
-  }
-}
 
-// ── Game flow events ──────────────────────────────────────────────────────────
+    // ── Game flow ──
 
-export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext): void {
-  const { store, showNotification } = ctx;
-
-  switch (message.type) {
     case "start_game":
       store.onStartGame(message);
       break;
@@ -172,15 +149,9 @@ export function handleGameFlowEvent(message: GameFlowEvent, ctx: HandlerContext)
         }
       }
       break;
-  }
-}
 
-// ── Drawing events ────────────────────────────────────────────────────────────
+    // ── Drawing ──
 
-export function handleDrawingEvent(message: DrawingEvent, ctx: HandlerContext): void {
-  const { store, showNotification } = ctx;
-
-  switch (message.type) {
     case "draw_stroke":
       // A completed stroke carries the full PNG for the shared/round drawing.
       if (typeof message.drawing === "string" && message.playerId && message.playerId !== store.localPlayerId) {
@@ -214,27 +185,17 @@ export function handleDrawingEvent(message: DrawingEvent, ctx: HandlerContext): 
         showNotification(i18n.global.t(message.visible ? "notifications.drawpadShown" : "notifications.drawpadHidden"));
       }
       break;
-  }
-}
 
-// ── Results events (reactions) ────────────────────────────────────────────────
+    // ── Reactions ──
 
-export function handleResultsEvent(message: ResultsEvent, _ctx: HandlerContext): void {
-  switch (message.type) {
     case "reaction_received":
       if (isReactionKey(message.reactionKey)) {
         useReactions().add(message.drawingId, message.reactionKey);
       }
       break;
-  }
-}
 
-// ── Kick & moderation events ──────────────────────────────────────────────────
+    // ── Kick votes & moderation ──
 
-export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
-  const { store, router, showNotification } = ctx;
-
-  switch (message.type) {
     case "kick_vote_started":
       store.startKickVote(message.targetPlayerId, {
         currentVotes: message.currentVotes,
@@ -290,6 +251,14 @@ export function handleKickEvent(message: KickEvent, ctx: HandlerContext): void {
 
     case "kick_error":
       showNotification(message.error || i18n.global.t("moderation.kickRequestFailed"), "error");
+      break;
+
+    case "protocol_error":
+      // The server drops oversized frames; without this a drawing that did not
+      // fit would vanish and guessers would wait for it forever.
+      if (message.error === "payload_too_large")
+        showNotification(i18n.global.t("notifications.drawingTooLarge"), "error", 8000);
+      else log.warn("Server rejected a message:", message.error);
       break;
   }
 }

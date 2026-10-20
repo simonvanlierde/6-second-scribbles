@@ -1,13 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  type HandlerContext,
-  handleConnectionEvent,
-  handleGameFlowEvent,
-  handleKickEvent,
-  handleResultsEvent,
-} from "@/composables/connection/handlers";
+import { type HandlerContext, handleServerEvent } from "@/composables/connection/handlers";
 import { useReactions } from "@/composables/useReactions";
 import { useGameStore } from "@/stores/game";
 
@@ -35,15 +29,15 @@ describe("connection handlers translations", () => {
     ]);
     store.localPlayerId = "p1";
 
-    handleConnectionEvent({ type: "host_changed", newHostId: "p2" }, ctx);
-    handleGameFlowEvent({ type: "default_locale_update", locale: "fr" }, ctx);
+    handleServerEvent({ type: "host_changed", newHostId: "p2" }, ctx);
+    handleServerEvent({ type: "default_locale_update", locale: "fr" }, ctx);
 
     expect(showNotification).toHaveBeenNthCalledWith(1, "Bob is now the host");
     expect(showNotification).toHaveBeenNthCalledWith(2, "Room language changed to Français");
   });
 
   it("translates a full spectator list instead of showing the server's English", () => {
-    handleConnectionEvent(
+    handleServerEvent(
       { type: "join_error", error: "spectators_full", message: "This room has as many spectators as it allows." },
       ctx,
     );
@@ -52,7 +46,7 @@ describe("connection handlers translations", () => {
   });
 
   it("keeps a player in the room when a round is in progress", () => {
-    handleConnectionEvent({ type: "join_error", error: "game_in_progress", message: "" }, ctx);
+    handleServerEvent({ type: "join_error", error: "game_in_progress", message: "" }, ctx);
 
     expect(showNotification).toHaveBeenCalledWith(
       "This round is already in progress. You can join next round.",
@@ -64,8 +58,8 @@ describe("connection handlers translations", () => {
   it("shows other join errors and sends the player home", () => {
     vi.useFakeTimers();
     try {
-      handleConnectionEvent({ type: "join_error", error: "room_full", message: "Room is full" }, ctx);
-      handleConnectionEvent({ type: "join_error", error: "room_full", message: "" }, ctx);
+      handleServerEvent({ type: "join_error", error: "room_full", message: "Room is full" }, ctx);
+      handleServerEvent({ type: "join_error", error: "room_full", message: "" }, ctx);
 
       expect(showNotification).toHaveBeenNthCalledWith(1, "Room is full", "error");
       expect(showNotification).toHaveBeenNthCalledWith(2, "Unable to join room", "error");
@@ -79,7 +73,7 @@ describe("connection handlers translations", () => {
   it("uses translated moderation notifications with interpolation", () => {
     store.localPlayerId = "p1";
 
-    handleKickEvent(
+    handleServerEvent(
       {
         type: "kick_vote_started",
         targetPlayerId: "p2",
@@ -92,7 +86,7 @@ describe("connection handlers translations", () => {
       ctx,
     );
 
-    handleKickEvent(
+    handleServerEvent(
       {
         type: "player_kicked",
         playerId: "p2",
@@ -110,7 +104,7 @@ describe("connection handlers translations", () => {
     reactions.clear();
     reactions.add("p2", "laugh");
 
-    handleGameFlowEvent(
+    handleServerEvent(
       {
         type: "round_complete",
         results: [],
@@ -138,7 +132,7 @@ describe("connection handlers translations", () => {
     store.setPlayerDrawing("p1", "data:image/png;base64,A1");
     store.setPlayerDrawing("p2", "data:image/png;base64,B1");
 
-    handleGameFlowEvent(
+    handleServerEvent(
       {
         type: "round_complete",
         results: [
@@ -161,7 +155,7 @@ describe("connection handlers translations", () => {
     expect(store.totalGuessesMade).toBe(2);
 
     // The next round nulls player.drawing — the captured history must persist.
-    handleGameFlowEvent(
+    handleServerEvent(
       {
         type: "start_round",
         round: 2,
@@ -176,7 +170,7 @@ describe("connection handlers translations", () => {
     const reactions = useReactions();
     reactions.clear();
 
-    handleResultsEvent(
+    handleServerEvent(
       {
         type: "reaction_received",
         drawingId: "p2",
@@ -185,7 +179,7 @@ describe("connection handlers translations", () => {
       },
       ctx,
     );
-    handleResultsEvent(
+    handleServerEvent(
       {
         type: "reaction_received",
         drawingId: "p2",

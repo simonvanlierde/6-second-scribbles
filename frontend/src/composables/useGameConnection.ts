@@ -1,16 +1,9 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import {
-  handleConnectionEvent,
-  handleDrawingEvent,
-  handleGameFlowEvent,
-  handleKickEvent,
-  handleResultsEvent,
-} from "@/composables/connection/handlers";
+import { handleServerEvent } from "@/composables/connection/handlers";
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, UI_TIMINGS } from "@/config/gameConfig";
 import { type ClientEvent, ClientEventSchema, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
-import { i18n } from "@/i18n";
 import { createLogger } from "@/shared/logger";
 import { getRejoinKey } from "@/shared/playerIdentity";
 import { useGameStore } from "@/stores/game";
@@ -171,57 +164,7 @@ export function useGameConnection() {
 
   function handleMessage(message: ServerEvent) {
     log.debug("Received:", message.type);
-
-    switch (message.type) {
-      case "join_error":
-      case "host_restored":
-      case "room_state":
-      case "player_joined":
-      case "player_left":
-      case "player_presence":
-      case "host_changed":
-        handleConnectionEvent(message, ctx);
-        break;
-
-      case "start_game":
-      case "start_round":
-      case "start_guessing":
-      case "round_complete":
-      case "game_complete":
-      case "restart_game":
-      case "ready_status":
-      case "settings_update":
-      case "default_locale_update":
-        handleGameFlowEvent(message, ctx);
-        break;
-
-      case "draw_stroke":
-      case "draw_stroke_partial":
-      case "drawpad_clear":
-      case "pad_visibility":
-        handleDrawingEvent(message, ctx);
-        break;
-
-      case "reaction_received":
-        handleResultsEvent(message, ctx);
-        break;
-
-      case "kick_vote_started":
-      case "kick_vote_updated":
-      case "player_kicked":
-      case "kick_vote_expired":
-      case "kick_error":
-        handleKickEvent(message, ctx);
-        break;
-
-      case "protocol_error":
-        // The server drops oversized frames; without this a drawing that did not
-        // fit would vanish and guessers would wait for it forever.
-        if (message.error === "payload_too_large")
-          showNotification(i18n.global.t("notifications.drawingTooLarge"), "error", 8000);
-        else log.warn("Server rejected a message:", message.error);
-        break;
-    }
+    handleServerEvent(message, ctx);
   }
 
   function startHeartbeat() {
