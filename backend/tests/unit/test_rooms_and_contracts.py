@@ -92,7 +92,7 @@ async def test_room_action_handlers_cover_validation_and_updates(
             difficulty="hard",
             rounds=5,
             drawingTimeLimit=40,
-            guessingTimeLimit=20,
+            guessingTimeLimit=25,
         ),
     )
     await room_actions.handle_default_locale_update(
@@ -126,7 +126,7 @@ async def test_room_action_handlers_cover_validation_and_updates(
     assert room.metadata.difficulty == DIFFICULTY_HARD
     assert room.metadata.max_rounds == 5
     assert room.metadata.drawing_time_limit == 40
-    assert room.metadata.guessing_time_limit == 20
+    assert room.metadata.guessing_time_limit == 25
     assert room.metadata.default_locale == DEFAULT_LOCALE
     assert room.metadata.custom_category_ids == [3, 5]
     assert room.metadata.pad_visibility is False
@@ -158,7 +158,7 @@ async def test_settings_broadcasts_carry_stored_room_settings(
 
     await room_actions.handle_settings_update(
         session,
-        SettingsUpdateEvent(type="settings_update", rounds=7, drawingTimeLimit=40, guessingTimeLimit=20),
+        SettingsUpdateEvent(type="settings_update", rounds=7, drawingTimeLimit=40, guessingTimeLimit=25),
     )
     # A partial update keeps the other stored settings, and the broadcast says so.
     await room_actions.handle_settings_update(session, SettingsUpdateEvent(type="settings_update", difficulty="hard"))
@@ -168,7 +168,7 @@ async def test_settings_broadcasts_carry_stored_room_settings(
         difficulty="hard",
         rounds=7,
         drawingTimeLimit=40,
-        guessingTimeLimit=20,
+        guessingTimeLimit=25,
     )
 
     # The server fills in defaults for omitted start settings; clients must see them.

@@ -138,7 +138,7 @@ def test_observer_follows_a_game_over_the_socket(test_client: TestClient) -> Non
         send_json(watcher, {"type": "watch"})
         assert receive_json(watcher)["type"] == ROOM_STATE
 
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         for socket in (ws1, ws2):
             receive_json(socket)
             receive_json(socket)

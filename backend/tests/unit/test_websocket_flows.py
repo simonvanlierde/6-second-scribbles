@@ -51,7 +51,7 @@ def test_full_game_flow(test_client: TestClient) -> None:
         "GAME01",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         start_messages = (receive_json(ws1), receive_json(ws2))
         assert [message["type"] for message in start_messages] == [START_GAME, START_GAME]
 
@@ -121,7 +121,7 @@ def test_server_starts_guessing_after_round_timer(
         "CODE00",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 1})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GAME, START_GAME]
 
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_ROUND, START_ROUND]
@@ -337,7 +337,7 @@ def test_three_player_full_round(test_client: TestClient, dealt_cards: dict[str,
     ) as (ws1, ws2, ws3):
         sockets = {PLAYER_1: ws1, PLAYER_2: ws2, PLAYER_3: ws3}
 
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         for ws in (ws1, ws2, ws3):
             assert receive_json(ws)["type"] == START_GAME
 
@@ -478,7 +478,7 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
         "CODE09",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         receive_json(ws1)
         receive_json(ws2)
 

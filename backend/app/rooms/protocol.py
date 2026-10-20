@@ -13,8 +13,9 @@ from app.core.types import (
     Difficulty,
     GamePhase,
     LanguageCode,
-    PositiveRoundCount,
     PositiveRoundLengthSeconds,
+    RoundCount,
+    RoundLengthSeconds,
 )
 
 if TYPE_CHECKING:
@@ -65,9 +66,9 @@ class GameSettingsEventModel(ClientEventModel):
     """Shared client payload fields for updating game settings."""
 
     difficulty: Difficulty | None = None
-    rounds: PositiveRoundCount | None = None
-    drawing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
-    guessing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
+    rounds: RoundCount | None = None
+    drawing_time_limit: RoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
+    guessing_time_limit: RoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
 
 
 class StartGameEvent(GameSettingsEventModel):

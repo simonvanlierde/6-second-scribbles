@@ -254,9 +254,9 @@ export const ServerEventSchema = z.union([
   z.object({
     type: z.literal("start_game"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
-    rounds: z.union([z.number().int().gte(1), z.null()]).default(null),
-    drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
-    guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
+    rounds: z.union([z.number().int().gte(1).lte(10), z.null()]).default(null),
+    drawingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
+    guessingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
   }),
   z.object({
     type: z.literal("start_guessing"),
@@ -267,9 +267,9 @@ export const ServerEventSchema = z.union([
   z.object({
     type: z.literal("settings_update"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
-    rounds: z.union([z.number().int().gte(1), z.null()]).default(null),
-    drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
-    guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
+    rounds: z.union([z.number().int().gte(1).lte(10), z.null()]).default(null),
+    drawingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
+    guessingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
   }),
   z
     .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
@@ -406,9 +406,9 @@ export const ClientEventSchema = z.union([
   z.object({
     type: z.literal("start_game"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
-    rounds: z.union([z.number().int().gte(1), z.null()]).default(null),
-    drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
-    guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
+    rounds: z.union([z.number().int().gte(1).lte(10), z.null()]).default(null),
+    drawingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
+    guessingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
   }),
   z.object({ type: z.literal("player_ready"), playerId: z.string().max(64) }),
   z.object({
@@ -426,9 +426,9 @@ export const ClientEventSchema = z.union([
   z.object({
     type: z.literal("settings_update"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
-    rounds: z.union([z.number().int().gte(1), z.null()]).default(null),
-    drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
-    guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
+    rounds: z.union([z.number().int().gte(1).lte(10), z.null()]).default(null),
+    drawingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
+    guessingTimeLimit: z.union([z.number().int().gte(15).lte(180), z.null()]).default(null),
   }),
   z.object({
     type: z.literal("default_locale_update"),

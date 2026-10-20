@@ -20,6 +20,7 @@
     "rounds": {
       "anyOf": [
         {
+          "maximum": 10,
           "minimum": 1,
           "type": "integer"
         },
@@ -32,7 +33,8 @@
     "drawingTimeLimit": {
       "anyOf": [
         {
-          "minimum": 1,
+          "maximum": 180,
+          "minimum": 15,
           "type": "integer"
         },
         {
@@ -44,7 +46,8 @@
     "guessingTimeLimit": {
       "anyOf": [
         {
-          "minimum": 1,
+          "maximum": 180,
+          "minimum": 15,
           "type": "integer"
         },
         {

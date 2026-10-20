@@ -233,6 +233,39 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client: TestC
         }
 
 
+@pytest.mark.parametrize("event_type", ["start_game", "settings_update"])
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {"rounds": 0},
+        {"rounds": 11},
+        {"rounds": 1_000_000},
+        {"drawingTimeLimit": 14},
+        {"drawingTimeLimit": 181},
+        {"guessingTimeLimit": 1},
+        {"guessingTimeLimit": 86_400},
+    ],
+)
+def test_out_of_range_settings_return_protocol_error(
+    test_client: TestClient,
+    event_type: str,
+    settings: dict[str, object],
+) -> None:
+    """Settings outside the lobby's bounds (1-10 rounds, 15-180 s timers) are rejected."""
+    with joined_players(
+        test_client,
+        "CODE22",
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
+    ) as (ws1, _ws2):
+        send_json(ws1, {"type": event_type, **settings})
+
+        assert receive_json(ws1) == {
+            "type": "protocol_error",
+            "error": "invalid_payload",
+            "message": "Invalid websocket payload.",
+        }
+
+
 def test_player_ready_requires_matching_connection_identity(test_client: TestClient) -> None:
     """Ready events must come from the websocket that owns the player id."""
     with joined_players(
