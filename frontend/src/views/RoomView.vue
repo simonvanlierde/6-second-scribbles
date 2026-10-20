@@ -3,7 +3,6 @@ import { computed, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import { useGameConnection } from "@/composables/useGameConnection";
-import { normalizeGamePhase } from "@/shared/gamePhase";
 import { normalizeRoomCode } from "@/shared/roomCode";
 import { useGameStore } from "@/stores/game";
 import GameView from "@/views/GameView.vue";
@@ -30,7 +29,7 @@ function ensureConnected() {
 }
 onMounted(ensureConnected);
 watch(inActiveRoom, ensureConnected);
-const gamePhase = computed(() => normalizeGamePhase(store.gamePhase));
+const gamePhase = computed(() => store.gamePhase);
 const isSpectating = computed(
   () =>
     (!inActiveRoom.value && store.isSpectatorMode && gamePhase.value !== "lobby") ||

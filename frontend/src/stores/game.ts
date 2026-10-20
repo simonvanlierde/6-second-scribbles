@@ -4,7 +4,6 @@ import { computed, ref } from "vue";
 import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
-import { normalizeGamePhase } from "@/shared/gamePhase";
 import { getBrowserLocale } from "@/shared/locales";
 import type {
   Card,
@@ -81,7 +80,7 @@ export const useGameStore = defineStore(
     const kickVotes = ref<Map<string, KickVote>>(new Map());
 
     // --- Game flow ---
-    const gamePhase = ref(normalizeGamePhase(undefined));
+    const gamePhase = ref<GamePhase>("lobby");
     const currentRound = ref<number>(0);
     const maxRounds = ref<number>(GAME_SETTINGS.rounds.DEFAULT);
     const difficulty = ref<Difficulty>(GAME_SETTINGS.difficulty.DEFAULT);
@@ -373,7 +372,7 @@ export const useGameStore = defineStore(
       setPlayers(roomState.players);
       hostId.value = roomState.hostId ?? null;
       enterPhase(
-        normalizeGamePhase(roomState.gamePhase),
+        roomState.gamePhase,
         roomState.readyCount ?? readyCount.value,
         roomState.totalPlayers ?? totalPlayers.value,
       );

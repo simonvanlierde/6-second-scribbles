@@ -10,7 +10,6 @@ import { useGameConnection } from "@/composables/useGameConnection";
 import { RoomStatusResponseSchema } from "@/generated/api";
 import { i18n } from "@/i18n";
 import { apiRequest } from "@/lib/api";
-import { normalizeGamePhase } from "@/shared/gamePhase";
 import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { isValidRoomCode, normalizeRoomCode } from "@/shared/roomCode";
 import type { GamePhase } from "@/shared/types";
@@ -87,7 +86,7 @@ async function loadRoomStatus(nextRoomCode: string) {
 
     roomExists.value = Boolean(data.exists);
     roomPlayerCount.value = typeof data.players === "number" ? data.players : 0;
-    roomPhase.value = normalizeGamePhase(data.game_phase);
+    roomPhase.value = data.game_phase ?? "lobby";
   } catch {
     if (version !== requestVersion) return;
     statusError.value = i18n.global.t("roomAccess.loadFailed");
