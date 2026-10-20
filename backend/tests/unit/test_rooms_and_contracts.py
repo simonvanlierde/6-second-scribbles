@@ -268,8 +268,8 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
     assert missing_status.exists is False
 
 
-def test_generate_contract_helpers_cover_normalization_and_split(tmp_path: Path) -> None:
-    """Contract helpers normalize schemas, inline refs, and write per-event files."""
+def test_generate_contract_helpers_cover_normalization_and_event_types() -> None:
+    """Contract helpers normalize schemas, inline refs, and list a union's event types."""
     schema = {
         "$defs": {"Named": {"type": "object", "properties": {"type": {"const": "ping", "default": "ping"}}}},
         "oneOf": [{"$ref": "#/$defs/Named"}],
@@ -277,7 +277,7 @@ def test_generate_contract_helpers_cover_normalization_and_split(tmp_path: Path)
     }
 
     prepared = generate_contracts.prepare(schema)
-    variants, index = generate_contracts.split_union_schema(
+    event_types = generate_contracts.union_event_types(
         {
             "anyOf": [
                 {"properties": {"type": {"const": "ping"}}},
@@ -286,15 +286,11 @@ def test_generate_contract_helpers_cover_normalization_and_split(tmp_path: Path)
             ]
         }
     )
-    out_dir = tmp_path / "events"
-    generate_contracts.write_event_schemas(variants, index, out_dir)
 
     assert SCHEMA_DEFS_KEY not in prepared
     assert SCHEMA_ANY_OF_KEY in prepared
     assert prepared["properties"]["type"] == {"const": "ping"}
-    assert sorted(index) == ["ping", "pong"]
-    assert (out_dir / "ping.schema.json").exists()
-    assert (out_dir / "index.json").exists()
+    assert event_types == ["ping", "pong"]
 
 
 def test_generate_contract_helpers_cover_errors_and_main(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -303,21 +299,16 @@ def test_generate_contract_helpers_cover_errors_and_main(tmp_path: Path, monkeyp
         event_type_for_schema({})
 
     with pytest.raises(TypeError, match="Expected schema to contain anyOf"):
-        generate_contracts.split_union_schema({})
+        generate_contracts.union_event_types({})
 
     with pytest.raises(ValueError, match="client event catalog does not match schema types"):
-        generate_contracts.assert_catalog_matches_index({"join": "join.schema.json"}, {"leave": {}}, "client")
+        generate_contracts.assert_catalog_matches_events(["join"], {"leave": {}}, "client")
 
     monkeypatch.setattr(generate_contracts, "CONTRACTS_ROOT", tmp_path)
     monkeypatch.setattr(
         generate_contracts,
         "generate_schema",
         lambda _adapter, *, mode: {"anyOf": [{"properties": {"type": {"const": f"{mode}-event"}}}]},
-    )
-    monkeypatch.setattr(
-        generate_contracts,
-        "split_union_schema",
-        lambda schema: (schema["anyOf"], {schema["anyOf"][0]["properties"]["type"]["const"]: "event.schema.json"}),
     )
     monkeypatch.setattr(
         generate_contracts,
@@ -328,17 +319,14 @@ def test_generate_contract_helpers_cover_errors_and_main(tmp_path: Path, monkeyp
         },
     )
     write_schema = Mock()
-    write_event_schemas = Mock()
     write_catalog = Mock()
     write_openapi = Mock()
     monkeypatch.setattr(generate_contracts, "write_schema", write_schema)
-    monkeypatch.setattr(generate_contracts, "write_event_schemas", write_event_schemas)
     monkeypatch.setattr(generate_contracts, "write_event_catalog", write_catalog)
     monkeypatch.setattr(generate_contracts, "write_openapi", write_openapi)
 
     generate_contracts.main()
 
     assert write_schema.call_count == 2
-    assert write_event_schemas.call_count == 2
     write_catalog.assert_called_once()
     write_openapi.assert_called_once()

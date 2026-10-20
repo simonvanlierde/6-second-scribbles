@@ -3,10 +3,6 @@
 Writes JSON Schema files under contracts/jsonschema/:
   - server-event.schema.json  (server -> client messages we parse)
   - client-event.schema.json  (client -> server messages we send)
-  - server-events/*.schema.json  (one schema per server event type)
-  - client-events/*.schema.json  (one schema per client event type)
-  - server-events/index.json
-  - client-events/index.json
 
 Also writes the canonical OpenAPI document to contracts/openapi.json and the
 shared websocket event catalog to contracts/room-events.json.
@@ -22,7 +18,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from shutil import rmtree
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from app.core.logging import configure_logging
@@ -139,44 +134,13 @@ def _event_type_for_schema(schema: JsonObject) -> str:
     return event_type
 
 
-def split_union_schema(union_schema: JsonObject) -> tuple[list[JsonObject], dict[str, str]]:
-    """Return one schema variant per event type plus its index mapping."""
+def union_event_types(union_schema: JsonObject) -> list[str]:
+    """Return the event type of each branch of a discriminated union schema."""
     variants = union_schema.get(ANY_OF_KEY)
     if not isinstance(variants, list):
         msg = f"Expected schema to contain {ANY_OF_KEY}."
         raise TypeError(msg)
-
-    event_schemas: list[JsonObject] = []
-    index: dict[str, str] = {}
-    for variant in variants:
-        if not isinstance(variant, dict):
-            continue
-        event_type = _event_type_for_schema(variant)
-        filename = f"{event_type}.schema.json"
-        event_schemas.append(variant)
-        index[event_type] = filename
-
-    return event_schemas, index
-
-
-def write_event_schemas(event_schemas: list[JsonObject], index: dict[str, str], out_dir: Path) -> None:
-    """Write one per-event schema file for each union variant."""
-    if out_dir.exists():
-        rmtree(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    for event_schema in event_schemas:
-        event_type = _event_type_for_schema(event_schema)
-        filename = index[event_type]
-        write_schema(event_schema, out_dir / filename)
-
-    write_index(index, out_dir / "index.json")
-
-
-def write_index(index: dict[str, str], path: Path) -> None:
-    """Write one per-event schema index file."""
-    path.write_text(f"{json.dumps(index, indent=2)}\n")
-    logger.info("wrote %s", path)
+    return [_event_type_for_schema(variant) for variant in variants if isinstance(variant, dict)]
 
 
 def write_event_catalog(path: Path) -> None:
@@ -191,9 +155,9 @@ def write_openapi(path: Path) -> None:
     logger.info("wrote %s", path)
 
 
-def assert_catalog_matches_index(index: dict[str, str], catalog: Mapping[str, object], direction: str) -> None:
-    """Ensure backend-owned metadata covers exactly the known event types."""
-    if sorted(index) != sorted(catalog):
+def assert_catalog_matches_events(event_types: list[str], catalog: Mapping[str, object], direction: str) -> None:
+    """Ensure the event catalog covers exactly the event types in the schema."""
+    if sorted(event_types) != sorted(catalog):
         msg = f"{direction} event catalog does not match schema types."
         raise ValueError(msg)
 
@@ -205,15 +169,11 @@ def main() -> None:
 
     server_schema = generate_schema(SERVER_EVENT_ADAPTER, mode="serialization")
     client_schema = generate_schema(CLIENT_EVENT_ADAPTER, mode="validation")
-    server_event_schemas, server_index = split_union_schema(server_schema)
-    client_event_schemas, client_index = split_union_schema(client_schema)
-    assert_catalog_matches_index(client_index, CONTRACT_EVENT_CATALOG["client"], "client")
-    assert_catalog_matches_index(server_index, CONTRACT_EVENT_CATALOG["server"], "server")
+    assert_catalog_matches_events(union_event_types(client_schema), CONTRACT_EVENT_CATALOG["client"], "client")
+    assert_catalog_matches_events(union_event_types(server_schema), CONTRACT_EVENT_CATALOG["server"], "server")
 
     write_schema(server_schema, out_dir / "server-event.schema.json")
     write_schema(client_schema, out_dir / "client-event.schema.json")
-    write_event_schemas(server_event_schemas, server_index, out_dir / "server-events")
-    write_event_schemas(client_event_schemas, client_index, out_dir / "client-events")
     write_event_catalog(CONTRACTS_ROOT / "room-events.json")
     write_openapi(CONTRACTS_ROOT / "openapi.json")
 

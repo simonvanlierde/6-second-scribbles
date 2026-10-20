@@ -26,7 +26,7 @@ without the copies drifting apart unnoticed?
 
 Chosen option: **committed, generated contracts**. The backend is the single
 source of truth. `just generate-contracts` writes `contracts/openapi.json`,
-`contracts/room-events.json`, and one JSON Schema file per event. The frontend
+`contracts/room-events.json`, and one JSON Schema file per direction. The frontend
 generates its `src/generated/` types from them. The `contracts` CI job runs
 `pnpm run contracts:check`, which fails the build if the backend no longer
 reproduces the committed files. `just check-contracts` runs the same check locally.
