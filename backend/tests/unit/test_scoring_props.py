@@ -3,6 +3,7 @@
 from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
+# spell-checker: ignore abcdeiknorstgy
 from app.scoring import GuessTarget, _generate_variants, guess_matcher, normalize_text
 
 words = st.text(alphabet=st.characters(categories=["L", "M", "Zs"]), max_size=12)

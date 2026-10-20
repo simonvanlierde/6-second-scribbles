@@ -42,7 +42,7 @@ class TestDelayedHostTransfer:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that host retains status when reconnecting before transfer completes."""
-        room_id = "HOST10"
+        room_id = "CODE10"
         room = room_manager.get_or_create_room(room_id)
         monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 3600_000)
 
@@ -72,7 +72,7 @@ class TestDelayedHostTransfer:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that host is transferred if they don't reconnect in time."""
-        room_id = "HOST12"
+        room_id = "CODE12"
         room = room_manager.get_or_create_room(room_id)
         monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 0)
 
@@ -96,7 +96,7 @@ class TestPlayerLimitEnforcement:
 
     async def test_room_full_rejects_11th_player(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """Test that an 11th player cannot join a full room."""
-        room_id = "FULL06"
+        room_id = "CODE06"
         room = room_manager.get_or_create_room(room_id)
 
         for i in range(10):
@@ -111,7 +111,7 @@ class TestPlayerLimitEnforcement:
 
     async def test_existing_player_can_reconnect_to_full_room(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """Test that existing player can reconnect even if room appears full."""
-        room_id = "RECO29"
+        room_id = "CODE29"
         room = room_manager.get_or_create_room(room_id)
 
         for i in range(10):
@@ -134,7 +134,7 @@ class TestWebSocketRoomFull:
 
     def test_websocket_sends_error_when_room_full(self, test_client: TestClient) -> None:
         """Test that WebSocket sends join_error when trying to join full room."""
-        room_id = "WSFU37"
+        room_id = "CODE37"
         room = GameRoom(room_id)
         for i in range(10):
             ws = AsyncMock()
@@ -164,17 +164,17 @@ class TestGlobalRoomCap:
         """get_or_create_room raises once the global cap is reached."""
         monkeypatch.setattr(settings, "max_total_rooms", 1)
 
-        room_manager.get_or_create_room("ROOM33")
+        room_manager.get_or_create_room("CODE33")
 
         with pytest.raises(RoomCapacityError):
-            room_manager.get_or_create_room("ROOM34")
+            room_manager.get_or_create_room("CODE34")
 
     def test_existing_room_still_returned_at_cap(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A room that already exists is returned even when the cap is reached."""
         monkeypatch.setattr(settings, "max_total_rooms", 1)
 
-        first = room_manager.get_or_create_room("ROOM33")
-        again = room_manager.get_or_create_room("ROOM33")
+        first = room_manager.get_or_create_room("CODE33")
+        again = room_manager.get_or_create_room("CODE33")
 
         assert first is again
 
@@ -186,7 +186,7 @@ class TestGlobalRoomCap:
         """A websocket connecting to a new room at capacity is closed with 1013."""
         monkeypatch.setattr(settings, "max_total_rooms", 0)
 
-        with pytest.raises(WebSocketDisconnect) as exc_info, test_client.websocket_connect("/ws/NEWR14") as ws:
+        with pytest.raises(WebSocketDisconnect) as exc_info, test_client.websocket_connect("/ws/CODE14") as ws:
             ws.receive_text()
 
         assert exc_info.value.code == WS_TRY_AGAIN_LATER
@@ -197,7 +197,7 @@ class TestGhostPlayerPrevention:
 
     async def test_reconnecting_player_replaces_old_connection(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """Test that reconnecting with same player ID replaces old connection."""
-        room_id = "RECO31"
+        room_id = "CODE31"
         room = room_manager.get_or_create_room(room_id)
 
         ws1 = make_ws()
@@ -223,7 +223,7 @@ class _StuckWebSocket(TestWebSocket):
 async def test_stuck_socket_does_not_hold_up_the_room(monkeypatch: pytest.MonkeyPatch) -> None:
     """A send that never completes times out, and the other players still get the message."""
     monkeypatch.setattr(settings, "ws_send_timeout_seconds", 0.05)
-    room = GameRoom("STUC36")
+    room = GameRoom("CODE36")
     stuck, healthy = _StuckWebSocket(), TestWebSocket()
     room.players["stuck"] = PlayerInfo(id="stuck", name="Stuck", websocket=as_websocket(stuck))
     room.players["ok"] = PlayerInfo(id="ok", name="Ok", websocket=as_websocket(healthy))
@@ -238,7 +238,7 @@ async def test_stuck_socket_does_not_hold_up_the_room(monkeypatch: pytest.Monkey
 
 async def test_kicked_player_cannot_rejoin(make_ws: Callable[..., TestWebSocket]) -> None:
     """A vote-kicked player id is refused when it tries to join the same room again."""
-    room = GameRoom("KICK13")
+    room = GameRoom("CODE13")
     await room.add_player("host", "Host", as_websocket(make_ws()))
     await room.add_player("troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
 

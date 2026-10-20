@@ -31,7 +31,7 @@ class TestRandomRoomJoin:
 
     def test_find_public_room(self, test_client: TestClient) -> None:
         """Test that a public room waiting for players is returned by random join."""
-        room_id = "PUBL22"
+        room_id = "CODE22"
         with joined_players(test_client, room_id, [JoinedPlayer("player1", "Test Player")]):
             response = test_client.get("/api/rooms/random")
 
@@ -43,7 +43,7 @@ class TestRandomRoomJoin:
 
     def test_private_room_not_returned(self, test_client: TestClient) -> None:
         """Test that private rooms are excluded by random join."""
-        room_id = "PRIV19"
+        room_id = "CODE19"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]):
             room = room_manager.get_room(room_id)
@@ -55,7 +55,7 @@ class TestRandomRoomJoin:
 
     def test_full_room_not_returned(self, test_client: TestClient) -> None:
         """Test that full rooms are not returned by random join."""
-        room_id = "FULL05"
+        room_id = "CODE05"
         room = GameRoom(room_id)
         for i in range(10):
             ws = AsyncMock()
@@ -72,7 +72,7 @@ class TestRandomRoomJoin:
 
     def test_mid_game_room_not_returned(self, test_client: TestClient) -> None:
         """Test that rooms in the middle of a game are not returned by random join."""
-        room_id = "GAMI08"
+        room_id = "CODE08"
 
         with joined_players(
             test_client,
@@ -95,7 +95,7 @@ class TestPrivacyToggle:
 
     def test_host_can_set_privacy(self, test_client: TestClient) -> None:
         """Test that the host can toggle room privacy and it affects random join."""
-        room_id = "PRIV17"
+        room_id = "CODE17"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]) as (ws,):
             response = test_client.get("/api/rooms/random")
@@ -109,7 +109,7 @@ class TestPrivacyToggle:
 
     def test_non_host_cannot_set_privacy(self, test_client: TestClient) -> None:
         """Test that a non-host player cannot toggle room privacy."""
-        room_id = "NONH16"
+        room_id = "CODE16"
 
         with joined_players(
             test_client,

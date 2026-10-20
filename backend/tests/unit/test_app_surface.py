@@ -130,7 +130,7 @@ def test_player_disconnect_broadcasts_player_left(test_client: TestClient) -> No
 
 def test_request_game_state_returns_current_room_state(test_client: TestClient) -> None:
     """Requesting game state returns the current room snapshot."""
-    with test_client.websocket_connect("/ws/STAT35") as websocket:
+    with test_client.websocket_connect("/ws/CODE35") as websocket:
         initial_state = receive_json(websocket)
         assert initial_state["type"] == ROOM_STATE
 
@@ -155,7 +155,7 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
 
 def test_ready_and_restart_messages_are_broadcast(test_client: TestClient) -> None:
     """Readiness and restart events are echoed back through the room."""
-    with test_client.websocket_connect("/ws/CONT02") as websocket:
+    with test_client.websocket_connect("/ws/CODE02") as websocket:
         receive_json(websocket)
         join_player(websocket, PLAYER_ONE_ID, PLAYER_ONE_NAME)
 
@@ -171,7 +171,7 @@ def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
     """Non-host players are rejected when restarting the game."""
     with joined_players(
         test_client,
-        "CONT03",
+        "CODE03",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "restart_game", "playerId": PLAYER_TWO_ID})
@@ -185,7 +185,7 @@ def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
 
 def test_invalid_json_does_not_close_connection(test_client: TestClient, sample_messages: dict[str, object]) -> None:
     """Malformed payloads produce a protocol error without closing the socket."""
-    with test_client.websocket_connect("/ws/ERRO04") as websocket:
+    with test_client.websocket_connect("/ws/CODE04") as websocket:
         receive_json(websocket)
         join_player(websocket, "player-123", "Test Player")
 
@@ -205,7 +205,7 @@ def test_invalid_typed_payload_returns_protocol_error(test_client: TestClient) -
     """Schema-invalid typed payloads produce a protocol error."""
     with joined_players(
         test_client,
-        "PROT20",
+        "CODE20",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "submit_guess", "playerId": PLAYER_TWO_ID})
@@ -221,7 +221,7 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client: TestC
     """Invalid difficulty values are rejected before a game starts."""
     with joined_players(
         test_client,
-        "PROT21",
+        "CODE21",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "drawingTimeLimit": 30})
@@ -237,7 +237,7 @@ def test_player_ready_requires_matching_connection_identity(test_client: TestCli
     """Ready events must come from the websocket that owns the player id."""
     with joined_players(
         test_client,
-        "READ25",
+        "CODE25",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "player_ready", "playerId": PLAYER_ONE_ID})
