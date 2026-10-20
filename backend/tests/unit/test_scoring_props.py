@@ -1,6 +1,6 @@
 """Property tests for guess normalization, matching and scoring."""
 
-from hypothesis import given, settings
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from app.scoring import GuessTarget, guess_matcher, normalize_text
@@ -12,6 +12,8 @@ fast = settings(max_examples=150, deadline=None)
 
 @fast
 @given(st.text())
+# A combining mark before a space hid the space from strip() until the mark was dropped.
+@example("\u0301 a")
 def test_normalize_text_is_idempotent(text: str) -> None:
     """Normalizing twice changes nothing."""
     once = normalize_text(text)
