@@ -11,7 +11,6 @@
     "you": "You",
     "unknown": "Unknown",
     "pointsShort": "{count} pts",
-    "roomCode": "Room {code}",
     "roundProgress": "Round {current} / {total}",
     "countdownIn": "in {count}s",
     "unavailable": "Unavailable",
@@ -90,9 +89,7 @@
     "roomInProgress": "The room is in progress. You can watch now and join when it returns to the lobby.",
     "playersInRoom": "{count} player | {count} players in room",
     "invalidCodeText": "Room codes are 6 characters using A–Z and 0–9. Check the code and try again.",
-    "roomNotExist": "This room does not exist, bringing you back to the lobby...",
     "tryGoBack": "Try going back to the lobby and re-entering the code.",
-    "backToLobby": "Back to lobby",
     "enterYourName": "Enter your name",
     "yourName": "Your name",
     "back": "Back",
@@ -150,20 +147,16 @@
   "spectator": {
     "drawingRound": "Drawing round",
     "guessingRound": "Guessing round",
-    "roomBackInLobby": "Room is back in the lobby",
     "roundResults": "Round results",
     "finalResults": "Final results",
     "watchingRoom": "Watching room",
-    "joinableAgain": "The room is joinable again. Jump in for the next game whenever you are ready.",
     "watchingLive": "Watching live updates. You can join when the room returns to the lobby.",
-    "joinNextGame": "Join next game",
     "leaveRoom": "Leave room",
     "players": "Players",
     "drawings": "Drawings",
     "roundStatus": "Round status",
     "noDrawingsYet": "No drawings have been published yet.",
     "guessingInProgress": "Guessing is in progress. We'll move on once the round is complete.",
-    "lobbyAgain": "The room is waiting in the lobby again. Use “Join next game” to enter as a player.",
     "betweenRounds": "This room is between rounds. We'll keep you updated live.",
     "drawingAlt": "{name}'s drawing"
   },
@@ -216,8 +209,6 @@
     "cancel": "Cancel"
   },
   "localeSelector": {
-    "disabledHelp": "Unavailable locales are disabled until full playable content is ready.",
-    "reasonUnavailable": "{name}: {reason}",
     "noPlayableCategories": "No playable categories yet",
     "missingPromptCoverage": "Missing prompt coverage across difficulties",
     "failedToLoad": "Failed to load locale availability"
