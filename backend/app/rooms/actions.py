@@ -164,8 +164,7 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     await broadcast_and_persist(session, ready_status)
 
     if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
-        session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
-        await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
+        await session.room.enter_guessing()
 
 
 async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessEvent) -> None:

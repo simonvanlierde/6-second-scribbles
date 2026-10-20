@@ -122,12 +122,6 @@ def guessing_event_payload(room: GameRoom) -> StartGuessingEvent:
     )
 
 
-def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
-    """Transition into guessing and return the broadcast event."""
-    start_guessing(room)
-    return guessing_event_payload(room)
-
-
 def reset_game(room: GameRoom) -> None:
     """Reset mutable game state back to the lobby."""
     room.scheduler.cancel_round_tasks()

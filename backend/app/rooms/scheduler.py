@@ -151,10 +151,7 @@ class RoomTaskScheduler:
             # are still the scheduled task, else we'd fire a stale phase transition.
             if self._guessing_start_task is not asyncio.current_task():
                 return
-            guessing_event = rounds.start_guessing_event(self._room)
-            await self._room.broadcast(guessing_event)
-            await self._room.persist()
-            self.schedule_scoring_timeout(self._room.metadata.guessing_time_limit or 60)
+            await self._room.enter_guessing()
         except asyncio.CancelledError:
             pass
 
@@ -240,9 +237,10 @@ class RoomTaskScheduler:
         self._round_scoring_task = None
 
     def cancel_guessing_start(self) -> None:
-        """Cancel any pending drawing->guessing transition task."""
-        if self._guessing_start_task and not self._guessing_start_task.done():
-            self._guessing_start_task.cancel()
+        """Cancel any pending drawing->guessing transition task, unless it is the caller."""
+        task = self._guessing_start_task
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
         self._guessing_start_task = None
 
     def cancel_game_complete(self) -> None:

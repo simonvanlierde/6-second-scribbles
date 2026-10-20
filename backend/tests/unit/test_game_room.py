@@ -343,7 +343,7 @@ class TestGameRoom:
         """Guessing starts with a fresh ready state and an explicit phase start time."""
         room_with_players.metadata.ready_players.update({"player-1", "player-2"})
 
-        timeout_seconds = room_with_players.start_guessing()
+        timeout_seconds = rounds.start_guessing(room_with_players)
 
         assert timeout_seconds == 60
         assert room_with_players.metadata.game_phase == GamePhase.GUESSING
@@ -743,16 +743,16 @@ class TestRobustGuessScoring:
 
     async def test_start_guessing_is_idempotent(self, room_with_players: GameRoom) -> None:
         """A second start_guessing (e.g. late scheduler fire) must not reassign targets."""
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
         original_targets = dict(room_with_players.metadata.guess_targets)
 
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
 
         assert room_with_players.metadata.guess_targets == original_targets
 
     async def test_host_submit_alone_does_not_score(self, room_with_players: GameRoom) -> None:
         """With both players connected, one submission is not all submissions (bug a)."""
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
         targets = room_with_players.metadata.guess_targets
 
         scored = rounds.record_guess_submission(
@@ -767,7 +767,7 @@ class TestRobustGuessScoring:
 
     async def test_both_submit_scores(self, room_with_players: GameRoom) -> None:
         """The second of two connected players submitting triggers scoring (bug b)."""
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
         targets = room_with_players.metadata.guess_targets
         rounds.record_guess_submission(
             room_with_players,
@@ -787,7 +787,7 @@ class TestRobustGuessScoring:
 
     async def test_departed_non_submitter_is_not_expected(self, room_with_players: GameRoom) -> None:
         """If the only non-submitter leaves, the remaining submissions count as complete."""
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
         targets = room_with_players.metadata.guess_targets
         rounds.record_guess_submission(
             room_with_players,
@@ -823,7 +823,7 @@ class TestPresence:
 
     async def test_scoring_excludes_disconnected_player(self, room_with_players: GameRoom) -> None:
         """A disconnected player isn't expected to submit, so others complete the round."""
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
         targets = room_with_players.metadata.guess_targets
         room_with_players.players[PLAYER_TWO_ID].connected = False
 
@@ -897,7 +897,7 @@ class TestReviewRegressions:
 
     async def test_scoring_is_idempotent_outside_guessing(self, room_with_players: GameRoom) -> None:
         """A second scoring trigger after the round already scored is a no-op (F3)."""
-        room_with_players.start_guessing()
+        rounds.start_guessing(room_with_players)
         room_with_players.metadata.game_phase = GamePhase.ROUND_RESULTS
         room_with_players.metadata.player_scores = {PLAYER_ONE_ID: 50, PLAYER_TWO_ID: 10}
 
@@ -943,7 +943,7 @@ class TestReviewRegressions:
             await player_lifecycle.add_player(game_room, pid, name, as_websocket(make_ws()))
         game_room.players[PLAYER_THREE_ID].connected = False
 
-        game_room.start_guessing()
+        rounds.start_guessing(game_room)
 
         assert PLAYER_THREE_ID not in game_room.metadata.guess_targets
         assert PLAYER_ONE_ID in game_room.metadata.guess_targets

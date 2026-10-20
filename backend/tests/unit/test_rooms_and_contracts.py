@@ -77,11 +77,8 @@ async def test_room_action_handlers_cover_validation_and_updates(
 
     broadcast = AsyncMock()
     persist = AsyncMock()
-    start_guessing = Mock(return_value=123)
     monkeypatch.setattr(room, "broadcast", broadcast)
     monkeypatch.setattr(room, "persist", persist)
-    monkeypatch.setattr(room.scheduler, "schedule_scoring_timeout", Mock())
-    monkeypatch.setattr(room, "start_guessing", start_guessing)
 
     await room_actions.handle_settings_update(
         cast("RoomWebSocketSession", session),

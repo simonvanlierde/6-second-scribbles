@@ -385,10 +385,16 @@ class GameRoom:
         """Return the authenticated user id associated with a player connection, if any."""
         return self.metadata.player_user_ids.get(player_id)
 
-    def start_guessing(self) -> int:
-        """Transition into the guessing phase and return the scoring timeout."""
+    async def enter_guessing(self) -> None:
+        """Move from drawing to guessing, tell everyone, and arm the scoring timeout.
+
+        Runs from the drawing timer or early, once every connected player is ready.
+        """
         self.scheduler.cancel_guessing_start()
-        return rounds.start_guessing(self)
+        timeout_seconds = rounds.start_guessing(self)
+        await self.broadcast(rounds.guessing_event_payload(self))
+        await self.persist()
+        self.scheduler.schedule_scoring_timeout(timeout_seconds)
 
     async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
         """Broadcast a message to all connected players in the room."""
