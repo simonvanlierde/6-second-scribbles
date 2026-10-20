@@ -260,8 +260,8 @@ export const useGameStore = defineStore(
       scores: Record<string, number>;
       highlights?: RoundHighlights | null;
     }) {
-      setRoundResults(event.results);
-      setRoundHighlights(event.highlights ?? null);
+      lastRoundResults.value = event.results;
+      lastHighlights.value = event.highlights ?? null;
       updateScores(event.scores);
       // Snapshot this round's drawings for the end-of-game gallery before the
       // next start_round clears them. currentRound still names the finished round.
@@ -290,10 +290,6 @@ export const useGameStore = defineStore(
       totalPlayers.value = total;
     }
 
-    function setRoundResults(results: RoundResult[]) {
-      lastRoundResults.value = results;
-    }
-
     /**
      * Snapshot the round's drawings into the gallery and fold its correct-guess
      * count into the running total. Called on round_complete while players still
@@ -320,10 +316,6 @@ export const useGameStore = defineStore(
       }
     }
 
-    function setRoundHighlights(highlights: RoundHighlights | null) {
-      lastHighlights.value = highlights;
-    }
-
     function updateScores(scores: Record<string, number>) {
       for (const [playerId, score] of Object.entries(scores)) {
         const player = players.value.get(playerId);
@@ -337,10 +329,6 @@ export const useGameStore = defineStore(
       return playersList.value
         .map((p) => ({ playerId: p.id, playerName: p.name, score: p.score }))
         .sort((a, b) => b.score - a.score);
-    }
-
-    function getWinner() {
-      return getFinalScores()[0];
     }
 
     // --- Actions: room settings ---
@@ -540,12 +528,7 @@ export const useGameStore = defineStore(
       onGameComplete,
       onRestartGame,
       setReadyStatus,
-      setRoundResults,
-      captureRoundDrawings,
-      setRoundHighlights,
-      updateScores,
       getFinalScores,
-      getWinner,
       setDefaultLocale,
       setPrivacy,
       applySettingsUpdate,
