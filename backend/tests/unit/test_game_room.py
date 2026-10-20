@@ -725,6 +725,49 @@ class TestRoomTaskScheduler:
         assert tasks["_round_scoring_task"] is None
         assert tasks["_game_complete_task"] is None
 
+    async def test_final_results_return_to_the_lobby_after_a_delay(
+        self, room_with_players: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The server restarts a finished game on its own, a while after final results."""
+        monkeypatch.setattr(settings, "game_complete_delay_seconds", 0)
+        monkeypatch.setattr(settings, "final_results_restart_seconds", 0)
+        room_with_players.metadata.current_round = 1
+
+        room_with_players.scheduler.schedule_game_complete()
+        await asyncio.sleep(0.05)
+
+        assert room_with_players.metadata.game_phase == GamePhase.LOBBY
+        socket = cast("TestWebSocket", room_with_players.players[PLAYER_ONE_ID].websocket)
+        sent = [json.loads(text)["type"] for text in socket.sent_texts]
+        assert sent[-2:] == ["game_complete", "restart_game"]
+
+    async def test_manual_restart_cancels_the_automatic_one(
+        self, room_with_players: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A host restart, or a new game, replaces the pending automatic restart."""
+        monkeypatch.setattr(settings, "game_complete_delay_seconds", 0)
+        room_with_players.scheduler.schedule_game_complete()
+        await asyncio.sleep(0.05)
+        assert _scheduler_tasks(room_with_players.scheduler)["_restart_task"] is not None
+
+        rounds.reset_game(room_with_players)
+
+        assert _scheduler_tasks(room_with_players.scheduler)["_restart_task"] is None
+
+    async def test_emptied_room_cancels_the_automatic_restart(
+        self, room_with_players: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Nobody is left to restart for once the last player goes."""
+        monkeypatch.setattr(settings, "game_complete_delay_seconds", 0)
+        room_with_players.scheduler.schedule_game_complete()
+        await asyncio.sleep(0.05)
+
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_ONE_ID)
+        assert _scheduler_tasks(room_with_players.scheduler)["_restart_task"] is not None
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_TWO_ID)
+
+        assert _scheduler_tasks(room_with_players.scheduler)["_restart_task"] is None
+
     async def test_cancel_round_tasks_preserves_idle_check(self, game_room: GameRoom) -> None:
         """cancel_round_tasks() must not touch the idle-check loop."""
         scheduler = game_room.scheduler

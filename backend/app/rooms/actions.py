@@ -189,11 +189,8 @@ async def handle_restart_game(session: RoomWebSocketSession, event: RestartGameE
     """Handle a restart-game event."""
     if not await require_host(session, "restart the game"):
         return
-    rounds.reset_game(session.room)
-    # Players who dropped during the finished game and never returned are cleared
-    # as we go back to the lobby (they were kept through final results).
-    await player_lifecycle.prune_disconnected(session.room)
-    await broadcast_and_persist(session, event)
+    del event
+    await session.room.restart_game()
 
 
 async def handle_settings_update(session: RoomWebSocketSession, event: SettingsUpdateEvent) -> None:

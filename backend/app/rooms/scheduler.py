@@ -1,8 +1,9 @@
 """Per-room async task scheduler.
 
 Owns all fire-and-forget timers a game room spawns — idle monitoring, the
-drawing->guessing transition, scoring fallback, next-round countdown, and
-game-complete broadcast — so `GameRoom` can focus on state.
+drawing->guessing transition, scoring fallback, next-round countdown,
+game-complete broadcast and the return to the lobby after final results — so
+`GameRoom` can focus on state.
 
 Not owned by the scheduler:
 - `_scoring_lock` and `score_and_broadcast_round()` — these live on
@@ -92,6 +93,7 @@ class RoomTaskScheduler:
         self._next_round_start_task: asyncio.Task[object] | None = None
         self._round_scoring_task: asyncio.Task[object] | None = None
         self._game_complete_task: asyncio.Task[object] | None = None
+        self._restart_task: asyncio.Task[object] | None = None
 
     # ---------- Introspection ----------
 
@@ -127,6 +129,8 @@ class RoomTaskScheduler:
         self._round_scoring_task = None
         await cancel_task(self._game_complete_task)
         self._game_complete_task = None
+        await cancel_task(self._restart_task)
+        self._restart_task = None
 
     async def _idle_check_loop(self) -> None:
         while True:
@@ -224,6 +228,7 @@ class RoomTaskScheduler:
             await self._room.broadcast(event)
             logger.info("[GameRoom %s] Game complete. Winner: %s", self._room.room_id, event.winner)
             await self._room.persist()
+            self.schedule_restart()
         except asyncio.CancelledError:
             pass
         except Exception:
@@ -231,6 +236,23 @@ class RoomTaskScheduler:
             # rather than letting the failure vanish into the done-callback and
             # strand every client on the results screen.
             logger.exception("[GameRoom %s] Failed to broadcast game complete", self._room.room_id)
+
+    def schedule_restart(self) -> None:
+        """Schedule the return to the lobby once the final results have been up a while."""
+        self.cancel_restart()
+        self._restart_task = create_logged_task(
+            self._restart_after_delay(),
+            name=f"restart_{self._room.room_id}",
+        )
+
+    async def _restart_after_delay(self) -> None:
+        try:
+            await asyncio.sleep(settings.final_results_restart_seconds)
+            if self._restart_task is not asyncio.current_task():
+                return  # superseded/cancelled while we slept
+            await self._room.restart_game()
+        except asyncio.CancelledError:
+            pass
 
     # ---------- Cancellation helpers ----------
 
@@ -249,6 +271,11 @@ class RoomTaskScheduler:
         _cancel(self._game_complete_task)
         self._game_complete_task = None
 
+    def cancel_restart(self) -> None:
+        """Cancel any pending automatic restart."""
+        _cancel(self._restart_task)
+        self._restart_task = None
+
     def cancel_round_tasks(self) -> None:
         """Cancel every round-phase timer before starting a new round or resetting."""
         self.cancel_guessing_start()
@@ -259,3 +286,4 @@ class RoomTaskScheduler:
         _cancel(self._round_scoring_task)
         self._round_scoring_task = None
         self.cancel_game_complete()
+        self.cancel_restart()

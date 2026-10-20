@@ -25,8 +25,6 @@ export const UI_TIMINGS = {
 export const GAME_TIMINGS = {
   /** Countdown (seconds) shown on the round-results screen before server advances. */
   ROUND_RESULTS_COUNTDOWN_S: 15,
-  /** If all players are ready, host auto-restarts the game after this delay. */
-  AUTO_RESTART_TIMEOUT_MS: 60_000,
 } as const;
 
 export const STORAGE_KEYS = {

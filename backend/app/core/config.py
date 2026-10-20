@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     drawing_to_guessing_buffer_seconds: int = 2
     round_results_countdown_seconds: int = 15
     game_complete_delay_seconds: int = 5
+    # How long the final results stay up before the server sends the room back to the lobby.
+    final_results_restart_seconds: int = 60
     kick_vote_timeout_seconds: int = 60
 
     # Abuse / overload protection

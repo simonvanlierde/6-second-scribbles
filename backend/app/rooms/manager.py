@@ -34,7 +34,7 @@ from app.core.types import (
     GamePhase,
     LanguageCode,
 )
-from app.rooms import kick_vote, rounds
+from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import PlayerInfo
 from app.rooms.protocol import (
     DrawStrokePayload,
@@ -42,6 +42,7 @@ from app.rooms.protocol import (
     PlayerCardPayload,
     PlayerListItem,
     PlayerSnapshot,
+    RestartGameEvent,
     RoomStateEvent,
     StartRoundServerEvent,
     StrokeDelta,
@@ -262,6 +263,15 @@ class GameRoom:
                 )
 
         return assignments
+
+    async def restart_game(self) -> None:
+        """Send the room back to the lobby after a finished game."""
+        rounds.reset_game(self)
+        # Players who dropped during the finished game and never returned are cleared
+        # as we go back to the lobby (they were kept through final results).
+        await player_lifecycle.prune_disconnected(self)
+        await self.broadcast(RestartGameEvent(type="restart_game"))
+        await self.persist()
 
     async def check_idle_players(self) -> None:
         """Drop expired kick votes, and disconnect idle players during active game phases."""

@@ -234,6 +234,7 @@ async def remove_player(room: GameRoom, player_id: str, *, forget_identity: bool
 
     if room.is_empty():
         room.emptied_at = time.time()
+        room.scheduler.cancel_restart()
         logger.info("[GameRoom %s] Room is now empty, marked for hibernation/cleanup", room.room_id)
 
     if player_id != room.host_id:
@@ -288,6 +289,7 @@ async def disconnect_player(room: GameRoom, player_id: str) -> None:
     # If nobody is connected anymore, mark the room for hibernation/TTL cleanup.
     if room.is_empty():
         room.emptied_at = time.time()
+        room.scheduler.cancel_restart()
     await room.persist()
 
 

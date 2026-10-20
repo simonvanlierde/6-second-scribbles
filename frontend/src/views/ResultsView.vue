@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import GameHeader from "@/components/game/GameHeader.vue";
 import AllDrawingsGallery from "@/components/results/AllDrawingsGallery.vue";
@@ -14,7 +14,6 @@ import { useGameConnection } from "@/composables/useGameConnection";
 import { useLeaveRoom } from "@/composables/useLeaveRoom";
 import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useSound } from "@/composables/useSound";
-import { GAME_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
@@ -22,10 +21,9 @@ const store = useGameStore();
 const { send } = useGameConnection();
 const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
 const { play } = useSound();
-const { leaveRoom } = useLeaveRoom(() => clearAutoRestartTimeout());
+const { leaveRoom } = useLeaveRoom();
 
 const isReady = ref(false);
-const autoRestartTimeout = ref<number | null>(null);
 const leaveDialogOpen = ref(false);
 
 const finalScores = computed(() => store.getFinalScores());
@@ -71,33 +69,6 @@ function formatNames(names: string[]) {
   return names.join(", ");
 }
 
-watch(
-  () => store.gamePhase,
-  (newPhase) => {
-    if (newPhase === "lobby") clearAutoRestartTimeout();
-  },
-);
-
-watch(
-  () => store.readyCount,
-  (newReadyCount) => {
-    if (!store.isHost) return;
-    if (newReadyCount > 0 && newReadyCount === store.totalPlayers) {
-      clearAutoRestartTimeout();
-      autoRestartTimeout.value = window.setTimeout(() => {
-        playAgain();
-      }, GAME_TIMINGS.AUTO_RESTART_TIMEOUT_MS);
-    }
-  },
-);
-
-function clearAutoRestartTimeout() {
-  if (autoRestartTimeout.value) {
-    clearTimeout(autoRestartTimeout.value);
-    autoRestartTimeout.value = null;
-  }
-}
-
 function playAgain() {
   if (store.isHost) {
     send({ type: "restart_game" });
@@ -118,10 +89,6 @@ function showLeaveDialog() {
 
 onMounted(() => {
   play("winner");
-});
-
-onUnmounted(() => {
-  clearAutoRestartTimeout();
 });
 </script>
 
