@@ -7,17 +7,20 @@ import hashlib
 import hmac
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from app.core.avatar import AVATAR_COLOR_TOKENS, pick_avatar_color
-from app.rooms.protocol import HostChangedEvent
+from app.core.config import settings
+from app.core.types import GamePhase
+from app.rooms import rounds
+from app.rooms.protocol import HostChangedEvent, PlayerLeftEvent, PlayerPresenceEvent
+from app.rooms.scheduler import create_logged_task
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from fastapi import WebSocket
 
-    from app.rooms.manager import GameRoom, PlayerInfo
+    from app.rooms.manager import GameRoom
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,18 @@ MAX_ABSENT_BINDINGS = 40
 ABSENT_BINDING_GRACE_SECONDS = 600
 
 
+@dataclass
+class PlayerInfo:
+    """Information about a player in a game room."""
+
+    id: str
+    name: str
+    websocket: WebSocket
+    last_activity: float = field(default_factory=time.time)
+    color: str | None = None
+    connected: bool = True
+
+
 async def add_player(
     room: GameRoom,
     player_id: str,
@@ -45,12 +60,13 @@ async def add_player(
     user_id: str | None = None,
     preferred_color: str | None = None,
     rejoin_key: str | None = None,
-    max_players: int,
-    player_info_factory: type[PlayerInfo],
 ) -> tuple[PlayerInfo, bool]:
-    """Add or replace a player connection and report whether this restored the host."""
-    if player_id not in room.players and len(room.players) >= max_players:
-        msg = f"Room is full (maximum {max_players} players)"
+    """Add or replace a player connection and report whether this restored the host.
+
+    Raises ValueError when the room is full or the player may not take this player_id.
+    """
+    if player_id not in room.players and len(room.players) >= settings.max_players:
+        msg = f"Room is full (maximum {settings.max_players} players)"
         raise ValueError(msg)
 
     key_hash = _check_identity(room, player_id, user_id, rejoin_key)
@@ -77,7 +93,7 @@ async def add_player(
         used = [p.color for p in room.players.values() if p.color and p.id != player_id]
         color = pick_avatar_color(player_id, used)
 
-    player = player_info_factory(
+    player = PlayerInfo(
         id=player_id,
         name=name,
         websocket=websocket,
@@ -191,14 +207,7 @@ def _settle_host_on_join(
         room.last_host_user_id = user_id
 
 
-async def remove_player(
-    room: GameRoom,
-    player_id: str,
-    *,
-    host_transfer_delay_ms: int,
-    schedule_host_transfer: Callable[[str], asyncio.Task[object]],
-    forget_identity: bool = False,
-) -> None:
+async def remove_player(room: GameRoom, player_id: str, *, forget_identity: bool = False) -> None:
     """Remove a player and trigger delayed host transfer when required.
 
     The seat's identity binding (account and rejoin key) outlives a dropped
@@ -220,6 +229,9 @@ async def remove_player(
     for vote in room.active_kick_votes.values():
         vote.voters.discard(player_id)
 
+    # The leaver no longer blocks scoring.
+    _maybe_auto_score(room)
+
     if room.is_empty():
         room.emptied_at = time.time()
         logger.info("[GameRoom %s] Room is now empty, marked for hibernation/cleanup", room.room_id)
@@ -231,11 +243,9 @@ async def remove_player(
         logger.info(
             "[GameRoom %s] Host disconnected, scheduling transfer in %sms...",
             room.room_id,
-            host_transfer_delay_ms,
+            settings.host_transfer_delay_ms,
         )
-        if room.pending_host_transfer:
-            room.pending_host_transfer.cancel()
-        room.pending_host_transfer = schedule_host_transfer(player_id)
+        restart_host_transfer(room, player_id)
         return
 
     room.host_id = None
@@ -243,10 +253,77 @@ async def remove_player(
     room.last_host_user_id = None
 
 
-async def delayed_host_transfer(room: GameRoom, old_host_id: str, *, host_transfer_delay_ms: int) -> None:
+async def disconnect_player(room: GameRoom, player_id: str) -> None:
+    """Handle a socket drop.
+
+    In the lobby, remove the player outright; during a game keep them as a
+    'reconnecting' presence so peers can keep playing.
+    """
+    player = room.players.get(player_id)
+    if player is None:
+        return
+
+    if room.metadata.game_phase == GamePhase.LOBBY:
+        await remove_player(room, player_id)
+        await room.broadcast(PlayerLeftEvent(playerId=player_id))
+        await room.persist()
+        return
+
+    # `player.connected` may already be False if a broadcast send to this
+    # socket failed first (broadcast() marks it to stop retrying). That marks
+    # the socket dead but does NOT run migration/presence — so we must not
+    # early-return here, or a host whose send failed would never be replaced.
+    # Double-invocation for the same live socket can't happen: on_disconnect
+    # fires once per connection and handle_disconnect drops stale sockets.
+    player.connected = False
+    await room.broadcast(PlayerPresenceEvent(playerId=player_id, connected=False))
+
+    # Host migration: keep the existing grace so a quick refresh keeps the role.
+    if player_id == room.host_id and any(p.connected for p in room.players.values()):
+        restart_host_transfer(room, player_id)
+
+    # A now-disconnected non-submitter no longer blocks scoring.
+    _maybe_auto_score(room)
+
+    # If nobody is connected anymore, mark the room for hibernation/TTL cleanup.
+    if room.is_empty():
+        room.emptied_at = time.time()
+    await room.persist()
+
+
+async def prune_disconnected(room: GameRoom) -> None:
+    """Remove all disconnected players (called at game start / restart)."""
+    for player_id in [pid for pid, p in room.players.items() if not p.connected]:
+        await remove_player(room, player_id)
+        await room.broadcast(PlayerLeftEvent(playerId=player_id))
+
+
+def _maybe_auto_score(room: GameRoom) -> None:
+    """Score the round now if every connected player with a target has submitted.
+
+    A player leaving/disconnecting mid-guessing is no longer "expected" to
+    submit, so the remaining connected players may now all be done. The check
+    is computed live (it ignores departed players) so scoring can trigger
+    without waiting for the timeout and without a stale counter.
+    """
+    if room.metadata.game_phase == GamePhase.GUESSING and rounds.all_expected_guesses_submitted(room):
+        create_logged_task(room.score_and_broadcast_round(), name=f"auto_score_{room.room_id}")
+
+
+def restart_host_transfer(room: GameRoom, old_host_id: str) -> None:
+    """Cancel any pending host transfer and start a fresh grace window."""
+    if room.pending_host_transfer:
+        room.pending_host_transfer.cancel()
+    room.pending_host_transfer = create_logged_task(
+        delayed_host_transfer(room, old_host_id),
+        name=f"host_transfer_{room.room_id}",
+    )
+
+
+async def delayed_host_transfer(room: GameRoom, old_host_id: str) -> None:
     """Transfer host after a delay, allowing time for reconnection."""
     try:
-        await asyncio.sleep(host_transfer_delay_ms / 1000)
+        await asyncio.sleep(settings.host_transfer_delay_ms / 1000)
 
         old_host = room.players.get(old_host_id)
         if old_host is not None and old_host.connected and _owns_last_host(room, room.get_player_user_id(old_host_id)):

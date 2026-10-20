@@ -14,8 +14,8 @@ from app.categories import service as category_service
 from app.categories.schemas import CategorySelectionResponse, SelectedCategorySet
 from app.core.config import settings
 from app.core.types import GamePhase
+from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import manager as manager_module
-from app.rooms import rounds
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.player_lifecycle import ABSENT_BINDING_GRACE_SECONDS, MAX_ABSENT_BINDINGS, ROOM_BUSY_ERROR
@@ -70,7 +70,7 @@ class TestGameRoom:
         player_id = PLAYER_ONE_ID
         player_name = PLAYER_ONE_NAME
 
-        await game_room.add_player(player_id, player_name, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, player_id, player_name, as_websocket(mock_websocket))
 
         assert len(game_room.players) == 1
         assert game_room.host_id == player_id
@@ -80,19 +80,19 @@ class TestGameRoom:
         """Test adding multiple players to a room."""
         ws1, ws2, ws3 = make_ws(), make_ws(), make_ws()
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
-        await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
 
         assert len(game_room.players) == 3
         assert game_room.host_id == PLAYER_ONE_ID  # First player is host
 
     async def test_remove_player(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test removing a player from the room."""
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
         assert len(game_room.players) == 1
 
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await player_lifecycle.remove_player(game_room, PLAYER_ONE_ID)
         assert len(game_room.players) == 0
 
     async def test_host_transfer_on_host_leave(
@@ -105,12 +105,12 @@ class TestGameRoom:
         ws1, ws2 = make_ws(), make_ws()
         monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 0)
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
 
         assert game_room.host_id == PLAYER_ONE_ID
 
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await player_lifecycle.remove_player(game_room, PLAYER_ONE_ID)
         assert game_room.pending_host_transfer is not None
         await game_room.pending_host_transfer
 
@@ -124,8 +124,8 @@ class TestGameRoom:
 
     async def test_no_host_when_room_empty(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test that host_id is None when all players leave."""
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.remove_player(game_room, PLAYER_ONE_ID)
 
         assert game_room.host_id is None
         assert len(game_room.players) == 0
@@ -137,10 +137,14 @@ class TestGameRoom:
     ) -> None:
         """A player_id bound to one user rejects a join from a different user."""
         ws_alice, ws_mallory = make_ws(), make_ws()
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws_alice), user_id="user-alice")
+        await player_lifecycle.add_player(
+            game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws_alice), user_id="user-alice"
+        )
 
         with pytest.raises(ValueError, match="identity_conflict"):
-            await game_room.add_player(PLAYER_ONE_ID, "Mallory", as_websocket(ws_mallory), user_id="user-mallory")
+            await player_lifecycle.add_player(
+                game_room, PLAYER_ONE_ID, "Mallory", as_websocket(ws_mallory), user_id="user-mallory"
+            )
 
         # Alice keeps her seat, host role, and live socket — no takeover occurred.
         assert game_room.host_id == PLAYER_ONE_ID
@@ -153,11 +157,15 @@ class TestGameRoom:
     ) -> None:
         """The legitimate owner reconnecting with the same player_id is not blocked."""
         ws1, ws2 = make_ws(), make_ws()
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1), user_id="user-alice")
+        await player_lifecycle.add_player(
+            game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1), user_id="user-alice"
+        )
 
         # Same user, same player_id, new socket (e.g. a page refresh): must succeed
         # and retain the host role.
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws2), user_id="user-alice")
+        await player_lifecycle.add_player(
+            game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws2), user_id="user-alice"
+        )
 
         assert game_room.host_id == PLAYER_ONE_ID
         assert game_room.players[PLAYER_ONE_ID].websocket is as_websocket(ws2)
@@ -172,16 +180,21 @@ class TestGameRoom:
         ws_alice, ws_bob, ws_mallory = make_ws(), make_ws(), make_ws()
         monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 0)
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws_alice), user_id="user-alice")
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws_bob), user_id="user-bob")
+        await player_lifecycle.add_player(
+            game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws_alice), user_id="user-alice"
+        )
+        await player_lifecycle.add_player(
+            game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws_bob), user_id="user-bob"
+        )
 
         # Host leaves explicitly; a transfer is pending and host_id still lingers.
-        await game_room.remove_player(PLAYER_ONE_ID, forget_identity=True)
+        await player_lifecycle.remove_player(game_room, PLAYER_ONE_ID, forget_identity=True)
         assert game_room.pending_host_transfer is not None
 
         # Mallory grabs the freed player_id under a different account. She joins as a
         # plain player and must not inherit the lingering host role.
-        _player, is_reconnecting_host = await game_room.add_player(
+        _player, is_reconnecting_host = await player_lifecycle.add_player(
+            game_room,
             PLAYER_ONE_ID,
             "Mallory",
             as_websocket(ws_mallory),
@@ -197,10 +210,10 @@ class TestGameRoom:
     async def test_update_player_activity(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test updating player's last activity timestamp."""
         with patch("app.rooms.manager.time.time", side_effect=[1000.0, 1001.0]):
-            await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+            await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
             initial_time = game_room.players[PLAYER_ONE_ID].last_activity
 
-            game_room.update_player_activity(PLAYER_ONE_ID)
+            player_lifecycle.update_player_activity(game_room, PLAYER_ONE_ID)
             updated_time = game_room.players[PLAYER_ONE_ID].last_activity
 
         assert updated_time > initial_time
@@ -258,10 +271,10 @@ class TestGameRoom:
         """Test checking if room is empty."""
         assert game_room.is_empty()
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
         assert not game_room.is_empty()
 
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await player_lifecycle.remove_player(game_room, PLAYER_ONE_ID)
         assert game_room.is_empty()
 
     async def test_lobby_strokes_reconstructed_and_hydrated(self, game_room: GameRoom) -> None:
@@ -318,7 +331,7 @@ class TestGameRoom:
 
     async def test_mark_player_ready_returns_ready_status_payload(self, room_with_players: GameRoom) -> None:
         """Test ready-state payload serialization uses websocket aliases."""
-        payload = room_with_players.mark_player_ready("player-1")
+        payload = rounds.mark_player_ready(room_with_players, "player-1")
 
         assert payload.model_dump(by_alias=True, exclude_none=True) == {
             "type": READY_STATUS,
@@ -346,8 +359,8 @@ class TestGameRoom:
         ws1 = make_ws()
         ws2 = make_ws(send_error=Exception("Connection closed"))
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
 
         message = cast("WebSocketMessage", {"type": "test"})
         await game_room.broadcast(message)
@@ -368,10 +381,10 @@ class TestGameRoom:
         Note: rooms are not immediately removed — the periodic cleanup loop
         handles hibernation (1 min) and removal (5 min).
         """
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
         assert not game_room.is_empty()
 
-        await game_room.remove_player(PLAYER_ONE_ID)
+        await player_lifecycle.remove_player(game_room, PLAYER_ONE_ID)
 
         assert game_room.is_empty()
         assert game_room.emptied_at is not None
@@ -481,11 +494,11 @@ class TestGameRoom:
         """Test kick vote start broadcast preserves the expected protocol shape."""
         ws1, ws2, ws3 = make_ws(), make_ws(), make_ws()
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
-        await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
 
-        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
+        result = await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_THREE_ID)
 
         assert result is None
         messages = [json.loads(message) for message in ws1.sent_texts]
@@ -505,15 +518,15 @@ class TestGameRoom:
         """Test a non-final kick vote broadcasts the updated tally."""
         ws1, ws2, ws3, ws4 = make_ws(), make_ws(), make_ws(), make_ws()
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
-        await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
-        await game_room.add_player(PLAYER_FOUR_ID, PLAYER_FOUR_NAME, as_websocket(ws4))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
+        await player_lifecycle.add_player(game_room, PLAYER_FOUR_ID, PLAYER_FOUR_NAME, as_websocket(ws4))
 
-        start_result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_FOUR_ID)
+        start_result = await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_FOUR_ID)
         assert start_result is None
 
-        vote_result = await game_room.cast_kick_vote(PLAYER_THREE_ID, PLAYER_FOUR_ID)
+        vote_result = await kick_vote.cast_kick_vote(game_room, PLAYER_THREE_ID, PLAYER_FOUR_ID)
 
         assert vote_result is None
         update = [json.loads(m) for m in ws1.sent_texts if json.loads(m)["type"] == KICK_VOTE_UPDATED][-1]
@@ -530,10 +543,10 @@ class TestGameRoom:
         """Non-host players must leave rather than vote-kicking the host."""
         ws1, ws2 = make_ws(), make_ws()
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
 
-        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_ONE_ID)
+        result = await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_ONE_ID)
 
         assert result == HOST_CANNOT_BE_VOTE_KICKED_ERROR
 
@@ -545,12 +558,12 @@ class TestGameRoom:
         """Vote-kick stays reserved for public stranger rooms."""
         ws1, ws2, ws3 = make_ws(), make_ws(), make_ws()
 
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-        await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
-        await game_room.add_player(PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+        await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+        await player_lifecycle.add_player(game_room, PLAYER_THREE_ID, PLAYER_THREE_NAME, as_websocket(ws3))
         game_room.metadata.is_private = True
 
-        result = await game_room.initiate_kick_vote(PLAYER_TWO_ID, PLAYER_THREE_ID)
+        result = await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_THREE_ID)
 
         assert result == VOTE_KICK_PUBLIC_ONLY_ERROR
 
@@ -639,7 +652,7 @@ class TestIdlePlayerDetection:
 
     async def test_idle_check_only_during_active_game(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test that idle check only runs during active game phases."""
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
 
         # In lobby phase, no idle checks
         game_room.metadata.game_phase = GamePhase.LOBBY
@@ -653,7 +666,7 @@ class TestIdlePlayerDetection:
 
     async def test_idle_player_detection(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test detecting and disconnecting idle players."""
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
 
         # Set game to active phase
         game_room.metadata.game_phase = GamePhase.DRAWING
@@ -670,12 +683,12 @@ class TestIdlePlayerDetection:
 
     async def test_active_player_not_disconnected(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test that active players are not disconnected."""
-        await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
+        await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
 
         game_room.metadata.game_phase = GamePhase.DRAWING
 
         # Update activity to now
-        game_room.update_player_activity(PLAYER_ONE_ID)
+        player_lifecycle.update_player_activity(game_room, PLAYER_ONE_ID)
 
         # Check for idle players
         await game_room.check_idle_players()
@@ -796,7 +809,7 @@ class TestPresence:
         """A mid-game drop marks the player disconnected but keeps them in the room."""
         room_with_players.metadata.game_phase = GamePhase.DRAWING
 
-        await room_with_players.disconnect_player(PLAYER_ONE_ID)
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_ONE_ID)
 
         assert PLAYER_ONE_ID in room_with_players.players
         assert room_with_players.players[PLAYER_ONE_ID].connected is False
@@ -804,7 +817,7 @@ class TestPresence:
     async def test_disconnect_removes_in_lobby(self, room_with_players: GameRoom) -> None:
         """A drop in the lobby removes the player outright."""
         # room_with_players is in the default LOBBY phase.
-        await room_with_players.disconnect_player(PLAYER_TWO_ID)
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_TWO_ID)
 
         assert PLAYER_TWO_ID not in room_with_players.players
 
@@ -828,7 +841,7 @@ class TestPresence:
         """Pruning drops disconnected players and keeps connected ones."""
         room_with_players.players[PLAYER_TWO_ID].connected = False
 
-        await room_with_players.prune_disconnected()
+        await player_lifecycle.prune_disconnected(room_with_players)
 
         assert PLAYER_ONE_ID in room_with_players.players
         assert PLAYER_TWO_ID not in room_with_players.players
@@ -848,13 +861,14 @@ class TestReviewRegressions:
 
     async def test_remove_player_clears_participant_state(self, room_with_players: GameRoom) -> None:
         """A removed player is forgotten as a participant so they cannot rejoin the round (F1)."""
-        room_with_players.start_round(
+        rounds.start_round(
+            room_with_players,
             round_number=1,
             cards={PLAYER_ONE_ID: self._card(1), PLAYER_TWO_ID: self._card(2)},
         )
         assert PLAYER_TWO_ID in room_with_players.metadata.player_assignments
 
-        await room_with_players.remove_player(PLAYER_TWO_ID)
+        await player_lifecycle.remove_player(room_with_players, PLAYER_TWO_ID)
 
         # The rejoin gate keys on player_assignments; clearing it blocks a re-join.
         assert PLAYER_TWO_ID not in room_with_players.metadata.player_assignments
@@ -872,7 +886,7 @@ class TestReviewRegressions:
             (PLAYER_THREE_ID, PLAYER_THREE_NAME),
             (PLAYER_FOUR_ID, PLAYER_FOUR_NAME),
         ):
-            await game_room.add_player(pid, name, as_websocket(make_ws()))
+            await player_lifecycle.add_player(game_room, pid, name, as_websocket(make_ws()))
 
         required_all_connected = get_required_votes(game_room)
         game_room.players[PLAYER_FOUR_ID].connected = False
@@ -897,13 +911,14 @@ class TestReviewRegressions:
         """Early drawing->guessing fires once every *connected* player is ready (F5)."""
         room_with_players.metadata.game_phase = GamePhase.DRAWING
         room_with_players.players[PLAYER_TWO_ID].connected = False
-        room_with_players.mark_player_ready(PLAYER_ONE_ID)
+        rounds.mark_player_ready(room_with_players, PLAYER_ONE_ID)
 
         assert rounds.all_connected_players_ready(room_with_players) is True
 
     async def test_room_state_card_keeps_ids_for_rejoiner(self, room_with_players: GameRoom) -> None:
         """The reconnect snapshot's card must keep categoryId/itemIds, not drop them (F6)."""
-        room_with_players.start_round(
+        rounds.start_round(
+            room_with_players,
             round_number=1,
             cards={PLAYER_ONE_ID: self._card(7), PLAYER_TWO_ID: self._card(8)},
         )
@@ -925,7 +940,7 @@ class TestReviewRegressions:
             (PLAYER_TWO_ID, PLAYER_TWO_NAME),
             (PLAYER_THREE_ID, PLAYER_THREE_NAME),
         ):
-            await game_room.add_player(pid, name, as_websocket(make_ws()))
+            await player_lifecycle.add_player(game_room, pid, name, as_websocket(make_ws()))
         game_room.players[PLAYER_THREE_ID].connected = False
 
         game_room.start_guessing()
@@ -974,19 +989,21 @@ LATECOMER = "latecomer"
 async def test_absent_player_bindings_are_bounded(make_ws: Callable[..., TestWebSocket]) -> None:
     """Past MAX_ABSENT_BINDINGS recent departures newcomers wait; once those expire, the earliest go."""
     room = GameRoom("BINDINGS01")
-    await room.add_player(HOST_ID, "Host", as_websocket(make_ws()), rejoin_key="host-key")
+    await player_lifecycle.add_player(room, HOST_ID, "Host", as_websocket(make_ws()), rejoin_key="host-key")
     for i in range(MAX_ABSENT_BINDINGS):
-        await room.add_player(f"visitor-{i}", "Visitor", as_websocket(make_ws()), rejoin_key=f"key-{i}")
-        await room.remove_player(f"visitor-{i}")
+        await player_lifecycle.add_player(
+            room, f"visitor-{i}", "Visitor", as_websocket(make_ws()), rejoin_key=f"key-{i}"
+        )
+        await player_lifecycle.remove_player(room, f"visitor-{i}")
 
     with pytest.raises(ValueError, match=ROOM_BUSY_ERROR):
-        await room.add_player(LATECOMER, "Late", as_websocket(make_ws()), rejoin_key="late-key")
+        await player_lifecycle.add_player(room, LATECOMER, "Late", as_websocket(make_ws()), rejoin_key="late-key")
 
     departed_at = room.metadata.player_departed_at
     for pid in departed_at:
         departed_at[pid] -= ABSENT_BINDING_GRACE_SECONDS
-    await room.add_player(LATECOMER, "Late", as_websocket(make_ws()), rejoin_key="late-key")
-    await room.remove_player(LATECOMER)
+    await player_lifecycle.add_player(room, LATECOMER, "Late", as_websocket(make_ws()), rejoin_key="late-key")
+    await player_lifecycle.remove_player(room, LATECOMER)
 
     keys = room.metadata.player_rejoin_keys
     assert HOST_ID in keys

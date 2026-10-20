@@ -127,7 +127,6 @@ class RoomTaskScheduler:
             try:
                 await asyncio.sleep(IDLE_CHECK_INTERVAL_SECONDS)
                 await self._room.check_idle_players()
-                self._room.cleanup_expired_votes()
             except asyncio.CancelledError:
                 break
             except Exception:

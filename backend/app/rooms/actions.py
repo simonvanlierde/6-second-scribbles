@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
-from app.rooms import rounds
+from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
@@ -97,7 +97,8 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         return
 
     try:
-        _player, is_reconnecting_host = await session.room.add_player(
+        _player, is_reconnecting_host = await player_lifecycle.add_player(
+            session.room,
             event.player_id,
             event.name,
             session.websocket,
@@ -159,7 +160,7 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     if event.player_id != session.player_id:
         await session.send_error("player_ready_error", "invalid_player", "Ready updates must match your connection.")
         return
-    ready_status = session.room.mark_player_ready(event.player_id)
+    ready_status = rounds.mark_player_ready(session.room, event.player_id)
     await broadcast_and_persist(session, ready_status)
 
     if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
@@ -176,21 +177,23 @@ async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessE
             "Guess submissions must match your connection.",
         )
         return
-    await session.room.record_guess_submission(
+    if rounds.record_guess_submission(
+        session.room,
         player_id=event.player_id,
         target_player_id=event.target_player_id,
         guesses=event.guesses,
-    )
+    ):
+        await session.room.score_and_broadcast_round()
 
 
 async def handle_restart_game(session: RoomWebSocketSession, event: RestartGameEvent) -> None:
     """Handle a restart-game event."""
     if not await require_host(session, "restart the game"):
         return
-    session.room.reset_game()
+    rounds.reset_game(session.room)
     # Players who dropped during the finished game and never returned are cleared
     # as we go back to the lobby (they were kept through final results).
-    await session.room.prune_disconnected()
+    await player_lifecycle.prune_disconnected(session.room)
     await broadcast_and_persist(session, event)
 
 
@@ -242,7 +245,7 @@ async def handle_initiate_kick(session: RoomWebSocketSession, event: InitiateKic
     """Handle initiating a kick vote."""
     if not session.player_id:
         return
-    if error := await session.room.initiate_kick_vote(session.player_id, event.target_player_id):
+    if error := await kick_vote.initiate_kick_vote(session.room, session.player_id, event.target_player_id):
         await session.send_error("kick_error", error, "")
 
 
@@ -250,7 +253,7 @@ async def handle_cast_kick_vote(session: RoomWebSocketSession, event: CastKickVo
     """Handle casting a kick vote."""
     if not session.player_id:
         return
-    if error := await session.room.cast_kick_vote(session.player_id, event.target_player_id):
+    if error := await kick_vote.cast_kick_vote(session.room, session.player_id, event.target_player_id):
         await session.send_error("kick_error", error, "")
 
 
@@ -333,7 +336,7 @@ async def handle_disconnect(session: RoomWebSocketSession) -> None:
     current = session.room.players.get(session.player_id)
     if current is not None and current.websocket is not session.websocket:
         return
-    await session.room.disconnect_player(session.player_id)
+    await player_lifecycle.disconnect_player(session.room, session.player_id)
 
 
 async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None:
@@ -341,7 +344,7 @@ async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None
     del event
     if not session.player_id:
         return
-    await session.room.remove_player(session.player_id, forget_identity=True)
+    await player_lifecycle.remove_player(session.room, session.player_id, forget_identity=True)
     await broadcast_and_persist(session, PlayerLeftEvent(playerId=session.player_id))
 
 

@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 import app.main as main_module
 from app.core.types import GamePhase
+from app.rooms import player_lifecycle
 from app.rooms.manager import room_manager
 from tests.constants import (
     MEDIUM,
@@ -75,7 +76,7 @@ async def test_room_status_for_existing_and_missing_room(async_client: AsyncClie
     assert missing_response.json() == {"exists": False}
 
     room = room_manager.get_or_create_room(TEST_ROOM_ID)
-    await room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, AsyncMock())
+    await player_lifecycle.add_player(room, PLAYER_ONE_ID, PLAYER_ONE_NAME, AsyncMock())
     room.metadata.game_phase = GamePhase.DRAWING
 
     existing_response = await async_client.get(f"/api/rooms/{TEST_ROOM_ID}/status")

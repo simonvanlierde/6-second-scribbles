@@ -10,6 +10,7 @@ import pytest
 
 from app.core.types import GamePhase
 from app.rooms import actions as room_actions
+from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import router as room_router
 from app.rooms.manager import GameRoom
 from app.rooms.protocol import (
@@ -71,7 +72,7 @@ async def test_room_action_handlers_cover_validation_and_updates(
 ) -> None:
     """Action handlers update room state and reject invalid player ids."""
     room = GameRoom("ROOM-ACTIONS")
-    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "host", "Host", cast("WebSocket", make_ws()))
     session = _Session(room, player_id="host", host=True)
 
     broadcast = AsyncMock()
@@ -139,8 +140,8 @@ async def test_settings_broadcasts_carry_stored_room_settings(
 ) -> None:
     """start_game and settings_update broadcast the room's stored settings, not the client's echo."""
     room = GameRoom("ROOM-SETTINGS")
-    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
-    await room.add_player("guest", "Guest", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "host", "Host", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "guest", "Guest", cast("WebSocket", make_ws()))
     session = cast("RoomWebSocketSession", _Session(room, player_id="host", host=True))
     broadcast = AsyncMock()
     monkeypatch.setattr(room, "broadcast", broadcast)
@@ -180,25 +181,16 @@ async def test_room_action_handlers_cover_restart_drawpad_and_kick_errors(
 ) -> None:
     """Restart, drawpad, disconnect, and kick-vote error branches stay covered."""
     room = GameRoom("ROOM-MORE-ACTIONS")
-    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
-    await room.add_player("guest", "Guest", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "host", "Host", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "guest", "Guest", cast("WebSocket", make_ws()))
     session = _Session(room, player_id="host", host=True)
     non_host = _Session(room, player_id="guest", host=False)
 
     monkeypatch.setattr(room, "broadcast", AsyncMock())
     monkeypatch.setattr(room, "persist", AsyncMock())
-    monkeypatch.setattr(room, "reset_game", Mock())
-    monkeypatch.setattr(room, "remove_player", AsyncMock())
-    monkeypatch.setattr(
-        room,
-        "initiate_kick_vote",
-        AsyncMock(return_value="vote_failed"),
-    )
-    monkeypatch.setattr(
-        room,
-        "cast_kick_vote",
-        AsyncMock(return_value="cast_failed"),
-    )
+    monkeypatch.setattr(rounds, "reset_game", Mock())
+    monkeypatch.setattr(kick_vote, "initiate_kick_vote", AsyncMock(return_value="vote_failed"))
+    monkeypatch.setattr(kick_vote, "cast_kick_vote", AsyncMock(return_value="cast_failed"))
 
     await room_actions.handle_restart_game(
         cast("RoomWebSocketSession", session),

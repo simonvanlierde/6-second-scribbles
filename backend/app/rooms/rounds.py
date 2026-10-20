@@ -55,6 +55,7 @@ def start_round(
     cards: dict[str, PlayerPromptAssignmentState] | None,
 ) -> int:
     """Transition the room into a new drawing round and return the start timestamp."""
+    room.scheduler.cancel_round_tasks()
     round_start_time = int(time.time() * 1000)
     room.metadata.reset_round(cards=cards)
     room.metadata.round_start_time = round_start_time
@@ -129,6 +130,7 @@ def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
 
 def reset_game(room: GameRoom) -> None:
     """Reset mutable game state back to the lobby."""
+    room.scheduler.cancel_round_tasks()
     room.metadata.reset_game(room.players)
     room.round_drawings.clear()
     room.drawing_history.clear()

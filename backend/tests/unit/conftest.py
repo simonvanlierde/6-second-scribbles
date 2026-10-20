@@ -14,6 +14,7 @@ from app.categories import service as category_service
 from app.core import database
 from app.core import redis as redis_module
 from app.core.config import settings
+from app.rooms import player_lifecycle
 from app.rooms.manager import GameRoom, RoomManager
 from app.rooms.scheduler import create_logged_task
 from app.rooms.state import PlayerPromptAssignmentState
@@ -134,8 +135,8 @@ async def room_with_players(game_room: GameRoom) -> GameRoom:
     ws1 = TestWebSocket()
     ws2 = TestWebSocket()
 
-    await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
-    await game_room.add_player(PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
+    await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(ws1))
+    await player_lifecycle.add_player(game_room, PLAYER_TWO_ID, PLAYER_TWO_NAME, as_websocket(ws2))
 
     return game_room
 

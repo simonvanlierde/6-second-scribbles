@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError
 
 from app.core.config import settings
+from app.rooms import player_lifecycle
 from app.rooms.actions import (
     dispatch_event,
     handle_disconnect,
@@ -102,7 +103,7 @@ class RoomWebSocketSession:
                 await self.send_error("permission_error", "spectator", "Spectators cannot take part in the game.")
                 return
             if event.type != JOIN_EVENT_TYPE and self.player_id:
-                self.room.update_player_activity(self.player_id)
+                player_lifecycle.update_player_activity(self.room, self.player_id)
             await dispatch_event(self, event)
         except (ValidationError, TypeError, ValueError) as exc:
             logger.info("[Server] Rejected malformed websocket payload: %s", exc)
@@ -116,7 +117,7 @@ class RoomWebSocketSession:
 
     def is_host(self) -> bool:
         """Return whether this connection currently belongs to the host."""
-        return self.room.is_host(self.player_id)
+        return player_lifecycle.is_host(self.room, self.player_id)
 
     async def send_error(self, event_type: ErrorEventType, error: str, message: str) -> None:
         """Send a recoverable protocol error without closing the connection."""

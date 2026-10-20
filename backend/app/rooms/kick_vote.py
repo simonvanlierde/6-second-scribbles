@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from app.core.config import settings
+from app.rooms import player_lifecycle
 from app.rooms.protocol import (
     KickVoteExpiredEvent,
     KickVoteStartedEvent,
@@ -200,7 +201,7 @@ async def kick_player(room: GameRoom, player_id: str, reason: str = "Kicked") ->
     room.kicked_ids.add(player_id)
     if user_id := room.metadata.player_user_ids.get(player_id):
         room.kicked_ids.add(user_id)
-    await room.remove_player(player_id, forget_identity=True)
+    await player_lifecycle.remove_player(room, player_id, forget_identity=True)
     room.active_kick_votes.pop(player_id, None)
 
 
