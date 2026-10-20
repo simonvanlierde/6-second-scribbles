@@ -96,6 +96,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The server now rejects game settings outside the lobby's limits (1 to 10 rounds, 15 to 180 s timers) with a protocol error. Before, a modified client could set a million rounds or a 1 s timer.
 - A burst of throwaway joins could push out a guest's saved seat in the lobby and let someone else take it. Seats of players who left in the last 10 minutes are now kept; while 40 of them are held, new players are asked to try again in a few minutes.
 - The frontend image moves to Caddy 2.11 on Alpine 3.23 and installs Alpine updates at build time, which fixes 6 critical and 93 high findings in its base. The backend image no longer contains pip or curl; its healthcheck uses Python.
+- The Cloudflare tunnel image moves from a June build to cloudflared 2026.10.0, which fixes 17 high findings.
 - Production containers run with read-only root file systems, no Linux capabilities and `no-new-privileges`; the database also gets `no-new-privileges` and a 512-process limit.
 
 ## [0.2.1] - 2026-07-06
