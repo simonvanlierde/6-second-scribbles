@@ -37,7 +37,16 @@ WORKDIR /app/frontend
 
 RUN pnpm run build
 
-FROM caddy:2.10-alpine AS prod
+FROM caddy:2.11-alpine AS prod
+
+LABEL org.opencontainers.image.source="https://github.com/simonvanlierde/6-second-scribbles" \
+      org.opencontainers.image.title="6 Second Scribbles frontend" \
+      org.opencontainers.image.description="Caddy serving the 6 Second Scribbles web app and proxying /api to the backend" \
+      org.opencontainers.image.licenses="MIT"
+
+# Takes Alpine security fixes the base image has not been rebuilt with yet. Docker
+# caches this layer: build with --pull so a new base image reaches it.
+RUN apk upgrade --no-cache
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/frontend/dist /usr/share/caddy

@@ -14,7 +14,8 @@ services:
       POSTGRES_HOST: database
       REDIS_HOST: cache
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
+      # Python, not curl: the image ships no curl. urlopen raises on a non-2xx status.
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)" ]
       interval: 30s
       timeout: 10s
       retries: 3
