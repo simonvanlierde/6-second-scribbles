@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import get_session_maker
 from app.core.rate_limits import client_network, enforce_rate_limit, get_client_identifier
 from app.rooms.manager import ClientRoomLimitError, RoomCapacityError, room_manager
+from app.rooms.router import RoomCode
 from app.rooms.session import RoomWebSocketSession
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/ws", tags=["rooms"])
 
 
 @router.websocket("/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str) -> None:
+async def websocket_endpoint(websocket: WebSocket, room_id: RoomCode) -> None:
     """WebSocket endpoint for game rooms."""
     await websocket.accept()
     logger.info("[WebSocket] Connection accepted for room %s", room_id)

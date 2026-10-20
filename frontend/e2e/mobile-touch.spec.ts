@@ -1,11 +1,13 @@
-import { type Browser, expect, type Locator, type Page, test } from "@playwright/test";
+import { type Browser, type BrowserContextOptions, expect, type Locator, type Page, test } from "@playwright/test";
 
 // An iPhone 12-14 screen. 44 px is the smallest touch target Apple and WCAG 2.5.5 ask for.
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
+// A short laptop window, where the word card fills the sidebar.
+const LAPTOP = { viewport: { width: 1280, height: 720 } };
 const MIN_TARGET = 44;
 
-async function openPlayer(browser: Browser, name: string): Promise<Page> {
-  const page = await (await browser.newContext(PHONE)).newPage();
+async function openPlayer(browser: Browser, name: string, options: BrowserContextOptions): Promise<Page> {
+  const page = await (await browser.newContext(options)).newPage();
   await page.goto("/");
   await page.getByRole("button", { name: /^settings$/i }).click();
   const nameInput = page.getByPlaceholder(/pick a name/i);
@@ -22,17 +24,23 @@ async function expectTarget(locator: Locator) {
   expect(Math.round(box.height)).toBeGreaterThanOrEqual(MIN_TARGET);
 }
 
-test("touch targets are 44 px and Finish stays on a phone screen", async ({ browser }) => {
-  test.setTimeout(60_000);
-  const host = await openPlayer(browser, "Host");
+/** Opens a room with a host and a guest, and returns the host's page in the lobby. */
+async function openRoom(browser: Browser, options: BrowserContextOptions): Promise<Page> {
+  const host = await openPlayer(browser, "Host", options);
   await host.getByRole("button", { name: /create room/i }).click();
   await expect(host).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
   const roomCode = host.url().split("/rooms/")[1] ?? "";
 
-  const guest = await openPlayer(browser, "Guest");
+  const guest = await openPlayer(browser, "Guest", options);
   await guest.locator("input.hd-input--code").fill(roomCode);
   await guest.getByRole("button", { name: /join room/i }).click();
   await expect(host.getByRole("heading", { name: /players \(2\)/i })).toBeVisible();
+  return host;
+}
+
+test("touch targets are 44 px and Finish stays on a phone screen", async ({ browser }) => {
+  test.setTimeout(60_000);
+  const host = await openRoom(browser, PHONE);
 
   await expectTarget(host.getByRole("button", { name: /^kick player$/i }));
   await expectTarget(host.locator(".advanced-toggle"));
@@ -50,4 +58,12 @@ test("touch targets are 44 px and Finish stays on a phone screen", async ({ brow
   await host.getByRole("button", { name: /start game/i }).click();
   const finish = host.getByRole("button", { name: /^finish$/i });
   await expect(finish).toBeInViewport({ ratio: 1 });
+});
+
+test("Finish stays in a short laptop window", async ({ browser }) => {
+  test.setTimeout(60_000);
+  const host = await openRoom(browser, LAPTOP);
+  await host.getByRole("button", { name: /start game/i }).click();
+  // The button is slightly rotated, so a sub-pixel corner can fall outside the sidebar's clip.
+  await expect(host.getByRole("button", { name: /^finish$/i })).toBeInViewport({ ratio: 0.99 });
 });

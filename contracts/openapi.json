@@ -913,6 +913,7 @@
             "name": "room_id",
             "required": true,
             "schema": {
+              "pattern": "^[ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]{6}$",
               "title": "Room Id",
               "type": "string"
             }

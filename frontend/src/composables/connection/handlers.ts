@@ -64,12 +64,12 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
         break;
       }
 
-      if (message.error === "room_full" && isObserverConnection.value) {
-        showNotification(message.message || i18n.global.t("notifications.roomFullWatchOnly"), "error");
-        break;
-      }
-
-      showNotification(message.message || i18n.global.t("notifications.unableToJoinRoom"), "error");
+      showNotification(
+        message.error === "spectators_full"
+          ? i18n.global.t("notifications.spectatorsFull")
+          : message.message || i18n.global.t("notifications.unableToJoinRoom"),
+        "error",
+      );
       log.error("Join error:", message.message);
       setTimeout(() => router.push({ name: "home" }), UI_TIMINGS.JOIN_ERROR_REDIRECT_MS);
       break;

@@ -51,7 +51,7 @@ class TestQuickPlay:
 
     def test_returns_existing_room_when_one_has_space(self, test_client: TestClient) -> None:
         """A public room in lobby with space is reused rather than creating a new one."""
-        room_id = "QUICK_01"
+        room_id = "CODE23"
         with joined_players(test_client, room_id, [JoinedPlayer("player1", "Test Player")]):
             response = test_client.post("/api/rooms/quick-play")
             assert response.status_code == OK

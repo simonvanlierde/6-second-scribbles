@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import secrets
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Path, Request
 
 from app.core.config import settings
 from app.core.rate_limits import client_network, enforce_rate_limit, get_client_identifier
@@ -22,6 +23,8 @@ from app.rooms.state import RoomState
 
 ALLOWED_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 ROOM_CODE_LENGTH = 6
+# Codes come only from create_room, so anything else is a typo or a probe.
+RoomCode = Annotated[str, Path(pattern=f"^[{ALLOWED_CHARS}]{{{ROOM_CODE_LENGTH}}}$")]
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -33,7 +36,7 @@ async def get_random_room() -> RandomRoomResponse:
 
 
 @router.get("/{room_id}/status", response_model=RoomStatusResponse, response_model_exclude_none=True)
-async def room_status(room_id: str) -> RoomStatusResponse:
+async def room_status(room_id: RoomCode) -> RoomStatusResponse:
     """Get the status of a room."""
     return get_room_status(room_id=room_id)
 

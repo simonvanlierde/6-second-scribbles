@@ -44,6 +44,40 @@ describe("connection handlers translations", () => {
     expect(showNotification).toHaveBeenNthCalledWith(2, "Room language changed to Français");
   });
 
+  it("translates a full spectator list instead of showing the server's English", () => {
+    handleConnectionEvent(
+      { type: "join_error", error: "spectators_full", message: "This room has as many spectators as it allows." },
+      ctx,
+    );
+
+    expect(showNotification).toHaveBeenCalledWith("This room can't take any more spectators.", "error");
+  });
+
+  it("keeps a player in the room when a round is in progress", () => {
+    handleConnectionEvent({ type: "join_error", error: "game_in_progress", message: "" }, ctx);
+
+    expect(showNotification).toHaveBeenCalledWith(
+      "This round is already in progress. You can join next round.",
+      "info",
+    );
+    expect(ctx.router.push).not.toHaveBeenCalled();
+  });
+
+  it("shows other join errors and sends the player home", () => {
+    vi.useFakeTimers();
+    try {
+      handleConnectionEvent({ type: "join_error", error: "room_full", message: "Room is full" }, ctx);
+      handleConnectionEvent({ type: "join_error", error: "room_full", message: "" }, ctx);
+
+      expect(showNotification).toHaveBeenNthCalledWith(1, "Room is full", "error");
+      expect(showNotification).toHaveBeenNthCalledWith(2, "Unable to join room", "error");
+      vi.runAllTimers();
+      expect(ctx.router.push).toHaveBeenCalledWith({ name: "home" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("uses translated moderation notifications with interpolation", () => {
     store.localPlayerId = "p1";
 

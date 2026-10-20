@@ -189,7 +189,7 @@
     "roomDoesNotExist": "Diesen Raum gibt es nicht. Tritt einem anderen Raum bei oder erstelle einen neuen!",
     "connectFailed": "Verbindung fehlgeschlagen. Bitte versuche es erneut.",
     "roundInProgressJoinLater": "Diese Runde läuft bereits. Du kannst in der nächsten Runde einsteigen.",
-    "roomFullWatchOnly": "Dieser Raum ist voll, aber du kannst weiter zuschauen.",
+    "spectatorsFull": "Dieser Raum kann keine weiteren Zuschauer aufnehmen.",
     "unableToJoinRoom": "Raum konnte nicht betreten werden",
     "hostStatusRestored": "Host-Status wiederhergestellt",
     "youAreNowHost": "Du bist jetzt der Host",

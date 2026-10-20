@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
+import pytest
+from fastapi import WebSocketDisconnect, status
 from fastapi.testclient import TestClient
 
 import app.main as main_module
@@ -68,7 +70,7 @@ def test_openapi_includes_contract_schemas() -> None:
 
 async def test_room_status_for_existing_and_missing_room(async_client: AsyncClient) -> None:
     """Room status reports existence for missing and populated rooms."""
-    missing_response = await async_client.get("/api/rooms/NONEXISTENT/status")
+    missing_response = await async_client.get("/api/rooms/NOROOM/status")
     assert missing_response.status_code == 200
     assert missing_response.json() == {"exists": False}
 
@@ -79,6 +81,26 @@ async def test_room_status_for_existing_and_missing_room(async_client: AsyncClie
     existing_response = await async_client.get(f"/api/rooms/{TEST_ROOM_ID}/status")
     assert existing_response.status_code == 200
     assert existing_response.json() == {"exists": True, "players": 1, "game_phase": GamePhase.DRAWING.value}
+
+
+MALFORMED_ROOM_CODES = ["ABC12", "ABCDEFG", "abcdef", "AB-CDE"]
+
+
+@pytest.mark.parametrize("room_id", MALFORMED_ROOM_CODES)
+async def test_room_status_rejects_malformed_codes(async_client: AsyncClient, room_id: str) -> None:
+    """Only the 6-character codes the server hands out are looked up."""
+    response = await async_client.get(f"/api/rooms/{room_id}/status")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+@pytest.mark.parametrize("room_id", MALFORMED_ROOM_CODES)
+def test_websocket_rejects_malformed_codes(test_client: TestClient, room_id: str) -> None:
+    """A socket to a malformed code is closed before it can create a room."""
+    with pytest.raises(WebSocketDisconnect) as exc_info, test_client.websocket_connect(f"/ws/{room_id}") as ws:
+        ws.receive_text()
+
+    assert exc_info.value.code == status.WS_1008_POLICY_VIOLATION
+    assert room_manager.get_room(room_id) is None
 
 
 def test_join_broadcast_lists_all_players(test_client: TestClient) -> None:
@@ -108,7 +130,7 @@ def test_player_disconnect_broadcasts_player_left(test_client: TestClient) -> No
 
 def test_request_game_state_returns_current_room_state(test_client: TestClient) -> None:
     """Requesting game state returns the current room snapshot."""
-    with test_client.websocket_connect("/ws/STATE01") as websocket:
+    with test_client.websocket_connect("/ws/CODE35") as websocket:
         initial_state = receive_json(websocket)
         assert initial_state["type"] == ROOM_STATE
 
@@ -133,7 +155,7 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
 
 def test_ready_and_restart_messages_are_broadcast(test_client: TestClient) -> None:
     """Readiness and restart events are echoed back through the room."""
-    with test_client.websocket_connect("/ws/CONTROL01") as websocket:
+    with test_client.websocket_connect("/ws/CODE02") as websocket:
         receive_json(websocket)
         join_player(websocket, PLAYER_ONE_ID, PLAYER_ONE_NAME)
 
@@ -149,7 +171,7 @@ def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
     """Non-host players are rejected when restarting the game."""
     with joined_players(
         test_client,
-        "CONTROL02",
+        "CODE03",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "restart_game", "playerId": PLAYER_TWO_ID})
@@ -163,7 +185,7 @@ def test_non_host_cannot_restart_game(test_client: TestClient) -> None:
 
 def test_invalid_json_does_not_close_connection(test_client: TestClient, sample_messages: dict[str, object]) -> None:
     """Malformed payloads produce a protocol error without closing the socket."""
-    with test_client.websocket_connect("/ws/ERROR01") as websocket:
+    with test_client.websocket_connect("/ws/CODE04") as websocket:
         receive_json(websocket)
         join_player(websocket, "player-123", "Test Player")
 
@@ -183,7 +205,7 @@ def test_invalid_typed_payload_returns_protocol_error(test_client: TestClient) -
     """Schema-invalid typed payloads produce a protocol error."""
     with joined_players(
         test_client,
-        "PROTO01",
+        "CODE20",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "submit_guess", "playerId": PLAYER_TWO_ID})
@@ -199,7 +221,7 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client: TestC
     """Invalid difficulty values are rejected before a game starts."""
     with joined_players(
         test_client,
-        "PROTO02",
+        "CODE21",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "drawingTimeLimit": 30})
@@ -215,7 +237,7 @@ def test_player_ready_requires_matching_connection_identity(test_client: TestCli
     """Ready events must come from the websocket that owns the player id."""
     with joined_players(
         test_client,
-        "READY01",
+        "CODE25",
         [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
     ) as (_ws1, ws2):
         send_json(ws2, {"type": "player_ready", "playerId": PLAYER_ONE_ID})

@@ -23,6 +23,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
 - Guest accounts are deleted once their login session has expired (30 days by default), on backend startup and once a day after that. Registered accounts are kept.
 - **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
+- The server only accepts room codes of 6 letters and digits, the kind it hands out. A WebSocket to any other code is closed before it can create a room, and the room status endpoint answers 422.
 - The health endpoint and the OpenAPI document report the release version instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
 - Backend dependency updates.
@@ -63,6 +64,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Red text, such as the stepper buttons, the Advanced Settings link, highlight labels and standings ranks, was hard to read in light mode. It now uses a darker red that is easy to read in both themes.
 - In dark mode your own score in the standings and the name and detail on the yellow highlight card were pale text on yellow. They now use dark ink there.
 - Every line uvicorn logged, such as startup messages, appeared twice in the backend log, once as plain text and once as JSON.
+- In a short browser window on a laptop, the Finish button sat below the word card, out of view, until the player scrolled the card. It now stays at the bottom of the card column.
+- Someone turned away because a room already had 20 spectators saw the server's English message whatever their language. The message is now translated.
 - On a phone the Finish button sat below the screen during drawing, under the word list and the canvas. It now stays pinned to the bottom. Buttons that were small to tap on a touch screen (the lobby doodle colours and sizes, the settings steppers, Kick player and Advanced Settings) are now at least 44 px, and so are the words on the drawing card on larger screens.
 
 ## [0.2.1] - 2026-07-06

@@ -242,6 +242,8 @@ function confirmLeave() {
   width: 240px;
   flex-shrink: 0;
   overflow-y: auto;
+  /* Room for the card and button shadows, which the scroll box would clip. */
+  padding: 0 4px 4px 0;
 }
 .category-card__title {
   margin: 0 0 var(--space-3);
@@ -300,7 +302,11 @@ function confirmLeave() {
 .drawing-phase__hint {
   font-size: var(--text-label-md);
 }
+/* Sticky, so a word card taller than the window cannot push it out of the scrolling sidebar. */
 .drawing-phase__finish-desktop {
+  position: sticky;
+  bottom: 4px;
+  flex-shrink: 0;
   margin-top: auto;
 }
 .drawing-phase__finish-desktop svg {

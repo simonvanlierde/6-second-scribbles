@@ -83,9 +83,10 @@ def normalize_text(text: str) -> str:
     (Vietnamese ``má``/``ma``/``mã``, Arabic harakat). Make stripping locale-aware
     (thread the room locale from ``score_round``) if such a locale is ever added.
     """
-    decomposed = unicodedata.normalize("NFD", text.casefold().strip())
+    decomposed = unicodedata.normalize("NFD", text.casefold())
     without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-    return unicodedata.normalize("NFC", without_marks)
+    # Strip after dropping marks: a stray mark would otherwise shield a space next to it.
+    return unicodedata.normalize("NFC", without_marks).strip()
 
 
 @functools.lru_cache(maxsize=1024)
@@ -104,6 +105,8 @@ def _generate_variants(normalized: str) -> frozenset[str]:
     if normalized.endswith("ing"):
         variants.add(normalized[:-3])
 
+    # A word that is all suffix ("s", "es", "ing") would leave "", which every such word shares.
+    variants.discard("")
     return frozenset(variants)
 
 
