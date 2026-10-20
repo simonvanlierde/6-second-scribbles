@@ -72,6 +72,10 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
+        # The old backend keeps serving during a deploy's migration: fail fast rather than queue
+        # its queries behind a long lock.
+        connection.exec_driver_sql("SET lock_timeout = '3s'")
+        connection.exec_driver_sql("SET statement_timeout = '60s'")
         context.run_migrations()
 
 
