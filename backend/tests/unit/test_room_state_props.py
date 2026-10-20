@@ -42,15 +42,18 @@ class RoomMetadataMachine(RuleBasedStateMachine):
 
     def _leave(self, player_id: str, *, forget_identity: bool) -> None:
         # Mirrors player_lifecycle.remove_player.
+        was_present = player_id in self.present
         self.present.discard(player_id)
         self.metadata.forget_player(player_id, forget_identity=forget_identity)
-        self.departed.pop(player_id, None)
-        if not forget_identity:
-            key = self.metadata.player_rejoin_keys.get(player_id)
-            user = self.metadata.player_user_ids.get(player_id)
-            if key is not None or user is not None:
-                self.departed[player_id] = (self.now, key, user)
-            self._trim()
+        if forget_identity:
+            self.departed.pop(player_id, None)
+            return
+        # Removing a player who already left does not restart their grace period.
+        key = self.metadata.player_rejoin_keys.get(player_id)
+        user = self.metadata.player_user_ids.get(player_id)
+        if was_present and (key is not None or user is not None):
+            self.departed[player_id] = (self.now, key, user)
+        self._trim()
 
     @rule(player_id=player_ids, guest=st.booleans(), with_key=st.booleans())
     def join(self, player_id: str, *, guest: bool, with_key: bool) -> None:
