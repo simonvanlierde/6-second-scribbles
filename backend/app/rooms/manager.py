@@ -40,7 +40,6 @@ from app.rooms.protocol import (
     DrawStrokePayload,
     GalleryDrawingPayload,
     PlayerCardPayload,
-    PlayerListItem,
     PlayerSnapshot,
     RestartGameEvent,
     RoomStateEvent,
@@ -361,10 +360,7 @@ class GameRoom:
         card = PlayerCardPayload.model_validate(assignment.model_dump()) if assignment else None
         return RoomStateEvent.model_validate(
             {
-                "players": [
-                    PlayerSnapshot(id=player.id, name=player.name, color=player.color, connected=player.connected)
-                    for player in self._ordered_players()
-                ],
+                "players": self.get_player_list(),
                 "hostId": self.host_id,
                 "gamePhase": self.metadata.game_phase,
                 "difficulty": self.metadata.difficulty,
@@ -467,10 +463,10 @@ class GameRoom:
         seats = self.metadata.player_seats
         return sorted(self.players.values(), key=lambda p: seats.get(p.id, len(seats)))
 
-    def get_player_list(self) -> list[PlayerListItem]:
+    def get_player_list(self) -> list[PlayerSnapshot]:
         """Get the list of all players in the room, in stable seat order."""
         return [
-            PlayerListItem(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
+            PlayerSnapshot(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
         ]
 
     # ------------------------------------------------------------------ #

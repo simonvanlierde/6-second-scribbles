@@ -408,7 +408,7 @@
               }
             },
             "required": ["id", "name"],
-            "title": "PlayerListItem",
+            "title": "PlayerSnapshot",
             "type": "object"
           },
           "title": "Players",

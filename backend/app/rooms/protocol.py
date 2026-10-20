@@ -289,15 +289,6 @@ class PlayerSnapshot(BaseModel):
     connected: bool = True
 
 
-class PlayerListItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    name: str
-    color: str | None = None
-    connected: bool = True
-
-
 class GalleryDrawingPayload(BaseModel):
     """One completed drawing retained for the end-of-game gallery."""
 
@@ -342,7 +333,7 @@ class RoomStateEvent(ServerEventModel):
 class PlayerJoinedEvent(ServerPlayerEventModel):
     type: Literal["player_joined"] = "player_joined"
     name: str
-    players: list[PlayerListItem]
+    players: list[PlayerSnapshot]
     is_host: bool = Field(alias="isHost")
 
 
