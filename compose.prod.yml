@@ -118,6 +118,8 @@ services:
         condition: service_completed_successfully
     environment:
       POSTGRES_HOST: database
+      # --overwrite clears the category caches here; unreachable only logs a warning.
+      REDIS_HOST: cache
       ENV: prod
     env_file:
       - backend/.env.prod

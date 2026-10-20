@@ -3,7 +3,7 @@
 Run this from the backend directory after setting up the database:
     uv run python -m scripts.seed_data              # seed a fresh DB; warn + abort if already seeded
     uv run python -m scripts.seed_data --append     # add only categories not already present
-    uv run python -m scripts.seed_data --overwrite  # replace all system categories + prompts
+    uv run python -m scripts.seed_data --overwrite  # update system categories + prompts in place (IDs kept)
     uv run python -m scripts.seed_data --clear       # delete ALL categories, prompts, and users
 """
 
@@ -17,7 +17,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
-from sqlalchemy import delete, select
+from redis.exceptions import RedisError
+from sqlalchemy import delete, or_, select
 
 from app.categories.models import (
     DEFAULT_CATEGORY_SOURCE,
@@ -27,6 +28,7 @@ from app.categories.models import (
     compute_available_locales,
     normalize_locale_code,
 )
+from app.core import redis
 from app.core.database import get_session_maker
 from app.core.logging import configure_logging
 from app.users.models import User
@@ -63,45 +65,44 @@ def _build_category_translations(translations: list[dict[str, Any]]) -> dict[str
     }
 
 
-async def _seed_prompt_library(session: AsyncSession, prompts_data: list[dict[str, Any]]) -> None:
-    """Populate the global prompt library."""
+async def _seed_prompt_library(
+    session: AsyncSession, prompts_data: list[dict[str, Any]], *, update: bool = False
+) -> dict[str, Prompt]:
+    """Populate the global prompt library, keyed by stable_key.
+
+    Existing prompts keep their row and ID; with ``update`` their translations are replaced.
+    """
+    library = {p.stable_key: p for p in (await session.execute(select(Prompt))).scalars()}
     for p_data in prompts_data:
         stable_key = str(p_data["id"])
-
-        # Get or create Prompt
-        result = await session.execute(select(Prompt).where(Prompt.stable_key == stable_key))
-        prompt = result.scalar_one_or_none()
-
-        if not prompt:
-            prompt = Prompt(
-                stable_key=stable_key,
-                translations=_build_prompt_translations(list(p_data["translations"])),
-            )
+        translations = _build_prompt_translations(list(p_data["translations"]))
+        prompt = library.get(stable_key)
+        if prompt is None:
+            library[stable_key] = prompt = Prompt(stable_key=stable_key, translations=translations)
             session.add(prompt)
+        elif update:
+            prompt.translations = translations
     await session.flush()
+    return library
 
 
-async def _create_category(
+async def _sync_category(
     session: AsyncSession,
-    *,
-    id_name: str,
-    difficulty: str,
-    default_locale: str,
-    translations: list[dict[str, Any]],
-    items: list[str],
-) -> tuple[Category, int]:
-    translations_dict = _build_category_translations(translations)
+    category: Category | None,
+    cat_data: dict[str, Any],
+    library: dict[str, Prompt],
+) -> int:
+    """Create the category, or update it in place, and link its prompts. Returns the link count."""
+    slug = str(cat_data["id"])
+    translations_dict = _build_category_translations(list(cat_data["translations"]))
 
     # Resolve linked prompts up front so we can compute available_locales
-    # explicitly at insert time (the old SQLAlchemy after_flush listener is gone).
+    # explicitly at write time (the old SQLAlchemy after_flush listener is gone).
     resolved_prompts: list[tuple[int, Prompt]] = []
-    for index, stable_key in enumerate(items, start=1):
-        result = await session.execute(select(Prompt).where(Prompt.stable_key == stable_key))
-        prompt = result.scalar_one_or_none()
+    for index, stable_key in enumerate(cat_data["items"], start=1):
+        prompt = library.get(str(stable_key))
         if not prompt:
-            logger.warning(
-                "Prompt '%s' referenced in category '%s' not found in library; skipping.", stable_key, id_name
-            )
+            logger.warning("Prompt '%s' referenced in category '%s' not found in library; skipping.", stable_key, slug)
             continue
         resolved_prompts.append((index, prompt))
 
@@ -110,30 +111,49 @@ async def _create_category(
         [p.translations for _, p in resolved_prompts],
     )
     if not available_locales:
-        logger.warning("Category '%s' has no fully playable locales; it will be skipped by selection queries.", id_name)
+        logger.warning("Category '%s' has no fully playable locales; it will be skipped by selection queries.", slug)
 
-    category = Category(
-        slug=id_name,
-        difficulty=difficulty.lower(),
-        default_locale=default_locale,
-        source="system",
-        translations=translations_dict,
-        available_locales=available_locales,
-    )
-    session.add(category)
+    if category is None:
+        category = Category(slug=slug, source=DEFAULT_CATEGORY_SOURCE)
+        session.add(category)
+    category.difficulty = str(cat_data["difficulty"]).lower()
+    category.default_locale = str(cat_data.get("default_locale", "en"))
+    category.translations = translations_dict
+    category.available_locales = available_locales
     await session.flush()
 
-    for index, prompt in resolved_prompts:
-        session.add(
-            CategoryPrompt(
-                category_id=category.id,
-                prompt_id=prompt.id,
-                sort_order=index,
-            )
+    wanted = [(prompt.id, index) for index, prompt in resolved_prompts]
+    current = (
+        await session.execute(
+            select(CategoryPrompt.prompt_id, CategoryPrompt.sort_order)
+            .where(CategoryPrompt.category_id == category.id)
+            .order_by(CategoryPrompt.sort_order)
         )
+    ).all()
+    if [tuple(row) for row in current] != wanted:
+        await session.execute(delete(CategoryPrompt).where(CategoryPrompt.category_id == category.id))
+        session.add_all(
+            CategoryPrompt(category_id=category.id, prompt_id=prompt_id, sort_order=index)
+            for prompt_id, index in wanted
+        )
+        await session.flush()
+    return len(wanted)
 
-    await session.flush()
-    return category, len(resolved_prompts)
+
+async def _clear_category_caches() -> None:
+    """Drop Redis entries built from category and prompt rows, so updated translations apply at once.
+
+    Key prefixes match the builders in app/core/redis.py. Best effort: the database is already
+    committed, and every entry expires on its own TTL anyway (24 h for scoring targets).
+    """
+    try:
+        r = await redis.get_redis()
+        for pattern in ("cat_targets:*", "category_locale_availability:*"):
+            keys = [key async for key in r.scan_iter(match=pattern)]
+            if keys:
+                await r.delete(*keys)
+    except RedisError, OSError:
+        logger.warning("Could not clear category caches in Redis; they expire on their own TTL.", exc_info=True)
 
 
 async def seed_database(*, overwrite: bool = False, append: bool = False) -> None:
@@ -142,8 +162,9 @@ async def seed_database(*, overwrite: bool = False, append: bool = False) -> Non
     Modes (mutually exclusive):
       - default: seed a fresh database. If system categories already exist, warn
         and make no changes — the caller must opt in via ``overwrite`` or ``append``.
-      - ``overwrite``: delete existing system categories and the prompt library,
-        then re-seed everything from the YAML.
+      - ``overwrite``: make the database match the YAML. Categories are matched on
+        slug and prompts on stable_key and updated in place, so their IDs (which
+        rooms in Redis hold) survive; only rows that left the YAML are deleted.
       - ``append``: leave existing data untouched; insert only categories whose
         slug is not already present (the prompt library is get-or-create either way).
     """
@@ -164,49 +185,61 @@ async def seed_database(*, overwrite: bool = False, append: bool = False) -> Non
                 )
                 return
 
+            prompts = SEED_DATA.get(PROMPTS_KEY, [])
+            categories_data = SEED_DATA.get(SYSTEM_CATEGORIES_KEY, [])
+            existing: dict[str, Category] = {}
             if overwrite:
-                logger.info(
-                    "Overwrite mode: clearing %d existing system categories and the prompt library.",
-                    len(existing_slugs),
+                slugs = [str(c["id"]) for c in categories_data]
+                stable_keys = [str(p["id"]) for p in prompts]
+                removed_categories = await session.execute(
+                    delete(Category)
+                    .where(
+                        Category.source == DEFAULT_CATEGORY_SOURCE,
+                        or_(Category.slug.is_(None), Category.slug.not_in(slugs)),
+                    )
+                    .returning(Category.id)
                 )
-                await session.execute(delete(Category).where(Category.source == DEFAULT_CATEGORY_SOURCE))
-                await session.execute(delete(Prompt))
-                existing_slugs = set()
+                removed_prompts = await session.execute(
+                    delete(Prompt).where(Prompt.stable_key.not_in(stable_keys)).returning(Prompt.id)
+                )
+                logger.info(
+                    "Overwrite mode: updating system categories in place; removed %d categories and %d prompts "
+                    "no longer in the seed data.",
+                    len(removed_categories.all()),
+                    len(removed_prompts.all()),
+                )
+                for category in (
+                    await session.execute(select(Category).where(Category.source == DEFAULT_CATEGORY_SOURCE))
+                ).scalars():
+                    existing.setdefault(category.slug or "", category)
             elif existing_slugs:
                 logger.info("Append mode: %d existing system categories will be left untouched.", len(existing_slugs))
 
-            # 1. Seed Prompt Library (get-or-create; safe to run in append mode)
-            prompts = SEED_DATA.get(PROMPTS_KEY, [])
-            await _seed_prompt_library(session, prompts)
+            # 1. Seed Prompt Library (get-or-create; overwrite also updates translations)
+            library = await _seed_prompt_library(session, prompts, update=overwrite)
             logger.info("Populated Prompt Library with %d entries.", len(prompts))
 
-            # 2. Seed Categories, skipping any slug that already exists (append mode)
+            # 2. Seed Categories: overwrite updates existing ones, append skips them
             total_categories = 0
             total_links = 0
             skipped = 0
-            for cat_data in SEED_DATA.get(SYSTEM_CATEGORIES_KEY, []):
+            for cat_data in categories_data:
                 slug = str(cat_data["id"])
-                if slug in existing_slugs:
+                if slug in existing_slugs and not overwrite:
                     skipped += 1
                     continue
-                _, created_links = await _create_category(
-                    session,
-                    id_name=slug,
-                    difficulty=str(cat_data["difficulty"]),
-                    default_locale=str(cat_data.get("default_locale", "en")),
-                    translations=list(cat_data["translations"]),
-                    items=list(cat_data["items"]),
-                )
+                total_links += await _sync_category(session, existing.get(slug), cat_data, library)
                 total_categories += 1
-                total_links += created_links
 
             await session.commit()
             logger.info(
-                "Seeded database with %d new categories and %d prompt links (skipped %d existing).",
+                "Seeded database with %d categories and %d prompt links (skipped %d existing).",
                 total_categories,
                 total_links,
                 skipped,
             )
+            if overwrite:
+                await _clear_category_caches()
 
         except Exception:
             await session.rollback()
@@ -234,7 +267,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     group.add_argument(
         "--overwrite",
         action="store_true",
-        help="Delete existing system categories and the prompt library, then re-seed from scratch.",
+        help="Update system categories and prompts in place from the YAML; delete those no longer in it.",
     )
     group.add_argument(
         "--append",
@@ -252,7 +285,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 if __name__ == "__main__":
     configure_logging()
     args = _parse_args(sys.argv[1:])
-    if args.clear:
-        asyncio.run(clear_database())
-    else:
-        asyncio.run(seed_database(overwrite=args.overwrite, append=args.append))
+
+    async def _main() -> None:
+        try:
+            if args.clear:
+                await clear_database()
+            else:
+                await seed_database(overwrite=args.overwrite, append=args.append)
+        finally:
+            await redis.close_redis()
+
+    asyncio.run(_main())
