@@ -21,11 +21,6 @@ draw, guess, and see the round results in real time.
 The room route shows a different screen for the lobby, drawing, guessing, round
 results, final results, and spectators. The server's current state decides which one.
 
-## Dependency notes
-
-`@vueuse/motion` (registered in `src/main.ts`) and `html-to-image` are installed,
-but no screen uses them yet.
-
 ## Local Setup
 
 From the `frontend/` directory:
