@@ -29,9 +29,9 @@ from tests.constants import (
     PLAYER_KICKED,
     PROTOCOL_ERROR,
     READY_STATUS,
-    ROOM_FULL,
     ROOM_STATE,
     ROUND_COMPLETE,
+    SEATS_BUSY,
     START_GAME,
     START_GUESSING,
     START_ROUND,
@@ -313,7 +313,7 @@ def test_drop_flood_cannot_free_a_refreshing_guest_seat(test_client: TestClient)
                 reply = join_player(throwaway, f"throwaway{i}", "x", rejoin_key=f"key{i}")
         # The guest's binding plus 39 throwaways reach the cap, so the last newcomer waits.
         assert reply["type"] == JOIN_ERROR
-        assert reply["error"] == ROOM_FULL
+        assert reply["error"] == SEATS_BUSY
 
         with test_client.websocket_connect(f"/ws/{room_id}") as intruder:
             receive_json(intruder)

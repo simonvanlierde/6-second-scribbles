@@ -186,6 +186,7 @@
     "connectFailed": "Nie udało się połączyć. Spróbuj ponownie.",
     "roundInProgressJoinLater": "Ta runda już trwa. Możesz dołączyć w następnej rundzie.",
     "spectatorsFull": "Ten pokój nie może przyjąć więcej widzów.",
+    "seatsBusy": "Zbyt wielu graczy właśnie opuściło ten pokój. Spróbuj ponownie za kilka minut.",
     "unableToJoinRoom": "Nie można dołączyć do pokoju",
     "hostStatusRestored": "Przywrócono status gospodarza",
     "youAreNowHost": "Jesteś teraz gospodarzem",

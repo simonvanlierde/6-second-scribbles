@@ -186,6 +186,7 @@
     "connectFailed": "Failed to connect. Please try again.",
     "roundInProgressJoinLater": "This round is already in progress. You can join next round.",
     "spectatorsFull": "This room can't take any more spectators.",
+    "seatsBusy": "Too many players left this room just now. Try again in a few minutes.",
     "unableToJoinRoom": "Unable to join room",
     "hostStatusRestored": "Host status restored",
     "youAreNowHost": "You are now the host",

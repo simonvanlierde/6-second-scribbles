@@ -24,11 +24,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Sentinel raised by add_player when a player_id is claimed by a different user;
-# handle_join matches on it to send the right join error.
+# Sentinels raised by add_player; handle_join matches on them to send the right join error.
 IDENTITY_CONFLICT_ERROR = "identity_conflict"
 KICKED_ERROR = "kicked"
-ROOM_BUSY_ERROR = "Too many players left this room just now. Try again in a few minutes."
+SEATS_BUSY_ERROR = "seats_busy"
 # Identity bindings kept for players who dropped without leaving. Each visitor who
 # closes the tab leaves one, and every persist() writes them all, so past this many
 # the earliest departures go, once they are older than the grace period.
@@ -141,7 +140,7 @@ def _check_identity(room: GameRoom, player_id: str, user_id: str | None, rejoin_
             # Make room for this newcomer's binding among the expired ones.
             trim_absent_bindings(room, present, keep=MAX_ABSENT_BINDINGS - 1)
             if len(room.metadata.absent_identities(present)) >= MAX_ABSENT_BINDINGS:
-                raise ValueError(ROOM_BUSY_ERROR)
+                raise ValueError(SEATS_BUSY_ERROR)
     return key_hash
 
 

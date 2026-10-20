@@ -186,6 +186,7 @@
     "connectFailed": "Verbinden mislukt. Probeer het opnieuw.",
     "roundInProgressJoinLater": "Deze ronde is al bezig. Je kunt meedoen in de volgende ronde.",
     "spectatorsFull": "Deze room kan geen extra kijkers meer hebben.",
+    "seatsBusy": "Er zijn net te veel spelers uit deze room vertrokken. Probeer het over een paar minuten opnieuw.",
     "unableToJoinRoom": "Kan niet deelnemen aan de room",
     "hostStatusRestored": "Hoststatus hersteld",
     "youAreNowHost": "Jij bent nu de host",

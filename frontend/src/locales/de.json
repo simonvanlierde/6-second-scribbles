@@ -186,6 +186,7 @@
     "connectFailed": "Verbindung fehlgeschlagen. Bitte versuche es erneut.",
     "roundInProgressJoinLater": "Diese Runde läuft bereits. Du kannst in der nächsten Runde einsteigen.",
     "spectatorsFull": "Dieser Raum kann keine weiteren Zuschauer aufnehmen.",
+    "seatsBusy": "Gerade haben zu viele Spieler diesen Raum verlassen. Versuch es in ein paar Minuten noch einmal.",
     "unableToJoinRoom": "Raum konnte nicht betreten werden",
     "hostStatusRestored": "Host-Status wiederhergestellt",
     "youAreNowHost": "Du bist jetzt der Host",

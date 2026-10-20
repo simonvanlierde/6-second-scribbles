@@ -186,6 +186,7 @@
     "connectFailed": "接続に失敗しました。もう一度お試しください。",
     "roundInProgressJoinLater": "このラウンドはすでに進行中です。次のラウンドから参加できます。",
     "spectatorsFull": "このルームはこれ以上観戦者を受け入れられません。",
+    "seatsBusy": "このルームから退出したプレイヤーが多すぎます。数分後にもう一度お試しください。",
     "unableToJoinRoom": "ルームに参加できません",
     "hostStatusRestored": "ホスト権限が復元されました",
     "youAreNowHost": "あなたがホストになりました",

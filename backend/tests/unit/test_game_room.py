@@ -17,7 +17,7 @@ from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import manager as manager_module
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
-from app.rooms.player_lifecycle import ABSENT_BINDING_GRACE_SECONDS, MAX_ABSENT_BINDINGS, ROOM_BUSY_ERROR
+from app.rooms.player_lifecycle import ABSENT_BINDING_GRACE_SECONDS, MAX_ABSENT_BINDINGS, SEATS_BUSY_ERROR
 from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
@@ -1024,7 +1024,7 @@ async def test_absent_player_bindings_are_bounded(make_ws: Callable[..., TestWeb
         )
         await player_lifecycle.remove_player(room, f"visitor-{i}")
 
-    with pytest.raises(ValueError, match=ROOM_BUSY_ERROR):
+    with pytest.raises(ValueError, match=SEATS_BUSY_ERROR):
         await player_lifecycle.add_player(room, LATECOMER, "Late", as_websocket(make_ws()), rejoin_key="late-key")
 
     departed_at = room.metadata.player_departed_at

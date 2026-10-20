@@ -186,6 +186,7 @@
     "connectFailed": "Falha ao conectar. Tente novamente.",
     "roundInProgressJoinLater": "Esta rodada já está em andamento. Você pode entrar na próxima rodada.",
     "spectatorsFull": "Esta sala não aceita mais espectadores.",
+    "seatsBusy": "Muitos jogadores acabaram de sair desta sala. Tente de novo em alguns minutos.",
     "unableToJoinRoom": "Não foi possível entrar na sala",
     "hostStatusRestored": "Status de anfitrião restaurado",
     "youAreNowHost": "Agora você é o anfitrião",

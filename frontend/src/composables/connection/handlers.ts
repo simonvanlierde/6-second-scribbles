@@ -47,7 +47,9 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
       showNotification(
         message.error === "spectators_full"
           ? i18n.global.t("notifications.spectatorsFull")
-          : message.message || i18n.global.t("notifications.unableToJoinRoom"),
+          : message.error === "seats_busy"
+            ? i18n.global.t("notifications.seatsBusy")
+            : message.message || i18n.global.t("notifications.unableToJoinRoom"),
         "error",
       );
       log.error("Join error:", message.message);

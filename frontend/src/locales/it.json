@@ -186,6 +186,7 @@
     "connectFailed": "Connessione non riuscita. Riprova.",
     "roundInProgressJoinLater": "Questo round è già in corso. Puoi entrare al prossimo round.",
     "spectatorsFull": "Questa stanza non può accogliere altri spettatori.",
+    "seatsBusy": "Troppi giocatori hanno appena lasciato questa stanza. Riprova tra qualche minuto.",
     "unableToJoinRoom": "Impossibile entrare nella stanza",
     "hostStatusRestored": "Stato di host ripristinato",
     "youAreNowHost": "Ora sei l’host",

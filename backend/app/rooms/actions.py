@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
 from app.rooms import kick_vote, player_lifecycle, rounds
-from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR, SEATS_BUSY_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
     DrawStrokePartialEvent,
@@ -113,6 +113,8 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
             error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use in another browser or account."
         elif str(exc) == KICKED_ERROR:
             error, message = KICKED_ERROR, "You were removed from this room."
+        elif str(exc) == SEATS_BUSY_ERROR:
+            error, message = SEATS_BUSY_ERROR, "Too many players left this room just now. Try again in a few minutes."
         else:
             error, message = "room_full", str(exc)
         await send_ws_message(

@@ -45,6 +45,15 @@ describe("connection handlers translations", () => {
     expect(showNotification).toHaveBeenCalledWith("This room can't take any more spectators.", "error");
   });
 
+  it("translates a room whose seats are all held instead of showing the server's English", () => {
+    handleServerEvent({ type: "join_error", error: "seats_busy", message: "English text from the server" }, ctx);
+
+    expect(showNotification).toHaveBeenCalledWith(
+      "Too many players left this room just now. Try again in a few minutes.",
+      "error",
+    );
+  });
+
   it("keeps a player in the room when a round is in progress", () => {
     handleServerEvent({ type: "join_error", error: "game_in_progress", message: "" }, ctx);
 

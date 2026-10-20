@@ -186,6 +186,7 @@
     "connectFailed": "連線失敗，請再試一次。",
     "roundInProgressJoinLater": "這個回合已經開始，你可以加入下一回合。",
     "spectatorsFull": "這個房間無法再容納更多觀眾。",
+    "seatsBusy": "剛剛有太多玩家離開了這個房間。請幾分鐘後再試。",
     "unableToJoinRoom": "無法加入房間",
     "hostStatusRestored": "房主身分已恢復",
     "youAreNowHost": "你現在是房主了",

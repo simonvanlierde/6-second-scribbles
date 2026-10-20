@@ -186,6 +186,7 @@
     "connectFailed": "Échec de la connexion. Réessaie.",
     "roundInProgressJoinLater": "Cette manche est déjà en cours. Tu pourras rejoindre la prochaine.",
     "spectatorsFull": "Ce salon ne peut plus accueillir de spectateurs.",
+    "seatsBusy": "Trop de joueurs viennent de quitter ce salon. Réessaie dans quelques minutes.",
     "unableToJoinRoom": "Impossible de rejoindre le salon",
     "hostStatusRestored": "Statut d’hôte restauré",
     "youAreNowHost": "Tu es maintenant l’hôte",
