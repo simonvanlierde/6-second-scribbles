@@ -1,10 +1,11 @@
-"""Tests for random room join functionality."""
+"""Tests for matching a public room, as quick play does, and the privacy toggle that hides one."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
+from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms.manager import GameRoom, PlayerInfo, room_manager
 from tests.constants import MEDIUM, START_GAME
@@ -13,36 +14,26 @@ from tests.helpers import JoinedPlayer, joined_players, receive_json, send_json
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
-DETAIL = "detail"
-NO_AVAILABLE = "no available"
+
+def _find_public_room() -> str | None:
+    return room_manager.find_random_public_room(max_players=settings.max_players)
 
 
-class TestRandomRoomJoin:
-    """Test suite for random room join feature."""
+class TestFindPublicRoom:
+    """Test suite for public room matching."""
 
-    def test_no_available_rooms(self, test_client: TestClient) -> None:
+    def test_no_available_rooms(self) -> None:
         """Test when no public rooms are available."""
-        response = test_client.get("/api/rooms/random")
-
-        assert response.status_code == 404
-        data = response.json()
-        assert DETAIL in data
-        assert NO_AVAILABLE in data[DETAIL].lower()
+        assert _find_public_room() is None
 
     def test_find_public_room(self, test_client: TestClient) -> None:
-        """Test that a public room waiting for players is returned by random join."""
+        """Test that a public room waiting for players is matched."""
         room_id = "CODE22"
         with joined_players(test_client, room_id, [JoinedPlayer("player1", "Test Player")]):
-            response = test_client.get("/api/rooms/random")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["room_code"] == room_id
-            assert data["player_count"] == 1
-            assert data["max_players"] == 10
+            assert _find_public_room() == room_id
 
     def test_private_room_not_returned(self, test_client: TestClient) -> None:
-        """Test that private rooms are excluded by random join."""
+        """Test that private rooms are not matched."""
         room_id = "CODE19"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]):
@@ -50,11 +41,10 @@ class TestRandomRoomJoin:
             assert room is not None
             room.metadata.is_private = True
 
-            response = test_client.get("/api/rooms/random")
-            assert response.status_code == 404
+            assert _find_public_room() is None
 
-    def test_full_room_not_returned(self, test_client: TestClient) -> None:
-        """Test that full rooms are not returned by random join."""
+    def test_full_room_not_returned(self) -> None:
+        """Test that full rooms are not matched."""
         room_id = "CODE05"
         room = GameRoom(room_id)
         for i in range(10):
@@ -67,11 +57,10 @@ class TestRandomRoomJoin:
         room.host_id = "player-0"
         room_manager.rooms[room_id] = room
 
-        response = test_client.get("/api/rooms/random")
-        assert response.status_code == 404
+        assert _find_public_room() is None
 
     def test_mid_game_room_not_returned(self, test_client: TestClient) -> None:
-        """Test that rooms in the middle of a game are not returned by random join."""
+        """Test that rooms in the middle of a game are not matched."""
         room_id = "CODE08"
 
         with joined_players(
@@ -86,26 +75,25 @@ class TestRandomRoomJoin:
             assert room is not None
             room.metadata.game_phase = GamePhase.DRAWING
 
-            response = test_client.get("/api/rooms/random")
-            assert response.status_code == 404
+            assert _find_public_room() is None
 
 
 class TestPrivacyToggle:
     """Test suite for room privacy toggle."""
 
     def test_host_can_set_privacy(self, test_client: TestClient) -> None:
-        """Test that the host can toggle room privacy and it affects random join."""
+        """Test that the host can toggle room privacy and it hides the room from matching."""
         room_id = "CODE17"
 
         with joined_players(test_client, room_id, [JoinedPlayer("host1", "Host")]) as (ws,):
-            response = test_client.get("/api/rooms/random")
-            assert response.status_code == 200
-            assert response.json()["room_code"] == room_id
+            assert _find_public_room() == room_id
 
             send_json(ws, {"type": "privacy_changed", "isPrivate": True})
+            # The server sends nothing back, so a state request orders the check after the change.
+            send_json(ws, {"type": "request_game_state", "playerId": "host1"})
+            receive_json(ws)
 
-            response = test_client.get("/api/rooms/random")
-            assert response.status_code == 404
+            assert _find_public_room() is None
 
     def test_non_host_cannot_set_privacy(self, test_client: TestClient) -> None:
         """Test that a non-host player cannot toggle room privacy."""

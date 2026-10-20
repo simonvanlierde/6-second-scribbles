@@ -15,10 +15,3 @@ class UserResponse(BaseModel):
     display_name: str | None = Field(alias="displayName")
     preferred_locale: str = Field(alias="preferredLocale")
     is_guest: bool = Field(alias="isGuest")
-
-
-class UpdatePreferencesRequest(BaseModel):
-    """Request body for updating user preferences."""
-
-    preferred_locale: str | None = Field(default=None, alias="preferredLocale")
-    display_name: str | None = Field(default=None, alias="displayName")

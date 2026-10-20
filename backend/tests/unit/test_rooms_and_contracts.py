@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from fastapi import HTTPException
 
 from app.core.types import GamePhase
 from app.rooms import actions as room_actions
@@ -250,9 +249,6 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
     existing_status = room_router.get_room_status(room_id="ROOM01")
     monkeypatch.setattr(room_router.room_manager, "get_room", Mock(return_value=None))
     missing_status = room_router.get_room_status(room_id="ROOM02")
-
-    with pytest.raises(HTTPException, match="No available public rooms found"):
-        await room_router.get_random_joinable_room()
 
     assert created.room_code == GENERATED_ROOM_CODE
     assert existing_status.exists is True

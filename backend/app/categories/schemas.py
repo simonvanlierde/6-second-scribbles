@@ -7,15 +7,6 @@ from pydantic import BaseModel, Field
 from app.core.types import Difficulty, LanguageCode
 
 
-class CategoryListItem(BaseModel):
-    """Compact localized category representation used by list endpoints."""
-
-    id: int
-    name: str
-    difficulty: Difficulty
-    locale: LanguageCode | None
-
-
 class SelectedCategorySet(BaseModel):
     """One selected localized category set for game setup."""
 

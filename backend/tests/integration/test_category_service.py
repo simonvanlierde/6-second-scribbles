@@ -21,39 +21,6 @@ FALLBACK = "Fallback"
 class TestCategoryService:
     """Focused tests for CategoryService methods."""
 
-    async def test_list_categories_filters_by_difficulty_and_language(self, db_session: AsyncSession) -> None:
-        """Filter categories by difficulty and language."""
-        db_session.add(
-            Category(
-                difficulty="easy",
-                source="system",
-                available_locales=["en"],
-                translations={"en": {"name": "Easy EN"}},
-            )
-        )
-        db_session.add(
-            Category(
-                difficulty="easy",
-                source="system",
-                available_locales=["fr"],
-                translations={"fr": {"name": "Facile FR"}},
-            )
-        )
-        db_session.add(
-            Category(
-                difficulty="hard",
-                source="system",
-                available_locales=["en"],
-                translations={"en": {"name": "Hard EN"}},
-            )
-        )
-        await db_session.commit()
-
-        response = await category_service.list_categories(db_session, difficulty="easy", language="en")
-
-        assert len(response) == 1
-        assert [category.name for category in response] == ["Easy EN"]
-
     @pytest.mark.usefixtures("_deterministic_sample")
     async def test_select_category_sets_returns_localized_items(self, db_session: AsyncSession) -> None:
         """Return localized category sets with alternatives."""

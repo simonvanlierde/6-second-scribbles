@@ -31,35 +31,6 @@
         "title": "AppInfoResponse",
         "type": "object"
       },
-      "CategoryListItem": {
-        "description": "Compact localized category representation used by list endpoints.",
-        "properties": {
-          "difficulty": {
-            "$ref": "#/components/schemas/Difficulty"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "locale": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/LanguageCode"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": ["id", "name", "difficulty", "locale"],
-        "title": "CategoryListItem",
-        "type": "object"
-      },
       "CreateRoomResponse": {
         "description": "Response for newly created room.",
         "properties": {
@@ -184,26 +155,6 @@
         "title": "QuickPlayResponse",
         "type": "object"
       },
-      "RandomRoomResponse": {
-        "description": "Response for finding a random joinable room.",
-        "properties": {
-          "max_players": {
-            "title": "Max Players",
-            "type": "integer"
-          },
-          "player_count": {
-            "title": "Player Count",
-            "type": "integer"
-          },
-          "room_code": {
-            "title": "Room Code",
-            "type": "string"
-          }
-        },
-        "required": ["room_code", "player_count", "max_players"],
-        "title": "RandomRoomResponse",
-        "type": "object"
-      },
       "RegisterRequest": {
         "description": "Request body for account registration.",
         "properties": {
@@ -306,35 +257,6 @@
         },
         "required": ["status", "total_rooms", "active_rooms", "hibernated_rooms", "empty_rooms", "total_players"],
         "title": "StatsResponse",
-        "type": "object"
-      },
-      "UpdatePreferencesRequest": {
-        "description": "Request body for updating user preferences.",
-        "properties": {
-          "displayName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Displayname"
-          },
-          "preferredLocale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preferredlocale"
-          }
-        },
-        "title": "UpdatePreferencesRequest",
         "type": "object"
       },
       "UserResponse": {
@@ -596,75 +518,6 @@
         "tags": ["auth"]
       }
     },
-    "/api/categories": {
-      "get": {
-        "description": "Get all categories, optionally filtered by difficulty and language.",
-        "operationId": "get_categories_api_categories_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "difficulty",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/Difficulty"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Difficulty"
-            }
-          },
-          {
-            "in": "query",
-            "name": "language",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/LanguageCode"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "en",
-              "title": "Language"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/CategoryListItem"
-                  },
-                  "title": "Response Get Categories Api Categories Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Categories",
-        "tags": ["categories"]
-      }
-    },
     "/api/categories/locales": {
       "get": {
         "description": "Get supported locales with category coverage counts.",
@@ -785,64 +638,6 @@
         "tags": ["users"]
       }
     },
-    "/api/me/preferences": {
-      "patch": {
-        "description": "Update the current user's basic profile preferences.",
-        "operationId": "update_preferences_api_me_preferences_patch",
-        "parameters": [
-          {
-            "in": "cookie",
-            "name": "scribbles_session",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Scribbles Session"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePreferencesRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Update Preferences",
-        "tags": ["users"]
-      }
-    },
     "/api/rooms/": {
       "post": {
         "description": "Create a new room with a unique alphanumeric code and reserve it in Redis.\n\nThis endpoint attempts several times to generate a code and atomically set the\nRedis key, so a new code never reuses one still held in Redis. On success it\ncreates the in-memory room and persists initial state. Rooms live in this\nprocess's memory, so the backend must run as a single worker: another worker\nwould not see the room created here.",
@@ -880,26 +675,6 @@
           }
         },
         "summary": "Quick Play",
-        "tags": ["rooms"]
-      }
-    },
-    "/api/rooms/random": {
-      "get": {
-        "description": "Find a random public room that's available to join.",
-        "operationId": "get_random_room_api_rooms_random_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RandomRoomResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Random Room",
         "tags": ["rooms"]
       }
     },

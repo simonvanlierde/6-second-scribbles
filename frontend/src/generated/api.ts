@@ -21,16 +21,6 @@ export const AppInfoResponseSchema = z
   .describe("Root endpoint response.");
 export type AppInfoResponse = z.infer<typeof AppInfoResponseSchema>;
 
-export const CategoryListItemSchema = z
-  .object({
-    difficulty: z.enum(["easy", "medium", "hard"]),
-    id: z.number().int(),
-    locale: z.union([z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/), z.null()]),
-    name: z.string(),
-  })
-  .describe("Compact localized category representation used by list endpoints.");
-export type CategoryListItem = z.infer<typeof CategoryListItemSchema>;
-
 export const CreateRoomResponseSchema = z
   .object({ room_code: z.string() })
   .describe("Response for newly created room.");
@@ -96,11 +86,6 @@ export const QuickPlayResponseSchema = z
   .describe("Response for quick-play: a joinable room, existing or freshly created.");
 export type QuickPlayResponse = z.infer<typeof QuickPlayResponseSchema>;
 
-export const RandomRoomResponseSchema = z
-  .object({ max_players: z.number().int(), player_count: z.number().int(), room_code: z.string() })
-  .describe("Response for finding a random joinable room.");
-export type RandomRoomResponse = z.infer<typeof RandomRoomResponseSchema>;
-
 export const RegisterRequestSchema = z
   .object({
     displayName: z.union([z.string().max(80), z.null()]).optional(),
@@ -143,14 +128,6 @@ export const StatsResponseSchema = z
   .describe("Server statistics response.");
 export type StatsResponse = z.infer<typeof StatsResponseSchema>;
 
-export const UpdatePreferencesRequestSchema = z
-  .object({
-    displayName: z.union([z.string(), z.null()]).optional(),
-    preferredLocale: z.union([z.string(), z.null()]).optional(),
-  })
-  .describe("Request body for updating user preferences.");
-export type UpdatePreferencesRequest = z.infer<typeof UpdatePreferencesRequestSchema>;
-
 export const UserResponseSchema = z
   .object({
     displayName: z.union([z.string(), z.null()]),
@@ -173,7 +150,6 @@ export type ValidationError = z.infer<typeof ValidationErrorSchema>;
 
 export const apiSchemaNames = [
   "AppInfoResponse",
-  "CategoryListItem",
   "CreateRoomResponse",
   "Difficulty",
   "GamePhase",
@@ -183,11 +159,9 @@ export const apiSchemaNames = [
   "LocaleAvailabilityItem",
   "LoginRequest",
   "QuickPlayResponse",
-  "RandomRoomResponse",
   "RegisterRequest",
   "RoomStatusResponse",
   "StatsResponse",
-  "UpdatePreferencesRequest",
   "UserResponse",
   "ValidationError",
 ] as const;

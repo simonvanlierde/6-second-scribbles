@@ -16,14 +16,13 @@ from app.rooms import kick_vote as kick_vote_service
 from app.rooms import lifecycle as room_lifecycle_service
 from app.rooms import player_lifecycle as player_lifecycle_service
 from app.rooms import rounds as round_service
-from app.rooms import router as room_service
 from app.rooms import scheduler as scheduler_service
 from app.rooms import ws_router as websocket_service
-from app.rooms.manager import GameRoom, RoomManager, room_manager
+from app.rooms.manager import GameRoom, RoomManager
 from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateEvent
 from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from tests.constants import ROOM_42, ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
+from tests.constants import ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -33,20 +32,6 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from tests.support import TestWebSocket
-
-
-class TestRoomService:
-    """Focused tests for RoomService methods that don't require WebSocket context."""
-
-    async def test_get_random_joinable_room_returns_counts(self, make_ws: Callable[..., TestWebSocket]) -> None:
-        """Test that get_random_joinable_room returns the correct player count for a room with players."""
-        room = room_manager.get_or_create_room(ROOM_42)
-        await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
-
-        response = await room_service.get_random_joinable_room()
-
-        assert response.room_code == ROOM_42
-        assert response.player_count == 1
 
 
 class TestKickVoteService:

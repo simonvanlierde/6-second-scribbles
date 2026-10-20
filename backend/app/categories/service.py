@@ -5,17 +5,14 @@ from __future__ import annotations
 import random
 from collections import defaultdict
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
-from sqlalchemy import cast as sa_cast
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import selectinload
 
 from app.categories.models import Category, CategoryPrompt, Prompt, normalize_locale_code
 from app.categories.schemas import (
-    CategoryListItem,
     CategorySelectionResponse,
     LocaleAvailabilityItem,
     SelectedCategorySet,
@@ -159,38 +156,6 @@ def _build_selected_category_set(
         items=items,
         alternatives=alternatives,
     )
-
-
-async def list_categories(
-    db: AsyncSession,
-    *,
-    difficulty: Difficulty | None,
-    language: LanguageCode | None,
-) -> list[CategoryListItem]:
-    """List categories filtered by denormalized available_locales field."""
-    requested_locale = _normalize_locale(language)
-
-    # Use Postgres JSONB '@>' operator for fast intersection check
-    query = select(Category).where(sa_cast(Category.available_locales, JSONB).contains([requested_locale]))
-
-    if difficulty:
-        query = query.where(Category.difficulty == difficulty.lower())
-
-    categories = list((await db.execute(query)).scalars().all())
-
-    payload: list[CategoryListItem] = []
-    for c in categories:
-        translation = c.translations.get(requested_locale)
-        if translation:
-            payload.append(
-                CategoryListItem(
-                    id=c.id,
-                    name=translation.get("name", ""),
-                    difficulty=cast("Difficulty", c.difficulty),
-                    locale=requested_locale,
-                )
-            )
-    return payload
 
 
 async def list_locale_availability(

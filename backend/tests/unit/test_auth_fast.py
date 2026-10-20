@@ -80,41 +80,6 @@ async def test_register_claims_guest_user_fast(
     enforce_rate_limit.assert_awaited_once()
 
 
-async def test_update_preferences_updates_current_user_fast(
-    async_client: AsyncClient,
-) -> None:
-    """Preference updates can stay on the fast app test path."""
-    db = AsyncMock()
-    current_user = SimpleNamespace(
-        id="user-1",
-        username="charlie",
-        display_name="Before",
-        preferred_locale="en",
-        password_hash=AUTHENTICATED_MARKER,
-    )
-
-    async def override_db() -> AsyncIterator[AsyncMock]:
-        yield db
-
-    application.dependency_overrides[database.get_async_session] = override_db
-    application.dependency_overrides[auth_dependencies.get_current_user] = lambda: current_user
-
-    response = await async_client.patch(
-        "/api/me/preferences",
-        json={"preferredLocale": "nl", "displayName": "Charlie"},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "id": "user-1",
-        "username": "charlie",
-        "displayName": "Charlie",
-        "preferredLocale": "nl",
-        "isGuest": False,
-    }
-    db.commit.assert_awaited_once()
-
-
 async def test_login_rejects_invalid_password_fast(
     async_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
