@@ -3,6 +3,8 @@
     "leave": "Verlassen",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
+    "connecting": "Verbinden…",
+    "reconnecting": "Verbindung wird wiederhergestellt…",
     "color": "Farbe",
     "host": "Host",
     "copied": "Kopiert!",

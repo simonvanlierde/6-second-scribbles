@@ -3,6 +3,8 @@
     "leave": "나가기",
     "cancel": "취소",
     "confirm": "확인",
+    "connecting": "연결 중…",
+    "reconnecting": "다시 연결 중…",
     "color": "색상",
     "host": "방장",
     "copied": "복사됐어요!",

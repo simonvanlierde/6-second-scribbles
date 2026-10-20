@@ -3,6 +3,8 @@
     "leave": "離開",
     "cancel": "取消",
     "confirm": "確認",
+    "connecting": "連線中…",
+    "reconnecting": "重新連線中…",
     "color": "顏色",
     "host": "房主",
     "copied": "已複製！",

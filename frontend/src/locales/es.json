@@ -3,6 +3,8 @@
     "leave": "Salir",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
+    "connecting": "Conectando…",
+    "reconnecting": "Reconectando…",
     "color": "Color",
     "host": "Anfitrión",
     "copied": "¡Copiado!",
