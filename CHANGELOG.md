@@ -6,32 +6,50 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- Rolling back to 0.2.x drops every open room: rooms saved by this release carry fields that 0.2.x refuses to load. The database has no new migrations since 0.2.1 and rolls back safely.
+- The JSONB translations migration (`b2a7f484d1a9`) can no longer be downgraded. Restore a backup or re-seed instead.
+- Migrations now give up after waiting 3 s for a lock or running one statement for 60 s, so a deploy cannot stall the backend that is still serving. Rerun the deploy if one gives up.
+- The backend runs a single worker, and a network may hold at most 5 open rooms (`MAX_ROOMS_PER_CLIENT`).
+- The `AUTH_REGISTER_*`, `AUTH_LOGIN_*` and `CATEGORY_MUTATION_*` settings are gone. Remove them from `.env` files.
+- Deploy with `docker compose build --pull`, `docker compose pull --ignore-buildable`, then `docker compose up -d` (`just up-prod` does this), so base and service images pick up security fixes.
+
 ### Added
 
 - A logo, favicon, and Apple touch icon.
 - A `robots.txt` that keeps crawlers off the API, the WebSocket, room pages, and the internal design-system page.
 - A Content Security Policy on the frontend: scripts, styles, fonts, and API and WebSocket calls are limited to the site's own origin.
-- `seed_data` modes: `--append` adds only new categories, `--overwrite` replaces the system categories and prompts. A `database-seed` Compose service runs the seeder on demand.
+- `seed_data` modes: `--append` adds only new categories, `--overwrite` updates the system categories and prompts to match the seed file. A `database-seed` Compose service runs the seeder on demand.
 - JSON access logs from the frontend's Caddy server, recording the real visitor IP behind the Cloudflare tunnel.
 - End-to-end Playwright tests in CI, against Postgres and Redis.
 - A WebSocket load test, `just loadtest`, and [docs/capacity.md](docs/capacity.md) with its result: about 80 rooms of 6 busy players on one backend under the production limits.
+- CI builds the production images, starts the production stack and checks its health and hardening, and scans the images with Trivy. A weekly run fails on any new fixable high or critical finding. CI also fails when the models change without a migration.
+- OCI labels (source, title, description, licence) on both images.
+- Redis keeps its data in a volume, so logins and open rooms survive a recreated Redis container.
 
 ### Changed
 
 - Spectators now see a game live, the moment something happens, instead of catching up every 2 seconds. A room takes up to 20 spectators, and they never count toward the player limit.
 - Server logs no longer keep full visitor IPs: Caddy masks them to the /24 (IPv4) or /48 (IPv6) network, and the backend no longer writes its own access log or the visitor IP of each WebSocket connection. The About dialog now says what is stored and for how long.
 - Production containers rotate their logs at 3 files of 10 MB each, so Caddy's access log, which holds visitor IPs, no longer grows without limit.
-- Guest accounts are deleted once their login session has expired (30 days by default), on backend startup and once a day after that. Registered accounts are kept.
+- Guest accounts are deleted once their login session has expired (30 days by default), on backend startup and once a day after that.
 - **Breaking:** `seed_data` without a flag no longer replaces existing system categories. On a database that already has them it makes no changes; pass `--overwrite` for the old behaviour.
 - The server only accepts room codes of 6 letters and digits, the kind it hands out. A WebSocket to any other code is closed before it can create a room, and the room status endpoint answers 422.
 - The health endpoint and the OpenAPI document report the release version instead of a hardcoded 2.0.0.
 - The frontend build image runs Node 26 on Debian trixie.
 - Backend dependency updates.
 - The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
+- `start_game` and `settings_update` broadcast the room's stored settings instead of echoing the client's message, so a partial settings change shows everyone the full settings.
+- When a network already has too many open rooms or creates rooms too fast, Create room and Quick play say so and suggest closing one, joining a friend's room or waiting a few minutes, instead of "Please try again".
+- Contract generation writes one JSON Schema file per direction instead of one per event.
 
 ### Removed
 
 - The unused `POST /api/rooms/{room_id}/category-selection` endpoint. It needed no login, had no rate limit, and could return the whole prompt bank.
+- The account system: `POST /api/auth/register`, `/login` and `/logout`, and the `argon2-cffi` dependency. No screen used them. Guest sessions are unchanged.
+- The unused `GET /api/rooms/random`, `GET /api/categories` and `PATCH /api/me/preferences` endpoints.
+- The unused `room_custom_categories_update` WebSocket event and `customCategoryIds` in `room_state`, and the demo account in the local seed data.
 
 ### Fixed
 
@@ -42,20 +60,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The production Redis service now restarts after a crash or host reboot.
 - Local `dev-*` and `down-clean` recipes no longer act on the production stack when `COMPOSE_FILE` points at it.
 - The page language (`<html lang>`) now follows the chosen language instead of staying English, so screen readers read the text with the right voice and pronunciation.
-- A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
 - Rooms nobody ever joined, such as a created code left unused, and rooms restored from Redis after a restart never expired, so they piled up until the 500-room cap refused new rooms. Both now expire after the normal 5-minute empty-room TTL.
 - Room-creation and login rate limits in production counted every visitor as one client: the backend read the last `X-Forwarded-For` entry, which Caddy filled with the Cloudflare tunnel container's address. Caddy now forwards the visitor's own IP.
-- Any player could take over a guest's seat, and with it their score and prompts, by joining with that guest's player id, which every roster shows. The browser now keeps a private rejoin key next to its player id, and the server refuses a join for a known seat unless it carries the key the seat's first join used.
-- Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
 - A restart dropped every saved room when a single one could not be read, for example a room saved by an older release. Unreadable rooms are now skipped one at a time and the rest are restored.
 - A round started by the server's timer cancelled itself as it started: the round was not saved after it began, and the server's own drawing timer was never set. Rounds still moved on because each browser presses Finish when its timer runs out, but a player whose browser stayed connected without doing that, such as a locked phone, held the whole room in the drawing phase.
-- A modified client could deal its own cards or force the guessing phase: the host-only `start_round` and `start_guessing` commands still worked, although the app never sends them. They are removed, together with the unused `round_complete` and `game_complete` client events, and rounds are now dealt by the server only.
-- A refresh in the lobby released the player's seat, so someone else could claim their player id with a new rejoin key in the moment they were gone, and lock them out. The seat stays bound to its owner's key until they leave on purpose or are kicked; a room keeps these bindings for at most 40 departed players.
-- During a Redis outage the backend wrote session ids, which work as 30-day login tokens, into its error log. It no longer logs them.
-- One player could freeze the server for every room by filling the lobby drawpad: each room snapshot could grow to tens of MB. The shared doodle now keeps at most 20,000 points (the oldest strokes go first), names, ids and stroke styles have length limits, and each connection gets at most 5 full room snapshots per 5 seconds.
-- One player whose connection stopped reading could hold up every message and timer in their room. A send now gives up after 5 seconds, and that player is disconnected so their browser reconnects.
-- A player voted out of a public room, or removed by the host, could rejoin straight away. The room now refuses that player, and their account if they were signed in, until it closes.
-- One visitor could fill all 500 rooms and lock everyone else out with "Server at capacity". A network may now hold at most 5 open rooms it created (IPv6 addresses count per /64); players and sockets are not limited, so a household on one Wi-Fi can still play together.
 - In Safari the favicon lost its colours: Safari checks the `<style>` inside an SVG favicon against the page's Content Security Policy, which blocks inline styles. The favicon now has no `<style>`: a light and a dark SVG with fixed colours, picked by the browser's colour scheme.
 - A browser set to Chinese (for example `zh-CN` or `zh-TW`) started in English, because only the base language `zh` was kept and the app has no plain `zh`. It now picks Simplified or Traditional Chinese from the browser's language tag.
 - In dark mode the drawing canvas was dark, so the default black pen was nearly invisible, and drawings made in dark mode showed up as dark tiles for everyone else. The canvas is now light paper in both themes, so every drawing looks the same to every player. The white pen now draws in paper colour in both themes.
@@ -67,6 +75,28 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - In a short browser window on a laptop, the Finish button sat below the word card, out of view, until the player scrolled the card. It now stays at the bottom of the card column.
 - Someone turned away because a room already had 20 spectators saw the server's English message whatever their language. The message is now translated.
 - On a phone the Finish button sat below the screen during drawing, under the word list and the canvas. It now stays pinned to the bottom. Buttons that were small to tap on a touch screen (the lobby doodle colours and sizes, the settings steppers, Kick player and Advanced Settings) are now at least 44 px, and so are the words on the drawing card on larger screens.
+- Scoring treated a guess differently on a second pass when an accent mark sat next to a space, and counted "s", "es" and "ing" as matches for each other.
+- In dark mode the winner's name and the "Game stats" heading were unreadable on the results screen, the selected brush size showed no dot, the lobby's "Room code" label was faint, and drawing thumbnails had dark bars around them.
+- The ready tick in the game header wrapped onto its own line.
+- The home page "How to Play" and "About" links and the settings language picker were 40 px tall; they are now 44 px.
+- The "Connecting…" and "Reconnecting…" banner was English in every language.
+
+### Security
+
+- A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
+- Any player could take over a guest's seat, and with it their score and prompts, by joining with that guest's player id, which every roster shows. The browser now keeps a private rejoin key next to its player id, and the server refuses a join for a known seat unless it carries the key the seat's first join used.
+- Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
+- A modified client could deal its own cards or force the guessing phase: the host-only `start_round` and `start_guessing` commands still worked, although the app never sends them. They are removed, together with the unused `round_complete` and `game_complete` client events, and rounds are now dealt by the server only.
+- A refresh in the lobby released the player's seat, so someone else could claim their player id with a new rejoin key in the moment they were gone, and lock them out. The seat stays bound to its owner's key until they leave on purpose or are kicked; a room keeps these bindings for at most 40 departed players.
+- During a Redis outage the backend wrote session ids, which work as 30-day login tokens, into its error log. It no longer logs them.
+- One player could freeze the server for every room by filling the lobby drawpad: each room snapshot could grow to tens of MB. The shared doodle now keeps at most 20,000 points (the oldest strokes go first), names, ids and stroke styles have length limits, and each connection gets at most 5 full room snapshots per 5 seconds.
+- One player whose connection stopped reading could hold up every message and timer in their room. A send now gives up after 5 seconds, and that player is disconnected so their browser reconnects.
+- A player voted out of a public room, or removed by the host, could rejoin straight away. The room now refuses that player, and their account if they were signed in, until it closes.
+- One visitor could fill all 500 rooms and lock everyone else out with "Server at capacity". A network may now hold at most 5 open rooms it created (IPv6 addresses count per /64); players and sockets are not limited, so a household on one Wi-Fi can still play together.
+- The server now rejects game settings outside the lobby's limits (1 to 10 rounds, 15 to 180 s timers) with a protocol error. Before, a modified client could set a million rounds or a 1 s timer.
+- A burst of throwaway joins could push out a guest's saved seat in the lobby and let someone else take it. Seats of players who left in the last 10 minutes are now kept; while 40 of them are held, new players are asked to try again in a few minutes.
+- The frontend image moves to Caddy 2.11 on Alpine 3.23 and installs Alpine updates at build time, which fixes 6 critical and 93 high findings in its base. The backend image no longer contains pip or curl; its healthcheck uses Python.
+- Production containers run with read-only root file systems, no Linux capabilities and `no-new-privileges`; the database also gets `no-new-privileges` and a 512-process limit.
 
 ## [0.2.1] - 2026-07-06
 
