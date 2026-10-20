@@ -155,6 +155,10 @@ const { t } = useI18n();
   background: var(--color-ink);
   border-radius: 50%;
 }
+/* The yellow active fill stays light in dark mode, so the dot needs fixed dark ink. */
+.brush--active .brush__dot {
+  background: var(--color-ink-fixed);
+}
 
 /* Compact variant for the lobby's smaller doodle pad — keeps colors + sizes +
    clear on a single row in the narrower card. */

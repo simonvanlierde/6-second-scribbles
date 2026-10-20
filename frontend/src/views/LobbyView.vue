@@ -367,7 +367,6 @@ function toggleRoomPadVisibility() {
 .lobby-code__label {
   font-family: var(--font-body);
   font-size: var(--text-label-md);
-  opacity: 0.7;
 }
 .lobby-code__value {
   font-size: 1.2rem;

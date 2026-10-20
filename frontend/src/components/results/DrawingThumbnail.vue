@@ -67,7 +67,7 @@ watch(
 .thumb__stage {
   position: relative;
   aspect-ratio: 4 / 3;
-  background: var(--color-paper);
+  background: var(--color-drawing-paper);
   border: 2.5px solid var(--color-ink);
   border-radius: var(--r-card);
   box-shadow: var(--shadow-card);

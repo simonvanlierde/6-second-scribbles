@@ -40,7 +40,8 @@
   h6 {
     font-family: var(--font-display);
     font-weight: 700;
-    color: var(--color-text);
+    /* Inherit so a heading takes its card's ink (e.g. --color-ink-fixed on light cards in dark mode). */
+    color: inherit;
   }
   h1 {
     font-size: var(--text-display-md);
