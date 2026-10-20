@@ -46,7 +46,7 @@ updates:
     cooldown:
       default-days: 7
 
-  # Base images in the Dockerfiles and the service images in compose. Majors stay
+  # Base images in both Docker builds and the service images in compose. Majors stay
   # manual: a new Postgres major needs a dump and restore.
   - package-ecosystem: docker
     directories: [ "/backend", "/frontend" ]
