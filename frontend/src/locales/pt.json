@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Falha ao criar a sala. Tente novamente.",
+    "tooManyRooms": "Há salas demais abertas na sua rede. Feche uma, entre na sala de um amigo ou espere alguns minutos.",
     "drawingTooLarge": "Seu desenho era grande demais para ser enviado, então os outros jogadores não podem vê-lo.",
     "enterRoomCode": "Insira um código de sala",
     "invalidRoomCode": "O código da sala deve ter 6 caracteres (A–Z, 0–9)",

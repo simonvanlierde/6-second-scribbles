@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "创建房间失败，请重试。",
+    "tooManyRooms": "你的网络开启的房间太多了。请关闭一个、加入朋友的房间，或等几分钟再试。",
     "drawingTooLarge": "你的画太大，无法发送，其他玩家看不到它。",
     "enterRoomCode": "请输入房间码",
     "invalidRoomCode": "房间码必须为 6 位字符（A–Z, 0–9）",

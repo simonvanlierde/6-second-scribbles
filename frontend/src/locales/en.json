@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Failed to create room. Please try again.",
+    "tooManyRooms": "Too many rooms are open from your network. Close one, join a friend's room, or wait a few minutes.",
     "drawingTooLarge": "Your drawing was too big to send, so the other players can't see it.",
     "enterRoomCode": "Please enter a room code",
     "invalidRoomCode": "Room code must be 6 characters (A–Z, 0–9)",

@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Nie udało się utworzyć pokoju. Spróbuj ponownie.",
+    "tooManyRooms": "Z twojej sieci otwarto zbyt wiele pokoi. Zamknij jeden, dołącz do pokoju znajomego albo odczekaj kilka minut.",
     "drawingTooLarge": "Twój rysunek był za duży, by go wysłać, więc inni gracze go nie widzą.",
     "enterRoomCode": "Wpisz kod pokoju",
     "invalidRoomCode": "Kod pokoju musi mieć 6 znaków (A–Z, 0–9)",

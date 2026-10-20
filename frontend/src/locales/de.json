@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Raum konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "tooManyRooms": "Aus deinem Netzwerk sind zu viele Räume offen. Schließ einen, tritt dem Raum eines Freundes bei oder warte ein paar Minuten.",
     "drawingTooLarge": "Deine Zeichnung war zu groß zum Senden, deshalb sehen die anderen sie nicht.",
     "enterRoomCode": "Bitte gib einen Raumcode ein",
     "invalidRoomCode": "Der Raumcode muss 6 Zeichen lang sein (A–Z, 0–9)",

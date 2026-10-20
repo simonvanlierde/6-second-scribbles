@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "建立房間失敗，請再試一次。",
+    "tooManyRooms": "你的網路開啟的房間太多了。請關閉一個、加入朋友的房間，或等幾分鐘再試。",
     "drawingTooLarge": "你的畫太大，無法傳送，其他玩家看不到它。",
     "enterRoomCode": "請輸入房間代碼",
     "invalidRoomCode": "房間代碼必須為 6 個字元（A–Z, 0–9）",

@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Échec de la création du salon. Réessaie.",
+    "tooManyRooms": "Trop de salons sont ouverts depuis ton réseau. Ferme-en un, rejoins le salon d’un ami ou attends quelques minutes.",
     "drawingTooLarge": "Ton dessin était trop lourd pour être envoyé, les autres joueurs ne le voient donc pas.",
     "enterRoomCode": "Saisis un code de salon",
     "invalidRoomCode": "Le code du salon doit comporter 6 caractères (A–Z, 0–9)",

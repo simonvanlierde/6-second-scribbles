@@ -178,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "방을 만들지 못했어요. 다시 시도해 주세요.",
+    "tooManyRooms": "이 네트워크에서 열린 방이 너무 많아요. 방을 하나 닫거나, 친구의 방에 참여하거나, 몇 분 후에 다시 시도해 주세요.",
     "drawingTooLarge": "그림이 너무 커서 보내지 못했어요. 다른 플레이어에게는 보이지 않아요.",
     "enterRoomCode": "방 코드를 입력해 주세요",
     "invalidRoomCode": "방 코드는 6자여야 해요 (A–Z, 0–9)",
