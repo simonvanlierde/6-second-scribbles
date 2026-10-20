@@ -49,7 +49,7 @@ class RoomMetadataState(BaseModel):
 
     # Per-player bindings kept for as long as the player holds a seat.
     SEAT_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {"player_locales", "player_user_ids", "player_rejoin_keys", "player_seats"},
+        {"player_locales", "player_user_ids", "player_rejoin_keys", "player_seats", "player_departed_at"},
     )
     # Cleared at the start of every round.
     ROUND_FIELDS: ClassVar[frozenset[str]] = frozenset(
@@ -105,6 +105,10 @@ class RoomMetadataState(BaseModel):
     # Stable display order: each player keeps the seat assigned on first join,
     # so a reconnect doesn't shuffle them to the end of the roster.
     player_seats: dict[str, int] = Field(default_factory=dict)
+    # When each departed player who still holds a binding left (unix seconds).
+    # Rooms saved before this field load with none and get stamped on the next trim.
+    # Left out of the JSON while empty, so such a room still loads in the release before.
+    player_departed_at: dict[str, float] = Field(default_factory=dict, exclude_if=lambda v: not v)
 
     def forget_player(self, player_id: str, *, forget_identity: bool) -> None:
         """Drop a player from every seat and round field.
@@ -118,8 +122,7 @@ class RoomMetadataState(BaseModel):
         self.player_locales.pop(player_id, None)
         self.player_seats.pop(player_id, None)
         if forget_identity:
-            self.player_user_ids.pop(player_id, None)
-            self.player_rejoin_keys.pop(player_id, None)
+            self._drop_identity(player_id)
         # Dropping the assignment matters most: the rejoin gate uses it to
         # recognise round participants, so a kicked player could otherwise
         # rejoin the active round.
@@ -128,15 +131,30 @@ class RoomMetadataState(BaseModel):
         self.submitted_players.discard(player_id)
         self.ready_players.discard(player_id)
 
-    def trim_absent_identities(self, present: set[str], *, keep: int) -> None:
-        """Keep the identity bindings of at most `keep` players not in `present`, the newest ones.
+    def absent_identities(self, present: set[str]) -> list[str]:
+        """Return the players not in `present` who still hold an identity binding."""
+        return [pid for pid in {**self.player_rejoin_keys, **self.player_user_ids} if pid not in present]
 
-        Dicts keep insertion order, which is first-join order here.
+    def trim_absent_identities(self, present: set[str], *, keep: int, now: float, grace: float) -> None:
+        """Keep the identity bindings of at most `keep` departed players, dropping the earliest departures.
+
+        A binding younger than `grace` seconds is never dropped, so a burst of
+        throwaway joins cannot free the seat of a player who is refreshing. The
+        caller bounds the total by refusing new players instead.
         """
-        for bindings in (self.player_rejoin_keys, self.player_user_ids):
-            absent = [pid for pid in bindings if pid not in present]
-            for pid in absent[: max(0, len(absent) - keep)]:
-                del bindings[pid]
+        absent = self.absent_identities(present)
+        self.player_departed_at = {pid: self.player_departed_at.get(pid, now) for pid in absent}
+        expired = sorted(
+            (pid for pid in absent if now - self.player_departed_at[pid] >= grace),
+            key=self.player_departed_at.__getitem__,
+        )
+        for pid in expired[: max(0, len(absent) - keep)]:
+            self._drop_identity(pid)
+
+    def _drop_identity(self, player_id: str) -> None:
+        self.player_user_ids.pop(player_id, None)
+        self.player_rejoin_keys.pop(player_id, None)
+        self.player_departed_at.pop(player_id, None)
 
     def reset_round(self, *, cards: dict[str, PlayerPromptAssignmentState] | None = None) -> None:
         """Clear every round field; `cards` become the new round's prompts."""
@@ -172,6 +190,7 @@ class RoomMetadataState(BaseModel):
         if player_id not in self.player_seats:
             self.player_seats[player_id] = (max(self.player_seats.values()) + 1) if self.player_seats else 0
         self.player_locales[player_id] = locale
+        self.player_departed_at.pop(player_id, None)
         if rejoin_key_hash is not None:
             self.player_rejoin_keys.setdefault(player_id, rejoin_key_hash)
         if user_id is not None:

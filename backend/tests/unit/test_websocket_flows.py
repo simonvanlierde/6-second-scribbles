@@ -10,7 +10,7 @@ import pytest
 
 from app.core.config import settings
 from app.core.types import GamePhase
-from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, MAX_ABSENT_BINDINGS
 from tests.constants import (
     ALICE,
     BOB,
@@ -29,6 +29,7 @@ from tests.constants import (
     PLAYER_KICKED,
     PROTOCOL_ERROR,
     READY_STATUS,
+    ROOM_FULL,
     ROOM_STATE,
     ROUND_COMPLETE,
     START_GAME,
@@ -292,6 +293,37 @@ def test_lobby_refresh_keeps_the_seat_bound_to_its_key(test_client: TestClient) 
             receive_json(newcomer)
             reply = join_player(newcomer, PLAYER_2, "Newcomer", rejoin_key="new-key")
             assert reply["type"] == PLAYER_JOINED
+
+
+def test_drop_flood_cannot_free_a_refreshing_guest_seat(test_client: TestClient) -> None:
+    """Throwaway ids that join and drop cannot push out the binding of a guest who just refreshed."""
+    room_id = "FLOOD1"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as host:
+        receive_json(host)
+        join_player(host, PLAYER_1, ALICE, rejoin_key="host-key")
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest:
+            receive_json(guest)
+            join_player(guest, PLAYER_2, BOB, rejoin_key="guest-key")
+
+        for i in range(MAX_ABSENT_BINDINGS):
+            with test_client.websocket_connect(f"/ws/{room_id}") as throwaway:
+                receive_json(throwaway)
+                reply = join_player(throwaway, f"throwaway{i}", "x", rejoin_key=f"key{i}")
+        # The guest's binding plus 39 throwaways reach the cap, so the last newcomer waits.
+        assert reply["type"] == JOIN_ERROR
+        assert reply["error"] == ROOM_FULL
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as intruder:
+            receive_json(intruder)
+            reply = join_player(intruder, PLAYER_2, "Mallory", rejoin_key="other-key")
+            assert reply["type"] == JOIN_ERROR
+            assert reply["error"] == IDENTITY_CONFLICT_ERROR
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest_again:
+            receive_json(guest_again)
+            assert join_player(guest_again, PLAYER_2, BOB, rejoin_key="guest-key")["type"] == PLAYER_JOINED
 
 
 def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> None:

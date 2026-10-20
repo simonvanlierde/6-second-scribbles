@@ -25,10 +25,14 @@ logger = logging.getLogger(__name__)
 # handle_join matches on it to send the right join error.
 IDENTITY_CONFLICT_ERROR = "identity_conflict"
 KICKED_ERROR = "kicked"
+ROOM_BUSY_ERROR = "Too many players left this room just now. Try again in a few minutes."
 # Identity bindings kept for players who dropped without leaving. Each visitor who
-# closes the tab leaves one, and every persist() writes them all, so the oldest
-# go once a room has seen this many departures.
+# closes the tab leaves one, and every persist() writes them all, so past this many
+# the earliest departures go, once they are older than the grace period.
 MAX_ABSENT_BINDINGS = 40
+# How long a dropped player's binding is safe from trimming, so they can refresh
+# or reconnect without anyone claiming their player_id.
+ABSENT_BINDING_GRACE_SECONDS = 600
 
 
 async def add_player(
@@ -112,7 +116,28 @@ def _check_identity(room: GameRoom, player_id: str, user_id: str | None, rejoin_
     stored_hash = room.metadata.player_rejoin_keys.get(player_id)
     if stored_hash is not None and (key_hash is None or not hmac.compare_digest(stored_hash, key_hash)):
         raise ValueError(IDENTITY_CONFLICT_ERROR)
+
+    # A new player_id adds a binding once it drops. While the absent bindings are
+    # all recent, refuse newcomers rather than evict one, so a flood of throwaway
+    # ids cannot free a real player's seat; the room opens again once they expire.
+    if player_id not in room.players and existing_owner is None and stored_hash is None:
+        present = set(room.players)
+        if len(room.metadata.absent_identities(present)) >= MAX_ABSENT_BINDINGS:
+            # Make room for this newcomer's binding among the expired ones.
+            trim_absent_bindings(room, present, keep=MAX_ABSENT_BINDINGS - 1)
+            if len(room.metadata.absent_identities(present)) >= MAX_ABSENT_BINDINGS:
+                raise ValueError(ROOM_BUSY_ERROR)
     return key_hash
+
+
+def trim_absent_bindings(room: GameRoom, present: set[str], *, keep: int = MAX_ABSENT_BINDINGS) -> None:
+    """Drop the earliest departed players' bindings past `keep`, sparing those within the grace period."""
+    room.metadata.trim_absent_identities(
+        present,
+        keep=keep,
+        now=time.time(),
+        grace=ABSENT_BINDING_GRACE_SECONDS,
+    )
 
 
 def _owns_last_host(room: GameRoom, user_id: str | None) -> bool:
@@ -186,7 +211,7 @@ async def remove_player(
     # is no longer treated as a current participant.
     room.metadata.forget_player(player_id, forget_identity=forget_identity)
     if not forget_identity:
-        room.metadata.trim_absent_identities(set(room.players), keep=MAX_ABSENT_BINDINGS)
+        trim_absent_bindings(room, set(room.players))
 
     # Drop any kick vote targeting the leaver (otherwise it lingers with its
     # accumulated voters and would kick them the instant they rejoin) and remove
