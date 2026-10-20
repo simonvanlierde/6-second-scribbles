@@ -11,12 +11,11 @@ from fastapi import HTTPException
 
 from app.categories.models import Category, CategoryPrompt, Prompt
 from app.categories.service import (
-    _build_selected_category_set,
     _normalize_locale_list,
     _select_scored_categories,
-    get_localized_category_set,
+    deal_category,
     get_localized_scoring_targets,
-    select_category_sets,
+    select_category_ids,
 )
 from app.core import redis as redis_module
 
@@ -92,7 +91,11 @@ def test_select_scored_categories_prefers_higher_locale_scores(monkeypatch: pyte
     """Selection keeps the highest-scoring categories first."""
     categories = [
         _category(category_id=1, available_locales=["en"], translations={"en": {"name": "Only English"}}),
-        _category(category_id=2, available_locales=["en", "fr"], translations={"en": {"name": "Bilingual"}}),
+        _category(
+            category_id=2,
+            available_locales=["en", "fr"],
+            translations={"en": {"name": "Bilingual"}},
+        ),
     ]
     monkeypatch.setattr("app.categories.service.random.shuffle", lambda _items: None)
 
@@ -101,24 +104,26 @@ def test_select_scored_categories_prefers_higher_locale_scores(monkeypatch: pyte
     assert [category.id for category in selected] == [2]
 
 
-def test_build_selected_category_set_skips_missing_prompt_translation() -> None:
+async def test_deal_category_skips_missing_prompt_translation() -> None:
     """Prompt entries without the chosen locale are skipped."""
     category = _category(category_id=7, available_locales=["fr"], translations={"fr": {"name": "Animaux"}})
     prompts = [
         _category_prompt(category_id=7, prompt_id=11, translations={"fr": {"label": "chat", "aliases": ["minou"]}}),
         _category_prompt(category_id=7, prompt_id=12, translations={"en": {"label": "dog", "aliases": []}}),
     ]
+    session = _QueuedSession([category], prompts)
 
-    selected = _build_selected_category_set(category, "fr", prompts)
+    card = await deal_category(
+        cast("AsyncSession", session), category_id=7, preferred_locale="fr", fallback_locale="fr"
+    )
 
-    assert selected is not None
-    assert selected.category_name == ANIMAUX
-    assert selected.item_ids == [11]
-    assert selected.items == ["chat"]
-    assert selected.alternatives == {"chat": ["minou"]}
+    assert card.category == ANIMAUX
+    assert card.item_ids == [11]
+    assert card.items == ["chat"]
+    assert card.alternatives == {"chat": ["minou"]}
 
 
-async def test_select_category_sets_falls_back_to_english(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_select_falls_back_to_english(monkeypatch: pytest.MonkeyPatch) -> None:
     """Selection falls back to English when the requested locale has no matches."""
     category = _category(
         category_id=1,
@@ -126,25 +131,23 @@ async def test_select_category_sets_falls_back_to_english(monkeypatch: pytest.Mo
         translations={"en": {"name": "Animals"}},
     )
     prompts = [_category_prompt(category_id=1, prompt_id=10, translations={"en": {"label": "cat", "aliases": []}})]
-    session = _QueuedSession([category], prompts)
+    session = _QueuedSession([category], [category], prompts)
 
     monkeypatch.setattr("app.categories.service.random.shuffle", lambda _items: None)
 
-    response = await select_category_sets(
-        cast("AsyncSession", session),
-        difficulty="easy",
-        count=1,
-        player_count=1,
-        locale="fr",
-        locales=["fr"],
+    category_ids = await select_category_ids(
+        cast("AsyncSession", session), difficulty="easy", player_count=1, locales=["fr"], room_locale="fr"
+    )
+    card = await deal_category(
+        cast("AsyncSession", session), category_id=1, preferred_locale="fr", fallback_locale="fr"
     )
 
-    assert len(response.selections) == 1
-    assert response.selections[0].category_name == ANIMALS
-    assert response.selections[0].items == [CAT]
+    assert category_ids == [1]
+    assert card.category == ANIMALS
+    assert card.items == [CAT]
 
 
-async def test_select_category_sets_uses_region_locale(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_select_and_deal_keep_region_locale(monkeypatch: pytest.MonkeyPatch) -> None:
     """Selection and prompt resolution preserve region-specific content locales."""
     category = _category(
         category_id=2,
@@ -161,25 +164,23 @@ async def test_select_category_sets_uses_region_locale(monkeypatch: pytest.Monke
             },
         )
     ]
-    session = _QueuedSession([category], prompts)
+    session = _QueuedSession([category], [category], prompts)
 
     monkeypatch.setattr("app.categories.service.random.shuffle", lambda _items: None)
 
-    response = await select_category_sets(
-        cast("AsyncSession", session),
-        difficulty="easy",
-        count=1,
-        player_count=1,
-        locale="zh-TW",
-        locales=["zh-TW"],
+    category_ids = await select_category_ids(
+        cast("AsyncSession", session), difficulty="easy", player_count=1, locales=["zh-TW"], room_locale="zh-TW"
+    )
+    card = await deal_category(
+        cast("AsyncSession", session), category_id=2, preferred_locale="zh-TW", fallback_locale="zh-TW"
     )
 
-    assert len(response.selections) == 1
-    assert response.selections[0].category_name == ZH_TW_ANIMALS
-    assert response.selections[0].items == [ZH_TW_CAT]
+    assert category_ids == [2]
+    assert card.category == ZH_TW_ANIMALS
+    assert card.items == [ZH_TW_CAT]
 
 
-async def test_get_localized_category_set_raises_when_no_available_locales() -> None:
+async def test_deal_category_raises_when_no_available_locales() -> None:
     """Categories with no available locales return a 404."""
     session = _QueuedSession(
         [_category(category_id=4, available_locales=[], translations={"en": {"name": "Animals"}})],
@@ -187,7 +188,7 @@ async def test_get_localized_category_set_raises_when_no_available_locales() -> 
     )
 
     with pytest.raises(HTTPException, match="Category has no available locales"):
-        await get_localized_category_set(
+        await deal_category(
             cast("AsyncSession", session),
             category_id=4,
             preferred_locale="fr",
@@ -195,7 +196,7 @@ async def test_get_localized_category_set_raises_when_no_available_locales() -> 
         )
 
 
-async def test_get_localized_category_set_uses_first_available_locale_when_preferences_miss() -> None:
+async def test_deal_category_uses_first_available_locale_when_preferences_miss() -> None:
     """When no preferred locale matches, the first available locale is used."""
     category = _category(
         category_id=9,
@@ -205,14 +206,14 @@ async def test_get_localized_category_set_uses_first_available_locale_when_prefe
     prompts = [_category_prompt(category_id=9, prompt_id=90, translations={"es": {"label": "gato", "aliases": []}})]
     session = _QueuedSession([category], prompts)
 
-    selection = await get_localized_category_set(
+    selection = await deal_category(
         cast("AsyncSession", session),
         category_id=9,
         preferred_locale="de",
         fallback_locale="it",
     )
 
-    assert selection.category_name == ANIMALES
+    assert selection.category == ANIMALES
     assert selection.items == [GATO]
 
 
@@ -271,3 +272,22 @@ async def test_get_localized_scoring_targets_falls_back_to_default_and_caches(
     assert result.category_name == ANIMALS
     assert result.targets[0].aliases == ["kitty"]
     cache_write.assert_awaited_once()
+
+
+async def test_untranslated_room_language_is_dealt_in_a_fallback_locale(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A category listed for the room's language but missing that translation is still dealt."""
+    category = _category(category_id=5, available_locales=["nl", "en"], translations={"en": {"name": ANIMALS}})
+    prompts = [_category_prompt(category_id=5, prompt_id=50, translations={"en": {"label": CAT, "aliases": []}})]
+    session = _QueuedSession([category], [category], prompts)
+    monkeypatch.setattr("app.categories.service.random.shuffle", lambda _items: None)
+
+    category_ids = await select_category_ids(
+        cast("AsyncSession", session), difficulty="easy", player_count=1, locales=["nl"], room_locale="nl"
+    )
+    card = await deal_category(
+        cast("AsyncSession", session), category_id=5, preferred_locale="nl", fallback_locale="nl"
+    )
+
+    assert category_ids == [5]
+    assert card.category == ANIMALS
+    assert card.items == [CAT]

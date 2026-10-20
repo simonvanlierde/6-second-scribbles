@@ -219,49 +219,29 @@ class GameRoom:
         self.scheduler.schedule_guessing_start(self.metadata.drawing_time_limit or 30)
 
     async def _build_server_round_assignments(self) -> dict[str, PlayerPromptAssignmentState]:
-        """Fetch one canonical category per player, then localize it per player."""
+        """Pick one category per player, then deal each player its card in their own locale."""
         if not self.players:
             return {}
 
-        player_ids = list(self.players.keys())
-        participant_locales = [self.get_player_locale(player_id) for player_id in player_ids]
-
-        session_maker = get_session_maker()
-        async with session_maker() as db:
-            response = await category_service.select_category_sets(
+        player_ids = list(self.players)
+        async with get_session_maker()() as db:
+            category_ids = await category_service.select_category_ids(
                 db,
                 difficulty=self.metadata.difficulty,
-                count=1,
                 player_count=len(player_ids),
-                locale=self.metadata.default_locale,
-                locales=participant_locales,
+                locales=[self.get_player_locale(player_id) for player_id in player_ids],
+                room_locale=self.metadata.default_locale,
             )
-
-        selected_sets = response.selections
-        if not selected_sets:
-            raise HTTPException(status_code=404, detail="No categories available for round")
-
-        assignments: dict[str, PlayerPromptAssignmentState] = {}
-
-        async with session_maker() as db:
-            for index, player_id in enumerate(player_ids):
-                # Reuse categories when fewer are available than there are players.
-                selected_category = selected_sets[index % len(selected_sets)]
-                localized_category = await category_service.get_localized_category_set(
+            # Reuse categories when fewer are available than there are players.
+            return {
+                player_id: await category_service.deal_category(
                     db,
-                    category_id=selected_category.category_id,
+                    category_id=category_ids[index % len(category_ids)],
                     preferred_locale=self.get_player_locale(player_id),
                     fallback_locale=self.metadata.default_locale,
                 )
-                assignments[player_id] = PlayerPromptAssignmentState(
-                    category_id=localized_category.category_id,
-                    category=localized_category.category_name,
-                    item_ids=localized_category.item_ids,
-                    items=localized_category.items,
-                    alternatives=localized_category.alternatives,
-                )
-
-        return assignments
+                for index, player_id in enumerate(player_ids)
+            }
 
     async def restart_game(self) -> None:
         """Send the room back to the lobby after a finished game."""

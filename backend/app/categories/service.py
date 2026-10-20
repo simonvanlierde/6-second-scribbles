@@ -12,12 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.categories.models import Category, CategoryPrompt, Prompt, normalize_locale_code
-from app.categories.schemas import (
-    CategorySelectionResponse,
-    LocaleAvailabilityItem,
-    SelectedCategorySet,
-)
+from app.categories.schemas import LocaleAvailabilityItem
 from app.core import redis
+from app.rooms.state import PlayerPromptAssignmentState
 from app.scoring import GuessTarget
 
 if TYPE_CHECKING:
@@ -44,8 +41,9 @@ def _normalize_locale(locale: LanguageCode | str | None) -> str:
     return normalized or DEFAULT_LANGUAGE_CODE
 
 
-def _category_available_locales(category: Category) -> set[str]:
-    return {normalized for raw in category.available_locales if (normalized := normalize_locale_code(raw)) is not None}
+def _locales(category: Category) -> set[str]:
+    """The category's playable locales, normalized."""
+    return {normalized for raw in category.available_locales if (normalized := normalize_locale_code(raw))}
 
 
 def _normalize_locale_list(locales: list[LanguageCode | str] | None, *, fallback: str) -> list[str]:
@@ -92,11 +90,6 @@ async def _load_category_prompts(
     return m
 
 
-def _score_category_by_locales(category: Category, requested_locales: list[str]) -> int:
-    available = {loc.lower() for loc in category.available_locales}
-    return sum(1 for locale in requested_locales if locale.lower() in available)
-
-
 def _select_scored_categories(
     categories: list[Category],
     requested_locales: list[str],
@@ -104,7 +97,7 @@ def _select_scored_categories(
 ) -> list[Category]:
     scored_groups: dict[int, list[Category]] = defaultdict(list)
     for category in categories:
-        score = _score_category_by_locales(category, requested_locales)
+        score = len(_locales(category).intersection(requested_locales))
         if score > 0:
             scored_groups[score].append(category)
 
@@ -117,45 +110,6 @@ def _select_scored_categories(
         if len(selected) >= total_needed:
             break
     return selected
-
-
-def _select_locale_for_category(category: Category, requested_locales: list[str]) -> str | None:
-    category_locales = {loc.lower() for loc in category.available_locales}
-    return next((locale for locale in requested_locales if locale.lower() in category_locales), None)
-
-
-def _category_supports_locale(category: Category, locale: str) -> bool:
-    return locale.lower() in {loc.lower() for loc in category.available_locales}
-
-
-def _build_selected_category_set(
-    category: Category,
-    selected_locale: str,
-    prompts: list[CategoryPrompt],
-) -> SelectedCategorySet | None:
-    ct = category.translations.get(selected_locale)
-    if not ct:
-        return None
-
-    item_ids: list[int] = []
-    items: list[str] = []
-    alternatives: dict[str, list[str]] = {}
-    for cp in prompts:
-        pt = cp.prompt.translations.get(selected_locale)
-        if not pt:
-            continue
-        item_ids.append(cp.prompt_id)
-        label = pt.get("label", "")
-        items.append(label)
-        alternatives[label] = pt.get("aliases", [])
-
-    return SelectedCategorySet(
-        category_id=category.id,
-        category_name=ct.get("name", ""),
-        item_ids=item_ids,
-        items=items,
-        alternatives=alternatives,
-    )
 
 
 async def list_locale_availability(
@@ -177,8 +131,7 @@ async def list_locale_availability(
     per_difficulty: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
     for category in categories:
-        unique_locales = _category_available_locales(category)
-        for locale in unique_locales:
+        for locale in _locales(category):
             totals[locale] += 1
             per_difficulty[locale][category.difficulty] += 1
 
@@ -199,17 +152,19 @@ async def list_locale_availability(
     return payload
 
 
-async def select_category_sets(
+async def select_category_ids(
     db: AsyncSession,
     *,
     difficulty: Difficulty,
-    count: int,
     player_count: int,
-    locale: LanguageCode | None,
-    locales: list[LanguageCode] | None = None,
-) -> CategorySelectionResponse:
-    """Select categories using pre-computed available_locales."""
-    requested_locales = _normalize_locale_list(locales, fallback=_normalize_locale(locale))
+    locales: list[LanguageCode],
+    room_locale: LanguageCode,
+) -> list[int]:
+    """Pick up to one category per player, preferring those playable in most of the players' locales.
+
+    Falls back to English categories when none suits any of `locales` or `room_locale`.
+    """
+    requested_locales = _normalize_locale_list(locales, fallback=_normalize_locale(room_locale))
 
     query = select(Category).where(
         Category.difficulty == difficulty.lower(),
@@ -217,15 +172,11 @@ async def select_category_sets(
     )
     all_categories = list((await db.execute(query)).scalars().all())
 
-    valid_categories = [
-        category for category in all_categories if _score_category_by_locales(category, requested_locales) > 0
-    ]
+    valid_categories = [category for category in all_categories if _locales(category).intersection(requested_locales)]
 
     if not valid_categories and DEFAULT_LANGUAGE_CODE not in requested_locales:
         requested_locales.append(DEFAULT_LANGUAGE_CODE)
-        valid_categories = [
-            category for category in all_categories if _category_supports_locale(category, DEFAULT_LANGUAGE_CODE)
-        ]
+        valid_categories = [category for category in all_categories if DEFAULT_LANGUAGE_CODE in _locales(category)]
 
     if not valid_categories:
         locale_text = ", ".join(requested_locales)
@@ -234,32 +185,22 @@ async def select_category_sets(
             detail=f"No categories found for difficulty {difficulty} in locales [{locale_text}]",
         )
 
-    total_needed = min(count * player_count, len(valid_categories))
-    selected = _select_scored_categories(valid_categories, requested_locales, total_needed)
-
-    prompts_by_cat = await _load_category_prompts(db, [c.id for c in selected])
-
-    selections: list[SelectedCategorySet] = []
-    for c in selected:
-        selected_locale = _select_locale_for_category(c, requested_locales)
-        if selected_locale is None:
-            continue
-
-        selection = _build_selected_category_set(c, selected_locale, prompts_by_cat.get(c.id, []))
-        if selection is not None:
-            selections.append(selection)
-
-    return CategorySelectionResponse(difficulty=difficulty, selections=selections)
+    total_needed = min(player_count, len(valid_categories))
+    return [category.id for category in _select_scored_categories(valid_categories, requested_locales, total_needed)]
 
 
-async def get_localized_category_set(
+async def deal_category(
     db: AsyncSession,
     *,
     category_id: int,
     preferred_locale: LanguageCode,
     fallback_locale: LanguageCode,
-) -> SelectedCategorySet:
-    """Resolve a category into one internally consistent locale for room gameplay."""
+) -> PlayerPromptAssignmentState:
+    """Build one player's card from a category.
+
+    The card uses the first locale the category is translated into from: the player's,
+    the room's, the category's default, English; failing all, its alphabetically first.
+    """
     category = await _get_visible_category_or_404(db, category_id=category_id)
     prompts_by_cat = await _load_category_prompts(db, [category_id])
 
@@ -267,10 +208,11 @@ async def get_localized_category_set(
         [preferred_locale, fallback_locale, category.default_locale],
         fallback=DEFAULT_LANGUAGE_CODE,
     )
-    available_set = {loc.lower() for loc in category.available_locales}
-    chosen_locale = next((loc for loc in candidate_locales if loc.lower() in available_set), None)
-    if chosen_locale is None and category.available_locales:
-        chosen_locale = min(category.available_locales)
+    # A locale listed as playable can still lack its translation until available_locales is recomputed.
+    available = {locale for locale in _locales(category) if locale in category.translations}
+    chosen_locale = next((loc for loc in candidate_locales if loc in available), None)
+    if chosen_locale is None and available:
+        chosen_locale = min(available)
     if chosen_locale is None:
         raise HTTPException(status_code=404, detail="Category has no available locales")
 
@@ -290,9 +232,9 @@ async def get_localized_category_set(
         items.append(label)
         alternatives[label] = pt.get("aliases", [])
 
-    return SelectedCategorySet(
+    return PlayerPromptAssignmentState(
         category_id=category_id,
-        category_name=ct.get("name", ""),
+        category=ct.get("name", ""),
         item_ids=item_ids,
         items=items,
         alternatives=alternatives,

@@ -11,7 +11,6 @@ import pytest
 from fastapi import HTTPException
 
 from app.categories import service as category_service
-from app.categories.schemas import CategorySelectionResponse, SelectedCategorySet
 from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms import kick_vote, player_lifecycle, rounds
@@ -413,7 +412,7 @@ class TestGameRoom:
 
         monkeypatch.setattr(
             category_service,
-            "select_category_sets",
+            "select_category_ids",
             AsyncMock(side_effect=HTTPException(status_code=404, detail="No categories found for difficulty: medium")),
         )
 
@@ -456,27 +455,13 @@ class TestGameRoom:
         monkeypatch.setattr(manager_module, "get_session_maker", lambda: _FakeSession)
 
         # Only two categories available for three players.
-        selections = [
-            SelectedCategorySet(
-                category_id=cid,
-                category_name=name,
-                item_ids=[cid],
-                items=[name],
-                alternatives={name: []},
-            )
-            for cid, name in ((143, "Sports Equipment"), (144, "Weather Phenomena"))
-        ]
+        monkeypatch.setattr(category_service, "select_category_ids", AsyncMock(return_value=[143, 144]))
         monkeypatch.setattr(
             category_service,
-            "select_category_sets",
-            AsyncMock(return_value=CategorySelectionResponse(difficulty=MEDIUM, selections=selections)),
-        )
-        monkeypatch.setattr(
-            category_service,
-            "get_localized_category_set",
+            "deal_category",
             AsyncMock(
-                side_effect=lambda _db, *, category_id, **_kwargs: next(
-                    s for s in selections if s.category_id == category_id
+                side_effect=lambda _db, *, category_id, **_kwargs: PlayerPromptAssignmentState(
+                    category_id=category_id, category="Test", items=["cat"]
                 )
             ),
         )
