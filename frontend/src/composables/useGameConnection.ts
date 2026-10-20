@@ -54,7 +54,6 @@ export function useGameConnection() {
     router,
     showNotification,
     send,
-    isObserverConnection,
   };
 
   function connect(roomCode: string, options: ConnectOptions = {}) {

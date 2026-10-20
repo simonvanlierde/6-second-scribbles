@@ -5,7 +5,6 @@
  * testable in isolation without needing a live WebSocket connection.
  */
 
-import type { Ref } from "vue";
 import type { Router } from "vue-router";
 
 import type { NotificationType } from "@/composables/notifications";
@@ -26,7 +25,6 @@ export type HandlerContext = {
   router: Router;
   showNotification: ShowNotification;
   send: (message: ClientEvent) => void;
-  isObserverConnection: Ref<boolean>;
 };
 
 // ── Event type aliases ────────────────────────────────────────────────────────
@@ -54,7 +52,7 @@ function isReactionKey(key: string): key is ReactionKey {
 // ── Connection & player events ────────────────────────────────────────────────
 
 export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerContext): void {
-  const { store, router, showNotification, isObserverConnection } = ctx;
+  const { store, router, showNotification } = ctx;
 
   switch (message.type) {
     case "join_error":
@@ -85,11 +83,6 @@ export function handleConnectionEvent(message: ConnectionEvent, ctx: HandlerCont
     case "player_joined":
       store.setPlayers(message.players);
       if (message.isHost) store.setHost(message.playerId);
-      if (store.pendingLocalPlayerId === message.playerId) {
-        store.confirmPendingLocalPlayer(message.playerId);
-        store.setSpectatorMode(false);
-        isObserverConnection.value = false;
-      }
       break;
 
     case "player_left":

@@ -1,6 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
 
 import {
   type HandlerContext,
@@ -26,7 +25,6 @@ describe("connection handlers translations", () => {
       router: { push: vi.fn() } as never,
       showNotification,
       send: vi.fn(),
-      isObserverConnection: ref(false),
     };
   });
 

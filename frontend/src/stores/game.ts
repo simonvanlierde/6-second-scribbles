@@ -68,8 +68,6 @@ export const useGameStore = defineStore(
     // Null until chosen or derived: setLocalPlayer fills it with a deterministic
     // per-id colour so fresh players don't all default to the same one.
     const localPlayerColor = ref<AvatarColor | null>(null);
-    const pendingLocalPlayerId = ref<string | null>(null);
-    const pendingLocalPlayerName = ref<string | null>(null);
     const isSpectatorMode = ref<boolean>(false);
 
     // --- Room & players ---
@@ -135,22 +133,6 @@ export const useGameStore = defineStore(
 
     function setSpectatorMode(visible: boolean) {
       isSpectatorMode.value = visible;
-    }
-
-    function setPendingLocalPlayer(id: string, name: string) {
-      pendingLocalPlayerId.value = id;
-      pendingLocalPlayerName.value = name;
-    }
-
-    function clearPendingLocalPlayer() {
-      pendingLocalPlayerId.value = null;
-      pendingLocalPlayerName.value = null;
-    }
-
-    function confirmPendingLocalPlayer(id: string) {
-      if (pendingLocalPlayerId.value !== id || !pendingLocalPlayerName.value) return;
-      setLocalPlayer(id, pendingLocalPlayerName.value);
-      clearPendingLocalPlayer();
     }
 
     function setLocalPlayerLocale(nextLocale: string) {
@@ -471,7 +453,6 @@ export const useGameStore = defineStore(
       players.value.clear();
       kickVotes.value.clear();
       hostId.value = null;
-      clearPendingLocalPlayer();
       currentRound.value = 0;
       maxRounds.value = GAME_SETTINGS.rounds.DEFAULT;
       difficulty.value = GAME_SETTINGS.difficulty.DEFAULT;
@@ -504,8 +485,6 @@ export const useGameStore = defineStore(
       hydrated,
       localPlayerId,
       localPlayerName,
-      pendingLocalPlayerId,
-      pendingLocalPlayerName,
       players,
       hostId,
       currentRound,
@@ -545,9 +524,6 @@ export const useGameStore = defineStore(
       // Actions
       setLocalPlayer,
       setSpectatorMode,
-      setPendingLocalPlayer,
-      clearPendingLocalPlayer,
-      confirmPendingLocalPlayer,
       setLocalPlayerLocale,
       setLocalPlayerColor,
       setRoomCode,
