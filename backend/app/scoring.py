@@ -105,6 +105,8 @@ def _generate_variants(normalized: str) -> frozenset[str]:
     if normalized.endswith("ing"):
         variants.add(normalized[:-3])
 
+    # A word that is all suffix ("s", "es", "ing") would leave "", which every such word shares.
+    variants.discard("")
     return frozenset(variants)
 
 

@@ -3,7 +3,7 @@
 from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
-from app.scoring import GuessTarget, guess_matcher, normalize_text
+from app.scoring import GuessTarget, _generate_variants, guess_matcher, normalize_text
 
 words = st.text(alphabet=st.characters(categories=["L", "M", "Zs"]), max_size=12)
 ascii_words = st.text(alphabet="abcdeiknorstgy ", min_size=1, max_size=10)
@@ -18,6 +18,19 @@ def test_normalize_text_is_idempotent(text: str) -> None:
     """Normalizing twice changes nothing."""
     once = normalize_text(text)
     assert normalize_text(once) == once
+
+
+@fast
+@given(words.map(normalize_text).filter(bool))
+def test_every_variant_of_a_word_is_a_word(word: str) -> None:
+    """Stripping a suffix never leaves an empty word, which would match any other."""
+    assert "" not in _generate_variants(word)
+
+
+def test_suffix_only_words_do_not_match_each_other() -> None:
+    """Short words that are all suffix only match themselves."""
+    for guess, target in (("s", "ing"), ("es", "s"), ("ing", "es")):
+        assert not guess_matcher.match_guess(guess, [target]).matched, (guess, target)
 
 
 # ASCII only: upper() is not reversible for every letter (the Turkish dotless i, U+0131, becomes "I", which
