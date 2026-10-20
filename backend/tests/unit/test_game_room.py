@@ -196,7 +196,7 @@ class TestGameRoom:
 
     async def test_update_player_activity(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test updating player's last activity timestamp."""
-        with patch("app.rooms.manager.time.time", side_effect=[1000.0, 1000.0, 1001.0]):
+        with patch("app.rooms.manager.time.time", side_effect=[1000.0, 1001.0]):
             await game_room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(mock_websocket))
             initial_time = game_room.players[PLAYER_ONE_ID].last_activity
 
@@ -240,18 +240,6 @@ class TestGameRoom:
 
         assert cast("TestWebSocket", player1.websocket).sent_texts == []
         assert cast("TestWebSocket", player2.websocket).sent_texts == [json.dumps(message, separators=(",", ":"))]
-
-    async def test_send_to_specific_player(self, room_with_players: GameRoom) -> None:
-        """Test sending a message to a specific player."""
-        message = cast("WebSocketMessage", {"type": "test", "data": "hello"})
-
-        await room_with_players.send_to_player(PLAYER_ONE_ID, message)
-
-        player1 = room_with_players.players[PLAYER_ONE_ID]
-        player2 = room_with_players.players[PLAYER_TWO_ID]
-
-        assert cast("TestWebSocket", player1.websocket).sent_texts == [json.dumps(message, separators=(",", ":"))]
-        assert cast("TestWebSocket", player2.websocket).sent_texts == []
 
     async def test_get_player_list(self, room_with_players: GameRoom) -> None:
         """Test getting the list of players."""

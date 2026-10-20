@@ -145,7 +145,7 @@ async def test_room_state_and_session_round_trip(monkeypatch: pytest.MonkeyPatch
 
     state = RoomState(room_id=ROOM_ID)
     await redis_module.save_room_state(ROOM_ID, state)
-    loaded = await redis_module.load_room_state(ROOM_ID)
+    loaded = RoomState.model_validate_json(fake_redis.store[f"room:{ROOM_ID}"])
 
     session_id = await redis_module.create_session(USER_ID)
     session_user = await redis_module.get_session_user_id(session_id)
@@ -198,7 +198,6 @@ async def test_redis_helpers_fall_back_cleanly_on_errors(monkeypatch: pytest.Mon
     failing = AsyncMock(side_effect=RedisError("boom"))
     monkeypatch.setattr(redis_module, "get_redis", failing)
 
-    assert await redis_module.load_room_state("ROOM01") is None
     assert await redis_module.load_all_room_states() == []
     assert await redis_module.get_session_user_id("session-1") is None
     # Rate limiting fails CLOSED: an un-countable request is reported as over-limit

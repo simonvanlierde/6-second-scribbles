@@ -59,7 +59,6 @@ async def add_player(
         logger.info("[GameRoom %s] Waking from hibernation", room.room_id)
         room.is_hibernated = False
 
-    room.last_activity = time.time()
     room.emptied_at = None
 
     is_reconnecting_host = (

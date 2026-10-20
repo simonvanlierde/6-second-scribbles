@@ -70,17 +70,12 @@ def should_be_removed(room: GameRoom) -> bool:
     return time.time() - room.emptied_at >= settings.room_ttl_seconds
 
 
-def get_age_seconds(room: GameRoom) -> float:
-    """Get room age in seconds."""
-    return time.time() - room.created_at
-
-
 def hibernate(room: GameRoom) -> None:
     """Put an empty room into hibernation mode."""
     if room.is_hibernated or not room.is_empty():
         return
 
-    logger.info("[GameRoom %s] Entering hibernation mode (age: %.0fs)", room.room_id, get_age_seconds(room))
+    logger.info("[GameRoom %s] Entering hibernation mode (age: %.0fs)", room.room_id, time.time() - room.created_at)
     room.is_hibernated = True
 
 

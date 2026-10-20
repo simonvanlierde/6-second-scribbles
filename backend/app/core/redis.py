@@ -75,17 +75,6 @@ async def save_room_state(room_id: str, state: RoomState) -> None:
         logger.exception("[Redis] Failed to save room %s", room_id)
 
 
-async def load_room_state(room_id: str) -> RoomState | None:
-    """Load the room state from Redis. Returns None if not found or on error."""
-    try:
-        r = await get_redis()
-        data = await r.get(_room_key(room_id))
-        return RoomState.model_validate_json(data) if data else None
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to load room %s", room_id)
-        return None
-
-
 async def delete_room_state(room_id: str) -> None:
     """Delete the room state from Redis. This is called when a room is closed."""
     try:

@@ -50,7 +50,6 @@ from app.rooms.protocol import (
     StrokeDelta,
     WebSocketMessage,
     encode_ws_message,
-    send_ws_message,
 )
 from app.rooms.scheduler import RoomTaskScheduler, create_logged_task
 from app.rooms.state import (
@@ -137,7 +136,6 @@ class GameRoom:
         self.last_host_id: str | None = None  # Track last host for reconnection
         self.last_host_user_id: str | None = None  # Authenticated owner of last host, for reclaim checks
         self.created_at = time.time()
-        self.last_activity = time.time()
         # When the room last had no connected players. A new room starts empty,
         # so one that nobody ever joins still expires after the TTL.
         self.emptied_at: float | None = self.created_at
@@ -615,16 +613,6 @@ class GameRoom:
         if self.observers:
             event = StartRoundServerEvent(round=round_number, cards={}, roundStartTime=round_start_time)
             await self._deliver_to_observers(encode_ws_message(event))
-
-    async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
-        """Send a message to a specific player."""
-        if player_id in self.players:
-            player = self.players[player_id]
-            try:
-                await send_ws_message(player.websocket, message)
-            except Exception:
-                logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-                await self.remove_player(player_id)
 
     def _ordered_players(self) -> list[PlayerInfo]:
         """Players in stable seat order (insertion order for any without a seat)."""
