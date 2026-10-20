@@ -143,15 +143,6 @@ async def get_session_user_id(session_id: str) -> str | None:
         return None
 
 
-async def delete_session(session_id: str) -> None:
-    """Delete a server-side auth session if it exists."""
-    try:
-        r = await get_redis()
-        await r.delete(_session_key(session_id))
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to delete a session")
-
-
 async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: int) -> tuple[int, int]:
     """Increment a fixed-window rate limit counter and return count plus retry-after seconds."""
     try:
@@ -174,7 +165,7 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
         logger.exception("[Redis] Failed to increment rate limit %s", bucket)
         # Fail closed: if Redis is unavailable we cannot count attempts, so treat
         # the request as over-limit rather than silently disabling every throttle
-        # (login/register/room-creation) during the outage. Availability trade-off:
+        # (guest sessions, room creation) during the outage. Availability trade-off:
         # a Redis blip 429s these endpoints, but Redis backs sessions/persistence
         # too, so the app is already degraded.
         return sys.maxsize, window_seconds

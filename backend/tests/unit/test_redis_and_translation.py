@@ -138,7 +138,7 @@ def _make_provider() -> _ProviderHarness:
 
 
 async def test_room_state_and_session_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Room state, sessions, and deletion all round-trip through Redis helpers."""
+    """Room state and sessions round-trip through Redis helpers."""
     fake_redis = _FakeRedis()
     monkeypatch.setattr(redis_module, "get_redis", AsyncMock(return_value=fake_redis))
     monkeypatch.setattr(redis_module.secrets, "token_urlsafe", lambda _n: "session-token")
@@ -149,13 +149,10 @@ async def test_room_state_and_session_round_trip(monkeypatch: pytest.MonkeyPatch
 
     session_id = await redis_module.create_session(USER_ID)
     session_user = await redis_module.get_session_user_id(session_id)
-    await redis_module.delete_session(session_id)
-    deleted_user = await redis_module.get_session_user_id(session_id)
 
     assert loaded is not None
     assert loaded.room_id == ROOM_ID
     assert session_user == USER_ID
-    assert deleted_user is None
 
 
 async def test_load_all_room_states_and_rate_limits(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -192,7 +189,6 @@ async def test_session_errors_do_not_log_the_session_id(
     monkeypatch.setattr(redis_module, "get_redis", AsyncMock(side_effect=RedisError("boom")))
 
     await redis_module.get_session_user_id(LEAKY_SESSION_ID)
-    await redis_module.delete_session(LEAKY_SESSION_ID)
 
     assert LEAKY_SESSION_ID not in caplog.text
 

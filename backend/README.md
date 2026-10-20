@@ -6,7 +6,7 @@ Redis holds runtime state, sessions, and room coordination.
 
 ## Main Modules
 
-- `app/auth/`: guest and account auth flows
+- `app/auth/`: guest sessions
 - `app/users/`: current-user profile
 - `app/categories/`: category lookup, locale handling, and guess scoring support
 - `app/rooms/`: room lifecycle, gameplay state, and WebSocket orchestration

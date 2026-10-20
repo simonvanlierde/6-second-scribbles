@@ -45,10 +45,6 @@ class Settings(BaseSettings):
     session_cookie_same_site: Literal["lax", "strict", "none"] = "lax"
     auth_guest_rate_limit: int = 20
     auth_guest_rate_window_seconds: int = 60
-    auth_register_rate_limit: int = 10
-    auth_register_rate_window_seconds: int = 60
-    auth_login_rate_limit: int = 10
-    auth_login_rate_window_seconds: int = 60
     category_locale_availability_ttl_seconds: int = 120
     category_cache_ttl_seconds: int = 60 * 60 * 24
 

@@ -69,36 +69,10 @@ export const LocaleAvailabilityItemSchema = z
   .describe("Aggregated locale support across selectable system categories.");
 export type LocaleAvailabilityItem = z.infer<typeof LocaleAvailabilityItemSchema>;
 
-export const LoginRequestSchema = z
-  .object({
-    password: z.string().min(8).max(128),
-    username: z
-      .string()
-      .regex(/^[a-zA-Z0-9_-]+$/)
-      .min(3)
-      .max(40),
-  })
-  .describe("Request body for username/password login.");
-export type LoginRequest = z.infer<typeof LoginRequestSchema>;
-
 export const QuickPlayResponseSchema = z
   .object({ kind: z.enum(["existing", "created"]), room_code: z.string() })
   .describe("Response for quick-play: a joinable room, existing or freshly created.");
 export type QuickPlayResponse = z.infer<typeof QuickPlayResponseSchema>;
-
-export const RegisterRequestSchema = z
-  .object({
-    displayName: z.union([z.string().max(80), z.null()]).optional(),
-    password: z.string().min(8).max(128),
-    preferredLocale: z.string().max(16).default("en"),
-    username: z
-      .string()
-      .regex(/^[a-zA-Z0-9_-]+$/)
-      .min(3)
-      .max(40),
-  })
-  .describe("Request body for account registration.");
-export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
 
 export const RoomStatusResponseSchema = z
   .object({
@@ -157,9 +131,7 @@ export const apiSchemaNames = [
   "HTTPValidationError",
   "LanguageCode",
   "LocaleAvailabilityItem",
-  "LoginRequest",
   "QuickPlayResponse",
-  "RegisterRequest",
   "RoomStatusResponse",
   "StatsResponse",
   "UserResponse",

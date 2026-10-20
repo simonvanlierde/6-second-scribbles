@@ -1,4 +1,4 @@
-"""Tests for first-party auth and session-backed user endpoints."""
+"""Tests for guest auth and the session-backed /me endpoint."""
 
 from __future__ import annotations
 
@@ -16,43 +16,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="session")
 PRELOADED_LOCALE = "es"
 DISPLAY_NAME = "Sketch Friend"
 SESSION_COOKIE_PREFIX = "scribbles_session="
-USERNAME_ALICE = "alice"
-USERNAME_BOB = "bob"
-SECRET_ALICE = "supersecret"  # noqa: S105
-SECRET_BOB = "verysecure"  # noqa: S105
 LOCALE_EN = "en"
-LOCALE_FR = "fr"
-
-
-async def test_login_logout_and_me_flow(async_client: AsyncClient) -> None:
-    """Login, logout, and /me all round-trip as expected."""
-    register_response = await async_client.post(
-        "/api/auth/register",
-        json={
-            "username": USERNAME_BOB,
-            "password": SECRET_BOB,
-            "preferredLocale": LOCALE_EN,
-        },
-    )
-    assert register_response.status_code == 200
-
-    logout_response = await async_client.post("/api/auth/logout")
-    assert logout_response.status_code == 204
-
-    unauthorized_me = await async_client.get("/api/me")
-    assert unauthorized_me.status_code == 401
-
-    login_response = await async_client.post(
-        "/api/auth/login",
-        json={"username": USERNAME_BOB, "password": SECRET_BOB},
-    )
-
-    assert login_response.status_code == 200
-    assert login_response.json()["username"] == USERNAME_BOB
-
-    me_response = await async_client.get("/api/me")
-    assert me_response.status_code == 200
-    assert me_response.json()["username"] == USERNAME_BOB
 
 
 async def test_guest_auth_creates_session_and_me_endpoint(async_client: AsyncClient) -> None:
