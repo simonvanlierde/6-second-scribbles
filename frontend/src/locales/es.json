@@ -88,7 +88,7 @@
     "invalidCode": "Código de sala inválido",
     "roomNotFound": "Sala no encontrada",
     "roomInProgress": "La sala está en curso. Puedes mirar ahora y unirte cuando vuelva al vestíbulo.",
-    "playersInRoom": "{count} jugador | {count} jugadores en la sala",
+    "playersInRoom": "{count} jugador en la sala | {count} jugadores en la sala",
     "invalidCodeText": "Los códigos de sala tienen 6 caracteres usando A–Z y 0–9. Revisa el código e inténtalo de nuevo.",
     "roomNotExist": "Esta sala no existe; te llevamos de vuelta al vestíbulo...",
     "tryGoBack": "Intenta volver al vestíbulo y volver a introducir el código.",

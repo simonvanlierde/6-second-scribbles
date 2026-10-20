@@ -88,7 +88,7 @@
     "invalidCode": "Codice stanza non valido",
     "roomNotFound": "Stanza non trovata",
     "roomInProgress": "La stanza è in corso. Puoi guardare ora e unirti quando torna nella lobby.",
-    "playersInRoom": "{count} giocatore | {count} giocatori nella stanza",
+    "playersInRoom": "{count} giocatore nella stanza | {count} giocatori nella stanza",
     "invalidCodeText": "I codici stanza sono lunghi 6 caratteri e usano A–Z e 0–9. Controlla il codice e riprova.",
     "roomNotExist": "Questa stanza non esiste, ti riportiamo alla lobby...",
     "tryGoBack": "Prova a tornare alla lobby e reinserire il codice.",

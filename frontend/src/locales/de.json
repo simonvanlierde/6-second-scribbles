@@ -88,7 +88,7 @@
     "invalidCode": "Ungültiger Raumcode",
     "roomNotFound": "Raum nicht gefunden",
     "roomInProgress": "Der Raum läuft bereits. Du kannst jetzt zusehen und beitreten, wenn er zurück in die Lobby wechselt.",
-    "playersInRoom": "{count} Spieler | {count} Spieler im Raum",
+    "playersInRoom": "{count} Spieler im Raum | {count} Spieler im Raum",
     "invalidCodeText": "Raumcodes bestehen aus 6 Zeichen mit A–Z und 0–9. Prüfe den Code und versuche es erneut.",
     "roomNotExist": "Dieser Raum existiert nicht. Wir bringen dich zurück zur Lobby...",
     "tryGoBack": "Geh zurück zur Lobby und gib den Code erneut ein.",
