@@ -65,6 +65,12 @@ async def cancel_task(task: asyncio.Task[object] | None) -> None:
         await task
 
 
+def _cancel(task: asyncio.Task[object] | None) -> None:
+    """Cancel a pending timer without waiting for it; never the running task, which is the caller."""
+    if task is not None and not task.done() and task is not asyncio.current_task():
+        task.cancel()
+
+
 def _log_task_exception(task: asyncio.Task[object]) -> None:
     if task.cancelled():
         return
@@ -136,8 +142,7 @@ class RoomTaskScheduler:
 
     def schedule_guessing_start(self, drawing_time_limit_seconds: int) -> None:
         """Schedule the drawing->guessing transition for the active round."""
-        if self._guessing_start_task and not self._guessing_start_task.done():
-            self._guessing_start_task.cancel()
+        _cancel(self._guessing_start_task)
         self._guessing_start_task = create_logged_task(
             self._start_guessing_after_delay(drawing_time_limit_seconds),
             name=f"start_guessing_{self._room.room_id}",
@@ -163,8 +168,7 @@ class RoomTaskScheduler:
 
     def schedule_next_round(self, timeout_seconds: int, *, round_number: int | None = None) -> None:
         """Schedule the next round to start after a delay."""
-        if self._next_round_start_task and not self._next_round_start_task.done():
-            self._next_round_start_task.cancel()
+        _cancel(self._next_round_start_task)
         self._next_round_start_task = create_logged_task(
             self._start_next_round_after_delay(timeout_seconds, round_number=round_number),
             name=f"next_round_{self._room.room_id}",
@@ -186,8 +190,7 @@ class RoomTaskScheduler:
 
     def schedule_scoring_timeout(self, timeout_seconds: int) -> None:
         """Schedule a fallback scoring task in case not all players submit in time."""
-        if self._round_scoring_task and not self._round_scoring_task.done():
-            self._round_scoring_task.cancel()
+        _cancel(self._round_scoring_task)
         self._round_scoring_task = create_logged_task(
             self._scoring_timeout(timeout_seconds),
             name=f"scoring_timeout_{self._room.room_id}",
@@ -237,30 +240,22 @@ class RoomTaskScheduler:
         self._round_scoring_task = None
 
     def cancel_guessing_start(self) -> None:
-        """Cancel any pending drawing->guessing transition task, unless it is the caller."""
-        task = self._guessing_start_task
-        if task and not task.done() and task is not asyncio.current_task():
-            task.cancel()
+        """Cancel any pending drawing->guessing transition task."""
+        _cancel(self._guessing_start_task)
         self._guessing_start_task = None
 
     def cancel_game_complete(self) -> None:
         """Cancel any pending game-complete broadcast task."""
-        if self._game_complete_task and not self._game_complete_task.done():
-            self._game_complete_task.cancel()
+        _cancel(self._game_complete_task)
         self._game_complete_task = None
 
     def cancel_round_tasks(self) -> None:
         """Cancel every round-phase timer before starting a new round or resetting."""
-        if self._guessing_start_task and not self._guessing_start_task.done():
-            self._guessing_start_task.cancel()
-        self._guessing_start_task = None
-        # The scheduled round start runs start_round itself; cancelling it here would
-        # kill it at its next await, before it persists and arms the guessing timer.
-        task = self._next_round_start_task
-        if task and not task.done() and task is not asyncio.current_task():
-            task.cancel()
+        self.cancel_guessing_start()
+        # The scheduled round start runs start_round itself; _cancel skips it then, or it
+        # would die at its next await, before it persists and arms the guessing timer.
+        _cancel(self._next_round_start_task)
         self._next_round_start_task = None
-        if self._round_scoring_task and not self._round_scoring_task.done():
-            self._round_scoring_task.cancel()
+        _cancel(self._round_scoring_task)
         self._round_scoring_task = None
         self.cancel_game_complete()
