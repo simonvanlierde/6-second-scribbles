@@ -1,5 +1,5 @@
 # compose.prod.yml - Docker Compose overrides for production environment
-# spell-checker: ignore tmpfs
+# spell-checker: ignore tmpfs, gosu
 name: 6ss-prod
 
 # Rotate container logs: Docker keeps json-file logs forever by default. Caddy's
@@ -75,6 +75,11 @@ services:
   database:
     logging: *logging
     restart: unless-stopped
+    # The entrypoint drops from root to postgres with gosu, which uses the default
+    # SETUID and SETGID capabilities, not a setuid bit, so no-new-privileges does not
+    # block it. The pids cap stops a fork bomb from exhausting the host's process table.
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - backend/.env.prod
     deploy:
@@ -82,6 +87,7 @@ services:
         limits:
           cpus: "1.0"
           memory: 512m
+          pids: 512
 
   database-migrations:
     <<: *hardening
