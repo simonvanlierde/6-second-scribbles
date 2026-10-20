@@ -5,9 +5,9 @@
 [![6ss.duinlab.nl](https://img.shields.io/website?url=https%3A%2F%2F6ss.duinlab.nl&up_message=online&down_message=offline)](https://6ss.duinlab.nl)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-6 Second Scribbles is a multiplayer drawing and guessing game that runs in real time. One player races through a list of prompts while everyone else guesses what's being drawn.
+6 Second Scribbles is a real-time multiplayer drawing and guessing game. One player races through a list of prompts while everyone else guesses what they're drawing.
 
-Play the live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl); the layout is desktop-first for now. It's a Vue 3 frontend and a FastAPI backend kept in sync by committed, generated contracts.
+Play it live at [6ss.duinlab.nl](https://6ss.duinlab.nl). The layout is built for desktop for now. It's a Vue 3 frontend and a FastAPI backend, kept in sync by committed, generated contracts.
 
 | The drawer's view | What the guessers see |
 | --- | --- |
@@ -15,7 +15,7 @@ Play the live demo at [6ss.duinlab.nl](https://6ss.duinlab.nl); the layout is de
 
 ## Running locally
 
-Requires Node 26+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
+You need Node 26+, Python 3.14+, `pnpm`, `uv`, `just`, and Docker.
 
 ```bash
 just install                                   # install dependencies
@@ -24,11 +24,11 @@ cp frontend/.env.example frontend/.env.local
 just dev                                        # Docker services + dev servers
 ```
 
-`just up` runs the whole stack in containers. `just test`, `just check`, and `just format` run the tests, the linters, and the formatters.
+Then open <http://localhost:3001>. `just up` runs the whole stack in containers instead. `just test`, `just check`, and `just format` run the tests, the linters, and the formatters.
 
 ## Docs
 
-- [Architecture](docs/architecture.md), with production deployment, and the [ADRs](docs/adr/)
+- [Architecture](docs/architecture.md), including how production runs, and the [design decisions](docs/adr/)
 - [Capacity](docs/capacity.md): how many rooms one backend holds
 - [Frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md)
 - [Contributing](CONTRIBUTING.md)
@@ -39,4 +39,4 @@ Inspired by *Six Second Scribbles* by Hazel Reynolds, published by [Gamely Games
 
 ## License
 
-Code is released under the [MIT License](LICENSE). The original *Six Second Scribbles* game concept, brand, and card content remain the property of their respective owners.
+The code is under the [MIT License](LICENSE). The original *Six Second Scribbles* game concept, brand, and card content belong to their owners.
