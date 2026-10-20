@@ -61,9 +61,12 @@ down-clean:
     {{ dev_compose }} down -v
 
 # Start full prod stack in Docker (infra + backend + built frontend).
+# --pull fetches new base images, so their security fixes reach the build.
 [group('docker')]
 up-prod:
-    {{ prod_compose }} up -d --build
+    {{ prod_compose }} build --pull
+    {{ prod_compose }} pull --ignore-buildable
+    {{ prod_compose }} up -d
 
 # Stop full prod stack.
 [group('docker')]
