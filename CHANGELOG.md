@@ -20,7 +20,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A logo, favicon, and Apple touch icon.
 - A `robots.txt` that keeps crawlers off the API, the WebSocket, room pages, and the internal design-system page.
 - A Content Security Policy on the frontend: scripts, styles, fonts, and API and WebSocket calls are limited to the site's own origin.
-- `seed_data` modes: `--append` adds only new categories, `--overwrite` updates the system categories and prompts to match the seed file. A `database-seed` Compose service runs the seeder on demand.
+- `seed_data` modes: `--append` adds only new categories, `--overwrite` updates the system categories and prompts in place to match the seed file, matched on slug and prompt key. IDs held by open rooms survive a reseed, translation fixes reach existing prompts, only entries removed from the seed file are deleted, and the category caches in Redis are cleared afterwards. A `database-seed` Compose service runs the seeder on demand.
 - JSON access logs from the frontend's Caddy server, recording the real visitor IP behind the Cloudflare tunnel.
 - End-to-end Playwright tests in CI, against Postgres and Redis.
 - A WebSocket load test, `just loadtest`, and [docs/capacity.md](docs/capacity.md) with its result: about 80 rooms of 6 busy players on one backend under the production limits.
