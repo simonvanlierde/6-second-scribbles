@@ -136,14 +136,19 @@ def _check_identity(room: GameRoom, player_id: str, user_id: str | None, rejoin_
     # A new player_id adds a binding once it drops. While the absent bindings are
     # all recent, refuse newcomers rather than evict one, so a flood of throwaway
     # ids cannot free a real player's seat; the room opens again once they expire.
-    if player_id not in room.players and existing_owner is None and stored_hash is None:
-        present = set(room.players)
-        if len(room.metadata.absent_identities(present)) >= MAX_ABSENT_BINDINGS:
-            # Make room for this newcomer's binding among the expired ones.
-            trim_absent_bindings(room, present, keep=MAX_ABSENT_BINDINGS - 1)
-            if len(room.metadata.absent_identities(present)) >= MAX_ABSENT_BINDINGS:
-                raise ValueError(SEATS_BUSY_ERROR)
+    if player_id not in room.players and existing_owner is None and stored_hash is None and seats_busy(room):
+        raise ValueError(SEATS_BUSY_ERROR)
     return key_hash
+
+
+def seats_busy(room: GameRoom) -> bool:
+    """Return whether the room must refuse a newcomer because every spare binding is recent."""
+    present = set(room.players)
+    if len(room.metadata.absent_identities(present)) < MAX_ABSENT_BINDINGS:
+        return False
+    # Make room for a newcomer's binding among the expired ones.
+    trim_absent_bindings(room, present, keep=MAX_ABSENT_BINDINGS - 1)
+    return len(room.metadata.absent_identities(present)) >= MAX_ABSENT_BINDINGS
 
 
 def trim_absent_bindings(room: GameRoom, present: set[str], *, keep: int = MAX_ABSENT_BINDINGS) -> None:
