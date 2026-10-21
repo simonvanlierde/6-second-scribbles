@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
+import { onBeforeUnmount, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
 import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
@@ -49,10 +49,15 @@ let pendingStart = false;
 // How many points of each stroke in the store are on the canvas, so a stroke that
 // grows via delta fragments is rendered incrementally.
 const drawnCounts = new Map<number, number>();
+// The toolbar's clear empties only this pad: strokes before this store index stay
+// off it, on redraws too, until the whole doodle is cleared.
+let clearedBefore = 0;
 
 // Pad coordinates (see PAD_SCALE) for the points drawn on this canvas, in pixels.
 function toPad(points: Array<{ x: number; y: number }>): number[] {
   const { width, height } = canvas.size();
+  // A pad out of the layout has no size, and its points have no position on it.
+  if (width === 0 || height === 0) return [];
   const scale = (value: number, size: number) =>
     Math.min(PAD_SCALE, Math.max(0, Math.round((value / size) * PAD_SCALE)));
   return points.flatMap((p) => [scale(p.x, width), scale(p.y, height)]);
@@ -75,18 +80,20 @@ function redrawAll() {
   canvas.clear();
   drawnCounts.clear();
   store.currentStrokes.forEach((stroke, i) => {
-    canvas.drawStroke(toCanvas(stroke, 0));
+    if (i >= clearedBefore) canvas.drawStroke(toCanvas(stroke, 0));
     drawnCounts.set(i, stroke.points.length / 2);
   });
 }
 
 function clearLocal() {
   canvas.clear();
+  clearedBefore = store.currentStrokes.length;
 }
 
 function flushPending() {
-  if (pendingPoints.length > 0 && pendingMeta && store.localPlayerId) {
-    const stroke = { color: pendingMeta.color, width: pendingMeta.width, points: toPad(pendingPoints) };
+  const points = toPad(pendingPoints);
+  if (points.length > 0 && pendingMeta && store.localPlayerId) {
+    const stroke = { color: pendingMeta.color, width: pendingMeta.width, points };
     send({ type: "draw_stroke_partial", playerId: store.localPlayerId, stroke, strokeStart: pendingStart });
     // Keep our own strokes in the store with everyone else's, so a resize can redraw
     // the whole doodle; they are already on the canvas.
@@ -112,6 +119,7 @@ watch(
   (strokes) => {
     if (strokes.length === 0) {
       drawnCounts.clear();
+      clearedBefore = 0;
       canvas.clear();
       return;
     }
@@ -120,7 +128,7 @@ watch(
       if (!stroke) continue;
       const done = drawnCounts.get(i) ?? 0;
       const total = stroke.points.length / 2;
-      if (total > done) {
+      if (total > done && i >= clearedBefore) {
         // Start one point back, so the new tail joins the part already drawn.
         canvas.drawStroke(toCanvas(stroke, Math.max(0, done - 1)));
         drawnCounts.set(i, total);
@@ -155,9 +163,13 @@ onMounted(() => {
   });
 });
 
-onUnmounted(() => {
+// Send what is buffered while the pad is still laid out, so its points still scale.
+onBeforeUnmount(() => {
   if (sendTimer !== null) clearTimeout(sendTimer);
   flushPending();
+});
+
+onUnmounted(() => {
   canvas.cleanup();
 });
 </script>

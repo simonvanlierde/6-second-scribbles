@@ -364,6 +364,57 @@ class TestGameRoom:
 
         assert ws.sent_texts == []
 
+    async def test_a_later_batch_never_overtakes_one_still_going_out(self, game_room: GameRoom) -> None:
+        """A player stuck on one batch holds back the next, so everyone gets batches in order."""
+        release = asyncio.Event()
+
+        class FirstSendStalls(TestWebSocket):
+            calls = 0
+
+            async def send_text(self, message: str) -> None:
+                self.calls += 1
+                if self.calls == 1:
+                    await release.wait()
+                await super().send_text(message)
+
+        slow, fast = FirstSendStalls(), TestWebSocket()
+        game_room.players["slow"] = PlayerInfo(id="slow", name="Slow", websocket=as_websocket(slow))
+        game_room.players["fast"] = PlayerInfo(id="fast", name="Fast", websocket=as_websocket(fast))
+        tick = manager_module.LOBBY_FRAGMENT_TICK_SECONDS
+        for x in (1, 2):
+            stroke = StrokeDelta(color="#000", width=3, points=[x, x])
+            game_room.queue_lobby_fragment(StrokeFragment(player_id="p1", stroke=stroke, stroke_start=x == 1))
+            await asyncio.sleep(tick * 2)
+        assert fast.sent_texts == []  # the second batch waits behind the stalled first
+
+        release.set()
+        await asyncio.sleep(tick * 3)
+
+        first_points = [
+            DrawStrokeBatchServerEvent.model_validate_json(m).fragments[0].stroke.points[0] for m in fast.sent_texts
+        ]
+        assert first_points == [1, 2]
+
+    async def test_waiting_for_the_lobby_batch_ends_when_it_has_gone_out(self, game_room: GameRoom) -> None:
+        """A clear can wait for a batch in flight, so it never lands before that batch."""
+        release = asyncio.Event()
+
+        class Stalls(TestWebSocket):
+            async def send_text(self, message: str) -> None:
+                await release.wait()
+                await super().send_text(message)
+
+        game_room.players["p1"] = PlayerInfo(id="p1", name="One", websocket=as_websocket(Stalls()))
+        stroke = StrokeDelta(color="#000", width=3, points=[1, 1])
+        game_room.queue_lobby_fragment(StrokeFragment(player_id="p1", stroke=stroke, stroke_start=True))
+        await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+
+        waiting = asyncio.create_task(game_room.wait_for_lobby_batch())
+        await asyncio.sleep(0.01)
+        assert not waiting.done()
+        release.set()
+        await asyncio.wait_for(waiting, timeout=1)
+
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""
         assert game_room.metadata.game_phase == GamePhase.LOBBY

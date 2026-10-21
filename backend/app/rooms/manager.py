@@ -151,6 +151,7 @@ class GameRoom:
         self._lobby_points = 0
         self._pending_fragments: list[StrokeFragment] = []
         self._fragment_flush: asyncio.TimerHandle | None = None
+        self._fragment_send: asyncio.Task[object] | None = None
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -363,11 +364,23 @@ class GameRoom:
             )
 
     def _flush_lobby_fragments(self) -> None:
+        loop = asyncio.get_running_loop()
+        if self._fragment_send is not None and not self._fragment_send.done():
+            # The last batch is still going out to a slow player: hold these a tick
+            # longer, so no player gets a later batch before an earlier one.
+            self._fragment_flush = loop.call_later(LOBBY_FRAGMENT_TICK_SECONDS, self._flush_lobby_fragments)
+            return
         self._fragment_flush = None
         fragments, self._pending_fragments = self._pending_fragments, []
         if fragments:
             event = DrawStrokeBatchServerEvent(fragments=fragments)
-            create_logged_task(self.broadcast(event), name=f"fragments_{self.room_id}")
+            self._fragment_send = create_logged_task(self.broadcast(event), name=f"fragments_{self.room_id}")
+
+    async def wait_for_lobby_batch(self) -> None:
+        """Wait until the doodle batch being sent, if any, has reached every player."""
+        if self._fragment_send is not None and not self._fragment_send.done():
+            # wait() neither raises the task's error nor cancels it if we are cancelled.
+            await asyncio.wait({self._fragment_send})
 
     def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot.
