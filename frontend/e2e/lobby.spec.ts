@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 // The name now lives in the Settings panel (opened from the gear), not on Home.
-async function setPlayerName(page: Parameters<Parameters<typeof test>[1]>[0]["page"], name: string) {
+async function setPlayerName(page: Page, name: string) {
   await page.getByRole("button", { name: /^settings$/i }).click();
   const nameInput = page.getByPlaceholder(/pick a name/i);
   await nameInput.fill(name);

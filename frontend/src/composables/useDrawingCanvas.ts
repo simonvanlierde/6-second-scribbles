@@ -1,13 +1,18 @@
 import { ref } from "vue";
 
-import type { DrawStroke } from "@/shared/types";
+/** A stroke in this canvas's CSS pixels. */
+export interface CanvasStroke {
+  color: string;
+  width: number;
+  points: Array<{ x: number; y: number }>;
+}
 
 export function useDrawingCanvas() {
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   const ctx = ref<CanvasRenderingContext2D | null>(null);
   const isDrawing = ref(false);
   const currentStroke = ref<{ x: number; y: number }[]>([]);
-  const strokes = ref<DrawStroke[]>([]);
+  const strokes = ref<CanvasStroke[]>([]);
   const currentColor = ref("#000000");
   const currentWidth = ref(5);
   // The stroke belongs to a single pointer; secondary pointers (multi-touch) are
@@ -19,6 +24,9 @@ export function useDrawingCanvas() {
   let onStrokeProgress:
     | ((delta: { color: string; width: number; points: Array<{ x: number; y: number }>; first: boolean }) => void)
     | null = null;
+  // Runs after a resize instead of replaying `strokes`, for a caller that keeps its
+  // own strokes and redraws them at the new size.
+  let onResize: (() => void) | null = null;
   let stopResizeObserver: (() => void) | null = null;
   let stopEventListeners: (() => void) | null = null;
 
@@ -211,15 +219,29 @@ export function useDrawingCanvas() {
     // Replay strokes synchronously — simpler and lossless compared to the
     // previous dataURL → Image → onload async round-trip, which was fragile
     // in test environments and caused quality loss on repeated resizes.
+    if (onResize) {
+      onResize();
+      return;
+    }
     for (const stroke of strokes.value) {
       drawStroke(stroke);
     }
   }
 
+  function setResizeHandler(cb: (() => void) | null) {
+    onResize = cb;
+  }
+
+  /** The canvas size in CSS pixels. */
+  function size(): { width: number; height: number } {
+    const rect = canvasRef.value?.getBoundingClientRect();
+    return { width: rect?.width ?? 0, height: rect?.height ?? 0 };
+  }
+
   // `from` renders only the tail of a stroke (from index `from`), connecting to
   // the previous point — used to draw incoming delta fragments incrementally
   // without re-stroking the whole path. `from` = 0 draws the entire stroke.
-  function drawStroke(stroke: DrawStroke, from = 0) {
+  function drawStroke(stroke: CanvasStroke, from = 0) {
     if (!ctx.value || stroke.points.length === 0) return;
 
     const startIdx = from > 0 ? from - 1 : 0;
@@ -241,7 +263,7 @@ export function useDrawingCanvas() {
     ctx.value.stroke();
   }
 
-  function replaceStrokes(nextStrokes: DrawStroke[]) {
+  function replaceStrokes(nextStrokes: CanvasStroke[]) {
     strokes.value = nextStrokes;
     if (ctx.value && canvasRef.value) {
       ctx.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
@@ -265,6 +287,8 @@ export function useDrawingCanvas() {
     undo,
     drawStroke,
     replaceStrokes,
+    setResizeHandler,
     setStrokeProgressCallback,
+    size,
   };
 }

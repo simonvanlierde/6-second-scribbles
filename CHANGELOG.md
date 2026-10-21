@@ -6,17 +6,31 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. The default, one step at 40 rooms, takes about five minutes. See [docs/capacity.md](docs/capacity.md).
+- For contributors: an end-to-end axe check of the lobby, drawing, guessing and round results screens, in both colour schemes.
+
+### Changed
+
+- **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
+- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. With every player drawing at once, one server now holds about 200 rooms of 6 instead of about 60.
+
 ### Removed
 
 - The Argos Translate machine translation of seed data is gone: the `db-translate` dependency group and Docker target, the `translate-seed` and `seed-auto` recipes, and the `ARGOS_MODELS_DIR` volume in the dev Compose file. Seed translations are now written and reviewed by hand. The game never used it at runtime.
 
 ### Fixed
 
+- The server no longer turns players away once about 1,000 are connected. It ran out of open files, one per connection, long before it ran out of CPU.
+- When the lobby drawpad changed size, for example when you rotated your phone, the other players' strokes disappeared from it.
+- In French, the player count now uses the singular for zero, as French grammar does.
 - If your device's clock ran slightly behind the server's, the drawing timer ended the moment a round started and your guesses were sent straight away.
 - If everyone left the final results and someone came back, the room no longer returned to the lobby on its own, so only the host could start a new game.
 - Your own avatar now shows the colour everyone else sees. When the colour you picked was taken, your header and settings showed your pick instead.
 - Quick play no longer sends you to a room that will turn you away because too many players recently left it.
 - The "wildest miss" highlight now reads a guess with the guesser's own language rules. It used English plurals, so a German "Eis" for "Ei" counted as a perfect match and could never be the wildest miss.
+- For contributors: `just loadtest` measured nothing since 2026-10-18. The server rejected every stroke and game start the load generator sent, so each run reported zero deliveries.
 
 ## [0.3.0] - 2026-10-21
 

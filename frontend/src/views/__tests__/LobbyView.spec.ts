@@ -111,7 +111,7 @@ describe("LobbyView", () => {
 
   it("lets the host manage shared drawpad visibility and clearing", async () => {
     const store = seedLobby();
-    store.applyPartialStroke("p2", { color: "#000", width: 2, points: [{ x: 1, y: 1 }] }, true);
+    store.applyPartialStroke("p2", { color: "#000", width: 2, points: [1, 1] }, true);
     const wrapper = mountLobby();
 
     await wrapper.find('[aria-label="Clear for all"]').trigger("click");
