@@ -403,16 +403,35 @@ class GameRoom:
         text = encode_ws_message(message)
         # Snapshot: send_text awaits, and a concurrent remove/disconnect
         # mutating self.players mid-iteration would raise "dict changed size".
-        for player_id, player in list(self.players.items()):
-            if (exclude and player_id == exclude) or not player.connected:
-                continue
-            await self._deliver(player, text)
-        await self._deliver_to_observers(text)
+        players = [player for player_id, player in list(self.players.items()) if player_id != exclude]
+        await self._deliver_all([*players, *self.observers], text)
 
     async def _deliver_to_observers(self, text: str) -> None:
-        for observer in list(self.observers):
-            if observer.connected:
-                await self._deliver(observer, text)
+        await self._deliver_all(list(self.observers), text)
+
+    async def _deliver_all(self, recipients: list[PlayerInfo], text: str) -> None:
+        """Send text to each still-connected recipient, dropping any whose send fails or stalls."""
+        pending = iter(recipients)
+        while True:
+            player: PlayerInfo | None = None
+            try:
+                # One timer for the whole loop rather than one per send: arming a timer
+                # per recipient was a measurable share of the CPU per relayed stroke.
+                async with asyncio.timeout(settings.ws_send_timeout_seconds):
+                    for player in pending:
+                        if not player.connected:
+                            continue
+                        try:
+                            await player.websocket.send_text(text)
+                        except Exception:
+                            logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
+                            self._drop(player)
+                    return
+            except TimeoutError:
+                # The send that ran out the clock is the stuck one; the rest get a new timer.
+                if player is not None:
+                    logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
+                    self._drop(player)
 
     async def _deliver(self, player: PlayerInfo, text: str) -> None:
         try:
@@ -420,15 +439,18 @@ class GameRoom:
             # it every broadcast and timer in the room.
             await asyncio.wait_for(player.websocket.send_text(text), settings.ws_send_timeout_seconds)
         except Exception:
-            # A failed send on a still-"connected" socket means we missed the
-            # close. Mark them disconnected so we stop trying; the websocket's
-            # receive loop will raise next and run disconnect_player, which
-            # broadcasts presence and handles host/scoring/cleanup.
             logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-            player.connected = False
-            # Close so the client reconnects instead of sitting on a socket that gets
-            # nothing; in the background, because a stuck socket may not close quickly.
-            create_logged_task(_close_quietly(player.websocket), name=f"close_{self.room_id}_{player.id}")
+            self._drop(player)
+
+    def _drop(self, player: PlayerInfo) -> None:
+        # A failed send on a still-"connected" socket means we missed the
+        # close. Mark them disconnected so we stop trying; the websocket's
+        # receive loop will raise next and run disconnect_player, which
+        # broadcasts presence and handles host/scoring/cleanup.
+        player.connected = False
+        # Close so the client reconnects instead of sitting on a socket that gets
+        # nothing; in the background, because a stuck socket may not close quickly.
+        create_logged_task(_close_quietly(player.websocket), name=f"close_{self.room_id}_{player.id}")
 
     async def send_round_start(
         self,
