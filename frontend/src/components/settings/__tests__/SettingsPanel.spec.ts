@@ -83,4 +83,15 @@ describe("SettingsPanel", () => {
     expect(action).toHaveBeenCalledTimes(1);
     expect(w.emitted("update:open")?.at(-1)).toEqual([false]);
   });
+
+  it("closes on Enter in the name field and resumes the action that asked for a name", async () => {
+    const w = mountPanel({ localPlayerName: "Simon" });
+    const action = vi.fn();
+    useSettingsPanel().pendingNameAction.value = action;
+
+    await w.get("input[type='text']").trigger("keyup.enter");
+
+    expect(w.emitted("update:open")?.at(-1)).toEqual([false]);
+    expect(action).toHaveBeenCalledTimes(1);
+  });
 });

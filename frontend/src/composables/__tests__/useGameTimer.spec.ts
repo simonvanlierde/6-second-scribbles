@@ -93,4 +93,18 @@ describe("useGameTimer", () => {
     await nextTick();
     expect(message.value).toBe("");
   });
+
+  it("stays quiet when a reconnect finds the time already up", async () => {
+    const { message } = useAnnouncer();
+    message.value = "";
+    const startTime = ref(Date.now());
+    const { isWarning } = useGameTimer({ startTime, duration: 30 });
+
+    startTime.value = Date.now() - 60_000;
+    await nextTick();
+    await nextTick();
+
+    expect(isWarning.value).toBe(true);
+    expect(message.value).toBe("");
+  });
 });

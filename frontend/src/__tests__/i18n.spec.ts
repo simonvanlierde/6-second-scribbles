@@ -1,4 +1,4 @@
-// cspell:ignore gracz gracze graczy pokoju sekund sekunda sekundy Została Zostało Zostały
+// cspell:ignore gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
 import { afterEach, describe, expect, it } from "vitest";
 
 import { i18n, setLocale } from "@/i18n";
@@ -80,5 +80,12 @@ describe("plurals", () => {
 
   it("keeps the two English forms", () => {
     expect([0, 1, 2].map(players)).toEqual(["0 players in room", "1 player in room", "2 players in room"]);
+  });
+
+  it("still picks singular and plural when a Polish string has only two forms", async () => {
+    await setLocale("pl");
+    i18n.global.mergeLocaleMessage("pl", { twoFormTest: "{count} punkt | {count} punkty" });
+    const points = (count: number) => i18n.global.t("twoFormTest", { count });
+    expect([1, 2, 5].map(points)).toEqual(["1 punkt", "2 punkty", "5 punkty"]);
   });
 });
