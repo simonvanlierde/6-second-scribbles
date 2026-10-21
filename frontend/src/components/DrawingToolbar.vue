@@ -45,7 +45,22 @@ const { t } = useI18n();
         :aria-label="DRAW_COLOR_NAMES[color] ? t(DRAW_COLOR_NAMES[color]) : color"
         :aria-pressed="currentColor === color"
         @click="$emit('select-color', color)"
-      />
+      >
+        <!-- A check, not an outline: the blue outline is the keyboard focus ring. -->
+        <svg
+          v-if="currentColor === color"
+          class="swatch__check"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </button>
     </div>
     <span class="toolbar__divider" aria-hidden="true" />
     <!-- biome-ignore lint/a11y/useSemanticElements: role=group + aria-label names the brush-size cluster; no native element fits -->
@@ -121,6 +136,7 @@ const { t } = useI18n();
   border-radius: var(--r-pill);
 }
 .swatch {
+  position: relative;
   width: 44px;
   height: 44px;
   border: 2px solid var(--color-ink);
@@ -132,8 +148,18 @@ const { t } = useI18n();
 }
 .swatch--active {
   transform: scale(1.15) rotate(-3deg);
-  outline: 3px solid var(--color-ring);
-  outline-offset: 2px;
+  border-width: 3px;
+}
+.swatch__check {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-paper);
 }
 .brush {
   display: inline-flex;

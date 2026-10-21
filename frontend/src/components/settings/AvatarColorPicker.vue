@@ -39,9 +39,9 @@ const { t } = i18n.global;
   cursor: pointer;
   transition: transform var(--motion-fast) var(--ease-spring);
 }
+/* A fill, not an outline: the blue outline is the keyboard focus ring. */
 .avatar-picker__btn--active {
-  outline: 3px solid var(--color-ring);
-  outline-offset: 2px;
+  background: var(--color-highlighter-yellow);
 }
 .avatar-picker__btn:active {
   transform: scale(0.94);
