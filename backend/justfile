@@ -63,17 +63,6 @@ migrate-new name:
 seed:
     uv run python -m scripts.seed_data
 
-# Fill missing seed translations using Argos Translate.
-[group('db')]
-translate-seed:
-    uv run python -m scripts.auto_translate_seed_data
-
-# Auto-translate missing seed entries, then seed the database.
-[group('db')]
-seed-auto:
-    just translate-seed
-    just seed
-
 # ── Install ───────────────────────────────────────────────────────────────────
 
 # Install backend dependencies.

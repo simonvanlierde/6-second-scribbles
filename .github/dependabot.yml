@@ -73,7 +73,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-      # ctranslate2 has no cp315 wheels yet; see backend/.python-version.
+      # Python minors move by hand, together with backend/.python-version.
       - dependency-name: python
         versions: [">=3.15"]
 
