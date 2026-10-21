@@ -13,8 +13,8 @@ interface UseGameTimerOptions {
 
 function computeTimeLeft(startTime: number | null | undefined, duration: number): number {
   if (!startTime || Number.isNaN(startTime)) return duration;
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  if (elapsed < 0 || elapsed > duration) return 0;
+  // A client clock running behind the server's makes elapsed negative: that is no time used yet.
+  const elapsed = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
   return Math.max(0, duration - elapsed);
 }
 
@@ -31,17 +31,26 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
     }
   }
 
-  const interval = window.setInterval(refresh, 1000);
-  const stop = () => clearInterval(interval);
+  let interval: number | undefined;
+  function stop() {
+    clearInterval(interval);
+    interval = undefined;
+  }
+  function start() {
+    stop();
+    interval = window.setInterval(refresh, 1000);
+  }
   // Outside a component (as in unit tests) nothing disposes the timer.
   if (getCurrentScope()) onScopeDispose(stop);
 
+  start();
   refresh();
 
   watch(
     () => [toValue(startTime), toValue(duration)] as const,
     () => {
       expired = false;
+      start();
       refresh();
     },
   );
