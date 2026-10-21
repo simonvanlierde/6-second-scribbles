@@ -49,6 +49,12 @@ export const useGameStore = defineStore(
       return idx;
     }
 
+    /** Whether the stroke at `index` is a player's latest one, which further fragments may extend. */
+    function isLatestStroke(index: number): boolean {
+      for (const idx of partialStrokeIndex.values()) if (idx === index) return true;
+      return false;
+    }
+
     function clearStrokes() {
       currentStrokes.value = [];
       partialStrokeIndex.clear();
@@ -541,6 +547,7 @@ export const useGameStore = defineStore(
       applyRoomState,
       // Drawing actions
       applyPartialStroke,
+      isLatestStroke,
       clearStrokes,
       setPlayerDrawing,
       setPlayerConnected,
