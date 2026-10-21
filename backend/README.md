@@ -32,8 +32,6 @@ just format
 just migrate
 just migrate-new "describe-change"
 just seed
-just translate-seed
-just seed-auto
 just generate-contracts
 ```
 
