@@ -120,3 +120,31 @@ class TestGuessMatcher:
         """Accents are still stripped so café matches cafe."""
         cafe = "cafe"
         assert normalize_text("Café") == cafe
+
+
+class TestLocalePlurals:
+    """Plural endings come from the guesser's language, not always from English."""
+
+    @pytest.fixture
+    def matcher(self) -> GuessMatcher:
+        """Create a GuessMatcher instance."""
+        return GuessMatcher()
+
+    def test_german_does_not_add_an_english_plural(self, matcher: GuessMatcher) -> None:
+        """German "Eis" (ice cream) is not a plural of "Ei" (egg)."""
+        assert not matcher.exact_match("Eis", "Ei", locale="de")
+        assert matcher.match_guess("Eis", "Ei", locale="de") is None
+
+    def test_english_plurals_still_match(self, matcher: GuessMatcher) -> None:
+        """English keeps its -s, -es and -ing endings."""
+        assert matcher.exact_match(CATS, CAT, locale="en")
+        assert matcher.exact_match(BOXES, BOX, locale="en-GB")
+
+    def test_spanish_plural_matches(self, matcher: GuessMatcher) -> None:
+        """Spanish plurals add -s or -es, so they still match."""
+        assert matcher.exact_match("gatos", "gato", locale="es")
+        assert matcher.exact_match("flores", "flor", locale="es")
+
+    def test_cjk_has_no_suffix_variants(self) -> None:
+        """Japanese words get no Latin suffixes."""
+        assert _generate_variants("ねこ", "ja") == frozenset({"ねこ"})

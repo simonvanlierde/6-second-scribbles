@@ -48,20 +48,31 @@ def normalize_text(text: str) -> str:
     return unicodedata.normalize("NFC", without_marks).strip()
 
 
+# Languages whose regular plural adds -s or -es. Others (German "Ei"/"Eis", Dutch,
+# Polish, Italian, CJK) form plurals differently, so a blind -s would join two words.
+ENGLISH = "en"
+_S_PLURAL_LANGUAGES = frozenset({ENGLISH, "es", "fr", "pt"})
+
+
 @functools.lru_cache(maxsize=1024)
-def _generate_variants(normalized: str) -> frozenset[str]:
-    """Generate common plural/verb variants of a normalized word."""
+def _generate_variants(normalized: str, locale: str | None = None) -> frozenset[str]:
+    """Generate the plural (and English -ing) variants of a normalized word.
+
+    ``locale`` is the guesser's language; None keeps the English rules.
+    """
+    language = (locale or ENGLISH).split("-")[0].lower()
     variants = {normalized}
 
-    if normalized.endswith("s"):
-        variants.add(normalized[:-1])
-        if normalized.endswith("es"):
-            variants.add(normalized[:-2])
-    else:
-        variants.add(f"{normalized}s")
-        variants.add(f"{normalized}es")
+    if language in _S_PLURAL_LANGUAGES:
+        if normalized.endswith("s"):
+            variants.add(normalized[:-1])
+            if normalized.endswith("es"):
+                variants.add(normalized[:-2])
+        else:
+            variants.add(f"{normalized}s")
+            variants.add(f"{normalized}es")
 
-    if normalized.endswith("ing"):
+    if language == ENGLISH and normalized.endswith("ing"):
         variants.add(normalized[:-3])
 
     # A word that is all suffix ("s", "es", "ing") would leave "", which every such word shares.
@@ -74,16 +85,18 @@ class GuessMatcher:
 
     FUZZY_MATCH_THRESHOLD = 85
 
-    def exact_match(self, guess: str, target: str) -> bool:
-        """Check if guess exactly matches target."""
-        return bool(_generate_variants(normalize_text(guess)) & _generate_variants(normalize_text(target)))
+    def exact_match(self, guess: str, target: str, locale: str | None = None) -> bool:
+        """Check if guess exactly matches target, allowing the language's plural endings."""
+        return bool(
+            _generate_variants(normalize_text(guess), locale) & _generate_variants(normalize_text(target), locale)
+        )
 
-    def fuzzy_match(self, guess: str, target: str) -> tuple[bool, float]:
+    def fuzzy_match(self, guess: str, target: str, locale: str | None = None) -> tuple[bool, float]:
         """Check if guess fuzzy matches target."""
         guess_norm = normalize_text(guess)
         target_norm = normalize_text(target)
 
-        if self.exact_match(guess, target):
+        if self.exact_match(guess, target, locale):
             return True, 100.0
 
         token_score = fuzz.token_sort_ratio(guess_norm, target_norm)
@@ -96,19 +109,25 @@ class GuessMatcher:
         similarity = max(token_score, partial_score)
         return similarity >= self.FUZZY_MATCH_THRESHOLD, similarity
 
-    def match_guess(self, guess: str, target: str, aliases: list[str] | None = None) -> float | None:
+    def match_guess(
+        self, guess: str, target: str, aliases: list[str] | None = None, locale: str | None = None
+    ) -> float | None:
         """Return the similarity when the guess matches the target or one of its aliases, else None.
 
         Aliases count only on an exact match; the target also counts on a fuzzy one.
         """
         if not normalize_text(guess):
             return None
-        if self.exact_match(guess, target) or any(self.exact_match(guess, alias) for alias in aliases or []):
+        if self.exact_match(guess, target, locale) or any(
+            self.exact_match(guess, alias, locale) for alias in aliases or []
+        ):
             return 100.0
-        is_match, similarity = self.fuzzy_match(guess, target)
+        is_match, similarity = self.fuzzy_match(guess, target, locale)
         return similarity if is_match else None
 
-    def score_guesses_against_targets(self, guesses: list[str], targets: list[GuessTarget]) -> list[str]:
+    def score_guesses_against_targets(
+        self, guesses: list[str], targets: list[GuessTarget], locale: str | None = None
+    ) -> list[str]:
         """Return the guesses that matched a target; each target counts once, so the score is the length."""
         matched_item_ids: set[int] = set()
         matched_guesses: list[str] = []
@@ -120,7 +139,7 @@ class GuessMatcher:
             for target in targets:
                 if target.item_id in matched_item_ids:
                     continue
-                similarity = self.match_guess(guess, target.label, target.aliases)
+                similarity = self.match_guess(guess, target.label, target.aliases, locale)
                 if similarity is not None and (best_target is None or similarity > best_similarity):
                     best_target = target
                     best_similarity = similarity

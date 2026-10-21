@@ -300,7 +300,9 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
                 exc.detail,
             )
             targets = []
-        matched_guesses = guess_matcher.score_guesses_against_targets(guesses, targets)
+        matched_guesses = guess_matcher.score_guesses_against_targets(
+            guesses, targets, room.get_player_locale(player_id)
+        )
         correct_count = len(matched_guesses)
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
