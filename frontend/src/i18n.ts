@@ -14,12 +14,18 @@ function polishPlural(choice: number, choicesLength: number): number {
   return form === "one" ? 0 : form === "few" ? 1 : 2;
 }
 
+// French counts zero in the singular too: "0 joueur", "1 joueur", "2 joueurs".
+// (Brazilian Portuguese keeps the default: "0 jogadores".)
+function frenchPlural(choice: number): number {
+  return Math.abs(choice) < 2 ? 0 : 1;
+}
+
 export const i18n = createI18n({
   legacy: false,
   locale: "en" satisfies AppLocale,
   fallbackLocale: "en" satisfies AppLocale,
   messages: { en } as Record<AppLocale, typeof en>,
-  pluralRules: { pl: polishPlural },
+  pluralRules: { pl: polishPlural, fr: frenchPlural },
 });
 
 const loaded = new Set<AppLocale>(["en"]);
