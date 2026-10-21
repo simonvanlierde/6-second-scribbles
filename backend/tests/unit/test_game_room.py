@@ -36,6 +36,7 @@ from tests.constants import (
     READY_STATUS,
     ROOM_NO_CATEGORIES,
     ROOM_STATE,
+    ROUND_COMPLETE,
     TEST_ROOM_ID,
 )
 from tests.support import as_websocket
@@ -934,6 +935,44 @@ class TestReviewRegressions:
         await room_with_players.score_and_broadcast_round()
 
         assert room_with_players.metadata.player_scores == {PLAYER_ONE_ID: 50, PLAYER_TWO_ID: 10}
+
+    @staticmethod
+    def _round_complete_sent_to(room: GameRoom, player_id: str) -> dict[str, list[dict[str, int]]]:
+        sent = cast("TestWebSocket", room.players[player_id].websocket).sent_texts
+        return next(msg for msg in map(json.loads, sent) if msg["type"] == ROUND_COMPLETE)
+
+    async def _guessing_round_with_one_submission(self, room: GameRoom) -> None:
+        rounds.start_round(room, round_number=1, cards={PLAYER_ONE_ID: self._card(1), PLAYER_TWO_ID: self._card(2)})
+        rounds.start_guessing(room)
+        room.metadata.guess_submissions = [
+            GuessSubmissionState(player_id=PLAYER_ONE_ID, target_player_id=PLAYER_TWO_ID, guesses=["cat"]),
+        ]
+
+    async def test_scoring_survives_a_category_removed_mid_round(self, room_with_players: GameRoom) -> None:
+        """A reseed that deletes the round's category scores those guesses as 0, not a stuck room."""
+        await self._guessing_round_with_one_submission(room_with_players)
+        missing = AsyncMock(side_effect=HTTPException(status_code=404, detail="Category not found"))
+
+        with patch.object(category_service, "get_localized_scoring_targets", missing):
+            await room_with_players.score_and_broadcast_round()
+
+        assert room_with_players.metadata.game_phase == GamePhase.ROUND_RESULTS
+        round_complete = self._round_complete_sent_to(room_with_players, PLAYER_ONE_ID)
+        assert round_complete["results"][0]["pointsEarned"] == 0
+        assert round_complete["results"][0]["totalItems"] == 0
+
+    async def test_scoring_failure_still_ends_the_round(self, room_with_players: GameRoom) -> None:
+        """An unexpected scoring error still broadcasts round_complete and moves the room on."""
+        await self._guessing_round_with_one_submission(room_with_players)
+        room_with_players.metadata.player_scores = {PLAYER_ONE_ID: 30, PLAYER_TWO_ID: 10}
+
+        with patch.object(rounds, "score_round", AsyncMock(side_effect=RuntimeError("boom"))):
+            await room_with_players.score_and_broadcast_round()
+
+        assert room_with_players.metadata.game_phase == GamePhase.ROUND_RESULTS
+        round_complete = self._round_complete_sent_to(room_with_players, PLAYER_ONE_ID)
+        assert round_complete["results"] == []
+        assert round_complete["scores"] == {PLAYER_ONE_ID: 30, PLAYER_TWO_ID: 10}
 
     async def test_all_connected_players_ready_ignores_disconnected(self, room_with_players: GameRoom) -> None:
         """Early drawing->guessing fires once every *connected* player is ready (F5)."""

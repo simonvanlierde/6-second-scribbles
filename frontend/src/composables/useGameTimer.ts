@@ -1,6 +1,9 @@
 import type { MaybeRefOrGetter } from "vue";
 import { computed, getCurrentScope, onScopeDispose, ref, toValue, watch } from "vue";
 
+import { useAnnouncer } from "@/composables/useAnnouncer";
+import { i18n } from "@/i18n";
+
 interface UseGameTimerOptions {
   startTime: MaybeRefOrGetter<number | null | undefined>;
   duration: MaybeRefOrGetter<number>;
@@ -44,6 +47,13 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
   );
 
   const isWarning = computed(() => timeLeft.value <= warningThreshold);
+
+  // The visible countdown is hidden from screen readers (a tick a second is noise),
+  // so say once that time is running low.
+  const { announce } = useAnnouncer();
+  watch(isWarning, (warning) => {
+    if (warning && timeLeft.value > 0) announce(i18n.global.t("phase.timeLow", { count: timeLeft.value }));
+  });
 
   return { timeLeft, isWarning };
 }

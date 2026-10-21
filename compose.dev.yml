@@ -49,6 +49,9 @@ services:
         condition: service_healthy
       database-migrations:
         condition: service_completed_successfully
+    # The image runs as uid 1001; run as the developer instead, so files written into
+    # the bind mounts below stay theirs. Export UID and GID if your shell does not.
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       # Keep seed/translation file edits on host and reuse downloaded Argos models.
       - ./backend:/app

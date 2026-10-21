@@ -64,7 +64,7 @@ const aboutOpen = ref(false);
 .home-wordmark {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(40px, 8vw, 56px);
+  font-size: clamp(2.5rem, 8vw, 3.5rem);
   line-height: 1;
   margin: 0;
   color: var(--color-ink);

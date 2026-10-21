@@ -49,11 +49,9 @@ const rankedScores = computed(() => {
 });
 
 const winners = computed(() => rankedScores.value.filter((player) => player.rank === 1));
-const winnerIsTie = computed(() => winners.value.length > 1);
 const winnerNames = computed(() => formatNames(winners.value.map((player) => player.playerName)));
 const winnerScore = computed(() => winners.value[0]?.score ?? 0);
-const winnerInitial = computed(() => getAvatarInitial(winners.value[0]?.playerName ?? "?"));
-const winnerColor = computed(() => winners.value[0]?.color ?? "");
+const winnerCards = computed(() => winners.value.map((player) => ({ name: player.playerName, color: player.color })));
 
 function formatNames(names: string[]) {
   if (names.length <= 1) return names[0] || i18n.global.t("common.unknown");
@@ -77,22 +75,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="final-results">
+  <main class="final-results">
     <GameHeader
       variant="final"
       :title="$t('finalResults.gameOver')"
-      :status="$t('finalResults.playersReady', { count: store.readyCount, total: store.totalPlayers })"
       @leave="leaveDialog?.request()"
     />
 
     <div class="final-results__body">
-      <WinnerCard
-        :name="winnerNames"
-        :initial="winnerInitial"
-        :color="winnerColor"
-        :score="winnerScore"
-        :is-tie="winnerIsTie"
-      />
+      <WinnerCard :name="winnerNames" :winners="winnerCards" :score="winnerScore" />
 
       <div class="final-results__columns">
         <section class="final-results__col">
@@ -159,7 +150,7 @@ onMounted(() => {
     </div>
 
     <LeaveRoomDialog ref="leaveDialog" />
-  </div>
+  </main>
 </template>
 
 <style scoped>

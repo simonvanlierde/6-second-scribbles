@@ -23,7 +23,7 @@ const phaseLabel = computed(() => {
 </script>
 
 <template>
-  <div class="spectator-page">
+  <main class="spectator-page">
     <header class="spectator-topbar">
       <div class="spectator-topbar__info">
         <span class="spectator-code">
@@ -66,7 +66,7 @@ const phaseLabel = computed(() => {
       <p v-if="store.gamePhase === 'guessing'" class="spectator-body">{{ $t("spectator.guessingInProgress") }}</p>
       <p v-else class="spectator-body">{{ $t("spectator.betweenRounds") }}</p>
     </HdCard>
-  </div>
+  </main>
 </template>
 
 <style scoped>

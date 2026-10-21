@@ -85,7 +85,8 @@ function toggleRoomPadVisibility() {
 </script>
 
 <template>
-  <div class="lobby-page">
+  <main class="lobby-page">
+    <h1 class="sr-only">{{ t('roomAccess.lobby') }}</h1>
     <div class="lobby-topbar">
       <HdButton variant="secondary" @click="leaveDialog?.request()"> ← {{ t('lobby.leaveRoom') }} </HdButton>
       <button type="button" class="lobby-code" :title="t('common.copyRoomCode')" @click="copyRoomCode">
@@ -308,7 +309,7 @@ function toggleRoomPadVisibility() {
     </div>
 
     <LeaveRoomDialog ref="leaveDialog" />
-  </div>
+  </main>
 </template>
 
 <style scoped>

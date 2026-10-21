@@ -47,4 +47,16 @@ describe("HdDialog", () => {
     expect(w.find('[data-testid="hd-dialog-confirm"]').text()).toBe("Yep");
     expect(w.find('[data-testid="hd-dialog-cancel"]').text()).toBe("Nope");
   });
+
+  it("can carry its own close button and no action buttons", async () => {
+    const w = mount(HdDialog, {
+      props: { open: true, title: "Settings", closeLabel: "Close", actions: false },
+    });
+    expect(w.find('[data-testid="hd-dialog-confirm"]').exists()).toBe(false);
+    const close = w.get('[data-testid="hd-dialog-close"]');
+    expect(close.attributes("aria-label")).toBe("Close");
+    await close.trigger("click");
+    expect(w.emitted("cancel")).toHaveLength(1);
+    expect(w.emitted("update:open")?.[0]).toEqual([false]);
+  });
 });

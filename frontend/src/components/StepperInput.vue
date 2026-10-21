@@ -40,8 +40,8 @@ const fieldWidth = computed(() => `${String(props.max).length + 1}ch`);
 
 const decrementLabel = computed(() => (props.step === 1 ? "−" : `−${props.step}${props.suffix}`));
 const incrementLabel = computed(() => (props.step === 1 ? "+" : `+${props.step}${props.suffix}`));
-const decrementAriaLabel = computed(() => `Decrease ${props.label}`);
-const incrementAriaLabel = computed(() => `Increase ${props.label}`);
+const decrementAriaLabel = computed(() => t("settings.decrease", { label: props.label }));
+const incrementAriaLabel = computed(() => t("settings.increase", { label: props.label }));
 
 function decrement() {
   const next = modelValue.value - props.step;

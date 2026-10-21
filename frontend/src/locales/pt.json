@@ -18,7 +18,8 @@
     "soundMute": "Silenciar som",
     "soundUnmute": "Ativar som",
     "and": "e",
-    "gotIt": "Entendi"
+    "gotIt": "Entendi",
+    "close": "Fechar"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "ligado",
     "soundOff": "desligado",
     "about": "Sobre",
-    "namePrompt": "Escolha um nome para continuar."
+    "namePrompt": "Escolha um nome para continuar.",
+    "decrease": "Diminuir {label}",
+    "increase": "Aumentar {label}",
+    "avatarColor": "Cor do avatar"
   },
   "lobby": {
     "leaveRoom": "Sair da sala",
@@ -106,7 +110,10 @@
     "clear": "Limpar",
     "loadingCategory": "Carregando...",
     "hint": "Toque em um item assim que você o desenhar.",
-    "undo": "Desfazer"
+    "undo": "Desfazer",
+    "brushSmall": "Pincel pequeno",
+    "brushMedium": "Pincel médio",
+    "brushLarge": "Pincel grande"
   },
   "guessing": {
     "guessPlayerDrawing": "Adivinhe o desenho de {name}",
@@ -244,6 +251,33 @@
     "readyForNext": "Pronto para o próximo jogo",
     "readyWaiting": "Pronto — esperando o anfitrião…",
     "backHome": "Voltar ao início",
-    "playersReady": "{count} / {total} jogadores prontos"
+    "noWinner": "Desta vez não há vencedor",
+    "noWinnerDetail": "Ninguém marcou pontos."
+  },
+  "phase": {
+    "drawing": "Rodada {round}: desenho",
+    "guessing": "Rodada {round}: palpites",
+    "timeLow": "Faltam {count} segundos"
+  },
+  "colors": {
+    "black": "Preto",
+    "white": "Branco",
+    "red": "Vermelho",
+    "blue": "Azul",
+    "green": "Verde",
+    "orange": "Laranja",
+    "coral": "Coral",
+    "yellow": "Amarelo",
+    "lavender": "Lavanda",
+    "peach": "Pêssego"
+  },
+  "reactions": {
+    "laugh": "Risada",
+    "shock": "Choque",
+    "art": "Que arte",
+    "mindBlown": "Impressionante",
+    "think": "Pensativo",
+    "group": "Reações ao desenho de {name}",
+    "react": "{reaction} para o desenho de {name}"
   }
 }

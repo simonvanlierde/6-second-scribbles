@@ -98,4 +98,12 @@ describe("RoundResultsView", () => {
 
     expect(leaveRoomMock).toHaveBeenCalledTimes(1);
   });
+
+  it("says the next round is coming, and after the last round that the final results are", () => {
+    const store = useGameStore();
+    expect(mount(RoundResultsView).get(".round-results__lead").text()).toContain("Next round");
+
+    store.currentRound = 3;
+    expect(mount(RoundResultsView).get(".round-results__lead").text()).toContain("Final results");
+  });
 });

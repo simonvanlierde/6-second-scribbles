@@ -18,7 +18,8 @@
     "soundMute": "静音",
     "soundUnmute": "取消静音",
     "and": "和",
-    "gotIt": "知道了"
+    "gotIt": "知道了",
+    "close": "关闭"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "开",
     "soundOff": "关",
     "about": "关于",
-    "namePrompt": "输入名字以继续。"
+    "namePrompt": "输入名字以继续。",
+    "decrease": "减少{label}",
+    "increase": "增加{label}",
+    "avatarColor": "头像颜色"
   },
   "lobby": {
     "leaveRoom": "离开房间",
@@ -106,7 +110,10 @@
     "clear": "清除",
     "loadingCategory": "加载中…",
     "hint": "画完一个物品后点一下它。",
-    "undo": "撤销"
+    "undo": "撤销",
+    "brushSmall": "细笔刷",
+    "brushMedium": "中笔刷",
+    "brushLarge": "粗笔刷"
   },
   "guessing": {
     "guessPlayerDrawing": "猜猜 {name} 画的是什么",
@@ -244,6 +251,33 @@
     "readyForNext": "准备好开始下一局",
     "readyWaiting": "已准备 — 等待房主…",
     "backHome": "返回首页",
-    "playersReady": "{count} / {total} 名玩家已准备"
+    "noWinner": "这次没有赢家",
+    "noWinnerDetail": "没有人得分。"
+  },
+  "phase": {
+    "drawing": "第 {round} 回合：作画",
+    "guessing": "第 {round} 回合：猜测",
+    "timeLow": "还剩 {count} 秒"
+  },
+  "colors": {
+    "black": "黑色",
+    "white": "白色",
+    "red": "红色",
+    "blue": "蓝色",
+    "green": "绿色",
+    "orange": "橙色",
+    "coral": "珊瑚色",
+    "yellow": "黄色",
+    "lavender": "薰衣草紫",
+    "peach": "桃色"
+  },
+  "reactions": {
+    "laugh": "大笑",
+    "shock": "震惊",
+    "art": "画得好",
+    "mindBlown": "太绝了",
+    "think": "思考中",
+    "group": "对 {name} 的图画的反应",
+    "react": "给 {name} 的图画：{reaction}"
   }
 }

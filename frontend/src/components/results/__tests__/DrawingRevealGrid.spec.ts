@@ -39,7 +39,7 @@ describe("DrawingRevealGrid", () => {
     const wrapper = mount(DrawingRevealGrid);
 
     // First reaction button of the first drawing's pad.
-    await wrapper.find('[aria-label="React with laugh"]').trigger("click");
+    await wrapper.find('[aria-label="Laugh for Alice\'s drawing"]').trigger("click");
 
     expect(sendMock).toHaveBeenCalledWith({
       type: "reaction_send",

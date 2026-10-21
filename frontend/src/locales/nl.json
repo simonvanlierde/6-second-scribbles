@@ -18,7 +18,8 @@
     "soundMute": "Geluid dempen",
     "soundUnmute": "Geluid aanzetten",
     "and": "en",
-    "gotIt": "Begrepen"
+    "gotIt": "Begrepen",
+    "close": "Sluiten"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "aan",
     "soundOff": "uit",
     "about": "Over",
-    "namePrompt": "Kies een naam om verder te gaan."
+    "namePrompt": "Kies een naam om verder te gaan.",
+    "decrease": "{label} verlagen",
+    "increase": "{label} verhogen",
+    "avatarColor": "Avatarkleur"
   },
   "lobby": {
     "leaveRoom": "Kamer verlaten",
@@ -106,7 +110,10 @@
     "clear": "Wissen",
     "loadingCategory": "Laden...",
     "hint": "Tik op een item zodra je het getekend hebt.",
-    "undo": "Ongedaan maken"
+    "undo": "Ongedaan maken",
+    "brushSmall": "Kleine kwast",
+    "brushMedium": "Middelgrote kwast",
+    "brushLarge": "Grote kwast"
   },
   "guessing": {
     "guessPlayerDrawing": "Raad de tekening van {name}",
@@ -244,6 +251,33 @@
     "readyForNext": "Klaar voor het volgende spel",
     "readyWaiting": "Klaar — wachten op host…",
     "backHome": "Terug naar start",
-    "playersReady": "{count} / {total} spelers klaar"
+    "noWinner": "Deze keer geen winnaar",
+    "noWinnerDetail": "Niemand heeft punten gescoord."
+  },
+  "phase": {
+    "drawing": "Ronde {round}: tekenen",
+    "guessing": "Ronde {round}: raden",
+    "timeLow": "Nog {count} seconden"
+  },
+  "colors": {
+    "black": "Zwart",
+    "white": "Wit",
+    "red": "Rood",
+    "blue": "Blauw",
+    "green": "Groen",
+    "orange": "Oranje",
+    "coral": "Koraal",
+    "yellow": "Geel",
+    "lavender": "Lavendel",
+    "peach": "Perzik"
+  },
+  "reactions": {
+    "laugh": "Lachen",
+    "shock": "Schrik",
+    "art": "Mooi gemaakt",
+    "mindBlown": "Verbluffend",
+    "think": "Nadenkend",
+    "group": "Reacties op de tekening van {name}",
+    "react": "{reaction} voor de tekening van {name}"
   }
 }

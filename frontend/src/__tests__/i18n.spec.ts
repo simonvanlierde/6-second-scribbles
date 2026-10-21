@@ -1,3 +1,4 @@
+// cspell:ignore gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
 import { afterEach, describe, expect, it } from "vitest";
 
 import { i18n, setLocale } from "@/i18n";
@@ -48,5 +49,43 @@ describe("setLocale", () => {
     await setLocale("fr");
     await setLocale("xx");
     expect(document.documentElement.lang).toBe("fr");
+  });
+});
+
+describe("plurals", () => {
+  afterEach(async () => {
+    await setLocale("en");
+  });
+
+  const players = (count: number) => i18n.global.t("roomEntry.playersInRoom", { count });
+
+  it("uses the three Polish forms: 1, 2-4 (not 12-14), and the rest", async () => {
+    await setLocale("pl");
+    expect([0, 1, 2, 5, 12, 22, 25].map(players)).toEqual([
+      "0 graczy w pokoju",
+      "1 gracz w pokoju",
+      "2 gracze w pokoju",
+      "5 graczy w pokoju",
+      "12 graczy w pokoju",
+      "22 gracze w pokoju",
+      "25 graczy w pokoju",
+    ]);
+  });
+
+  it("declines the Polish time-left announcement too", async () => {
+    await setLocale("pl");
+    const left = (count: number) => i18n.global.t("phase.timeLow", { count });
+    expect([10, 3, 1].map(left)).toEqual(["Zostało 10 sekund", "Zostały 3 sekundy", "Została 1 sekunda"]);
+  });
+
+  it("keeps the two English forms", () => {
+    expect([0, 1, 2].map(players)).toEqual(["0 players in room", "1 player in room", "2 players in room"]);
+  });
+
+  it("still picks singular and plural when a Polish string has only two forms", async () => {
+    await setLocale("pl");
+    i18n.global.mergeLocaleMessage("pl", { twoFormTest: "{count} punkt | {count} punkty" });
+    const points = (count: number) => i18n.global.t("twoFormTest", { count });
+    expect([1, 2, 5].map(points)).toEqual(["1 punkt", "2 punkty", "5 punkty"]);
   });
 });

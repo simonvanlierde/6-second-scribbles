@@ -18,7 +18,8 @@
     "soundMute": "Disattiva audio",
     "soundUnmute": "Attiva audio",
     "and": "e",
-    "gotIt": "Ho capito"
+    "gotIt": "Ho capito",
+    "close": "Chiudi"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "attivo",
     "soundOff": "disattivo",
     "about": "Informazioni",
-    "namePrompt": "Scegli un nome per continuare."
+    "namePrompt": "Scegli un nome per continuare.",
+    "decrease": "Diminuisci {label}",
+    "increase": "Aumenta {label}",
+    "avatarColor": "Colore dell’avatar"
   },
   "lobby": {
     "leaveRoom": "Lascia stanza",
@@ -106,7 +110,10 @@
     "clear": "Cancella",
     "loadingCategory": "Caricamento…",
     "hint": "Tocca un elemento quando l’hai disegnato.",
-    "undo": "Annulla"
+    "undo": "Annulla",
+    "brushSmall": "Pennello piccolo",
+    "brushMedium": "Pennello medio",
+    "brushLarge": "Pennello grande"
   },
   "guessing": {
     "guessPlayerDrawing": "Indovina il disegno di {name}",
@@ -244,6 +251,33 @@
     "readyForNext": "Pronto per la prossima partita",
     "readyWaiting": "Pronto — in attesa dell’host…",
     "backHome": "Torna alla home",
-    "playersReady": "{count} / {total} giocatori pronti"
+    "noWinner": "Nessun vincitore stavolta",
+    "noWinnerDetail": "Nessuno ha fatto punti."
+  },
+  "phase": {
+    "drawing": "Round {round}: disegno",
+    "guessing": "Round {round}: tentativi",
+    "timeLow": "Mancano {count} secondi"
+  },
+  "colors": {
+    "black": "Nero",
+    "white": "Bianco",
+    "red": "Rosso",
+    "blue": "Blu",
+    "green": "Verde",
+    "orange": "Arancione",
+    "coral": "Corallo",
+    "yellow": "Giallo",
+    "lavender": "Lavanda",
+    "peach": "Pesca"
+  },
+  "reactions": {
+    "laugh": "Risata",
+    "shock": "Shock",
+    "art": "Che arte",
+    "mindBlown": "Sbalorditivo",
+    "think": "Pensieroso",
+    "group": "Reazioni al disegno di {name}",
+    "react": "{reaction} per il disegno di {name}"
   }
 }
