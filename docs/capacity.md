@@ -125,7 +125,8 @@ nothing, or if a commit's stack does not start.
 CodSpeed runs `backend/tests/benchmarks` on every PR and on main
 (`.github/workflows/benchmarks.yml`) and reports on the PR when one gets slower:
 validating a stroke fragment, encoding a `draw_stroke_batch`, fanning it out to six
-connections, and storing a new stroke on a full doodle. It counts CPU instructions,
+connections, and storing a new stroke on a full doodle; scoring a guesser's submission;
+and saving and loading a mid-round room snapshot for Redis. It counts CPU instructions,
 so the result does not depend on how busy the runner is. It measures only code in
 this process, not uvicorn or websockets, so dependency bumps and releases still
 need `just loadtest-ab`. To try the benchmarks locally:
