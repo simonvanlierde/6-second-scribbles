@@ -122,6 +122,29 @@ describe("HomeCreateJoin", () => {
     expect(connectMock).toHaveBeenCalledWith("FAST01");
   });
 
+  it("quick play explains a refused room (429) and stays on the home screen", async () => {
+    apiRequestMock.mockRejectedValueOnce(new ApiError(429, "Too many open rooms from your network."));
+
+    const wrapper = mountPanel();
+    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await flushPromises();
+
+    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.tooManyRooms"), "error");
+    expect(connectMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("quick play reports other failures as a connection problem", async () => {
+    apiRequestMock.mockRejectedValueOnce(new ApiError(503, "Service unavailable"));
+
+    const wrapper = mountPanel();
+    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await flushPromises();
+
+    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.connectFailed"), "error");
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it("reports an invalid room code before checking the backend", async () => {
     const store = useGameStore();
     store.localPlayerName = "Simon";

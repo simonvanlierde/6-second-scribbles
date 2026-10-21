@@ -1,5 +1,8 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import type { GalleryDrawing } from "@/shared/types";
 import ResultsView from "@/views/ResultsView.vue";
 
@@ -195,5 +198,18 @@ describe("ResultsView", () => {
     await wrapper.find(".final-cta__home").trigger("click");
     expect(storeMock.reset).toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith({ name: "home" });
+  });
+
+  it("asks the host before they leave others behind from the header", async () => {
+    HTMLDialogElement.prototype.showModal = vi.fn(); // jsdom has no modal dialogs
+    HTMLDialogElement.prototype.close = vi.fn();
+    const wrapper = mount(ResultsView);
+
+    wrapper.findComponent(GameHeader).vm.$emit("leave");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(LeaveRoomDialog).findComponent(HdDialog).props("open")).toBe(true);
+    expect(storeMock.reset).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,10 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
 import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
+import { UI_TIMINGS } from "@/config/gameConfig";
 import { i18n } from "@/i18n";
 import { useGameStore } from "@/stores/game";
 
@@ -42,6 +43,10 @@ describe("GameSettingsPanel", () => {
       { code: "en", label: "English", enabled: true },
       { code: "nl", label: "Nederlands", enabled: true },
     ];
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders read-only chips for non-host players", () => {
@@ -106,5 +111,53 @@ describe("GameSettingsPanel", () => {
       type: "default_locale_update",
       locale: "nl",
     });
+  });
+
+  it("sends one settings update after the host stops clicking, not one per click", async () => {
+    vi.useFakeTimers();
+    const store = useGameStore();
+    store.setPlayers([{ id: "p1", name: "Host" }]);
+    store.setHost("p1");
+    store.localPlayerId = "p1";
+    const wrapper = mountPanel();
+    sendMock.mockReset();
+
+    const increase = wrapper.get('button[aria-label="Increase Rounds"]');
+    await increase.trigger("click");
+    await increase.trigger("click");
+    await increase.trigger("click");
+    vi.advanceTimersByTime(299);
+
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(store.maxRounds).toBe(8);
+
+    vi.advanceTimersByTime(1);
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ type: "settings_update", rounds: 8 }));
+  });
+
+  it("flashes the read-only settings when the host changes them, then settles", async () => {
+    vi.useFakeTimers();
+    const store = useGameStore();
+    store.setPlayers([
+      { id: "p1", name: "Host" },
+      { id: "p2", name: "Player" },
+    ]);
+    store.setHost("p1");
+    store.localPlayerId = "p2";
+    const wrapper = mountPanel();
+
+    store.applySettingsUpdate({ rounds: 7 });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".settings-flash").exists()).toBe(true);
+    expect(wrapper.text()).toContain("7 Rounds");
+
+    vi.advanceTimersByTime(UI_TIMINGS.SETTINGS_FLASH_MS);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".settings-flash").exists()).toBe(false);
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "settings_update" }));
   });
 });

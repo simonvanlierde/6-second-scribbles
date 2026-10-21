@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -95,6 +95,18 @@ describe("LobbyView", () => {
 
     expect(copyMock).toHaveBeenCalledWith("ABC123");
     expect(showNotificationMock).toHaveBeenCalledWith("Copied!");
+  });
+
+  it("does not claim the code was copied when clipboard access is denied", async () => {
+    seedLobby();
+    copyMock.mockRejectedValueOnce(new DOMException("Write permission denied.", "NotAllowedError"));
+    const wrapper = mountLobby();
+
+    await wrapper.find(".lobby-code").trigger("click");
+    await flushPromises();
+
+    expect(copyMock).toHaveBeenCalledWith("ABC123");
+    expect(showNotificationMock).not.toHaveBeenCalled();
   });
 
   it("lets the host manage shared drawpad visibility and clearing", async () => {

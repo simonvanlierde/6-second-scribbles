@@ -33,6 +33,19 @@ describe("LeaveRoomDialog", () => {
     expect(leaveRoomMock).toHaveBeenCalledTimes(1);
   });
 
+  it("stays in the room when the player cancels", async () => {
+    useGameStore().gamePhase = "guessing";
+    const wrapper = mount(LeaveRoomDialog, { global: { stubs: { HdDialog: true } } });
+    wrapper.vm.request();
+    await wrapper.vm.$nextTick();
+
+    wrapper.findComponent(HdDialog).vm.$emit("update:open", false);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(HdDialog).props("open")).toBe(false);
+    expect(leaveRoomMock).not.toHaveBeenCalled();
+  });
+
   it("leaves at once when there is nothing to lose", () => {
     const wrapper = mount(LeaveRoomDialog, { global: { stubs: { HdDialog: true } } });
 
