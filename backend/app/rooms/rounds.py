@@ -256,12 +256,13 @@ def _collect_miss_candidates(
     matched_guesses: set[str],
     targets: list[GuessTarget],
     miss_candidates: list[tuple[str, str, float]],
+    locale: str | None,
 ) -> None:
     """Append (player_id, guess, distance) for each guess that matched no target."""
     for guess in guesses:
         if guess in matched_guesses or not normalize_text(guess):
             continue
-        nearest = max((guess_matcher.fuzzy_match(guess, t.label)[1] for t in targets), default=0.0)
+        nearest = max((guess_matcher.fuzzy_match(guess, t.label, locale)[1] for t in targets), default=0.0)
         miss_candidates.append((player_id, guess, 100.0 - nearest))
 
 
@@ -300,9 +301,8 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
                 exc.detail,
             )
             targets = []
-        matched_guesses = guess_matcher.score_guesses_against_targets(
-            guesses, targets, room.get_player_locale(player_id)
-        )
+        locale = room.get_player_locale(player_id)
+        matched_guesses = guess_matcher.score_guesses_against_targets(guesses, targets, locale)
         correct_count = len(matched_guesses)
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
@@ -312,6 +312,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             matched_guesses=set(matched_guesses),
             targets=targets,
             miss_candidates=miss_candidates,
+            locale=locale,
         )
 
         if player_id in round_points:
