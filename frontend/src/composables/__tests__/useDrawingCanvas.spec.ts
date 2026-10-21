@@ -129,6 +129,39 @@ describe("useDrawingCanvas", () => {
     expect(visible.fills).toEqual(["#0f0"]);
   });
 
+  it("moves the stroke being drawn with the pad when it resizes", () => {
+    const observers: Array<() => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          observers.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const parent = document.createElement("div");
+    const el = document.createElement("canvas");
+    el.setPointerCapture = () => {};
+    parent.appendChild(el);
+    let size = { width: 200, height: 100 };
+    Object.defineProperty(parent, "clientWidth", { get: () => size.width });
+    Object.defineProperty(el, "offsetHeight", { get: () => size.height });
+    el.getBoundingClientRect = () => ({ left: 0, top: 0, ...size }) as DOMRect;
+    const canvas = useDrawingCanvas();
+    canvas.initCanvas(el);
+    observers[0]?.();
+
+    pointer(el, "pointerdown", 100, 50);
+    size = { width: 400, height: 200 };
+    observers[0]?.();
+    pointer(el, "pointerup", 0, 0);
+
+    expect(canvas.strokes.value[0]?.points).toEqual([{ x: 200, y: 100 }]);
+    vi.unstubAllGlobals();
+  });
+
   it("undo is a no-op when there are no strokes", () => {
     const canvas = useDrawingCanvas();
     expect(() => canvas.undo()).not.toThrow();
