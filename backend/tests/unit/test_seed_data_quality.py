@@ -126,6 +126,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "it": frozenset(
         {
+            "chopper",
             "automobile",
             "baguette",
             "ballerina",
@@ -155,6 +156,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "nl": frozenset(
         {
+            "chopper",
             "ballerina",
             "biscuit",
             "bistro",
@@ -199,6 +201,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "de": frozenset(
         {
+            "chopper",
             "amusement",
             "baguette",
             "ballerina",
@@ -257,6 +260,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "pl": frozenset(
         {
+            "chopper",
             "auto",
             "bistro",
             "bongo",
@@ -280,6 +284,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "pt": frozenset(
         {
+            "chopper",
             "ananas",
             "basilica",
             "bistro",
@@ -300,6 +305,948 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
         }
     ),
 }
+
+# Answers that two or more cards of one category share on purpose, because the word truly
+# names each of those cards. Any other shared answer fails the collision check below.
+SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
+    # a chopper is also a style of motorcycle
+    (
+        "en",
+        "vehicles",
+        "chopper",
+        frozenset(
+            {
+                "helicopter",
+                "motorcycle",
+            }
+        ),
+    ),
+    # a ladybug is a beetle
+    (
+        "de",
+        "insects",
+        "Käfer",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    (
+        "en",
+        "insects",
+        "beetle",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "insects",
+        "kever",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "insects",
+        "żuk",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "insects",
+        "besouro",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    (
+        "zh-CN",
+        "insects",
+        "甲虫",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    (
+        "zh-TW",
+        "insects",
+        "甲蟲",
+        frozenset(
+            {
+                "beetle",
+                "ladybug",
+            }
+        ),
+    ),
+    # a smiling face fits happy and laughing
+    (
+        "ja",
+        "emotions",
+        "笑顔",
+        frozenset(
+            {
+                "happy",
+                "laughing",
+            }
+        ),
+    ),
+    # arm and leg are both limbs
+    (
+        "en",
+        "body-parts",
+        "limb",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    (
+        "es",
+        "body-parts",
+        "extremidad",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    (
+        "fr",
+        "body-parts",
+        "membre",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    (
+        "it",
+        "body-parts",
+        "arto",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "body-parts",
+        "ledematen",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "body-parts",
+        "kończyna",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "body-parts",
+        "membro",
+        frozenset(
+            {
+                "arm",
+                "leg",
+            }
+        ),
+    ),
+    # bagno is used for the toilet and for a bath
+    (
+        "it",
+        "bathroom-items",
+        "bagno",
+        frozenset(
+            {
+                "bathtub",
+                "toilet",
+            }
+        ),
+    ),
+    # bike names a bicycle and a motorbike
+    (
+        "en",
+        "vehicles",
+        "bike",
+        frozenset(
+            {
+                "bicycle",
+                "motorcycle",
+            }
+        ),
+    ),
+    # bombón is a chocolate, and a marshmallow in Mexico
+    (
+        "es",
+        "candy",
+        "bombón",
+        frozenset(
+            {
+                "chocolate",
+                "marshmallow",
+            }
+        ),
+    ),
+    # boterham is a slice of bread and an open sandwich
+    (
+        "nl",
+        "food",
+        "boterham",
+        frozenset(
+            {
+                "bread",
+                "sandwich",
+            }
+        ),
+    ),
+    # both are berries in everyday speech
+    (
+        "de",
+        "fruits",
+        "beeren",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    (
+        "es",
+        "fruits",
+        "bayas",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    (
+        "fr",
+        "fruits",
+        "baies",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    (
+        "ko",
+        "fruits",
+        "베리",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "fruits",
+        "bagas",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    (
+        "zh-CN",
+        "fruits",
+        "浆果",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    # camión is a bus in Mexico and a truck elsewhere
+    (
+        "es",
+        "vehicles",
+        "camión",
+        frozenset(
+            {
+                "bus",
+                "truck",
+            }
+        ),
+    ),
+    # crab and lobster are both shellfish
+    (
+        "es",
+        "sea-creatures",
+        "marisco",
+        frozenset(
+            {
+                "crab",
+                "lobster",
+            }
+        ),
+    ),
+    # drum and maracas are both percussion
+    (
+        "en",
+        "musical-instruments",
+        "percussion",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    (
+        "it",
+        "musical-instruments",
+        "percussioni",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    (
+        "ko",
+        "musical-instruments",
+        "타악기",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "musical-instruments",
+        "percussie",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "musical-instruments",
+        "percussão",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    (
+        "zh-CN",
+        "musical-instruments",
+        "打击乐器",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    (
+        "zh-TW",
+        "musical-instruments",
+        "打擊樂器",
+        frozenset(
+            {
+                "drum",
+                "maracas",
+            }
+        ),
+    ),
+    # fork, knife and spoon are all cutlery
+    (
+        "de",
+        "kitchen-items",
+        "Besteck",
+        frozenset(
+            {
+                "fork",
+                "knife",
+                "spoon",
+            }
+        ),
+    ),
+    (
+        "es",
+        "kitchen-items",
+        "cubierto",
+        frozenset(
+            {
+                "fork",
+                "knife",
+                "spoon",
+            }
+        ),
+    ),
+    (
+        "fr",
+        "kitchen-items",
+        "couvert",
+        frozenset(
+            {
+                "fork",
+                "knife",
+                "spoon",
+            }
+        ),
+    ),
+    (
+        "it",
+        "kitchen-items",
+        "posate",
+        frozenset(
+            {
+                "fork",
+                "knife",
+            }
+        ),
+    ),
+    (
+        "ja",
+        "kitchen-items",
+        "カトラリー",
+        frozenset(
+            {
+                "fork",
+                "spoon",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "kitchen-items",
+        "sztućce",
+        frozenset(
+            {
+                "fork",
+                "knife",
+                "spoon",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "kitchen-items",
+        "talher",
+        frozenset(
+            {
+                "fork",
+                "knife",
+                "spoon",
+            }
+        ),
+    ),
+    # guitar and violin are both string instruments
+    (
+        "de",
+        "musical-instruments",
+        "Saiten",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    (
+        "en",
+        "musical-instruments",
+        "strings",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    (
+        "es",
+        "musical-instruments",
+        "cuerdas",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "musical-instruments",
+        "snaren",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "musical-instruments",
+        "struny",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    (
+        "zh-CN",
+        "musical-instruments",
+        "弦乐器",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    (
+        "zh-TW",
+        "musical-instruments",
+        "弦樂器",
+        frozenset(
+            {
+                "guitar",
+                "violin",
+            }
+        ),
+    ),
+    # hamster and mouse are both rodents
+    (
+        "en",
+        "pets",
+        "rodent",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    (
+        "es",
+        "pets",
+        "roedor",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    (
+        "fr",
+        "pets",
+        "rongeur",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    (
+        "it",
+        "pets",
+        "roditore",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "pets",
+        "knaagdieren",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "pets",
+        "gryzoń",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "pets",
+        "roedor",
+        frozenset(
+            {
+                "hamster",
+                "mouse",
+            }
+        ),
+    ),
+    # plates and bowls are both dishes
+    (
+        "en",
+        "kitchen-items",
+        "dish",
+        frozenset(
+            {
+                "bowl",
+                "plate",
+            }
+        ),
+    ),
+    # ręka means both hand and arm
+    (
+        "pl",
+        "body-parts",
+        "ręka",
+        frozenset(
+            {
+                "arm",
+                "hand",
+            }
+        ),
+    ),
+    # sorcier is the wizard's word; it meets sorcière only through the plural rule
+    (
+        "fr",
+        "fantasy",
+        "sorcière",
+        frozenset(
+            {
+                "witch",
+                "wizard",
+            }
+        ),
+    ),
+    # taco is a golf club and a hockey stick
+    (
+        "pt",
+        "sports-equipment",
+        "taco",
+        frozenset(
+            {
+                "golf-club",
+                "hockey-stick",
+            }
+        ),
+    ),
+    # the word covers caterpillars in everyday speech
+    (
+        "es",
+        "insects",
+        "gusano",
+        frozenset(
+            {
+                "caterpillar",
+                "worm",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "insects",
+        "robak",
+        frozenset(
+            {
+                "caterpillar",
+                "worm",
+            }
+        ),
+    ),
+    # the word covers elves and goblins
+    (
+        "fr",
+        "fantasy",
+        "lutin",
+        frozenset(
+            {
+                "elf",
+                "goblin",
+            }
+        ),
+    ),
+    (
+        "pt",
+        "fantasy",
+        "duende",
+        frozenset(
+            {
+                "elf",
+                "goblin",
+            }
+        ),
+    ),
+    # the word covers fairy and elf
+    (
+        "de",
+        "fantasy",
+        "Elfe",
+        frozenset(
+            {
+                "elf",
+                "fairy",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "fantasy",
+        "elfje",
+        frozenset(
+            {
+                "elf",
+                "fairy",
+            }
+        ),
+    ),
+    (
+        "zh-CN",
+        "fantasy",
+        "精灵",
+        frozenset(
+            {
+                "elf",
+                "fairy",
+            }
+        ),
+    ),
+    (
+        "zh-TW",
+        "fantasy",
+        "精靈",
+        frozenset(
+            {
+                "elf",
+                "fairy",
+            }
+        ),
+    ),
+    # the word covers gummy bears and jelly beans
+    (
+        "es",
+        "candy",
+        "gominola",
+        frozenset(
+            {
+                "gummy-bear",
+                "jellybean",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "candy",
+        "żelek",
+        frozenset(
+            {
+                "gummy-bear",
+                "jellybean",
+            }
+        ),
+    ),
+    # tienda is short for tienda de campaña and also a shop
+    (
+        "es",
+        "buildings",
+        "tienda",
+        frozenset(
+            {
+                "store",
+                "tent",
+            }
+        ),
+    ),
+    # tower and skyscraper are both tall buildings
+    (
+        "de",
+        "architecture",
+        "Hochhaus",
+        frozenset(
+            {
+                "skyscraper",
+                "tower",
+            }
+        ),
+    ),
+    (
+        "en",
+        "architecture",
+        "tall building",
+        frozenset(
+            {
+                "skyscraper",
+                "tower",
+            }
+        ),
+    ),
+    (
+        "ko",
+        "architecture",
+        "고층 건물",
+        frozenset(
+            {
+                "skyscraper",
+                "tower",
+            }
+        ),
+    ),
+    (
+        "nl",
+        "architecture",
+        "hoog gebouw",
+        frozenset(
+            {
+                "skyscraper",
+                "tower",
+            }
+        ),
+    ),
+    (
+        "pl",
+        "architecture",
+        "wysoki budynek",
+        frozenset(
+            {
+                "skyscraper",
+                "tower",
+            }
+        ),
+    ),
+    # 裙子 covers dresses and skirts
+    (
+        "zh-CN",
+        "clothes",
+        "裙子",
+        frozenset(
+            {
+                "dress",
+                "skirt",
+            }
+        ),
+    ),
+    (
+        "zh-TW",
+        "clothes",
+        "裙子",
+        frozenset(
+            {
+                "dress",
+                "skirt",
+            }
+        ),
+    ),
+    # 足 means both foot and leg
+    (
+        "ja",
+        "body-parts",
+        "足",
+        frozenset(
+            {
+                "foot",
+                "leg",
+            }
+        ),
+    ),
+    # 锅 covers pans and pots
+    (
+        "zh-CN",
+        "kitchen-items",
+        "锅",
+        frozenset(
+            {
+                "pan",
+                "pot",
+            }
+        ),
+    ),
+    # 雷 is thunder and lightning
+    (
+        "ja",
+        "weather-phenomena",
+        "雷",
+        frozenset(
+            {
+                "lightning",
+                "thunder",
+            }
+        ),
+    ),
+    # 魔法使い is any magic user, witch or wizard
+    (
+        "ja",
+        "fantasy",
+        "魔法使い",
+        frozenset(
+            {
+                "witch",
+                "wizard",
+            }
+        ),
+    ),
+)
 # spell-checker: enable
 
 PROMPTS: list[dict[str, Any]] = SEED_DATA["prompts"]
@@ -359,10 +1306,10 @@ def test_no_untranslated_english_aliases() -> None:
     assert not bad, f"{len(bad)} untranslated aliases: {bad}"
 
 
-def test_no_alias_matches_another_card_in_the_same_category() -> None:
-    """A guess must not score for two cards of one category, so their words must not collide."""
+def _collisions() -> list[tuple[str, str, str, str, str, str]]:
+    """Return (category, locale, card, word, other card, other word) for words that score for two cards."""
     prompts = {prompt["id"]: prompt for prompt in PROMPTS}
-    bad = []
+    found = []
     for category in CATEGORIES:
         words: dict[str, list[tuple[str, str]]] = defaultdict(list)
         for item in category["items"]:
@@ -370,13 +1317,40 @@ def test_no_alias_matches_another_card_in_the_same_category() -> None:
                 for word in [tr["label"], *(tr.get("aliases") or [])]:
                     words[tr["locale"]].append((item, word))
         for locale, pairs in words.items():
-            bad.extend(
+            found.extend(
                 (category["id"], locale, item_a, word_a, item_b, word_b)
                 for i, (item_a, word_a) in enumerate(pairs)
                 for item_b, word_b in pairs[i + 1 :]
-                if item_a != item_b and guess_matcher.exact_match(word_a, word_b)
+                if item_a != item_b and guess_matcher.exact_match(word_a, word_b, locale)
             )
+    return found
+
+
+def _allowed_by(collision: tuple[str, str, str, str, str, str]) -> int | None:
+    """Return the index of the SHARED_ANSWERS entry that allows a collision, if any."""
+    category, locale, item_a, word_a, item_b, word_b = collision
+    for index, (entry_locale, entry_category, answer, cards) in enumerate(SHARED_ANSWERS):
+        if (
+            (entry_locale, entry_category) == (locale, category)
+            and {item_a, item_b} <= cards
+            and guess_matcher.exact_match(answer, word_a, locale)
+            and guess_matcher.exact_match(answer, word_b, locale)
+        ):
+            return index
+    return None
+
+
+def test_no_alias_matches_another_card_in_the_same_category() -> None:
+    """A guess scores for one card only, unless the shared answer is listed as fitting every card."""
+    bad = [collision for collision in _collisions() if _allowed_by(collision) is None]
     assert not bad, f"{len(bad)} collisions: {bad}"
+
+
+def test_every_shared_answer_entry_is_still_needed() -> None:
+    """An allowlist entry that no longer matches a shared answer is stale."""
+    used = {_allowed_by(collision) for collision in _collisions()}
+    stale = [entry for index, entry in enumerate(SHARED_ANSWERS) if index not in used]
+    assert not stale, f"{len(stale)} stale entries: {stale}"
 
 
 def test_aliases_are_unique_and_differ_from_the_label() -> None:
