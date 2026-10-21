@@ -1,0 +1,47 @@
+name: CodSpeed
+
+# Runs the backend benchmarks (backend/tests/benchmarks) under CodSpeed's CPU
+# simulation. The push to main records the baseline each PR is compared with, and
+# workflow_dispatch lets CodSpeed backfill history.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A newer push cancels a PR's run, never main's: each main commit needs its baseline.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # OpenID Connect authentication with CodSpeed
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --group testing
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@821a40cd6c80e3cfe387caf55668287addd808da # v5.5.0
+        with:
+          mode: simulation
+          working-directory: backend
+          run: uv run pytest tests/benchmarks --codspeed
