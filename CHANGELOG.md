@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Upgrade notes
 
+- `/api/health` now answers HTTP 503, with the same JSON body, while the database or Redis is unreachable. A monitor that reads only the status code now sees an outage; Compose marks the backend unhealthy after 60 to 90 s of it, and `docker compose up --wait` fails on a degraded stack.
 - Rolling back to 0.2.x drops every open room: rooms saved by this release carry fields that 0.2.x refuses to load. The database has no new migrations since 0.2.1 and rolls back safely.
 - The JSONB translations migration (`b2a7f484d1a9`) can no longer be downgraded. Restore a backup or re-seed instead.
 - Migrations now give up after waiting 3 s for a lock or running one statement for 60 s, so a deploy cannot stall the backend that is still serving. Rerun the deploy if one gives up.
@@ -43,7 +44,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The backend turns each room broadcast into JSON once instead of once per player, which raises the capacity under the production limits from about 70 to about 80 busy rooms.
 - `start_game` and `settings_update` broadcast the room's stored settings instead of echoing the client's message, so a partial settings change shows everyone the full settings.
 - When a network already has too many open rooms or creates rooms too fast, Create room and Quick play say so and suggest closing one, joining a friend's room or waiting a few minutes, instead of "Please try again".
-- Contract generation writes one JSON Schema file per direction instead of one per event.
+- Contract generation writes one JSON Schema file per direction instead of one per event, and no longer writes `contracts/room-events.json`. The committed contracts are `openapi.json` and the two files in `contracts/jsonschema/`.
 - The frontend no longer depends on `@vueuse/core`.
 
 ### Removed
@@ -91,6 +92,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- The frontend container runs Caddy as an unprivileged user with every Linux capability dropped, instead of as root with `NET_BIND_SERVICE`. It still listens on port 80, so the Cloudflare tunnel needs no change.
 - A player could replace another player's drawing on everyone else's screen by sending a stroke with that player's id, and a socket that had not joined could still relay strokes to the room. The server now drops strokes from sockets that have not joined and stamps each relay with the sender's own id.
 - Any player could take over a guest's seat, and with it their score and prompts, by joining with that guest's player id, which every roster shows. The browser now keeps a private rejoin key next to its player id, and the server refuses a join for a known seat unless it carries the key the seat's first join used.
 - Every player received everyone's prompts at the start of a round, so a player could read the answers from the network traffic. Each player now receives only their own card.
