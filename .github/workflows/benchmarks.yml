@@ -1,0 +1,44 @@
+name: benchmarks
+
+# CodSpeed measures the stroke-path benchmarks in backend/tests/benchmarks on every PR
+# and compares them with main. Simulation mode counts CPU instructions, so a noisy
+# runner does not move the result. Every push to main runs, not only backend changes:
+# a PR is compared with its base commit, which needs a result of its own. A public
+# repo uploads without a token.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  codspeed:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    name: CodSpeed
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
+
+      - uses: CodSpeedHQ/action@821a40cd6c80e3cfe387caf55668287addd808da # v5.5.0
+        with:
+          mode: simulation
+          working-directory: backend
+          run: uv run pytest tests/benchmarks --codspeed
