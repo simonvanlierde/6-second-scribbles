@@ -53,9 +53,8 @@ services:
     # the bind mounts below stay theirs. Export UID and GID if your shell does not.
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      # Keep seed/translation file edits on host and reuse downloaded Argos models.
+      # Keep seed file edits on host.
       - ./backend:/app
-      - ${ARGOS_MODELS_DIR:-./backend/.argos-models}:/home/appuser/.local/share/argos-translate
     environment:
       POSTGRES_HOST: database
       REDIS_HOST: cache

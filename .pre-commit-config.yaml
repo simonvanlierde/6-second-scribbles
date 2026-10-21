@@ -4,9 +4,9 @@
 # Revs are commit SHAs, since tags are mutable; Dependabot moves each SHA and its
 # `# frozen:` tag together.
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
-# Scripts write the first three: auto_translate_seed_data.py dumps the seed YAML and
-# hashes it, and the translation cache is a JSON dump. Formatting them by hand would
-# change the hash and fight the next run. Env files stay as written.
+# The first three were written by the retired machine translation script: the seed
+# YAML, its hash and the translation cache. Reformatting them would only churn the
+# history. Env files stay as written.
 exclude: |-
   (?x)^(
     backend/scripts/seed_data\.yaml
