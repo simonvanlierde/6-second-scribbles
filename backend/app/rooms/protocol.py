@@ -31,7 +31,16 @@ class ClientEventModel(BaseModel):
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
-    type: str
+    # Each event narrows `type` to its own Literal. The checker sees a read-only property,
+    # which a subclass may narrow; pydantic sees the field, so `type` stays first in the schemas.
+    if TYPE_CHECKING:
+
+        @property
+        def type(self) -> str:
+            """The event's discriminator, such as "join"."""
+            ...
+    else:
+        type: str  # noqa: A001 - the wire field is named `type`
 
 
 class ClientPlayerEventModel(ClientEventModel):
@@ -260,7 +269,16 @@ class ServerEventModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    type: str
+    # Each event narrows `type` to its own Literal. The checker sees a read-only property,
+    # which a subclass may narrow; pydantic sees the field, so `type` stays first in the schemas.
+    if TYPE_CHECKING:
+
+        @property
+        def type(self) -> str:
+            """The event's discriminator, such as "join"."""
+            ...
+    else:
+        type: str  # noqa: A001 - the wire field is named `type`
 
 
 class ServerPlayerEventModel(ServerEventModel):
