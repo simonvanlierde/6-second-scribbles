@@ -85,8 +85,9 @@ export function useDrawingCanvas() {
   // them: repainting the whole HiDPI canvas on every pointermove made the browser
   // redraw all of it each frame.
   let paintedLive: Rect | null = null;
-  // Device pixels per CSS pixel, set on resize.
+  // Device pixels per CSS pixel, and the size in CSS pixels, set on resize.
   let scale = 1;
+  let cssSize = { width: 0, height: 0 };
   // The stroke belongs to a single pointer; secondary pointers (multi-touch) are
   // ignored so a second finger can't hijack or corrupt the in-progress stroke.
   let activePointerId: number | null = null;
@@ -311,6 +312,15 @@ export function useDrawingCanvas() {
     const cssHeight = canvasRef.value.offsetHeight;
     const dpr = window.devicePixelRatio || 1;
     scale = dpr;
+    // The stroke under the pointer was recorded at the old size: move it with the pad.
+    // In place, so points a caller still holds from onStrokeProgress move too.
+    if (cssSize.width > 0 && cssSize.height > 0) {
+      for (const point of currentStroke) {
+        point.x *= cssWidth / cssSize.width;
+        point.y *= cssHeight / cssSize.height;
+      }
+    }
+    cssSize = { width: cssWidth, height: cssHeight };
 
     canvasRef.value.width = layer.width = Math.round(cssWidth * dpr);
     canvasRef.value.height = layer.height = Math.round(cssHeight * dpr);
