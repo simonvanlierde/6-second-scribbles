@@ -56,6 +56,9 @@ const liveTimers = new Map<number, ReturnType<typeof setTimeout>>();
 // The toolbar's clear empties only this pad: strokes before this store index stay
 // off it, on redraws too, until the whole doodle is cleared.
 let clearedBefore = 0;
+// Store index of this player's latest stroke. While it is being drawn the canvas
+// shows it live, so a redraw must not also commit it.
+let localIndex = -1;
 
 // Pad coordinates (see PAD_SCALE) for the points drawn on this canvas, in pixels.
 function toPad(points: Array<{ x: number; y: number }>): number[] {
@@ -85,8 +88,11 @@ function redrawAll() {
   store.currentStrokes.forEach((stroke, i) => {
     drawnCounts.set(i, stroke.points.length / 2);
   });
+  const drawingLocal = canvas.isDrawing.value;
   canvas.replaceStrokes(
-    store.currentStrokes.filter((_, i) => i >= clearedBefore && !liveTimers.has(i)).map((s) => toCanvas(s)),
+    store.currentStrokes
+      .filter((_, i) => i >= clearedBefore && !liveTimers.has(i) && !(drawingLocal && i === localIndex))
+      .map((s) => toCanvas(s)),
   );
   for (const i of liveTimers.keys()) {
     const stroke = store.currentStrokes[i];
@@ -122,6 +128,7 @@ function flushPending() {
     // the whole doodle; they are already on the canvas.
     const index = store.applyPartialStroke(store.localPlayerId, stroke, pendingStart);
     drawnCounts.set(index, (store.currentStrokes[index]?.points.length ?? 0) / 2);
+    localIndex = index;
   }
   pendingPoints = [];
   pendingStart = false;
@@ -154,6 +161,13 @@ watch(
       if (total > (drawnCounts.get(i) ?? 0) && i >= clearedBefore) {
         drawnCounts.set(i, total);
         clearTimeout(liveTimers.get(i));
+        // Its player has moved on (or it came in a room_state snapshot): fill it once,
+        // not live, or a join with many strokes repaints them all on every one.
+        if (!store.isLatestStroke(i)) {
+          liveTimers.delete(i);
+          canvas.commitStroke(toCanvas(stroke), i);
+          continue;
+        }
         liveTimers.set(
           i,
           setTimeout(() => commitRemote(i), LIVE_TIMEOUT_MS),

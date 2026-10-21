@@ -22,9 +22,13 @@ const canvasMocks = vi.hoisted(() => ({
 
 const sendMock = vi.hoisted(() => vi.fn());
 
+// Not in canvasMocks, whose entries are all reset as mocks before each test.
+const isDrawing = vi.hoisted(() => ({ value: false }));
+
 vi.mock("@/composables/useDrawingCanvas", () => ({
   useDrawingCanvas: () => ({
     ...canvasMocks,
+    isDrawing,
   }),
 }));
 
@@ -254,6 +258,43 @@ describe("SharedDrawpad", () => {
     expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([]);
     expect(canvasMocks.setLiveStroke).toHaveBeenCalledTimes(1);
     expect(canvasMocks.setLiveStroke).toHaveBeenCalledWith(1, expect.objectContaining({ color: "#f00" }));
+  });
+
+  it("fills strokes from a room_state snapshot once each, not as live strokes", async () => {
+    const store = useGameStore();
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+
+    store.currentStrokes = [1, 2, 3].map((n) => ({ color: "#000", width: 4, points: [n * 1000, n * 1000] }));
+    await nextTick();
+
+    expect(canvasMocks.setLiveStroke).not.toHaveBeenCalled();
+    expect(canvasMocks.commitStroke).toHaveBeenCalledTimes(3);
+  });
+
+  it("leaves our own unfinished stroke out of a resize redraw, since it is still live", () => {
+    const store = useGameStore();
+    store.localPlayerId = "p1";
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+    canvasMocks.setStrokeProgressCallback.mock.calls[0]?.[0]({
+      color: "#123",
+      width: 6,
+      points: [{ x: 100, y: 50 }],
+      first: true,
+    });
+    vi.advanceTimersByTime(50);
+    const resize = canvasMocks.setResizeHandler.mock.calls[0]?.[0];
+
+    isDrawing.value = true;
+    resize();
+    expect(canvasMocks.replaceStrokes).toHaveBeenLastCalledWith([]);
+
+    isDrawing.value = false;
+    resize();
+    expect(canvasMocks.replaceStrokes).toHaveBeenLastCalledWith([expect.objectContaining({ color: "#123" })]);
   });
 
   it("clears locally and forwards toolbar choices to the canvas", async () => {
