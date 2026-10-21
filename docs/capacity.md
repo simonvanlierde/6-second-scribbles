@@ -68,10 +68,13 @@ The test script ([`backend/loadtest/run.py`](../backend/loadtest/run.py)) speaks
 the real room protocol, with one WebSocket per player:
 
 - The host opens `/ws/{room}` and joins. The guests join after the host.
-- In the lobby every player draws on the shared drawpad: strokes of 30
-  `draw_stroke_partial` fragments at 60 per second (one per browser frame, two
-  points each), with 0.5 to 1.5 s between strokes. That is about 20 messages
-  per second per player, so this is a busy lobby, not an average one.
+- In the lobby every player draws on the shared drawpad: strokes of 10
+  `draw_stroke_partial` fragments at 20 per second (six points each, as the
+  browser sends them every 50 ms), with 0.5 to 1.5 s between strokes. That is
+  about 7 messages per second per player, so this is a busy lobby, not an
+  average one. `--send-hz 60` replays the older client, which sent one fragment
+  per browser frame. The server sends each room's fragments out together every
+  50 ms, as one `draw_stroke_batch`.
 - After 7.5 to 22.5 s in the lobby, the host starts a one-round game. The server
   deals the cards. Each player sends a 56 KiB `draw_stroke`, the largest
   drawing the frontend sends, and `player_ready`. (The tables above used a

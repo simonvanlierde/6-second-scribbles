@@ -19,7 +19,13 @@ from app.rooms import manager as manager_module
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.player_lifecycle import ABSENT_BINDING_GRACE_SECONDS, MAX_ABSENT_BINDINGS, SEATS_BUSY_ERROR
-from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
+from app.rooms.protocol import (
+    DrawStrokeBatchServerEvent,
+    StrokeDelta,
+    StrokeFragment,
+    StrokePoint,
+    WebSocketMessage,
+)
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
     HOST_ONE,
@@ -40,12 +46,11 @@ from tests.constants import (
     ROUND_COMPLETE,
     TEST_ROOM_ID,
 )
-from tests.support import as_websocket
+from tests.support import TestWebSocket, as_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from tests.support import TestWebSocket
 
 EXPIRES_AT = "expiresAt"
 HOST_CHANGED = "host_changed"
@@ -332,6 +337,33 @@ class TestGameRoom:
             actual = sum(len(stroke.points) for stroke in game_room.lobby_strokes)
             assert game_room._lobby_points == actual  # noqa: SLF001
             assert actual <= manager_module.MAX_LOBBY_POINTS or len(game_room.lobby_strokes) == 1
+
+    async def test_lobby_fragments_go_out_together_once_per_tick(self, game_room: GameRoom) -> None:
+        """Fragments from several players in one tick reach each client as one batch, in order."""
+        ws = TestWebSocket()
+        game_room.players["p1"] = PlayerInfo(id="p1", name="One", websocket=as_websocket(ws))
+        for player_id, x in (("p1", 1), ("p2", 2), ("p1", 3)):
+            stroke = StrokeDelta(color="#000", width=3, points=[StrokePoint(x=x, y=x)])
+            game_room.queue_lobby_fragment(StrokeFragment(player_id=player_id, stroke=stroke, stroke_start=x == 1))
+        assert ws.sent_texts == []
+
+        await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+
+        assert len(ws.sent_texts) == 1
+        batch = DrawStrokeBatchServerEvent.model_validate_json(ws.sent_texts[0])
+        assert [(f.player_id, f.stroke.points[0].x) for f in batch.fragments] == [("p1", 1), ("p2", 2), ("p1", 3)]
+
+    async def test_clearing_the_doodle_drops_fragments_waiting_for_the_tick(self, game_room: GameRoom) -> None:
+        """A fragment drawn just before a clear does not reappear after it."""
+        ws = TestWebSocket()
+        game_room.players["p1"] = PlayerInfo(id="p1", name="One", websocket=as_websocket(ws))
+        stroke = StrokeDelta(color="#000", width=3, points=[StrokePoint(x=1, y=1)])
+        game_room.queue_lobby_fragment(StrokeFragment(player_id="p1", stroke=stroke, stroke_start=True))
+
+        game_room.clear_lobby_strokes()
+        await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+
+        assert ws.sent_texts == []
 
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""

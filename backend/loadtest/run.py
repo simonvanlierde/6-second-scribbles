@@ -1,8 +1,8 @@
 """Ramp WebSocket load against the room server until broadcast latency degrades.
 
 Each simulated room has one host and N-1 guests speaking the real room protocol:
-every player scribbles on the shared lobby drawpad (``draw_stroke_partial`` at
-the browser's frame rate), and every room regularly plays a one-round game
+every player scribbles on the shared lobby drawpad (``draw_stroke_partial`` 20
+times a second, as the browser sends them), and every room regularly plays a one-round game
 (server-dealt cards, a drawing, ready, guesses, scoring, restart). The
 measured latency is send-to-receive time of a stroke fragment as seen by the
 other players in the room, which is the hot broadcast path.
@@ -37,10 +37,11 @@ from websockets.exceptions import ConnectionClosed, InvalidHandshake
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-# A browser frame: SharedDrawpad.vue flushes buffered points once per animation frame.
-FRAME_HZ = 60
-STROKE_FRAMES = 30  # half a second of continuous drawing per stroke
-POINTS_PER_FRAME = 2
+# SharedDrawpad.vue sends buffered points every 50 ms (20 Hz); --send-hz 60 replays
+# the older client that sent once per animation frame.
+SEND_HZ = 20
+STROKE_SECONDS = 0.5  # continuous drawing per stroke
+POINTS_PER_SECOND = 120
 PAUSE_SECONDS = (0.5, 1.5)  # gap between strokes, uniform
 # The largest drawing the frontend sends: encodeDrawing (frontend/src/lib/
 # drawingImage.ts) shrinks every drawing to at most 56 KiB of data URL.
@@ -118,6 +119,7 @@ class Config:
     players: int
     lobby_seconds: float
     draw_seconds: float
+    send_hz: float
     end_at: float  # time.monotonic() deadline; CLOCK_MONOTONIC is shared across processes
     window: tuple[float, float]  # latency samples count only inside this monotonic window
 
@@ -234,6 +236,16 @@ class Player:
             await asyncio.sleep(2.0 if self.is_host else 0.5)
             await self.send({"type": "leave"})
 
+    def record_relay(self, msg: dict, now: float) -> None:
+        """Time the other players' stroke fragments in a relayed message."""
+        window_start, window_end = self.cfg.window
+        if not window_start <= now <= window_end:
+            return
+        # Servers before the per-room tick relayed each fragment on its own.
+        for fragment in msg.get("fragments", [msg]):
+            if fragment.get("playerId") != self.player_id:
+                self.stats.latencies_ms.append((now - sent_at(fragment["stroke"])) * 1000)
+
     async def receive_loop(self) -> None:
         """Track the room phase, react to the game flow, and time stroke relays."""
         assert self.ws is not None  # noqa: S101 # set by run() before this starts
@@ -243,10 +255,8 @@ class Player:
             kind = msg.get("type")
             self.phase = PHASE_AFTER.get(kind, self.phase)
             match kind:
-                case "draw_stroke_partial":
-                    window_start, window_end = self.cfg.window
-                    if msg.get("playerId") != self.player_id and window_start <= now <= window_end:
-                        self.stats.latencies_ms.append((now - sent_at(msg["stroke"])) * 1000)
+                case "draw_stroke_batch" | "draw_stroke_partial":
+                    self.record_relay(msg, now)
                 case "player_joined" if msg.get("playerId") == self.player_id:
                     if self.is_host and not msg.get("isHost"):
                         self.stats.errors["not_host"] += 1
@@ -290,13 +300,13 @@ class Player:
                 await asyncio.sleep(0.2)
                 continue
             x, y = rng.uniform(0, 800), rng.uniform(0, 600)
-            for frame in range(STROKE_FRAMES):
+            for frame in range(round(STROKE_SECONDS * self.cfg.send_hz)):
                 points = []
-                for _ in range(POINTS_PER_FRAME):
+                for _ in range(round(POINTS_PER_SECOND / self.cfg.send_hz)):
                     x, y = x + rng.uniform(-5, 5), y + rng.uniform(-5, 5)
                     points.append({"x": round(x, 1), "y": round(y, 1)})
                 await self.send(stroke_fragment(self.player_id, points, time.monotonic(), start=frame == 0))
-                await asyncio.sleep(1 / FRAME_HZ)
+                await asyncio.sleep(1 / self.cfg.send_hz)
             await asyncio.sleep(rng.uniform(*PAUSE_SECONDS))
 
     async def host_loop(self) -> None:
@@ -402,6 +412,7 @@ def run_step(args: argparse.Namespace, rooms: int) -> StepResult:
         players=args.players,
         lobby_seconds=args.lobby_seconds,
         draw_seconds=args.draw_seconds,
+        send_hz=args.send_hz,
         end_at=window[1],
         window=window,
     )
@@ -447,6 +458,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--duration", type=float, default=40, help="measured seconds per step")
     parser.add_argument("--lobby-seconds", type=float, default=15, help="lobby doodling between games")
     parser.add_argument("--draw-seconds", type=float, default=3, help="in-game drawing time per round")
+    parser.add_argument(
+        "--send-hz", type=float, default=SEND_HZ, help="doodle fragments each drawing player sends per second"
+    )
     parser.add_argument("--p95-limit", type=float, default=250, help="p95 latency (ms) that marks the knee")
     parser.add_argument("--workers", type=int, default=4, help="load-generator processes")
     parser.add_argument("--container", help="backend container to sample with docker stats")
@@ -456,7 +470,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--json", metavar="PATH", help="also write the step results to PATH as JSON")
     args = parser.parse_args(argv)
     if args.smoke:
-        args.rooms, args.players, args.duration, args.lobby_seconds, args.draw_seconds = "2", 3, 8, 4, 1
+        # The host starts the game 4-12 s in and the window opens at about 3 s, so every
+        # window holds some lobby drawing and still sees the round scored.
+        args.rooms, args.players, args.duration, args.lobby_seconds, args.draw_seconds = "2", 3, 20, 8, 1
     return args
 
 

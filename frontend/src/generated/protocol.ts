@@ -244,6 +244,33 @@ export const ServerEventSchema = z.union([
       senderId: z.string(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("draw_stroke_batch"),
+      fragments: z.array(
+        z
+          .object({
+            playerId: z.string(),
+            stroke: z
+              .object({
+                color: z.string().max(32),
+                width: z.number().gt(0).lte(64),
+                points: z
+                  .array(z.object({ x: z.number(), y: z.number() }))
+                  .max(1000)
+                  .optional(),
+              })
+              .describe(
+                "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
+              ),
+            strokeStart: z.boolean(),
+          })
+          .strict()
+          .describe("One player's doodle fragment inside a ``draw_stroke_batch``."),
+      ),
+    })
+    .strict()
+    .describe("The lobby doodle fragments a room received during one tick, in arrival order."),
   z.object({
     type: z.literal("start_game"),
     difficulty: z.union([z.enum(["easy", "medium", "hard"]), z.null()]).default(null),
@@ -267,28 +294,6 @@ export const ServerEventSchema = z.union([
   z
     .object({ type: z.literal("draw_stroke"), playerId: z.union([z.string(), z.null()]).default(null) })
     .catchall(z.any()),
-  z.object({
-    type: z.literal("draw_stroke_partial"),
-    playerId: z.union([z.string(), z.null()]).default(null),
-    stroke: z
-      .union([
-        z
-          .object({
-            color: z.string().max(32),
-            width: z.number().gt(0).lte(64),
-            points: z
-              .array(z.object({ x: z.number(), y: z.number() }))
-              .max(1000)
-              .optional(),
-          })
-          .describe(
-            "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
-          ),
-        z.null(),
-      ])
-      .default(null),
-    strokeStart: z.boolean().default(false),
-  }),
   z.object({ type: z.literal("drawpad_clear") }),
   z.object({ type: z.literal("pad_visibility"), visible: z.boolean().default(true) }),
 ]);

@@ -36,9 +36,12 @@ const { send } = useGameConnection();
 const color = ref<string>(DRAW_PALETTE[0]);
 const width = ref<number>(BRUSH_SIZES[1]);
 
-let rafId: number | null = null;
-// Delta points buffered since the last send; flushed once per animation frame so
-// the socket carries only new points, not the whole growing stroke.
+// Strokes go out at most this often: a send per animation frame (60 a second) made
+// relay cost on the server grow with frame rate rather than with drawing.
+const SEND_INTERVAL_MS = 50;
+let sendTimer: ReturnType<typeof setTimeout> | null = null;
+// Delta points buffered since the last send, so the socket carries only new points,
+// not the whole growing stroke.
 let pendingPoints: Array<{ x: number; y: number }> = [];
 let pendingMeta: { color: string; width: number } | null = null;
 let pendingStart = false;
@@ -64,11 +67,11 @@ function flushPending() {
 }
 
 function scheduleSend() {
-  if (rafId !== null) return;
-  rafId = requestAnimationFrame(() => {
-    rafId = null;
+  if (sendTimer !== null) return;
+  sendTimer = setTimeout(() => {
+    sendTimer = null;
     flushPending();
-  });
+  }, SEND_INTERVAL_MS);
 }
 
 // Render incoming remote strokes incrementally: for each stroke, draw only the
@@ -123,7 +126,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (rafId) cancelAnimationFrame(rafId);
+  if (sendTimer !== null) clearTimeout(sendTimer);
   flushPending();
   canvas.cleanup();
 });

@@ -485,6 +485,23 @@ class GameCompleteServerEvent(ServerEventModel):
     winner: str
 
 
+class StrokeFragment(BaseModel):
+    """One player's doodle fragment inside a ``draw_stroke_batch``."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    player_id: str = Field(alias="playerId")
+    stroke: StrokeDelta
+    stroke_start: bool = Field(alias="strokeStart")
+
+
+class DrawStrokeBatchServerEvent(ServerEventModel):
+    """The lobby doodle fragments a room received during one tick, in arrival order."""
+
+    type: Literal["draw_stroke_batch"] = "draw_stroke_batch"
+    fragments: list[StrokeFragment]
+
+
 class ReactionReceivedServerEvent(ServerEventModel):
     type: Literal["reaction_received"] = "reaction_received"
     drawing_id: str = Field(alias="drawingId")
@@ -498,7 +515,6 @@ RelayedClientEvent = Annotated[
     | RestartGameEvent
     | SettingsUpdateEvent
     | DrawStrokeEvent
-    | DrawStrokePartialEvent
     | DrawpadClearEvent
     | PadVisibilityEvent,
     Field(discriminator="type"),
@@ -532,6 +548,7 @@ ServerEvent = Annotated[
     | RoundCompleteServerEvent
     | GameCompleteServerEvent
     | ReactionReceivedServerEvent
+    | DrawStrokeBatchServerEvent
     | RelayedClientEvent,
     Field(discriminator="type"),
 ]

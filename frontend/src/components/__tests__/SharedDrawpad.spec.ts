@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 
 import SharedDrawpad from "@/components/SharedDrawpad.vue";
@@ -53,11 +53,11 @@ describe("SharedDrawpad", () => {
     setActivePinia(createPinia());
     sendMock.mockReset();
     for (const mock of Object.values(canvasMocks)) mock.mockReset();
-    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-      cb(0);
-      return 1;
-    });
-    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("initializes the canvas and replays existing lobby strokes", () => {
@@ -101,7 +101,9 @@ describe("SharedDrawpad", () => {
       ],
       first: true,
     });
+    expect(sendMock).not.toHaveBeenCalled();
 
+    vi.advanceTimersByTime(50);
     expect(sendMock).toHaveBeenCalledWith({
       type: "draw_stroke_partial",
       playerId: "p1",

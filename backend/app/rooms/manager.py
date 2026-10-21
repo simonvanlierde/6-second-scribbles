@@ -37,6 +37,7 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import PlayerInfo
 from app.rooms.protocol import (
+    DrawStrokeBatchServerEvent,
     DrawStrokePayload,
     GalleryDrawingPayload,
     PlayerCardPayload,
@@ -45,6 +46,7 @@ from app.rooms.protocol import (
     RoomStateEvent,
     StartRoundServerEvent,
     StrokeDelta,
+    StrokeFragment,
     WebSocketMessage,
     encode_ws_message,
 )
@@ -75,6 +77,10 @@ MAX_STROKE_POINTS = 4000
 # Cap on points across the whole doodle. The two caps above still allow 500 x 4000
 # points, a room_state of tens of MB that freezes the single worker to build.
 MAX_LOBBY_POINTS = 20_000
+# Lobby doodle fragments are held this long and sent as one draw_stroke_batch: a
+# drawing client sends 20 a second, and relaying each alone made server CPU grow
+# with fragments x players.
+LOBBY_FRAGMENT_TICK_SECONDS = 0.05
 
 
 class RoomCapacityError(Exception):
@@ -143,6 +149,8 @@ class GameRoom:
         # Points across lobby_strokes, kept up to date on every change: summing them on
         # every relayed fragment cost O(strokes) on the hottest path.
         self._lobby_points = 0
+        self._pending_fragments: list[StrokeFragment] = []
+        self._fragment_flush: asyncio.TimerHandle | None = None
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -343,6 +351,23 @@ class GameRoom:
         self.lobby_strokes.clear()
         self._lobby_partial_index.clear()
         self._lobby_points = 0
+        # Fragments still waiting for the tick belong to the doodle just cleared.
+        self._pending_fragments.clear()
+
+    def queue_lobby_fragment(self, fragment: StrokeFragment) -> None:
+        """Hold a doodle fragment for the next tick, when the room's fragments go out together."""
+        self._pending_fragments.append(fragment)
+        if self._fragment_flush is None:
+            self._fragment_flush = asyncio.get_running_loop().call_later(
+                LOBBY_FRAGMENT_TICK_SECONDS, self._flush_lobby_fragments
+            )
+
+    def _flush_lobby_fragments(self) -> None:
+        self._fragment_flush = None
+        fragments, self._pending_fragments = self._pending_fragments, []
+        if fragments:
+            event = DrawStrokeBatchServerEvent(fragments=fragments)
+            create_logged_task(self.broadcast(event), name=f"fragments_{self.room_id}")
 
     def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot.

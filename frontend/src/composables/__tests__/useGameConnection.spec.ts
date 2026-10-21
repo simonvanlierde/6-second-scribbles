@@ -49,25 +49,21 @@ describe("client message handlers", () => {
     expect(store.players.get("p2")?.drawing).toBe("data:image/png;base64,xyz");
   });
 
-  it("adds remote partials but ignores local-origin partials", () => {
+  it("applies every remote fragment of a batch and skips local-origin ones", () => {
     const store = useGameStore();
     store.localPlayerId = "p1";
     const { handleMessage } = useGameConnection();
 
     handleMessage({
-      type: "draw_stroke_partial",
-      playerId: "p2",
-      stroke: { color: "#123", width: 2, points: [{ x: 1, y: 2 }] },
+      type: "draw_stroke_batch",
+      fragments: [
+        { playerId: "p2", stroke: { color: "#123", width: 2, points: [{ x: 1, y: 2 }] }, strokeStart: true },
+        { playerId: "p1", stroke: { color: "#123", width: 2, points: [{ x: 3, y: 4 }] }, strokeStart: true },
+        { playerId: "p3", stroke: { color: "#456", width: 2, points: [{ x: 5, y: 6 }] }, strokeStart: true },
+      ],
     });
-    expect(store.currentStrokes.length).toBeGreaterThan(0);
 
-    const before = store.currentStrokes.length;
-    handleMessage({
-      type: "draw_stroke_partial",
-      playerId: "p1",
-      stroke: { color: "#123", width: 2, points: [{ x: 3, y: 4 }] },
-    });
-    expect(store.currentStrokes.length).toBe(before);
+    expect(store.currentStrokes.map((stroke) => stroke.points[0]?.x)).toEqual([1, 5]);
   });
 
   it("applies pad_visibility to the store", () => {
