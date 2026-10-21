@@ -6,8 +6,6 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, Mock
 
-import pytest
-
 from app.core.types import GamePhase
 from app.rooms import actions as room_actions
 from app.rooms import kick_vote, player_lifecycle, rounds
@@ -28,12 +26,12 @@ from app.rooms.protocol import (
     SubmitGuessEvent,
 )
 from scripts import generate_contracts
-from scripts.generate_contracts import _event_type_for_schema as event_type_for_schema
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    import pytest
     from fastapi import Request, WebSocket
 
     from app.rooms.session import RoomWebSocketSession
@@ -246,7 +244,7 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
 
 
 def test_generate_contract_helpers_cover_normalization_and_event_types() -> None:
-    """Contract helpers normalize schemas, inline refs, and list a union's event types."""
+    """Contract helpers normalize schemas and inline refs."""
     schema = {
         "$defs": {"Named": {"type": "object", "properties": {"type": {"const": "ping", "default": "ping"}}}},
         "oneOf": [{"$ref": "#/$defs/Named"}],
@@ -254,46 +252,19 @@ def test_generate_contract_helpers_cover_normalization_and_event_types() -> None
     }
 
     prepared = generate_contracts.prepare(schema)
-    event_types = generate_contracts.union_event_types(
-        {
-            "anyOf": [
-                {"properties": {"type": {"const": "ping"}}},
-                {"properties": {"type": {"const": "pong"}}},
-                "ignored",
-            ]
-        }
-    )
 
     assert SCHEMA_DEFS_KEY not in prepared
     assert SCHEMA_ANY_OF_KEY in prepared
     assert prepared["properties"]["type"] == {"const": "ping"}
-    assert event_types == ["ping", "pong"]
 
 
-def test_generate_contract_helpers_cover_errors_and_main(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Error branches and the main write orchestration remain covered."""
-    with pytest.raises(TypeError, match="missing properties"):
-        event_type_for_schema({})
-
-    with pytest.raises(TypeError, match="Expected schema to contain anyOf"):
-        generate_contracts.union_event_types({})
-
-    with pytest.raises(ValueError, match="client event catalog does not match schema types"):
-        generate_contracts.assert_catalog_matches_events(["join"], {"leave": {}}, "client")
-
+def test_generate_contracts_main_writes_schemas_and_openapi(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Main writes both union schemas and the OpenAPI document, and no event catalog."""
     monkeypatch.setattr(generate_contracts, "CONTRACTS_ROOT", tmp_path)
     monkeypatch.setattr(
         generate_contracts,
         "generate_schema",
         lambda _adapter, *, mode: {"anyOf": [{"properties": {"type": {"const": f"{mode}-event"}}}]},
-    )
-    monkeypatch.setattr(
-        generate_contracts,
-        "CONTRACT_EVENT_CATALOG",
-        {
-            "client": {"validation-event": {}},
-            "server": {"serialization-event": {}},
-        },
     )
     write_schema = Mock()
     write_openapi = Mock()

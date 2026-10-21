@@ -21,11 +21,9 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from app.core.logging import configure_logging
 from app.main import application
-from app.rooms.protocol import CLIENT_EVENT_ADAPTER, CONTRACT_EVENT_CATALOG, SERVER_EVENT_ADAPTER
+from app.rooms.protocol import CLIENT_EVENT_ADAPTER, SERVER_EVENT_ADAPTER
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from pydantic import TypeAdapter
 
 configure_logging()
@@ -114,45 +112,10 @@ def write_schema(schema: JsonObject, path: Path) -> None:
     logger.info("wrote %s", path)
 
 
-def _event_type_for_schema(schema: JsonObject) -> str:
-    """Return the discriminator value for one event schema branch."""
-    props = schema.get("properties")
-    if not isinstance(props, dict):
-        msg = "Event schema is missing properties."
-        raise TypeError(msg)
-
-    type_schema = props.get("type")
-    if not isinstance(type_schema, dict):
-        msg = "Event schema is missing the type property."
-        raise TypeError(msg)
-
-    event_type = type_schema.get(CONST_KEY)
-    if not isinstance(event_type, str):
-        msg = "Event schema type property is missing const."
-        raise TypeError(msg)
-    return event_type
-
-
-def union_event_types(union_schema: JsonObject) -> list[str]:
-    """Return the event type of each branch of a discriminated union schema."""
-    variants = union_schema.get(ANY_OF_KEY)
-    if not isinstance(variants, list):
-        msg = f"Expected schema to contain {ANY_OF_KEY}."
-        raise TypeError(msg)
-    return [_event_type_for_schema(variant) for variant in variants if isinstance(variant, dict)]
-
-
 def write_openapi(path: Path) -> None:
     """Write the canonical OpenAPI document."""
     path.write_text(f"{json.dumps(application.openapi(), indent=2, sort_keys=True)}\n")
     logger.info("wrote %s", path)
-
-
-def assert_catalog_matches_events(event_types: list[str], catalog: Mapping[str, object], direction: str) -> None:
-    """Ensure the event catalog covers exactly the event types in the schema."""
-    if sorted(event_types) != sorted(catalog):
-        msg = f"{direction} event catalog does not match schema types."
-        raise ValueError(msg)
 
 
 def main() -> None:
@@ -162,8 +125,6 @@ def main() -> None:
 
     server_schema = generate_schema(SERVER_EVENT_ADAPTER, mode="serialization")
     client_schema = generate_schema(CLIENT_EVENT_ADAPTER, mode="validation")
-    assert_catalog_matches_events(union_event_types(client_schema), CONTRACT_EVENT_CATALOG["client"], "client")
-    assert_catalog_matches_events(union_event_types(server_schema), CONTRACT_EVENT_CATALOG["server"], "server")
 
     write_schema(server_schema, out_dir / "server-event.schema.json")
     write_schema(client_schema, out_dir / "client-event.schema.json")
