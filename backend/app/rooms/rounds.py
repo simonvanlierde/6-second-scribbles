@@ -284,14 +284,18 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             )
             continue
 
+        locale = room.get_player_locale(player_id)
         try:
             scoring_targets = await category_service.get_localized_scoring_targets(
                 db,
                 category_id=target_assignment.category_id,
                 prompt_ids=target_assignment.item_ids,
-                preferred_locale=room.get_player_locale(player_id),
+                preferred_locale=locale,
+                fallback_locale=room.metadata.default_locale,
             )
             targets = scoring_targets.targets
+            # Match with the rules of the targets' language, which can be the room's.
+            locale = scoring_targets.locale
         except HTTPException as exc:
             # A reseed can delete the round's category mid-round; those guesses score 0.
             logger.warning(
@@ -301,7 +305,6 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
                 exc.detail,
             )
             targets = []
-        locale = room.get_player_locale(player_id)
         matched_guesses = guess_matcher.score_guesses_against_targets(guesses, targets, locale)
         correct_count = len(matched_guesses)
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS

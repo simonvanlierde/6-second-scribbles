@@ -29,6 +29,7 @@ ANIMALES = "Animales"
 ANIMALS = "Animals"
 CAT = "cat"
 GATO = "gato"
+SWEDISH_IN_SPANISH_ROOM = "sv>es"
 ZH_TW_ANIMALS = "動物"
 ZH_TW_CAT = "貓"
 
@@ -226,6 +227,7 @@ async def test_get_localized_scoring_targets_uses_cache(monkeypatch: pytest.Monk
             return_value={
                 "category_id": 3,
                 "category_name": "Animals",
+                "locale": "en",
                 "targets": [{"item_id": 30, "label": "cat", "aliases": ["kitty"]}],
             }
         ),
@@ -236,6 +238,7 @@ async def test_get_localized_scoring_targets_uses_cache(monkeypatch: pytest.Monk
         category_id=3,
         prompt_ids=[30],
         preferred_locale="en",
+        fallback_locale="en",
     )
 
     assert result.category_name == ANIMALS
@@ -267,11 +270,41 @@ async def test_get_localized_scoring_targets_falls_back_to_default_and_caches(
         category_id=5,
         prompt_ids=[50],
         preferred_locale="fr",
+        fallback_locale="fr",
     )
 
     assert result.category_name == ANIMALS
     assert result.targets[0].aliases == ["kitty"]
     cache_write.assert_awaited_once()
+
+
+async def test_scoring_uses_the_room_language_like_the_card(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A guesser whose language the category lacks is scored in the room's language, as their card is dealt."""
+    monkeypatch.setattr(redis_module, "get_cached_localized_scoring_targets", AsyncMock(return_value=None))
+    cache_write = AsyncMock()
+    monkeypatch.setattr(redis_module, "cache_localized_scoring_targets", cache_write)
+    category = _category(
+        category_id=7, available_locales=["en", "es"], translations={"en": {"name": ANIMALS}, "es": {"name": ANIMALES}}
+    )
+    prompt = Prompt(
+        id=70,
+        stable_key="cat",
+        translations={"en": {"label": CAT, "aliases": []}, "es": {"label": GATO, "aliases": []}},
+    )
+    session = _QueuedSession([category], [prompt])
+
+    result = await get_localized_scoring_targets(
+        cast("AsyncSession", session),
+        category_id=7,
+        prompt_ids=[70],
+        preferred_locale="sv",
+        fallback_locale="es",
+    )
+
+    assert result.category_name == ANIMALES
+    assert [target.label for target in result.targets] == [GATO]
+    # Another room language picks other targets, so it must not share the cache entry.
+    assert cache_write.await_args_list[0].args[1] == SWEDISH_IN_SPANISH_ROOM
 
 
 async def test_untranslated_room_language_is_dealt_in_a_fallback_locale(monkeypatch: pytest.MonkeyPatch) -> None:

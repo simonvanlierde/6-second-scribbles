@@ -24,6 +24,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- If a category had no words in your language, your guesses were checked against its words in the category's default language, usually English, even when the room's language was available. They are now checked in the same language your own card falls back to: the room's, then the category's default, then English.
 - The server no longer turns players away once about 1,000 are connected. It ran out of open files, one per connection, long before it ran out of CPU.
 - When the lobby drawpad changed size, for example when you rotated your phone, the other players' strokes disappeared from it.
 - In French, the player count now uses the singular for zero, as French grammar does.
