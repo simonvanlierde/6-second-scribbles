@@ -42,6 +42,7 @@ const { t } = i18n.global;
 /* A fill, not an outline: the blue outline is the keyboard focus ring. */
 .avatar-picker__btn--active {
   background: var(--color-highlighter-yellow);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
 }
 .avatar-picker__btn:active {
   transform: scale(0.94);
