@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from app.rooms.protocol import RoundResultItem
-from app.rooms.rounds import compute_highlights
+from app.rooms.rounds import _collect_miss_candidates, compute_highlights
 from app.rooms.state import GuessSubmissionState
+from app.scoring import GuessTarget
 
 P1 = "p1"
 P2 = "p2"
@@ -98,3 +99,17 @@ def test_wildest_miss_picks_max_distance() -> None:
     assert miss is not None
     assert miss.player_id == P2
     assert miss.detail == miss_candidates[1][1]
+
+
+def test_miss_distance_uses_the_guessers_locale() -> None:
+    """German "Eis" (ice) is not a plural of "Ei" (egg), so it is a miss at a real distance."""
+    candidates: list[tuple[str, str, float]] = []
+    _collect_miss_candidates(
+        player_id=P1,
+        guesses=["Eis"],
+        matched_guesses=set(),
+        targets=[GuessTarget(item_id=1, label="Ei", aliases=[])],
+        miss_candidates=candidates,
+        locale="de",
+    )
+    assert candidates[0][2] > 0

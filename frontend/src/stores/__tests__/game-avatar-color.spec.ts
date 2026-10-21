@@ -20,6 +20,16 @@ describe("game store — localPlayerColor", () => {
     expect(store.localAvatarColor).toBe(AVATAR_COLORS[4]);
   });
 
+  it("shows the colour the room assigned over a picked one the room gave to someone else", () => {
+    const store = useGameStore();
+    store.setLocalPlayer("player-abc", "Simon");
+    store.setLocalPlayerColor(AVATAR_COLORS[2]);
+    expect(store.localAvatarColor).toBe(AVATAR_COLORS[2]);
+
+    store.setPlayers([{ id: "player-abc", name: "Simon", color: AVATAR_COLORS[4] }]);
+    expect(store.localAvatarColor).toBe(AVATAR_COLORS[4]);
+  });
+
   it("setPlayers keeps the server's colour and fills one for a player without", () => {
     const store = useGameStore();
     store.setPlayers([

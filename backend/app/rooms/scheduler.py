@@ -101,6 +101,10 @@ class RoomTaskScheduler:
         """Return whether a next-round start timer is currently scheduled."""
         return self._next_round_start_task is not None and not self._next_round_start_task.done()
 
+    def is_restart_pending(self) -> bool:
+        """Return whether the automatic return to the lobby is currently scheduled."""
+        return self._restart_task is not None and not self._restart_task.done()
+
     # ---------- Idle monitoring ----------
 
     def start_idle_check(self) -> None:
@@ -228,7 +232,9 @@ class RoomTaskScheduler:
             await self._room.broadcast(event)
             logger.info("[GameRoom %s] Game complete. Winner: %s", self._room.room_id, event.winner)
             await self._room.persist()
-            self.schedule_restart()
+            # A room that emptied meanwhile has nobody to restart for; a returning player re-arms it.
+            if not self._room.is_empty():
+                self.schedule_restart()
         except asyncio.CancelledError:
             pass
         except Exception:

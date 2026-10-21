@@ -667,6 +667,7 @@ class RoomManager:
         - Not full (< max_players)
         - In lobby phase (not mid-game)
         - Has at least 1 player (not empty)
+        - Not refusing newcomers with seats_busy
 
         Returns room_id if found, None otherwise
         """
@@ -676,6 +677,7 @@ class RoomManager:
             if not room.metadata.is_private
             and 0 < len(room.players) < max_players
             and room.metadata.game_phase == GamePhase.LOBBY
+            and not player_lifecycle.seats_busy(room)
         ]
 
         return secrets.choice(available_rooms) if available_rooms else None

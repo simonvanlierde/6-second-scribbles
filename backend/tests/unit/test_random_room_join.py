@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms.manager import GameRoom, PlayerInfo, room_manager
+from app.rooms.player_lifecycle import MAX_ABSENT_BINDINGS
 from tests.constants import MEDIUM, START_GAME
 from tests.support import JoinedPlayer, joined_players, receive_json, send_json
 
@@ -56,6 +57,18 @@ class TestFindPublicRoom:
             )
         room.host_id = "player-0"
         room_manager.rooms[room_id] = room
+
+        assert _find_public_room() is None
+
+    def test_room_refusing_newcomers_not_returned(self) -> None:
+        """A room whose recent departures fill every spare binding would refuse the newcomer."""
+        room = GameRoom("CODE06")
+        room.players["host"] = PlayerInfo(id="host", name="Host", websocket=AsyncMock())
+        room.host_id = "host"
+        for i in range(MAX_ABSENT_BINDINGS):
+            room.metadata.seat_player(f"gone-{i}", locale="en", user_id=None, rejoin_key_hash=f"hash-{i}")
+            room.metadata.forget_player(f"gone-{i}", forget_identity=False)
+        room_manager.rooms[room.room_id] = room
 
         assert _find_public_room() is None
 

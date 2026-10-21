@@ -754,6 +754,40 @@ class TestRoomTaskScheduler:
 
         assert _scheduler_tasks(room_with_players.scheduler)["_restart_task"] is None
 
+    async def test_rejoin_after_room_emptied_rearms_the_automatic_restart(
+        self,
+        room_with_players: GameRoom,
+        make_ws: Callable[..., TestWebSocket],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A player back on final results in a room that emptied still returns to the lobby."""
+        monkeypatch.setattr(settings, "game_complete_delay_seconds", 0)
+        room_with_players.metadata.current_round = 1
+        room_with_players.scheduler.schedule_game_complete()
+        await asyncio.sleep(0.05)
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_ONE_ID)
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_TWO_ID)
+
+        await player_lifecycle.add_player(room_with_players, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(make_ws()))
+
+        assert room_with_players.metadata.game_phase == GamePhase.FINAL_RESULTS
+        assert room_with_players.scheduler.is_restart_pending()
+
+    async def test_room_emptied_before_game_complete_schedules_no_restart(
+        self, room_with_players: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Nobody is left to restart for when the room empties during the final countdown."""
+        monkeypatch.setattr(settings, "game_complete_delay_seconds", 0.02)
+        room_with_players.metadata.current_round = 1
+        room_with_players.metadata.game_phase = GamePhase.ROUND_RESULTS
+        room_with_players.scheduler.schedule_game_complete()
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_ONE_ID)
+        await player_lifecycle.disconnect_player(room_with_players, PLAYER_TWO_ID)
+
+        await asyncio.sleep(0.1)
+
+        assert not room_with_players.scheduler.is_restart_pending()
+
     async def test_cancel_round_tasks_preserves_idle_check(self, game_room: GameRoom) -> None:
         """cancel_round_tasks() must not touch the idle-check loop."""
         scheduler = game_room.scheduler

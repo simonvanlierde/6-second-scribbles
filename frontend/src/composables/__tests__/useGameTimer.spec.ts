@@ -56,6 +56,19 @@ describe("useGameTimer", () => {
     await nextTick();
 
     expect(timeLeft.value).toBe(2);
+
+    vi.advanceTimersByTime(2_000);
+
+    expect(timeLeft.value).toBe(0);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives the full time when the client clock is slightly behind the server's start time", () => {
+    const onExpire = vi.fn();
+    const { timeLeft } = useGameTimer({ startTime: Date.now() + 1, duration: 30, onExpire });
+
+    expect(timeLeft.value).toBe(30);
+    expect(onExpire).not.toHaveBeenCalled();
   });
 
   it("stops ticking once the screen that owns it goes away", () => {
