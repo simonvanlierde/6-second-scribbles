@@ -245,5 +245,10 @@
     "readyWaiting": "Klaar — wachten op host…",
     "backHome": "Terug naar start",
     "playersReady": "{count} / {total} spelers klaar"
+  },
+  "phase": {
+    "drawing": "Ronde {round}: tekenen",
+    "guessing": "Ronde {round}: raden",
+    "timeLow": "Nog {count} seconden"
   }
 }

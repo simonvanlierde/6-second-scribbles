@@ -245,5 +245,10 @@
     "readyWaiting": "已準備 — 等待房主…",
     "backHome": "返回首頁",
     "playersReady": "{count} / {total} 名玩家已準備"
+  },
+  "phase": {
+    "drawing": "第 {round} 回合：繪畫",
+    "guessing": "第 {round} 回合：猜測",
+    "timeLow": "還剩 {count} 秒"
   }
 }

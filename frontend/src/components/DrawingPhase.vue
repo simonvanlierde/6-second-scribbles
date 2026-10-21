@@ -117,14 +117,18 @@ function toggleItem(index: number) {
 </script>
 
 <template>
-  <div class="drawing-phase">
-    <GameHeader :time-left="timeLeft" @leave="leaveDialog?.request()" />
+  <main class="drawing-phase">
+    <GameHeader
+      :time-left="timeLeft"
+      :title="$t('phase.drawing', { round: store.currentRound })"
+      @leave="leaveDialog?.request()"
+    />
 
     <div class="drawing-phase__body">
       <!-- Category sidebar -->
       <aside class="drawing-phase__sidebar">
         <HdCard class="category-card">
-          <h3 class="category-card__title">{{ category }}</h3>
+          <h2 class="category-card__title">{{ category }}</h2>
           <ol class="category-card__list">
             <li v-for="(item, index) in items" :key="index">
               <button
@@ -190,7 +194,7 @@ function toggleItem(index: number) {
     </HdButton>
 
     <LeaveRoomDialog ref="leaveDialog" />
-  </div>
+  </main>
 </template>
 
 <style scoped>

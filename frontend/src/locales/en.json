@@ -245,5 +245,10 @@
     "readyWaiting": "Ready — waiting for host…",
     "backHome": "Back home",
     "playersReady": "{count} / {total} players ready"
+  },
+  "phase": {
+    "drawing": "Round {round}: drawing",
+    "guessing": "Round {round}: guessing",
+    "timeLow": "{count} seconds left"
   }
 }

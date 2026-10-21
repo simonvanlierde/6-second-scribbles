@@ -66,16 +66,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="round-results">
+  <main class="round-results">
     <GameHeader :time-left="countdown" @leave="leaveDialog?.request()" />
 
     <div class="round-results__body">
-      <p class="round-results__lead">
-        {{ $t("roundResults.title", { round: store.currentRound }) }}
-        ·
-        {{ isLastRound ? $t("roundResults.finalResultsSoon") : $t("roundResults.nextRoundSoon") }}
-        {{ $t("common.countdownIn", { count: countdown }) }}
-      </p>
+      <div class="round-results__intro">
+        <h1 class="round-results__title">{{ $t("roundResults.title", { round: store.currentRound }) }}</h1>
+        <p class="round-results__lead">
+          {{ isLastRound ? $t("roundResults.finalResultsSoon") : $t("roundResults.nextRoundSoon") }}
+          {{ $t("common.countdownIn", { count: countdown }) }}
+        </p>
+      </div>
 
       <RoundHighlights :highlights="store.lastHighlights" />
 
@@ -135,7 +136,7 @@ onUnmounted(() => {
     </div>
 
     <LeaveRoomDialog ref="leaveDialog" />
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -153,6 +154,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+}
+.round-results__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-heading-lg);
+  color: var(--color-ink);
 }
 .round-results__lead {
   margin: 0;

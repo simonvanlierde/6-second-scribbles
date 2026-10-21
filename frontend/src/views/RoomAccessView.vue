@@ -139,7 +139,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="access-page">
+  <main class="access-page">
     <HdCard class="access-card">
       <span class="access-code">
         <span class="access-code__label">{{ $t('home.roomCodeLabel') }}</span>
@@ -188,7 +188,7 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </HdCard>
-  </div>
+  </main>
 </template>
 
 <style scoped>

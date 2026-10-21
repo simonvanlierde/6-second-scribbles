@@ -245,5 +245,10 @@
     "readyWaiting": "준비 완료 — 방장을 기다리는 중…",
     "backHome": "홈으로 돌아가기",
     "playersReady": "{count} / {total}명 준비 완료"
+  },
+  "phase": {
+    "drawing": "라운드 {round}: 그리기",
+    "guessing": "라운드 {round}: 맞히기",
+    "timeLow": "{count}초 남음"
   }
 }

@@ -245,5 +245,10 @@
     "readyWaiting": "Bereit — warte auf Host…",
     "backHome": "Zurück zur Startseite",
     "playersReady": "{count} / {total} Spieler bereit"
+  },
+  "phase": {
+    "drawing": "Runde {round}: Zeichnen",
+    "guessing": "Runde {round}: Raten",
+    "timeLow": "Noch {count} Sekunden"
   }
 }

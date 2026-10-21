@@ -245,5 +245,10 @@
     "readyWaiting": "Pronto — in attesa dell’host…",
     "backHome": "Torna alla home",
     "playersReady": "{count} / {total} giocatori pronti"
+  },
+  "phase": {
+    "drawing": "Round {round}: disegno",
+    "guessing": "Round {round}: tentativi",
+    "timeLow": "Mancano {count} secondi"
   }
 }

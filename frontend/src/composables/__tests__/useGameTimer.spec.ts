@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 
+import { useAnnouncer } from "@/composables/useAnnouncer";
 import { useGameTimer } from "@/composables/useGameTimer";
 
 describe("useGameTimer", () => {
@@ -70,5 +71,26 @@ describe("useGameTimer", () => {
 
     expect(timer?.timeLeft.value).toBe(1);
     expect(onExpire).not.toHaveBeenCalled();
+  });
+
+  it("tells screen readers once when time is running low, not every second", async () => {
+    const { message } = useAnnouncer();
+    message.value = "";
+    useGameTimer({ startTime: Date.now(), duration: 12 });
+
+    vi.advanceTimersByTime(1_000);
+    await nextTick();
+    expect(message.value).toBe("");
+
+    vi.advanceTimersByTime(1_000);
+    await nextTick();
+    await nextTick();
+    expect(message.value).toBe("10 seconds left");
+
+    message.value = "";
+    vi.advanceTimersByTime(3_000);
+    await nextTick();
+    await nextTick();
+    expect(message.value).toBe("");
   });
 });

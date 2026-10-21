@@ -245,5 +245,10 @@
     "readyWaiting": "準備完了 — ホストを待っています…",
     "backHome": "ホームに戻る",
     "playersReady": "{count} / {total} 人が準備完了"
+  },
+  "phase": {
+    "drawing": "ラウンド {round}：描画",
+    "guessing": "ラウンド {round}：予想",
+    "timeLow": "残り{count}秒"
   }
 }

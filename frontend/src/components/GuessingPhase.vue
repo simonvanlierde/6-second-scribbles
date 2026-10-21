@@ -138,8 +138,12 @@ function handleImageError(playerId: string) {
 </script>
 
 <template>
-  <div class="guessing-phase">
-    <GameHeader :time-left="timeLeft" @leave="leaveDialog?.request()" />
+  <main class="guessing-phase">
+    <GameHeader
+      :time-left="timeLeft"
+      :title="$t('phase.guessing', { round: store.currentRound })"
+      @leave="leaveDialog?.request()"
+    />
 
     <div class="guessing-phase__body">
       <template v-if="assignedTargetPlayer">
@@ -238,7 +242,7 @@ function handleImageError(playerId: string) {
       @confirm="confirmSkipGuesses"
       @cancel="cancelSkipGuesses"
     />
-  </div>
+  </main>
 </template>
 
 <style scoped>

@@ -245,5 +245,10 @@
     "readyWaiting": "Gotowy — czekam na hosta…",
     "backHome": "Powrót do strony głównej",
     "playersReady": "{count} / {total} graczy gotowych"
+  },
+  "phase": {
+    "drawing": "Runda {round}: rysowanie",
+    "guessing": "Runda {round}: zgadywanie",
+    "timeLow": "Zostało {count} sekund"
   }
 }

@@ -77,7 +77,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="final-results">
+  <main class="final-results">
     <GameHeader
       variant="final"
       :title="$t('finalResults.gameOver')"
@@ -159,7 +159,7 @@ onMounted(() => {
     </div>
 
     <LeaveRoomDialog ref="leaveDialog" />
-  </div>
+  </main>
 </template>
 
 <style scoped>

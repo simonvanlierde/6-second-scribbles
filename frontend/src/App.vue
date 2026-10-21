@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import HdIconButton from "@/components/ui/HdIconButton.vue";
 import HdToast from "@/components/ui/HdToast.vue";
+import { useAnnouncer } from "@/composables/useAnnouncer";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { setLocale } from "@/i18n";
@@ -16,6 +17,7 @@ const authStore = useAuthStore();
 const { connectionStatus } = useGameConnection();
 const { t } = useI18n();
 const { isOpen: settingsOpen, open: openSettings } = useSettingsPanel();
+const { message: announcement } = useAnnouncer();
 
 watch(
   () => store.localPlayerLocale,
@@ -69,6 +71,7 @@ onMounted(async () => {
       </div>
     </Transition>
     <HdToast />
+    <div class="sr-only" role="status" aria-atomic="true">{{ announcement }}</div>
     <SettingsPanel v-model:open="settingsOpen" />
   </div>
 </template>

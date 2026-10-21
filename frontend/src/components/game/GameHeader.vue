@@ -14,7 +14,7 @@ withDefaults(
     timeLeft?: number;
     /** "game" shows the timer + round/score; "final" shows a title + status chip. */
     variant?: "game" | "final";
-    /** Title shown in "final" mode (e.g. "Game over"). */
+    /** The screen's h1: shown in "final" mode (e.g. "Game over"), for screen readers only in "game" mode. */
     title?: string;
     /** Status chip text shown in "final" mode (e.g. a result summary). */
     status?: string;
@@ -95,6 +95,7 @@ const avatarColor = computed(() => store.localAvatarColor);
     </template>
 
     <template v-else>
+      <h1 v-if="title" class="sr-only">{{ title }}</h1>
       <div class="game-header__timer"><HdTimer :seconds="timeLeft" /></div>
 
       <div class="game-header__meta">

@@ -245,5 +245,10 @@
     "readyWaiting": "Prêt — en attente de l’hôte…",
     "backHome": "Retour à l’accueil",
     "playersReady": "{count} / {total} joueurs prêts"
+  },
+  "phase": {
+    "drawing": "Manche {round} : dessin",
+    "guessing": "Manche {round} : devinettes",
+    "timeLow": "Plus que {count} secondes"
   }
 }
