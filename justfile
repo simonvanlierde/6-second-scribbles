@@ -131,8 +131,11 @@ check-backend:
 check-root:
     pnpm run check
 
-# Scan the full git history for secrets (Dockerized Betterleaks; mounts as in
-# lefthook.yml). Known dev and test passwords are listed in .betterleaksignore.
+# Scan the full git history for secrets (Dockerized Betterleaks). The checkout and
+# git's shared directory are both mounted at their real paths: in a linked worktree,
+# .git is a file pointing at the main checkout's .git, so mounting the checkout alone
+# leaves git with no repository. Known dev and test passwords are listed in
+# .betterleaksignore.
 [group('check')]
 check-security:
     docker run --rm --user "$(id -u):$(id -g)" \
@@ -140,6 +143,11 @@ check-security:
         -v "$(git rev-parse --path-format=absolute --git-common-dir)":"$(git rev-parse --path-format=absolute --git-common-dir)" \
         ghcr.io/betterleaks/betterleaks:v1.9.0 \
         git --config .betterleaks.toml --redact --no-banner
+
+# Run every git hook over the whole repo, not just staged files (CI runs them too).
+[group('check')]
+hooks:
+    prek run -a
 
 # Format everything.
 [group('format')]

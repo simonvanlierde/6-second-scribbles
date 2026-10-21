@@ -104,7 +104,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cspell-
 
-      # Full-history scan, the same image and pin as lefthook.yml and `just check-security`.
+      # Full-history scan, the same image and pin as `just check-security`.
       - name: Run betterleaks
         run: >-
           docker run --rm --user "$(id -u):$(id -g)"

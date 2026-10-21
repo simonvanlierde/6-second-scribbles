@@ -1,0 +1,165 @@
+# Run with prek, a drop-in pre-commit replacement: `uv tool install prek`, then
+# `prek install` once per clone. `just hooks` runs every hook over the whole repo.
+#
+# Revs are commit SHAs, since tags are mutable; Dependabot moves each SHA and its
+# `# frozen:` tag together.
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+# Scripts write the first three: auto_translate_seed_data.py dumps the seed YAML and
+# hashes it, and the translation cache is a JSON dump. Formatting them by hand would
+# change the hash and fight the next run. Env files stay as written.
+exclude: |-
+  (?x)^(
+    backend/scripts/seed_data\.yaml
+    |backend/scripts/\.seed_translation_hash
+    |backend/translation/\.translation_cache\.json
+    |(.*/)?\.env(\..*)?
+  )$
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-yaml
+        # backend/loadtest/compose.yml uses compose's !reset tag.
+        args: [--unsafe]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+      - id: check-toml
+
+  # Tolerates JSONC configs (tsconfig, VS Code settings).
+  - repo: https://github.com/simonvanlierde/check-json5
+    rev: c70883b5be6d9fb87deac8d75395031372d54e83 # frozen: v1.2.0
+    hooks:
+      - id: check-json5
+
+  # Formats first, so yamllint below sees the formatted file.
+  - repo: https://github.com/google/yamlfmt
+    rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # frozen: v0.21.0
+    hooks:
+      - id: yamlfmt
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: cba56bcde1fdd01c1deb3f945e69764c291a6530 # frozen: v1.38.0
+    hooks:
+      - id: yamllint
+
+  # Staged changes only. `just check-security` and CI scan the full history.
+  - repo: https://github.com/betterleaks/betterleaks
+    rev: 81aff7a638638aae3a659845d089043e1d8fe9ac # frozen: v1.9.0
+    hooks:
+      - id: betterleaks
+        args: [--config, .betterleaks.toml]
+
+  # Audits .github/ for template injection, credential leakage, cache poisoning
+  # and impostor commits. Set GH_TOKEN to enable the audits that need the API;
+  # without it only the offline subset runs.
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2 # frozen: v1.30.1
+    hooks:
+      - id: zizmor
+
+  # Checks what zizmor doesn't: unknown keys, bad `needs`, expression type errors,
+  # and shellcheck over every `run:` when shellcheck is on PATH.
+  - repo: https://github.com/rhysd/actionlint
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # Runs from its own image: nothing to install, but it needs the Docker daemon.
+  - repo: https://github.com/hadolint/hadolint
+    rev: 2eece55955ced00200be9729e9728cb7dacca505 # frozen: v2.15.1
+    hooks:
+      - id: hadolint-docker
+
+  - repo: https://github.com/rvben/rumdl-pre-commit
+    rev: 83cecb6b523a053d7d3dfdc4798d705b505a88f9 # frozen: v0.2.78
+    hooks:
+      - id: rumdl
+        args: [--fix]
+
+  - repo: local
+    hooks:
+      # Runs from the backend's venv, not the ruff-pre-commit mirror, so it uses the
+      # same ruff as CI. --force-exclude keeps ruff's excludes when the hook passes
+      # explicit filenames.
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen --project backend ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen --project backend ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+        require_serial: true
+
+      - id: ty
+        name: ty check
+        entry: uv run --frozen --directory backend ty check
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.pyi?$
+
+      # One biome.jsonc at the root covers the frontend too.
+      - id: biome
+        name: biome check
+        entry: pnpm exec biome check --write --no-errors-on-unmatched
+        language: system
+        files: \.(js|cjs|mjs|ts|tsx|vue|json|jsonc|css|html|md)$
+
+      # vue-tsc --build, the frontend's own type-check. A bare `vue-tsc --noEmit`
+      # follows the solution tsconfig's empty `files` and checks nothing.
+      - id: tsc
+        name: vue-tsc --build
+        entry: pnpm --dir frontend run type-check
+        language: system
+        pass_filenames: false
+        files: ^frontend/.*\.(ts|tsx|vue)$|^frontend/tsconfig
+
+      - id: commitlint
+        name: commitlint
+        entry: pnpm exec commitlint --edit
+        language: system
+        stages: [commit-msg]
+
+      # The full-repo spelling and README scans run in CI and `just check`;
+      # before a push, only the changed files.
+      - id: cspell
+        name: cspell
+        entry: pnpm exec cspell lint --config .cspell.yml --cache --cache-strategy content --no-must-find-files
+        language: system
+        stages: [pre-push]
+
+      - id: markdownlint
+        name: markdownlint-cli2
+        entry: pnpm exec markdownlint-cli2
+        language: system
+        files: (^|/)README\.md$
+        stages: [pre-push]
+
+      # Contract reproducibility only; the tsc hook covers the generated types.
+      - id: contracts
+        name: contracts reproducible
+        entry: pnpm run contracts:check
+        language: system
+        pass_filenames: false
+        files: |-
+          (?x)^(
+            contracts/.*
+            |backend/app/rooms/protocol\.py
+            |backend/app/[^/]+/schemas\.py
+            |backend/scripts/generate_contracts\.py
+            |frontend/scripts/generate-contracts\.mjs
+            |scripts/check-contracts\.mjs
+            |(frontend/)?package\.json
+            |pnpm-lock\.yaml
+            |(backend/|frontend/)?justfile
+          )$
+        stages: [pre-push]

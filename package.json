@@ -7,7 +7,6 @@
     "node": ">=26.0.0"
   },
   "scripts": {
-    "prepare": "lefthook install",
     "check": "pnpm run check:biome && pnpm run check:spelling && pnpm run check:markdown",
     "check:biome": "biome check .",
     "check:spelling": "pnpm exec cspell lint . --config .cspell.yml --gitignore --cache --cache-strategy content",
@@ -23,7 +22,6 @@
     "@cspell/dict-es-es": "^3.0.9",
     "@cspell/dict-fr-fr": "^2.3.2",
     "cspell": "^10.3.6",
-    "lefthook": "^2.2.2",
     "markdownlint-cli2": "^0.23.3"
   }
 }

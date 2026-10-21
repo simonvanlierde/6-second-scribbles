@@ -1,4 +1,3 @@
----
 version: "0.2"
 language: en
 dictionaries:
@@ -34,6 +33,10 @@ ignorePaths:
 ignoreWords:
   # Software terms
   - vueuse
+  - prek
+  - rumdl
+  - shellcheck
+  - zizmor
 
 words:
   # Names
