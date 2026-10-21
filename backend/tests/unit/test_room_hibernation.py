@@ -1,5 +1,6 @@
 """Tests for room hibernation and automatic garbage collection."""
 
+import asyncio
 import time
 from typing import TYPE_CHECKING
 
@@ -30,6 +31,7 @@ PLAYER_2 = "player_2"
 PLAYER_3 = "player_3"
 EXPECTED_HIBERNATED = "hibernated"
 EXPECTED_REMOVED = "removed"
+CLEANUP_LOOP_ERROR_LOG = "Error in cleanup loop"
 
 
 class TestRoomHibernation:
@@ -114,6 +116,15 @@ class TestRoomHibernation:
         assert not room.is_hibernated
         assert room.emptied_at is None
 
+    async def test_occupied_room_never_hibernates(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """A direct hibernate call leaves a room alone while a player is still connected."""
+        room = GameRoom(HIBERNATE_TEST_ROOM)
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(make_ws()))
+
+        room.hibernate()
+
+        assert not room.is_hibernated
+
 
 class TestRoomManagerCleanup:
     """Test suite for RoomManager periodic cleanup."""
@@ -172,6 +183,33 @@ class TestRoomManagerCleanup:
 
         assert ACTIVE_ROOM in managed_room_manager.rooms
         assert not room.is_hibernated
+
+    async def test_cleanup_loop_survives_a_failing_pass(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """One failed cleanup pass is logged, and the next pass still runs."""
+        manager = RoomManager()
+        manager.CLEANUP_INTERVAL_SECONDS = 0
+        passes: list[int] = []
+
+        async def flaky_cleanup() -> tuple[int, int]:
+            passes.append(len(passes))
+            if len(passes) == 1:
+                msg = "cleanup failed"
+                raise RuntimeError(msg)
+            return (0, 0)
+
+        monkeypatch.setattr(manager, "run_cleanup", flaky_cleanup)
+
+        await manager.start()
+        for _ in range(20):
+            if len(passes) >= 2:
+                break
+            await asyncio.sleep(0)
+        await manager.stop()
+
+        assert len(passes) >= 2
+        assert CLEANUP_LOOP_ERROR_LOG in caplog.text
 
 
 class TestRoomManagerStats:

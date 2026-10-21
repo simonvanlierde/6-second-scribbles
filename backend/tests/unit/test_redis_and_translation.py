@@ -33,6 +33,7 @@ ZERO_RATE_SUMMARY = "Cache hit rate: 0.0% (0/0 hits) | writes: 0"
 SUMMARY_HALF_HIT = "50.0%"
 PROMPTS_LINE = "prompts: []"
 SAME_TEXT = "same"
+CACHE_WRITE_FAILED_LOG = "Failed to cache cat_targets:1:en:"
 
 
 class _FakeRedis:
@@ -207,6 +208,17 @@ async def test_redis_helpers_fall_back_cleanly_on_errors(monkeypatch: pytest.Mon
     assert retry_after == 10
     assert await redis_module.get_cached_localized_scoring_targets(1, "en", [1]) is None
     assert await redis_module.get_cached_category_locale_availability(None) is None
+
+
+async def test_failed_cache_write_is_logged_not_raised(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Scoring still runs when Redis cannot store the targets; only the cache entry is lost."""
+    monkeypatch.setattr(redis_module, "get_redis", AsyncMock(side_effect=RedisError("boom")))
+
+    await redis_module.cache_localized_scoring_targets(1, "en", [1], {"cat": ["cat"]})
+
+    assert CACHE_WRITE_FAILED_LOG in caplog.text
 
 
 def test_translation_cache_load_put_reset_and_summary(tmp_path: Path) -> None:

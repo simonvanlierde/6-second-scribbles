@@ -32,6 +32,9 @@ EDITED_LABEL = "kitty"
 REMOVED_PROMPT = "dog"
 ADDED_PROMPT = "axolotl"
 GROWN_CATEGORY = "animals"
+MISSING_PROMPT_LOG = "Prompt 'unicorn' referenced in category 'pets' not found in library"
+UNPLAYABLE_CATEGORY_LOG = "Category 'dutch-only' has no fully playable locales"
+CACHE_CLEAR_FAILED_LOG = "Could not clear category caches in Redis"
 
 
 class TestSeedDataScript:
@@ -172,3 +175,63 @@ class TestSeedDataScript:
         kept_link_ids = set((await db_session.execute(select(CategoryPrompt.id))).scalars().all()) & link_ids
         assert len(kept_link_ids) > len(link_ids) / 2
         assert await redis_client.keys("cat_targets:*") == []
+
+    async def test_seed_warns_about_missing_prompts_and_unplayable_categories(
+        self,
+        db_session: AsyncSession,
+        seed_data_session_maker: None,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A typo in the YAML is logged and skipped; a category no locale can play is flagged."""
+        _ = seed_data_session_maker
+        data = {
+            "prompts": [{"id": EDITED_PROMPT, "translations": [{"locale": "en", "label": EDITED_PROMPT}]}],
+            "system_categories": [
+                {
+                    "id": "pets",
+                    "difficulty": "easy",
+                    "translations": [{"locale": "en", "name": "Pets"}],
+                    "items": [EDITED_PROMPT, "unicorn"],
+                },
+                {
+                    "id": "dutch-only",
+                    "difficulty": "easy",
+                    "default_locale": "nl",
+                    "translations": [{"locale": "nl", "name": "Pets"}],
+                    "items": [EDITED_PROMPT],
+                },
+            ],
+        }
+        monkeypatch.setattr(seed_data, "SEED_DATA", data)
+        caplog.set_level(logging.WARNING, logger="scripts.seed_data")
+
+        await seed_data.seed_database()
+
+        assert MISSING_PROMPT_LOG in caplog.text
+        assert UNPLAYABLE_CATEGORY_LOG in caplog.text
+        locales = dict((await db_session.execute(select(Category.slug, Category.available_locales))).all())
+        assert locales == {"pets": ["en"], "dutch-only": []}
+
+    async def test_overwrite_still_succeeds_when_redis_is_down(
+        self,
+        db_session: AsyncSession,
+        seed_data_session_maker: None,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The data is already committed, so a failed cache clear is a warning, not a failed seed."""
+        _ = seed_data_session_maker
+        await seed_data.seed_database()
+
+        async def redis_down() -> None:
+            msg = "Connection refused"
+            raise ConnectionRefusedError(msg)
+
+        monkeypatch.setattr(redis_module, "get_redis", redis_down)
+        caplog.set_level(logging.WARNING, logger="scripts.seed_data")
+
+        await seed_data.seed_database(overwrite=True)
+
+        assert CACHE_CLEAR_FAILED_LOG in caplog.text
+        assert (await db_session.execute(select(Category))).scalars().first() is not None

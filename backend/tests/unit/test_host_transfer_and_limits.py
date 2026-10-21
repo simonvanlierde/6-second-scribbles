@@ -12,6 +12,7 @@ from fastapi import WebSocketDisconnect
 
 from app.core.config import settings
 from app.core.rate_limits import client_network
+from app.core.types import GamePhase
 from app.rooms import kick_vote, player_lifecycle
 from app.rooms import router as room_router
 from app.rooms.manager import ClientRoomLimitError, GameRoom, PlayerInfo, RoomCapacityError, RoomManager, room_manager
@@ -91,6 +92,33 @@ class TestDelayedHostTransfer:
 
         assert room.host_id == SECOND_PLAYER_ID
         assert room.last_host_id == SECOND_PLAYER_ID
+
+    async def test_host_leaving_after_a_drop_restarts_the_single_transfer(
+        self,
+        make_ws: Callable[..., TestWebSocket],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A host who drops mid-game and then leaves gets one transfer, not two racing ones."""
+        room = room_manager.get_or_create_room("CODE40")
+        monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 3600_000)
+        await player_lifecycle.add_player(room, HOST_PLAYER_ID, "Host Player", as_websocket(make_ws()))
+        await player_lifecycle.add_player(room, SECOND_PLAYER_ID, "Player 2", as_websocket(make_ws()))
+        room.metadata.game_phase = GamePhase.DRAWING
+
+        await player_lifecycle.disconnect_player(room, HOST_PLAYER_ID)
+        first_transfer = room.pending_host_transfer
+        assert first_transfer is not None
+
+        await player_lifecycle.remove_player(room, HOST_PLAYER_ID)
+        second_transfer = room.pending_host_transfer
+        await asyncio.wait([first_transfer], timeout=1)  # far short of the hour-long grace
+
+        assert first_transfer.done()
+        assert second_transfer is not None
+        assert second_transfer is not first_transfer
+        assert room.host_id == HOST_PLAYER_ID  # the stopped transfer handed nothing over
+        assert not second_transfer.done()
+        second_transfer.cancel()
 
 
 class TestPlayerLimitEnforcement:
