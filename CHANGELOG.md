@@ -35,6 +35,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A second translation review fixed about 1,700 interface strings, categories and word cards across all 11 languages. Korean, Japanese and Chinese had the most; no word card holds leftover machine-translation debris any more. Production picks up the words after `seed_data --overwrite`.
 - A translation review covered the 11 non-English languages. Wrong machine translations in category names, word cards and accepted guesses are corrected (Korean and Japanese had many), French uses "tu" throughout, and Korean uses the polite 해요체. Production picks up the new categories and words only after `seed_data --overwrite`.
 - "Connecting…" and "Reconnecting…" were shown in English in every language. A test now fails when a language file misses a key.
 - The player count on the room entry page reads "1 player in room", not "1 player", in every language.
