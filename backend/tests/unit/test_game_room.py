@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import random
 import time
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, Mock, patch
@@ -18,7 +19,12 @@ from app.rooms import manager as manager_module
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.player_lifecycle import ABSENT_BINDING_GRACE_SECONDS, MAX_ABSENT_BINDINGS, SEATS_BUSY_ERROR
-from app.rooms.protocol import StrokeDelta, StrokePoint, WebSocketMessage
+from app.rooms.protocol import (
+    DrawStrokeBatchServerEvent,
+    StrokeDelta,
+    StrokeFragment,
+    WebSocketMessage,
+)
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
     HOST_ONE,
@@ -39,12 +45,11 @@ from tests.constants import (
     ROUND_COMPLETE,
     TEST_ROOM_ID,
 )
-from tests.support import as_websocket
+from tests.support import TestWebSocket, as_websocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from tests.support import TestWebSocket
 
 EXPIRES_AT = "expiresAt"
 HOST_CHANGED = "host_changed"
@@ -281,7 +286,7 @@ class TestGameRoom:
         """Partials fold into one authoritative stroke that room_state replays to late joiners."""
 
         def delta(x: float) -> StrokeDelta:
-            return StrokeDelta(color="#000", width=3, points=[StrokePoint(x=x, y=x)])
+            return StrokeDelta(color="#000", width=3, points=[x, x])
 
         # Start a stroke, then two continuation fragments — one growing stroke.
         game_room.apply_lobby_partial("p1", delta(1), is_start=True)
@@ -291,7 +296,7 @@ class TestGameRoom:
         game_room.apply_lobby_partial("p2", delta(9), is_start=True)
 
         assert len(game_room.lobby_strokes) == 2
-        assert [p.x for p in game_room.lobby_strokes[0].points] == [1, 2, 3]
+        assert game_room.lobby_strokes[0].points == [1, 1, 2, 2, 3, 3]
 
         # A late joiner's snapshot carries the whole doodle, not a blank canvas.
         state = game_room.room_state_event()
@@ -303,13 +308,61 @@ class TestGameRoom:
 
     async def test_lobby_stroke_points_are_capped(self, game_room: GameRoom) -> None:
         """One never-ending stroke can't grow memory past the per-stroke cap."""
-        chunk = StrokeDelta(color="#000", width=3, points=[StrokePoint(x=0, y=0)] * 1000)
+        chunk = StrokeDelta(color="#000", width=3, points=[0, 0] * 1000)
         game_room.apply_lobby_partial("p1", chunk, is_start=True)
         for _ in range(10):  # 10k points offered into one stroke
             game_room.apply_lobby_partial("p1", chunk, is_start=False)
 
         assert len(game_room.lobby_strokes) == 1
-        assert len(game_room.lobby_strokes[0].points) == manager_module.MAX_STROKE_POINTS
+        assert len(game_room.lobby_strokes[0].points) == 2 * manager_module.MAX_STROKE_POINTS
+
+    async def test_lobby_point_total_tracks_every_change(
+        self, game_room: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The running point total matches the strokes through starts, extensions, trims and clears."""
+        monkeypatch.setattr(manager_module, "MAX_LOBBY_POINTS", 50)
+        monkeypatch.setattr(manager_module, "MAX_LOBBY_STROKES", 8)
+        monkeypatch.setattr(manager_module, "MAX_STROKE_POINTS", 12)
+        rng = random.Random(7)  # noqa: S311 - a seeded sequence, not a secret
+        new_stroke_share = 0.3
+        for step in range(2_000):
+            player = f"p{rng.randrange(4)}"
+            points = [step, 0] * rng.randrange(1, 6)
+            game_room.apply_lobby_partial(
+                player, StrokeDelta(color="#000", width=3, points=points), is_start=rng.random() < new_stroke_share
+            )
+            if step % 500 == 499:
+                game_room.clear_lobby_strokes()
+            actual = sum(len(stroke.points) // 2 for stroke in game_room.lobby_strokes)
+            assert game_room._lobby_points == actual  # noqa: SLF001
+            assert actual <= manager_module.MAX_LOBBY_POINTS or len(game_room.lobby_strokes) == 1
+
+    async def test_lobby_fragments_go_out_together_once_per_tick(self, game_room: GameRoom) -> None:
+        """Fragments from several players in one tick reach each client as one batch, in order."""
+        ws = TestWebSocket()
+        game_room.players["p1"] = PlayerInfo(id="p1", name="One", websocket=as_websocket(ws))
+        for player_id, x in (("p1", 1), ("p2", 2), ("p1", 3)):
+            stroke = StrokeDelta(color="#000", width=3, points=[x, x])
+            game_room.queue_lobby_fragment(StrokeFragment(player_id=player_id, stroke=stroke, stroke_start=x == 1))
+        assert ws.sent_texts == []
+
+        await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+
+        assert len(ws.sent_texts) == 1
+        batch = DrawStrokeBatchServerEvent.model_validate_json(ws.sent_texts[0])
+        assert [(f.player_id, f.stroke.points[0]) for f in batch.fragments] == [("p1", 1), ("p2", 2), ("p1", 3)]
+
+    async def test_clearing_the_doodle_drops_fragments_waiting_for_the_tick(self, game_room: GameRoom) -> None:
+        """A fragment drawn just before a clear does not reappear after it."""
+        ws = TestWebSocket()
+        game_room.players["p1"] = PlayerInfo(id="p1", name="One", websocket=as_websocket(ws))
+        stroke = StrokeDelta(color="#000", width=3, points=[1, 1])
+        game_room.queue_lobby_fragment(StrokeFragment(player_id="p1", stroke=stroke, stroke_start=True))
+
+        game_room.clear_lobby_strokes()
+        await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+
+        assert ws.sent_texts == []
 
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""

@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
-import type { DrawStroke } from "@/shared/types";
+import { type CanvasStroke, useDrawingCanvas } from "@/composables/useDrawingCanvas";
 
-const stroke = (color: string): DrawStroke => ({
+const stroke = (color: string): CanvasStroke => ({
   color,
   width: 5,
   points: [{ x: 0, y: 0 }],

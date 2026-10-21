@@ -1,4 +1,4 @@
-// cspell:ignore gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
+// cspell:ignore dans joueur joueurs salon gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
 import { afterEach, describe, expect, it } from "vitest";
 
 import { i18n, setLocale } from "@/i18n";
@@ -76,6 +76,15 @@ describe("plurals", () => {
     await setLocale("pl");
     const left = (count: number) => i18n.global.t("phase.timeLow", { count });
     expect([10, 3, 1].map(left)).toEqual(["Zostało 10 sekund", "Zostały 3 sekundy", "Została 1 sekunda"]);
+  });
+
+  it("counts zero in the French singular", async () => {
+    await setLocale("fr");
+    expect([0, 1, 2].map(players)).toEqual([
+      "0 joueur dans le salon",
+      "1 joueur dans le salon",
+      "2 joueurs dans le salon",
+    ]);
   });
 
   it("keeps the two English forms", () => {

@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from app.core.config import settings
 from app.rooms.manager import MAX_LOBBY_POINTS
-from app.rooms.protocol import StrokeDelta, StrokePoint, encode_ws_message, parse_client_event
+from app.rooms.protocol import PAD_SCALE, StrokeDelta, encode_ws_message, parse_client_event
 from app.rooms.session import RoomWebSocketSession
 from tests.constants import PLAYER_ONE_ID, PLAYER_TWO_ID
 from tests.support import as_websocket
@@ -101,12 +101,12 @@ async def test_game_state_requests_dropped_past_window_limit(
 
 def test_lobby_doodle_stays_small_under_maximum_fragments(game_room: GameRoom) -> None:
     """600 maximum-size fragments keep the doodle under the point cap and room_state under 1 MB."""
-    fragment = StrokeDelta(color="#000000", width=2, points=[StrokePoint(x=i, y=i) for i in range(1000)])
+    fragment = StrokeDelta(color="#000000", width=2, points=[i % 10_000 for i in range(2000)])
 
     for _ in range(600):
         game_room.apply_lobby_partial(PLAYER_ONE_ID, fragment, is_start=True)
 
-    assert sum(len(stroke.points) for stroke in game_room.lobby_strokes) <= MAX_LOBBY_POINTS
+    assert sum(len(stroke.points) // 2 for stroke in game_room.lobby_strokes) <= MAX_LOBBY_POINTS
     assert len(encode_ws_message(game_room.room_state_event())) < 1_000_000
 
 
@@ -123,10 +123,22 @@ def test_oversized_fields_are_rejected() -> None:
             parse_client_event(json.dumps(payload))
 
 
+@pytest.mark.parametrize(
+    "points",
+    [[1, 2, 3], [0, PAD_SCALE + 1], [-1, 0], [0.5, 0.5], [0, 0] * 1001],
+    ids=["half a point", "past the pad", "before the pad", "not whole numbers", "too many points"],
+)
+def test_stroke_points_must_be_whole_points_on_the_pad(points: list[float]) -> None:
+    """Points are x, y pairs of integers inside the pad, at most 1000 per fragment."""
+    payload = {"type": "draw_stroke_partial", "stroke": {"color": "#000", "width": 2, "points": points}}
+    with pytest.raises(ValidationError):
+        parse_client_event(json.dumps(payload))
+
+
 def test_trimming_the_doodle_keeps_in_progress_strokes_attached(game_room: GameRoom) -> None:
     """When old strokes are trimmed, a player mid-stroke keeps extending the same stroke."""
-    dot = StrokeDelta(color="#000000", width=2, points=[StrokePoint(x=0, y=0)])
-    big = StrokeDelta(color="#000000", width=2, points=[StrokePoint(x=i, y=i) for i in range(1000)])
+    dot = StrokeDelta(color="#000000", width=2, points=[0, 0])
+    big = StrokeDelta(color="#000000", width=2, points=[i % 10_000 for i in range(2000)])
     for _ in range(MAX_LOBBY_POINTS // 1000):
         game_room.apply_lobby_partial(PLAYER_TWO_ID, big, is_start=True)
     game_room.apply_lobby_partial(PLAYER_ONE_ID, big, is_start=True)  # pushes the doodle past the cap
@@ -136,4 +148,4 @@ def test_trimming_the_doodle_keeps_in_progress_strokes_attached(game_room: GameR
         game_room.apply_lobby_partial(PLAYER_ONE_ID, dot, is_start=False)
 
     assert game_room.lobby_strokes[-1] is own
-    assert len(own.points) == len(big.points) + 2
+    assert len(own.points) == len(big.points) + 2 * len(dot.points)

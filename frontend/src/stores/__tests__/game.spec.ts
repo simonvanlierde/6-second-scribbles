@@ -229,7 +229,7 @@ describe("onStartRound", () => {
     store.addPlayer("p2", "Bob");
     store.setReadyStatus(2, 2);
     store.setPlayerDrawing("p1", "data:image/png;base64,old");
-    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 0, y: 0 }] }, true);
+    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [0, 0] }, true);
     store.onStartRound({
       round: 1,
       cards: { p1: { category: "Animals", items: ["cat", "dog"] } },
@@ -540,24 +540,24 @@ describe("kick votes", () => {
 describe("applyPartialStroke", () => {
   it("appends delta fragments to the same stroke and starts a new one on strokeStart", () => {
     const store = useGameStore();
-    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 0, y: 0 }] }, true);
-    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 1, y: 1 }] }, false);
+    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [0, 0] }, true);
+    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [1, 1] }, false);
     // One stroke, points appended (no per-fragment stroke growth).
     expect(store.currentStrokes).toHaveLength(1);
-    expect(store.currentStrokes[0]?.points).toHaveLength(2);
+    expect(store.currentStrokes[0]?.points).toEqual([0, 0, 1, 1]);
 
-    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 2, y: 2 }] }, true);
+    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [2, 2] }, true);
     expect(store.currentStrokes).toHaveLength(2);
   });
 
   it("keeps each player's in-progress stroke separate", () => {
     const store = useGameStore();
-    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 0, y: 0 }] }, true);
-    store.applyPartialStroke("p2", { color: "#f00", width: 3, points: [{ x: 5, y: 5 }] }, true);
-    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [{ x: 1, y: 1 }] }, false);
+    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [0, 0] }, true);
+    store.applyPartialStroke("p2", { color: "#f00", width: 3, points: [5, 5] }, true);
+    store.applyPartialStroke("p1", { color: "#000", width: 2, points: [1, 1] }, false);
     expect(store.currentStrokes).toHaveLength(2);
-    expect(store.currentStrokes[0]?.points).toHaveLength(2);
-    expect(store.currentStrokes[1]?.points).toHaveLength(1);
+    expect(store.currentStrokes[0]?.points).toEqual([0, 0, 1, 1]);
+    expect(store.currentStrokes[1]?.points).toEqual([5, 5]);
   });
 });
 

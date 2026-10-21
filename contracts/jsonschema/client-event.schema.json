@@ -384,21 +384,11 @@
                 },
                 "points": {
                   "items": {
-                    "properties": {
-                      "x": {
-                        "title": "X",
-                        "type": "number"
-                      },
-                      "y": {
-                        "title": "Y",
-                        "type": "number"
-                      }
-                    },
-                    "required": ["x", "y"],
-                    "title": "StrokePoint",
-                    "type": "object"
+                    "maximum": 10000,
+                    "minimum": 0,
+                    "type": "integer"
                   },
-                  "maxItems": 1000,
+                  "maxItems": 2000,
                   "title": "Points",
                   "type": "array"
                 }

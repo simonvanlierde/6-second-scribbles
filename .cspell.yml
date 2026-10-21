@@ -54,9 +54,12 @@ words:
   - dorny
   - duinlab
   - geolocation
+  - getaffinity
   - harakat
   - healthz
   - htmlcov
+  - hyperthread
+  - hyperthreads
   - imagetools
   - Isguest
   - justfile

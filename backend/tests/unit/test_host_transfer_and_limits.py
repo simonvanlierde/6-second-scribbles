@@ -266,6 +266,23 @@ async def test_stuck_socket_does_not_hold_up_the_room(monkeypatch: pytest.Monkey
     assert stuck.close_calls
 
 
+async def test_every_stuck_socket_is_dropped_and_the_rest_still_get_the_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After one send times out, the recipients after it still get the message, under a new timer."""
+    monkeypatch.setattr(settings, "ws_send_timeout_seconds", 0.05)
+    room = GameRoom("CODE37")
+    first, healthy, last = _StuckWebSocket(), TestWebSocket(), _StuckWebSocket()
+    for player_id, ws in (("first", first), ("ok", healthy), ("last", last)):
+        room.players[player_id] = PlayerInfo(id=player_id, name=player_id, websocket=as_websocket(ws))
+
+    await asyncio.wait_for(room.broadcast(room.room_state_event()), timeout=1)
+    await asyncio.sleep(0)
+
+    assert [p.connected for p in room.players.values()] == [False, True, False]
+    assert len(healthy.sent_texts) == 1
+
+
 async def test_kicked_player_cannot_rejoin(make_ws: Callable[..., TestWebSocket]) -> None:
     """A vote-kicked player id is refused when it tries to join the same room again."""
     room = GameRoom("CODE13")

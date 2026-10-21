@@ -37,6 +37,7 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import PlayerInfo
 from app.rooms.protocol import (
+    DrawStrokeBatchServerEvent,
     DrawStrokePayload,
     GalleryDrawingPayload,
     PlayerCardPayload,
@@ -45,6 +46,7 @@ from app.rooms.protocol import (
     RoomStateEvent,
     StartRoundServerEvent,
     StrokeDelta,
+    StrokeFragment,
     WebSocketMessage,
     encode_ws_message,
 )
@@ -75,6 +77,10 @@ MAX_STROKE_POINTS = 4000
 # Cap on points across the whole doodle. The two caps above still allow 500 x 4000
 # points, a room_state of tens of MB that freezes the single worker to build.
 MAX_LOBBY_POINTS = 20_000
+# Lobby doodle fragments are held this long and sent as one draw_stroke_batch: a
+# drawing client sends 20 a second, and relaying each alone made server CPU grow
+# with fragments x players.
+LOBBY_FRAGMENT_TICK_SECONDS = 0.05
 
 
 class RoomCapacityError(Exception):
@@ -140,6 +146,11 @@ class GameRoom:
         # hydrate the doodle via room_state. In-memory only, like round_drawings.
         self.lobby_strokes: list[DrawStrokePayload] = []
         self._lobby_partial_index: dict[str, int] = {}
+        # Points across lobby_strokes, kept up to date on every change: summing them on
+        # every relayed fragment cost O(strokes) on the hottest path.
+        self._lobby_points = 0
+        self._pending_fragments: list[StrokeFragment] = []
+        self._fragment_flush: asyncio.TimerHandle | None = None
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -309,25 +320,29 @@ class GameRoom:
             self.lobby_strokes.append(
                 DrawStrokePayload(color=stroke.color, width=stroke.width, points=list(stroke.points))
             )
+            self._lobby_points += len(stroke.points) // 2
             self._lobby_partial_index[player_id] = len(self.lobby_strokes) - 1
         else:
             # Bound points per stroke too: a client that keeps sending continuation
             # fragments without a new strokeStart would grow one stroke unbounded.
-            room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points)
+            room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points) // 2
             if room > 0:
-                self.lobby_strokes[idx].points.extend(stroke.points[:room])
+                added = stroke.points[: room * 2]
+                self.lobby_strokes[idx].points.extend(added)
+                self._lobby_points += len(added) // 2
         # NOTE: bound the shared doodle by stroke count and total points so a
         # marathon lobby can't grow unbounded; the oldest strokes go first.
         drop = max(0, len(self.lobby_strokes) - MAX_LOBBY_STROKES)
-        total = sum(len(s.points) for s in self.lobby_strokes[drop:])
+        total = self._lobby_points - sum(len(s.points) // 2 for s in self.lobby_strokes[:drop])
         while total > MAX_LOBBY_POINTS and drop < len(self.lobby_strokes) - 1:
-            total -= len(self.lobby_strokes[drop].points)
+            total -= len(self.lobby_strokes[drop].points) // 2
             drop += 1
         if drop:
             self._trim_lobby_strokes(drop)
 
     def _trim_lobby_strokes(self, drop: int) -> None:
         """Drop the oldest `drop` strokes, keeping in-progress strokes attached to theirs."""
+        self._lobby_points -= sum(len(s.points) // 2 for s in self.lobby_strokes[:drop])
         self.lobby_strokes = self.lobby_strokes[drop:]
         self._lobby_partial_index = {pid: i - drop for pid, i in self._lobby_partial_index.items() if i >= drop}
 
@@ -335,6 +350,24 @@ class GameRoom:
         """Reset the shared lobby doodle (host clear, or leaving the lobby)."""
         self.lobby_strokes.clear()
         self._lobby_partial_index.clear()
+        self._lobby_points = 0
+        # Fragments still waiting for the tick belong to the doodle just cleared.
+        self._pending_fragments.clear()
+
+    def queue_lobby_fragment(self, fragment: StrokeFragment) -> None:
+        """Hold a doodle fragment for the next tick, when the room's fragments go out together."""
+        self._pending_fragments.append(fragment)
+        if self._fragment_flush is None:
+            self._fragment_flush = asyncio.get_running_loop().call_later(
+                LOBBY_FRAGMENT_TICK_SECONDS, self._flush_lobby_fragments
+            )
+
+    def _flush_lobby_fragments(self) -> None:
+        self._fragment_flush = None
+        fragments, self._pending_fragments = self._pending_fragments, []
+        if fragments:
+            event = DrawStrokeBatchServerEvent(fragments=fragments)
+            create_logged_task(self.broadcast(event), name=f"fragments_{self.room_id}")
 
     def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot.
@@ -395,16 +428,35 @@ class GameRoom:
         text = encode_ws_message(message)
         # Snapshot: send_text awaits, and a concurrent remove/disconnect
         # mutating self.players mid-iteration would raise "dict changed size".
-        for player_id, player in list(self.players.items()):
-            if (exclude and player_id == exclude) or not player.connected:
-                continue
-            await self._deliver(player, text)
-        await self._deliver_to_observers(text)
+        players = [player for player_id, player in list(self.players.items()) if player_id != exclude]
+        await self._deliver_all([*players, *self.observers], text)
 
     async def _deliver_to_observers(self, text: str) -> None:
-        for observer in list(self.observers):
-            if observer.connected:
-                await self._deliver(observer, text)
+        await self._deliver_all(list(self.observers), text)
+
+    async def _deliver_all(self, recipients: list[PlayerInfo], text: str) -> None:
+        """Send text to each still-connected recipient, dropping any whose send fails or stalls."""
+        pending = iter(recipients)
+        while True:
+            player: PlayerInfo | None = None
+            try:
+                # One timer for the whole loop rather than one per send: arming a timer
+                # per recipient was a measurable share of the CPU per relayed stroke.
+                async with asyncio.timeout(settings.ws_send_timeout_seconds):
+                    for player in pending:
+                        if not player.connected:
+                            continue
+                        try:
+                            await player.websocket.send_text(text)
+                        except Exception:
+                            logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
+                            self._drop(player)
+                    return
+            except TimeoutError:
+                # The send that ran out the clock is the stuck one; the rest get a new timer.
+                if player is not None:
+                    logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
+                    self._drop(player)
 
     async def _deliver(self, player: PlayerInfo, text: str) -> None:
         try:
@@ -412,15 +464,18 @@ class GameRoom:
             # it every broadcast and timer in the room.
             await asyncio.wait_for(player.websocket.send_text(text), settings.ws_send_timeout_seconds)
         except Exception:
-            # A failed send on a still-"connected" socket means we missed the
-            # close. Mark them disconnected so we stop trying; the websocket's
-            # receive loop will raise next and run disconnect_player, which
-            # broadcasts presence and handles host/scoring/cleanup.
             logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-            player.connected = False
-            # Close so the client reconnects instead of sitting on a socket that gets
-            # nothing; in the background, because a stuck socket may not close quickly.
-            create_logged_task(_close_quietly(player.websocket), name=f"close_{self.room_id}_{player.id}")
+            self._drop(player)
+
+    def _drop(self, player: PlayerInfo) -> None:
+        # A failed send on a still-"connected" socket means we missed the
+        # close. Mark them disconnected so we stop trying; the websocket's
+        # receive loop will raise next and run disconnect_player, which
+        # broadcasts presence and handles host/scoring/cleanup.
+        player.connected = False
+        # Close so the client reconnects instead of sitting on a socket that gets
+        # nothing; in the background, because a stuck socket may not close quickly.
+        create_logged_task(_close_quietly(player.websocket), name=f"close_{self.room_id}_{player.id}")
 
     async def send_round_start(
         self,

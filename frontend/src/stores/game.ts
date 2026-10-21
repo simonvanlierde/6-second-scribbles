@@ -33,7 +33,8 @@ export const useGameStore = defineStore(
     // (the server reconstructs them from these same partials). A stroke still in
     // progress exactly at join time may restart on its next fragment — a one-stroke
     // seam, not a permanent gap.
-    function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean) {
+    /** Add a fragment to the player's stroke; returns that stroke's index in currentStrokes. */
+    function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean): number {
       const idx = partialStrokeIndex.get(playerId);
       if (isStart || idx === undefined || !currentStrokes.value[idx]) {
         currentStrokes.value.push({
@@ -42,9 +43,10 @@ export const useGameStore = defineStore(
           points: [...stroke.points],
         });
         partialStrokeIndex.set(playerId, currentStrokes.value.length - 1);
-      } else {
-        currentStrokes.value[idx].points.push(...stroke.points);
+        return currentStrokes.value.length - 1;
       }
+      currentStrokes.value[idx].points.push(...stroke.points);
+      return idx;
     }
 
     function clearStrokes() {
