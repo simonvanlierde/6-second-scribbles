@@ -25,6 +25,7 @@ const playerGuesses = ref<Record<string, string[]>>({});
 const submittedPlayers = ref<string[]>([]);
 const allGuessesSubmitted = ref(false);
 const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
+const guessPanel = useTemplateRef<HTMLElement>("guessPanel");
 const skipDialogOpen = ref(false);
 const emptyGuessDialogTarget = ref<string | null>(null);
 
@@ -129,6 +130,8 @@ function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
     allGuessesSubmitted.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
     draft.clear();
+    // The submit button goes away with the form; keep focus in place instead of on <body>.
+    void nextTick(() => guessPanel.value?.focus());
   }
 }
 
@@ -138,8 +141,12 @@ function handleImageError(playerId: string) {
 </script>
 
 <template>
-  <div class="guessing-phase">
-    <GameHeader :time-left="timeLeft" @leave="leaveDialog?.request()" />
+  <main class="guessing-phase">
+    <GameHeader
+      :time-left="timeLeft"
+      :title="$t('phase.guessing', { round: store.currentRound })"
+      @leave="leaveDialog?.request()"
+    />
 
     <div class="guessing-phase__body">
       <template v-if="assignedTargetPlayer">
@@ -170,8 +177,14 @@ function handleImageError(playerId: string) {
           </div>
         </HdCard>
 
-        <!-- Guess panel -->
-        <div class="guess-panel">
+        <!-- Guess panel. It scrolls, so once submitted (nothing inside takes focus)
+             it takes focus itself, letting keyboard users scroll it. -->
+        <section
+          ref="guessPanel"
+          class="guess-panel"
+          :aria-label="$t('guessing.yourGuesses')"
+          :tabindex="submittedPlayers.includes(assignedTargetPlayer.id) ? 0 : undefined"
+        >
           <HdCard v-if="submittedPlayers.includes(assignedTargetPlayer.id)" variant="postit" class="guess-submitted">
             <svg
               viewBox="0 0 24 24"
@@ -218,7 +231,7 @@ function handleImageError(playerId: string) {
             </HdCard>
             <HdCard variant="postit" class="guess-hint">{{ $t("guessing.hint") }}</HdCard>
           </template>
-        </div>
+        </section>
       </template>
 
       <div v-else class="guessing-phase__waiting">
@@ -238,7 +251,7 @@ function handleImageError(playerId: string) {
       @confirm="confirmSkipGuesses"
       @cancel="cancelSkipGuesses"
     />
-  </div>
+  </main>
 </template>
 
 <style scoped>

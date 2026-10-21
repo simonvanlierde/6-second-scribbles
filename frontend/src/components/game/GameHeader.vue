@@ -12,14 +12,12 @@ withDefaults(
   defineProps<{
     /** Countdown shown in the timer; ignored in "final" mode. */
     timeLeft?: number;
-    /** "game" shows the timer + round/score; "final" shows a title + status chip. */
+    /** "game" shows the timer + round/score; "final" shows only the title. */
     variant?: "game" | "final";
-    /** Title shown in "final" mode (e.g. "Game over"). */
+    /** The screen's h1: shown in "final" mode (e.g. "Game over"), for screen readers only in "game" mode. */
     title?: string;
-    /** Status chip text shown in "final" mode (e.g. a result summary). */
-    status?: string;
   }>(),
-  { timeLeft: 0, variant: "game", title: "", status: "" },
+  { timeLeft: 0, variant: "game", title: "" },
 );
 defineEmits<{ leave: [] }>();
 
@@ -90,11 +88,12 @@ const avatarColor = computed(() => store.localAvatarColor);
         </svg>
         {{ title }}
       </h1>
-      <div class="game-header__meta"><span v-if="status" class="game-header__status">{{ status }}</span></div>
+      <div class="game-header__meta" />
       <HdAvatar class="game-header__avatar" :initial="initial" :color="avatarColor" size="sm" />
     </template>
 
     <template v-else>
+      <h1 v-if="title" class="sr-only">{{ title }}</h1>
       <div class="game-header__timer"><HdTimer :seconds="timeLeft" /></div>
 
       <div class="game-header__meta">
@@ -160,12 +159,6 @@ const avatarColor = computed(() => store.localAvatarColor);
 .game-header__flag {
   width: 22px;
   height: 22px;
-}
-.game-header__status {
-  font-size: var(--text-label-md);
-  font-weight: 700;
-  text-align: right;
-  white-space: nowrap;
 }
 .game-header__meta {
   display: flex;

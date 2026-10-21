@@ -12,9 +12,9 @@ const gamePhase = computed(() => store.gamePhase);
 <template>
   <DrawingPhase v-if="gamePhase === 'drawing'" />
   <GuessingPhase v-else-if="gamePhase === 'guessing'" />
-  <div v-else class="flex min-h-screen items-center justify-center">
+  <main v-else class="flex min-h-screen items-center justify-center">
     <div class="container">
-      <h2>{{ $t('game.waitingForRound') }}</h2>
+      <h1>{{ $t('game.waitingForRound') }}</h1>
     </div>
-  </div>
+  </main>
 </template>

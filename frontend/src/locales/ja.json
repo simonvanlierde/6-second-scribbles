@@ -18,7 +18,8 @@
     "soundMute": "サウンドをミュート",
     "soundUnmute": "ミュートを解除",
     "and": "と",
-    "gotIt": "わかった"
+    "gotIt": "わかった",
+    "close": "閉じる"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "オン",
     "soundOff": "オフ",
     "about": "このアプリについて",
-    "namePrompt": "続けるには名前を入力してください。"
+    "namePrompt": "続けるには名前を入力してください。",
+    "decrease": "{label}を減らす",
+    "increase": "{label}を増やす",
+    "avatarColor": "アバターの色"
   },
   "lobby": {
     "leaveRoom": "ルームを退出",
@@ -106,7 +110,10 @@
     "clear": "消去",
     "loadingCategory": "読み込み中…",
     "hint": "描けたらアイテムをタップしよう。",
-    "undo": "元に戻す"
+    "undo": "元に戻す",
+    "brushSmall": "細いペン",
+    "brushMedium": "普通のペン",
+    "brushLarge": "太いペン"
   },
   "guessing": {
     "guessPlayerDrawing": "{name}さんの絵を予想",
@@ -244,6 +251,33 @@
     "readyForNext": "次のゲームの準備完了",
     "readyWaiting": "準備完了 — ホストを待っています…",
     "backHome": "ホームに戻る",
-    "playersReady": "{count} / {total} 人が準備完了"
+    "noWinner": "今回は勝者なし",
+    "noWinnerDetail": "誰も得点できませんでした。"
+  },
+  "phase": {
+    "drawing": "ラウンド {round}：描画",
+    "guessing": "ラウンド {round}：予想",
+    "timeLow": "残り{count}秒"
+  },
+  "colors": {
+    "black": "黒",
+    "white": "白",
+    "red": "赤",
+    "blue": "青",
+    "green": "緑",
+    "orange": "オレンジ",
+    "coral": "コーラル",
+    "yellow": "黄色",
+    "lavender": "ラベンダー",
+    "peach": "ピーチ"
+  },
+  "reactions": {
+    "laugh": "爆笑",
+    "shock": "衝撃",
+    "art": "いい絵",
+    "mindBlown": "圧巻",
+    "think": "考え中",
+    "group": "{name}さんの絵へのリアクション",
+    "react": "{name}さんの絵に「{reaction}」"
   }
 }

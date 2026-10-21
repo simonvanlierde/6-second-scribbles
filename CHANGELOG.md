@@ -8,6 +8,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Upgrade notes
 
+- A migration drops six database indexes that duplicated unique constraints or were never queried. It drops them concurrently, so it takes no long table lock.
+- The backend images run as uid and gid 1001 instead of 1000. Directories you bind-mount into the seed or translate containers must be writable by 1001; the dev Compose file runs the seed container as your own uid.
 - `/api/health` now answers HTTP 503, with the same JSON body, while the database or Redis is unreachable. A monitor that reads only the status code now sees an outage; Compose marks the backend unhealthy after 60 to 90 s of it, and `docker compose up --wait` fails on a degraded stack.
 - Rolling back to 0.2.x drops every open room: rooms saved by this release carry fields that 0.2.x refuses to load. The database has no new migrations since 0.2.1 and rolls back safely.
 - The JSONB translations migration (`b2a7f484d1a9`) can no longer be downgraded. Restore a backup or re-seed instead.
@@ -31,6 +33,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Screen readers hear which game phase starts, focus moves to its heading, and the browser tab shows the room screen and round. They hear "10 seconds left" once instead of no countdown.
+- Button labels for screen readers follow your language; pen colours and brushes have names, and each reaction button says whose drawing it is for.
+- Text follows your browser's font-size setting.
+- The chosen pen and avatar colour show a check or an ink outline, so the blue outline only means keyboard focus.
+- The frontend build pins corepack to 0.36.0 instead of the latest release.
 - A finished game goes back to the lobby by itself 3 minutes after the final results, so a room whose host left can play again. Operators can change the delay with `FINAL_RESULTS_RESTART_SECONDS`. (The host's browser had a timer for this that never fired.)
 - Spectators now see a game live, the moment something happens, instead of catching up every 2 seconds. A room takes up to 20 spectators, and they never count toward the player limit.
 - Server logs no longer keep full visitor IPs: Caddy masks them to the /24 (IPv4) or /48 (IPv6) network, and the backend no longer writes its own access log or the visitor IP of each WebSocket connection. The About dialog now says what is stored and for how long.
@@ -56,6 +63,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Korean cards showed web-page text as names (for example "이름 *" for leg), Japanese cards included sexual slang, and every language had wrong, English or duplicate accepted answers. The deck is cleaned, and a test now fails on junk text, leftover English answers and an answer that matches two cards in the same category.
+- In languages whose plurals do not add -s, a guess could score as another card: German "Eis" (ice cream) counted as "Ei" (egg). Plural endings now follow the guesser's language.
+- A round could get stuck in the guessing phase when a reseed removed its category. Those guesses now score 0, and any other scoring error ends the round without points.
+- A game where nobody scored crowned a champion; it now says there is no winner, and tied winners all show their avatars.
+- The drawing hint was hidden behind the Finish button on laptop screens.
+- After you sent your guesses, the guess panel could not be scrolled with the keyboard and lost focus.
+- The game-over header showed "0 / 2 players ready".
+- Polish player counts used the plural form for 5 or more players for 2 to 4 players as well.
+- The loading spinners kept spinning when your system asks for reduced motion.
 - About 450 word cards in nine languages had a wrong sense or a stray accepted answer (Italian "gate" for cake, Korean "presentation slide" for the playground slide); they now use the everyday word, and the Japanese footer credits Gamely Games again.
 - The message for a room that briefly turns away new players, after many players left it in a short time, is translated into every language.
 - A category without a translation in the room's language is now dealt in the next language it has, so the round still starts.

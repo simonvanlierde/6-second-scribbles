@@ -18,7 +18,8 @@
     "soundMute": "Mute sound",
     "soundUnmute": "Unmute sound",
     "and": "and",
-    "gotIt": "Got it"
+    "gotIt": "Got it",
+    "close": "Close"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "on",
     "soundOff": "off",
     "about": "About",
-    "namePrompt": "Pick a name to continue."
+    "namePrompt": "Pick a name to continue.",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}",
+    "avatarColor": "Avatar color"
   },
   "lobby": {
     "leaveRoom": "Leave Room",
@@ -106,7 +110,10 @@
     "clear": "Clear",
     "loadingCategory": "Loading...",
     "hint": "Tap an item once you've drawn it.",
-    "undo": "Undo"
+    "undo": "Undo",
+    "brushSmall": "Small brush",
+    "brushMedium": "Medium brush",
+    "brushLarge": "Large brush"
   },
   "guessing": {
     "guessPlayerDrawing": "Guess {name}'s drawing",
@@ -244,6 +251,33 @@
     "readyForNext": "Ready for next game",
     "readyWaiting": "Ready — waiting for host…",
     "backHome": "Back home",
-    "playersReady": "{count} / {total} players ready"
+    "noWinner": "No winner this time",
+    "noWinnerDetail": "Nobody scored any points."
+  },
+  "phase": {
+    "drawing": "Round {round}: drawing",
+    "guessing": "Round {round}: guessing",
+    "timeLow": "{count} seconds left"
+  },
+  "colors": {
+    "black": "Black",
+    "white": "White",
+    "red": "Red",
+    "blue": "Blue",
+    "green": "Green",
+    "orange": "Orange",
+    "coral": "Coral",
+    "yellow": "Yellow",
+    "lavender": "Lavender",
+    "peach": "Peach"
+  },
+  "reactions": {
+    "laugh": "Laugh",
+    "shock": "Shock",
+    "art": "Nice art",
+    "mindBlown": "Mind blown",
+    "think": "Thinking",
+    "group": "Reactions to {name}'s drawing",
+    "react": "{reaction} for {name}'s drawing"
   }
 }

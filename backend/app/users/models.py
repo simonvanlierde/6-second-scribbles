@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Index, String
+from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -28,11 +28,6 @@ class User(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
-    )
-
-    __table_args__ = (
-        Index("idx_users_username", "username", unique=True),
-        Index("idx_users_preferred_locale", "preferred_locale"),
     )
 
     def __repr__(self) -> str:

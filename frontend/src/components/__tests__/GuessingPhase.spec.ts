@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import GuessingPhase from "@/components/GuessingPhase.vue";
 import GameHeader from "@/components/game/GameHeader.vue";
 import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
@@ -87,6 +87,27 @@ describe("GuessingPhase", () => {
     expect(sendMock).toHaveBeenCalledWith({ type: "player_ready", playerId: "p1" });
     expect(draftClearMock).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain("Guesses submitted");
+  });
+
+  it("keeps the scrolling guess panel reachable by keyboard once nothing in it can take focus", async () => {
+    const wrapper = mount(GuessingPhase);
+    const panel = wrapper.get(".guess-panel");
+    expect(panel.attributes("aria-label")).toBe("Your guesses");
+
+    await wrapper.find("input.guess-input").setValue("cat");
+    await wrapper.find(".guess-card__submit").trigger("click");
+
+    expect(panel.attributes("tabindex")).toBe("0");
+  });
+
+  it("keeps keyboard focus on the guess panel when submitting removes the button", async () => {
+    const wrapper = mount(GuessingPhase, { attachTo: document.body });
+    await wrapper.find("input.guess-input").setValue("cat");
+    await wrapper.find(".guess-card__submit").trigger("click");
+    await nextTick();
+
+    expect(document.activeElement).toBe(wrapper.get(".guess-panel").element);
+    wrapper.unmount();
   });
 
   it("confirms before submitting an empty guess list", async () => {

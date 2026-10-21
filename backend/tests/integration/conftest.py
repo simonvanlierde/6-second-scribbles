@@ -37,13 +37,18 @@ _POSTGRES_PASSWORD = uuid4().hex
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _upgrade_database() -> None:
-    """Apply every Alembic migration to the database the settings point at."""
+def _alembic_config() -> Config:
+    """Alembic config for the database the settings point at."""
     config = Config(str(_BACKEND_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
     config.set_main_option("prepend_sys_path", str(_BACKEND_ROOT))
     config.set_main_option("sqlalchemy.url", settings.database_url)
-    command.upgrade(config, "head")
+    return config
+
+
+def _upgrade_database() -> None:
+    """Apply every Alembic migration to the database the settings point at."""
+    command.upgrade(_alembic_config(), "head")
 
 
 def _postgres_host_port(container: PostgresContainer) -> tuple[str, int]:
@@ -135,6 +140,12 @@ async def configure_integration_settings(
     await redis_module.close_redis()
     for key, value in previous.items():
         setattr(settings, key, value)
+
+
+@pytest.fixture
+def alembic_config() -> Config:
+    """Alembic config for the session's Postgres container, to run single migration steps."""
+    return _alembic_config()
 
 
 @pytest_asyncio.fixture(loop_scope="session")

@@ -6,12 +6,12 @@ import { REACTION_KEYS } from "@/composables/useReactions";
 
 describe("HdReactionPad", () => {
   it("renders a button per reaction key", () => {
-    const w = mount(HdReactionPad);
+    const w = mount(HdReactionPad, { props: { name: "Ada" } });
     expect(w.findAll("button")).toHaveLength(REACTION_KEYS.length);
   });
 
   it("emits 'react' with the key when a button is clicked", async () => {
-    const w = mount(HdReactionPad);
+    const w = mount(HdReactionPad, { props: { name: "Ada" } });
     const buttons = w.findAll("button");
     const firstButton = buttons[0];
     if (!firstButton) throw new Error("expected at least one button");

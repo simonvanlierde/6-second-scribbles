@@ -117,14 +117,21 @@ function toggleItem(index: number) {
 </script>
 
 <template>
-  <div class="drawing-phase">
-    <GameHeader :time-left="timeLeft" @leave="leaveDialog?.request()" />
+  <main class="drawing-phase">
+    <GameHeader
+      :time-left="timeLeft"
+      :title="$t('phase.drawing', { round: store.currentRound })"
+      @leave="leaveDialog?.request()"
+    />
 
     <div class="drawing-phase__body">
       <!-- Category sidebar -->
       <aside class="drawing-phase__sidebar">
+        <!-- Above the list: below it, the sticky Finish button covers it on short screens. -->
+        <HdCard variant="postit" class="drawing-phase__hint">{{ $t("drawing.hint") }}</HdCard>
+
         <HdCard class="category-card">
-          <h3 class="category-card__title">{{ category }}</h3>
+          <h2 class="category-card__title">{{ category }}</h2>
           <ol class="category-card__list">
             <li v-for="(item, index) in items" :key="index">
               <button
@@ -140,8 +147,6 @@ function toggleItem(index: number) {
             </li>
           </ol>
         </HdCard>
-
-        <HdCard variant="postit" class="drawing-phase__hint">{{ $t("drawing.hint") }}</HdCard>
 
         <HdButton
           variant="success"
@@ -190,7 +195,7 @@ function toggleItem(index: number) {
     </HdButton>
 
     <LeaveRoomDialog ref="leaveDialog" />
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -276,6 +281,14 @@ function toggleItem(index: number) {
 }
 .drawing-phase__hint {
   font-size: var(--text-label-md);
+}
+/* On a short laptop screen (1280x720) a ten-word card, the hint and Finish only fit
+ * with shorter rows. 32px is still above the 24px minimum target size. */
+@media (min-width: 769px) and (max-height: 800px) {
+  .category-card__item {
+    min-height: 32px;
+    padding-block: 2px;
+  }
 }
 /* Sticky, so a word card taller than the window cannot push it out of the scrolling sidebar. */
 .drawing-phase__finish-desktop {

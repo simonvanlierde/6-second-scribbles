@@ -49,7 +49,7 @@ function react(drawingId: string, key: ReactionKey): void {
             </ul>
           </template>
         </DrawingThumbnail>
-        <HdReactionPad @react="react(player.id, $event)" />
+        <HdReactionPad :name="player.name" @react="react(player.id, $event)" />
       </div>
     </div>
     <p v-else class="reveal__empty">{{ $t("roundResults.noDrawings") }}</p>

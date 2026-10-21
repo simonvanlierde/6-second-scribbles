@@ -70,7 +70,6 @@ class Category(Base):
         Index("idx_category_difficulty", "difficulty"),
         Index("idx_category_slug", "slug"),
         Index("idx_category_available_locales", "available_locales", postgresql_using="gin"),
-        Index("idx_category_translations", "translations", postgresql_using="gin"),
     )
 
     def __repr__(self) -> str:
@@ -98,11 +97,6 @@ class Prompt(Base):
         cascade="all, delete-orphan",
     )
 
-    __table_args__ = (
-        Index("idx_prompt_stable_key", "stable_key"),
-        Index("idx_prompt_translations", "translations", postgresql_using="gin"),
-    )
-
 
 class CategoryPrompt(Base):
     """Many-to-Many bridge between categories and prompts."""
@@ -120,7 +114,6 @@ class CategoryPrompt(Base):
 
     __table_args__ = (
         UniqueConstraint("category_id", "prompt_id", name="uq_category_prompt"),
-        Index("idx_category_prompt_category", "category_id"),
         Index("idx_category_prompt_prompt", "prompt_id"),
     )
 

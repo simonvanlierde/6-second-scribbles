@@ -3,7 +3,8 @@
 # The Debian release is in the tag so a rebuild never moves to the next one by itself.
 FROM python:3.14-slim-trixie AS runtime-base
 
-# Create the non-root user for all runtime stages.
+# Create the non-root user for all runtime stages. USER names the numeric uid so a
+# runtime (or Kubernetes runAsNonRoot) can tell it is not root without reading /etc/passwd.
 # The upgrade takes Debian security fixes the base image has not been rebuilt with yet.
 # Docker caches this layer, so it reruns only when the base image changes: deploy with
 # `docker compose build --pull` so a new base image reaches it.
@@ -11,7 +12,8 @@ FROM python:3.14-slim-trixie AS runtime-base
 # vendored libraries were the only fixable HIGH findings in the image.
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* && \
     rm -rf /usr/local/lib/python3.14/site-packages/pip /usr/local/lib/python3.14/site-packages/pip-*.dist-info /usr/local/bin/pip* && \
-    useradd --create-home --home-dir /home/appuser --shell /bin/false appuser
+    groupadd --gid 1001 appuser && \
+    useradd --uid 1001 --gid 1001 --create-home --home-dir /home/appuser --shell /bin/false appuser
 
 ENV VIRTUAL_ENV=/opt/.venv \
     PATH="/opt/.venv/bin:$PATH" \
@@ -106,7 +108,7 @@ LABEL org.opencontainers.image.source="https://github.com/simonvanlierde/6-secon
 COPY --chown=appuser:appuser --from=prod-deps /opt/.venv /opt/.venv
 COPY --chown=appuser:appuser --from=app-source /app /app
 
-USER appuser
+USER 1001:1001
 
 ENV SERVER_HOST=0.0.0.0
 
@@ -122,7 +124,7 @@ FROM runtime-base AS db-migrations
 COPY --chown=appuser:appuser --from=db-migrations-deps /opt/.venv /opt/.venv
 COPY --chown=appuser:appuser --from=migrations-source /app /app
 
-USER appuser
+USER 1001:1001
 
 CMD ["alembic", "upgrade", "head"]
 
@@ -131,7 +133,7 @@ FROM runtime-base AS db-seed
 COPY --chown=appuser:appuser --from=db-seed-deps /opt/.venv /opt/.venv
 COPY --chown=appuser:appuser --from=seed-source /app /app
 
-USER appuser
+USER 1001:1001
 
 CMD ["python", "scripts/seed_data.py"]
 
@@ -140,6 +142,6 @@ FROM runtime-base AS db-translate
 COPY --chown=appuser:appuser --from=db-translate-deps /opt/.venv /opt/.venv
 COPY --chown=appuser:appuser --from=translate-source /app /app
 
-USER appuser
+USER 1001:1001
 
 CMD ["python", "scripts/auto_translate_seed_data.py"]

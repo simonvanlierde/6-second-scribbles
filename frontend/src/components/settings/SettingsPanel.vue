@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 
 import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
 import HdAvatar from "@/components/ui/HdAvatar.vue";
-import HdIconButton from "@/components/ui/HdIconButton.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import HdInput from "@/components/ui/HdInput.vue";
 import { getAvatarInitial } from "@/composables/useAvatar";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
@@ -20,18 +20,6 @@ const { theme } = useTheme();
 const { enabled: soundEnabled } = useSound();
 const { focusNameOnOpen, pendingNameAction } = useSettingsPanel();
 const nameInputRef = useTemplateRef<InstanceType<typeof HdInput>>("nameInput");
-const dialogRef = useTemplateRef<HTMLDialogElement>("dialog");
-
-watch(
-  open,
-  (v) => {
-    const el = dialogRef.value;
-    if (!el) return;
-    if (v && !el.open) el.showModal();
-    else if (!v && el.open) el.close();
-  },
-  { flush: "post" },
-);
 
 watch(focusNameOnOpen, (v) => {
   if (v) {
@@ -44,13 +32,18 @@ watch(focusNameOnOpen, (v) => {
 
 const { t } = useI18n({ useScope: "global" });
 
-function close() {
-  open.value = false;
-  // Resume the action that opened the panel for a name (e.g. Create Room),
-  // now that the player has picked one — so they don't have to click twice.
+// Resume the action that opened the panel for a name (e.g. Create Room),
+// now that the player has picked one — so they don't have to click twice.
+// HdDialog closes itself on Escape, the backdrop and its close button, then emits cancel.
+function resumePendingAction() {
   const action = pendingNameAction.value;
   pendingNameAction.value = null;
   if (action && store.localPlayerName.trim()) action();
+}
+
+function close() {
+  open.value = false;
+  resumePendingAction();
 }
 
 const playerName = computed({
@@ -106,26 +99,14 @@ function selectTheme(value: Theme) {
 </script>
 
 <template>
-  <!-- biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users close via Escape, handled by @close -->
-  <dialog ref="dialog" class="settings-dialog" @click.self="close" @close="close">
-    <header class="settings-dialog__header">
-      <h2 class="settings-dialog__title">{{ t("settings.title") }}</h2>
-      <HdIconButton label="Close" variant="ghost" data-testid="settings-close" @click="close">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </HdIconButton>
-    </header>
-
+  <HdDialog
+    v-model:open="open"
+    class="settings-dialog"
+    :title="t('settings.title')"
+    :close-label="t('common.close')"
+    :actions="false"
+    @cancel="resumePendingAction"
+  >
     <div class="settings-dialog__body">
       <!-- Identity -->
       <section class="settings-section">
@@ -362,19 +343,12 @@ function selectTheme(value: Theme) {
         </div>
       </section>
     </div>
-  </dialog>
+  </HdDialog>
 </template>
 
 <style scoped>
-/* ─── Dialog shell ─── */
+/* ─── Dialog shell (HdDialog, laid out as a fixed header over a scrolling body) ─── */
 .settings-dialog {
-  margin: auto;
-  background: var(--color-card);
-  color: var(--color-ink);
-  border: 2.5px solid var(--color-ink);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-card);
-  width: min(420px, calc(100vw - 32px));
   max-height: min(640px, calc(100vh - 48px));
   padding: 0;
   overflow: hidden;
@@ -383,24 +357,11 @@ function selectTheme(value: Theme) {
   display: flex;
   flex-direction: column;
 }
-.settings-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(2px);
-}
-
-.settings-dialog__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.settings-dialog :deep(.hd-dialog__header) {
+  margin: 0;
   padding: 16px 20px;
   border-bottom: 1.5px dashed var(--color-ink);
   flex-shrink: 0;
-}
-.settings-dialog__title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-heading-md);
-  margin: 0;
 }
 .settings-dialog__body {
   padding: 20px;

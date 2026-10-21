@@ -50,12 +50,10 @@ prompts:
     - 喷气式飞机
   - locale: zh-TW
     label: 飛機
-    aliases:
-    - 飛機
+    aliases: []
   - locale: ja
     label: 飛行機
-    aliases:
-    - 飛行機
+    aliases: []
   - locale: ko
     label: 비행기
     aliases:
@@ -85,7 +83,6 @@ prompts:
   - locale: nl
     label: vliegveld
     aliases:
-    - vliegveld
     - terminal
   - locale: de
     label: Flughafen
@@ -93,9 +90,8 @@ prompts:
     - Flugplatz
     - Terminal
   - locale: pl
-    label: port lotniczy
+    label: lotnisko
     aliases:
-    - lotnisko
     - terminal
   - locale: pt
     label: aeroporto
@@ -294,7 +290,6 @@ prompts:
     label: mrówka
     aliases:
     - mrowisko
-    - owad
   - locale: pt
     label: formiga
     aliases:
@@ -395,8 +390,7 @@ prompts:
     - portal
   - locale: es
     label: arco
-    aliases:
-    - bóveda
+    aliases: []
   - locale: fr
     label: arche
     aliases:
@@ -404,7 +398,6 @@ prompts:
   - locale: it
     label: Arco
     aliases:
-    - gateway
     - portale
   - locale: nl
     label: boog
@@ -420,7 +413,6 @@ prompts:
     label: łuk
     aliases:
     - brama
-    - portal
   - locale: pt
     label: arco
     aliases:
@@ -517,7 +509,7 @@ prompts:
     - pittore
     - scultore
   - locale: nl
-    label: artiest
+    label: kunstenaar
     aliases:
     - maker
     - schilder
@@ -566,7 +558,6 @@ prompts:
   - locale: en
     label: Atom
     aliases:
-    - molecule
     - nucleus
   - locale: es
     label: átomo
@@ -579,47 +570,38 @@ prompts:
   - locale: it
     label: Atomo
     aliases:
-    - molecola
     - nucleo
   - locale: nl
-    label: Atom
+    label: atoom
     aliases:
-    - molecule
     - kern
   - locale: de
     label: Atom
     aliases:
-    - Molekül
     - Kern
   - locale: pl
     label: Atom
     aliases:
-    - cząsteczka
     - jądro
   - locale: pt
     label: Átomo
     aliases:
-    - molécula
     - núcleo
   - locale: zh-CN
     label: 原子
     aliases:
     - 原子核
-    - 分子
   - locale: zh-TW
     label: 原子
     aliases:
     - 原子核
-    - 分子
   - locale: ja
     label: 原子
     aliases:
-    - 分子
     - 原子核
   - locale: ko
     label: 원자
-    aliases:
-    - 분자
+    aliases: []
 - id: axe
   translations:
   - locale: en
@@ -639,16 +621,14 @@ prompts:
     - accetta
   - locale: nl
     label: bijl
-    aliases:
-    - bijl
+    aliases: []
   - locale: de
     label: Axt
     aliases:
     - Beil
   - locale: pl
-    label: topór
-    aliases:
-    - topór
+    label: siekiera
+    aliases: []
   - locale: pt
     label: machado
     aliases:
@@ -698,7 +678,6 @@ prompts:
     label: rugzak
     aliases:
     - zak
-    - rugzak
     - schooltas
   - locale: de
     label: Rucksack
@@ -710,7 +689,6 @@ prompts:
     label: plecak
     aliases:
     - worek
-    - plecak
     - torba szkolna
   - locale: pt
     label: mochila
@@ -916,23 +894,18 @@ prompts:
   - locale: nl
     label: honkbal
     aliases:
-    - hardball
     - softbal
   - locale: de
     label: Baseball
     aliases:
-    - hardball
     - softball
   - locale: pl
     label: baseball
     aliases:
-    - hardball
     - softball
   - locale: pt
-    label: baseball
-    aliases:
-    - hardball
-    - softball
+    label: beisebol
+    aliases: []
   - locale: zh-CN
     label: 棒球
     aliases:
@@ -1037,7 +1010,6 @@ prompts:
     label: wanna
     aliases:
     - kąpiel
-    - wanna
   - locale: pt
     label: banheira
     aliases:
@@ -1116,9 +1088,8 @@ prompts:
     - 浜辺
     - 海
   - locale: ko
-    label: 해수욕장
-    aliases:
-    - 해변
+    label: 해변
+    aliases: []
 - id: bed
   translations:
   - locale: en
@@ -1145,7 +1116,6 @@ prompts:
     label: bed
     aliases:
     - stapelbed
-    - bed
     - matras
   - locale: de
     label: Bett
@@ -1292,7 +1262,6 @@ prompts:
     label: pimiento
     aliases:
     - morrón
-    - paprika
   - locale: fr
     label: poivron
     aliases:
@@ -1364,7 +1333,7 @@ prompts:
     aliases:
     - zitplaatsen
   - locale: de
-    label: Sitzbank
+    label: Bank
     aliases:
     - sitz
   - locale: pl
@@ -1419,7 +1388,6 @@ prompts:
   - locale: nl
     label: fiets
     aliases:
-    - fiets
     - cyclus
     - wielen
   - locale: de
@@ -1436,7 +1404,6 @@ prompts:
   - locale: pt
     label: bicicleta
     aliases:
-    - bicicleta
     - ciclo
     - rodas
   - locale: zh-CN
@@ -1445,10 +1412,9 @@ prompts:
     - 单车
     - 脚踏车
   - locale: zh-TW
-    label: 自行車
+    label: 腳踏車
     aliases:
     - 單車
-    - 腳踏車
   - locale: ja
     label: 自転車
     aliases:
@@ -1543,17 +1509,16 @@ prompts:
     - bacca
     - frutti di bosco
   - locale: nl
-    label: bosbessen
+    label: bosbes
     aliases:
     - bessen
   - locale: de
-    label: Blaubeeren
+    label: Blaubeere
     aliases:
     - beeren
   - locale: pl
-    label: jagody
-    aliases:
-    - jagody
+    label: borówka
+    aliases: []
   - locale: pt
     label: mirtilo
     aliases:
@@ -1660,14 +1625,12 @@ prompts:
   - locale: en
     label: book
     aliases:
-    - notebook
     - novel
     - textbook
     - tome
   - locale: es
     label: libro
-    aliases:
-    - cuaderno
+    aliases: []
   - locale: fr
     label: livre
     aliases:
@@ -1676,60 +1639,49 @@ prompts:
   - locale: it
     label: libro
     aliases:
-    - notebook
     - romanzo
     - libro di testo
-    - tome
   - locale: nl
     label: boek
     aliases:
-    - schrift
     - roman
     - leerboek
     - boekdeel
   - locale: de
     label: Buch
     aliases:
-    - notizbuch
     - roman
     - textbuch
-    - tome
   - locale: pl
     label: książka
     aliases:
-    - notatnik
     - powieść
     - podręcznik
     - tom
   - locale: pt
     label: livro
     aliases:
-    - caderno
     - romance
     - livro didático
     - tomo
   - locale: zh-CN
     label: 书
     aliases:
-    - 笔记本
     - 小说
     - 教科书
   - locale: zh-TW
     label: 書
     aliases:
-    - 筆記本
     - 小說
     - 教科書
   - locale: ja
     label: 本
     aliases:
-    - ノート
     - 小説
     - 教科書
   - locale: ko
     label: 책
     aliases:
-    - 공책
     - 소설
     - 교과서
     - 도서
@@ -1810,27 +1762,22 @@ prompts:
     label: ciotola
     aliases:
     - bacino
-    - piatto
   - locale: nl
     label: kom
     aliases:
     - schaal
-    - schotel
   - locale: de
     label: Schale
     aliases:
     - becken
-    - gericht
   - locale: pl
     label: miska
     aliases:
     - miseczka
-    - naczynie
   - locale: pt
     label: tigela
     aliases:
     - bacia
-    - prato
   - locale: zh-CN
     label: 碗
     aliases:
@@ -1880,10 +1827,9 @@ prompts:
     - Kegeln
   - locale: pl
     label: kręgle
-    aliases:
-    - kręgle
+    aliases: []
   - locale: pt
-    label: bowling
+    label: boliche
     aliases:
     - bowling de dez pinos
   - locale: zh-CN
@@ -2125,7 +2071,7 @@ prompts:
     aliases:
     - Röschen
   - locale: pl
-    label: brokuły
+    label: brokuł
     aliases:
     - różyczka
   - locale: pt
@@ -2137,7 +2083,7 @@ prompts:
     aliases:
     - 西蓝花
   - locale: zh-TW
-    label: 西蘭花
+    label: 花椰菜
     aliases:
     - 小花
   - locale: ja
@@ -2226,42 +2172,33 @@ prompts:
     label: hamburguesa
     aliases:
     - hamburguesa con queso
-    - burger
   - locale: fr
     label: hamburger
     aliases:
     - cheeseburger
-    - hamburger
-    - patty
   - locale: it
     label: hamburger
     aliases:
     - cheeseburger
-    - panino
     - svizzera
   - locale: nl
-    label: Burger
+    label: hamburger
     aliases:
     - cheeseburger
-    - hamburger
-    - patty
   - locale: de
     label: Burger
     aliases:
     - Cheeseburger
     - Hamburger
-    - Patty
   - locale: pl
     label: burger
     aliases:
     - cheeseburger
     - hamburger
-    - patty
   - locale: pt
     label: hambúrguer
     aliases:
     - cheeseburger
-    - hamburguer
     - carne de hambúrguer
   - locale: zh-CN
     label: 汉堡
@@ -2368,8 +2305,7 @@ prompts:
     - monarca
   - locale: nl
     label: vlinder
-    aliases:
-    - monarch
+    aliases: []
   - locale: de
     label: Schmetterling
     aliases:
@@ -2414,11 +2350,11 @@ prompts:
     - poussoir
     - touche
   - locale: it
-    label: pulsante
+    label: bottone
     aliases:
     - chiusura
   - locale: nl
-    label: knop
+    label: knoop
     aliases:
     - bevestigingsmiddel
   - locale: de
@@ -2530,11 +2466,10 @@ prompts:
     - dolce
     - pasticcino
   - locale: nl
-    label: cake
+    label: taart
     aliases:
     - verjaardagstaart
     - dessert
-    - gateau
     - gebak
   - locale: de
     label: Kuchen
@@ -2548,8 +2483,6 @@ prompts:
     aliases:
     - tort urodzinowy
     - deser
-    - gateau
-    - ciasto
   - locale: pt
     label: bolo
     aliases:
@@ -2579,7 +2512,6 @@ prompts:
     aliases:
     - 생일 케이크
     - 디저트
-    - 빵
 - id: candy-cane
   translations:
   - locale: en
@@ -2654,14 +2586,12 @@ prompts:
   - locale: it
     label: auto
     aliases:
-    - auto
     - automobile
     - cavalcare
     - veicolo
   - locale: nl
     label: auto
     aliases:
-    - auto
     - rijden
     - voertuig
   - locale: de
@@ -2706,49 +2636,35 @@ prompts:
   translations:
   - locale: en
     label: caramel
-    aliases:
-    - toffee
-    - butterscotch
+    aliases: []
   - locale: es
     label: caramelo
     aliases:
     - dulce de leche
   - locale: fr
     label: caramel
-    aliases:
-    - toffee
+    aliases: []
   - locale: it
     label: caramello
-    aliases:
-    - toffee
-    - burro
+    aliases: []
   - locale: nl
     label: karamel
-    aliases:
-    - toffee
-    - boterkaramel
+    aliases: []
   - locale: de
     label: Karamell
-    aliases:
-    - Toffee
+    aliases: []
   - locale: pl
     label: karmel
-    aliases:
-    - toffi
-    - krówka
+    aliases: []
   - locale: pt
     label: caramelo
-    aliases:
-    - toffee
-    - caramelo amanteigado
+    aliases: []
   - locale: zh-CN
     label: 焦糖
-    aliases:
-    - 太妃糖
+    aliases: []
   - locale: zh-TW
     label: 焦糖
-    aliases:
-    - 太妃糖
+    aliases: []
   - locale: ja
     label: キャラメル
     aliases:
@@ -2785,7 +2701,7 @@ prompts:
     - Möhre
     - Wurzelgemüse
   - locale: pl
-    label: marchew
+    label: marchewka
     aliases:
     - warzywa korzeniowe
   - locale: pt
@@ -2798,17 +2714,16 @@ prompts:
     - 根茎类蔬菜
     - 红萝卜
   - locale: zh-TW
-    label: 胡蘿蔔
+    label: 紅蘿蔔
     aliases:
     - 根莖類蔬菜
-    - 紅蘿蔔
   - locale: ja
     label: ニンジン
     aliases:
     - 人参
     - 根菜
   - locale: ko
-    label: 카로트
+    label: 당근
     aliases:
     - 루트 야채
 - id: castle
@@ -2973,7 +2888,6 @@ prompts:
     label: bruco
     aliases:
     - larva
-    - verme
   - locale: nl
     label: rups
     aliases:
@@ -2983,7 +2897,6 @@ prompts:
     label: Raupe
     aliases:
     - Larve
-    - Wurm
   - locale: pl
     label: gąsienica
     aliases:
@@ -3042,7 +2955,6 @@ prompts:
   - locale: de
     label: Kathedrale
     aliases:
-    - minster
     - basilika
     - große kirche
   - locale: pl
@@ -3169,7 +3081,6 @@ prompts:
   - locale: nl
     label: schoolbord
     aliases:
-    - schoolbord
     - leisteen
   - locale: de
     label: Tafel
@@ -3288,9 +3199,8 @@ prompts:
     aliases:
     - ciliegie
   - locale: nl
-    label: kersen
-    aliases:
-    - kersen
+    label: kers
+    aliases: []
   - locale: de
     label: Kirsche
     aliases:
@@ -3305,12 +3215,10 @@ prompts:
     - cerejas
   - locale: zh-CN
     label: 樱桃
-    aliases:
-    - 樱桃
+    aliases: []
   - locale: zh-TW
     label: 櫻桃
-    aliases:
-    - 櫻桃
+    aliases: []
   - locale: ja
     label: さくらんぼ
     aliases:
@@ -3549,7 +3457,7 @@ prompts:
   - locale: nl
     label: Cleopatra
   - locale: de
-    label: Cleopatra
+    label: Kleopatra
   - locale: pl
     label: Kleopatra
   - locale: pt
@@ -3557,7 +3465,7 @@ prompts:
   - locale: zh-CN
     label: 克利奥帕特拉
   - locale: zh-TW
-    label: 克利奧帕特拉
+    label: 克麗奧佩脫拉
   - locale: ja
     label: クレオパトラ
   - locale: ko
@@ -3576,9 +3484,7 @@ prompts:
     label: reloj
     aliases:
     - despertador
-    - timer
     - reloj de pared
-    - reloj
   - locale: fr
     label: horloge
     aliases:
@@ -3592,7 +3498,6 @@ prompts:
     - orologio di allarme
     - timer
     - orologio da parete
-    - orologio
   - locale: nl
     label: klok
     aliases:
@@ -3652,8 +3557,6 @@ prompts:
     - cumulus
     - fluffy
     - fluffy cloud
-    - fog
-    - mist
     - sky
   - locale: es
     label: nube
@@ -3668,52 +3571,41 @@ prompts:
     aliases:
     - nube
     - cumulo
-    - nebbia
-    - foschia
   - locale: nl
     label: wolk
     aliases:
     - cumulus
     - pluizig
     - pluizige wolk
-    - mist
     - lucht
   - locale: de
     label: Wolke
     aliases:
     - Schäfchenwolke
-    - Nebel
     - Himmel
   - locale: pl
     label: chmura
     aliases:
-    - cumulus
     - puszysty
     - puszysta chmura
-    - mgła
     - niebo
   - locale: pt
     label: nuvem
     aliases:
-    - cumulus
     - fofinho
     - nuvem macia
-    - nevoeiro
-    - neblina
     - céu
   - locale: zh-CN
     label: 云
     aliases:
     - 积云
     - 云朵
-    - 雾
     - 天空
   - locale: zh-TW
     label: 雲
     aliases:
     - 積雲
     - 雲朵
-    - 霧
     - 天空
   - locale: ja
     label: 雲
@@ -3723,7 +3615,6 @@ prompts:
     label: 구름
     aliases:
     - 뭉게구름
-    - 안개
 - id: clouds
   translations:
   - locale: en
@@ -3743,12 +3634,10 @@ prompts:
   - locale: it
     label: Nuvole
     aliases:
-    - cloudscape
     - coperto
   - locale: nl
     label: Wolken
     aliases:
-    - cloudscape
     - bewolkt
   - locale: de
     label: Wolken
@@ -3758,27 +3647,23 @@ prompts:
   - locale: pl
     label: Chmury
     aliases:
-    - cloudscape
     - zachmurzenie
   - locale: pt
     label: Nuvens
     aliases:
-    - cloudscape
     - nublado
   - locale: zh-CN
     label: 云层
-    aliases:
-    - 云层
+    aliases: []
   - locale: zh-TW
     label: 雲層
-    aliases:
-    - 雲層
+    aliases: []
   - locale: ja
-    label: クラウド
+    label: 雲
     aliases:
     - クラウドスケープ
   - locale: ko
-    label: 클라우드
+    label: 구름
     aliases:
     - 구름 풍경
 - id: coat
@@ -3806,11 +3691,9 @@ prompts:
     aliases:
     - giacca
     - soprabito
-    - parka
   - locale: nl
     label: jas
     aliases:
-    - jas
     - overjas
     - parka
   - locale: de
@@ -3822,14 +3705,12 @@ prompts:
     label: płaszcz
     aliases:
     - kurtka
-    - płaszcz
     - parka
   - locale: pt
     label: casaco
     aliases:
     - jaqueta
     - sobretudo
-    - blusa
   - locale: zh-CN
     label: 外套
     aliases:
@@ -3946,16 +3827,13 @@ prompts:
     - cristoforo colombo
   - locale: nl
     label: Columbus
-    aliases:
-    - christopher columbus
+    aliases: []
   - locale: de
     label: Kolumbus
-    aliases:
-    - christopher columbus
+    aliases: []
   - locale: pl
     label: Kolumb
-    aliases:
-    - christopher columbus
+    aliases: []
   - locale: pt
     label: Colombo
     aliases:
@@ -3999,10 +3877,9 @@ prompts:
     - pilastro
     - palo
   - locale: nl
-    label: Kolom
+    label: zuil
     aliases:
     - pijler
-    - post
   - locale: de
     label: Säule
     aliases:
@@ -4012,7 +3889,6 @@ prompts:
     label: Kolumna
     aliases:
     - filar
-    - post
   - locale: pt
     label: coluna
     aliases:
@@ -4123,15 +3999,13 @@ prompts:
   - locale: fr
     label: biscuit
     aliases:
-    - biscuit
     - collation sucrée
   - locale: it
     label: biscotto
     aliases:
-    - cookie
     - spuntino dolce
   - locale: nl
-    label: cookie
+    label: koekje
     aliases:
     - biscuit
     - zoete snack
@@ -4141,23 +4015,21 @@ prompts:
     - Plätzchen
     - Cookie
   - locale: pl
-    label: ciasteczko
+    label: ciastko
     aliases:
     - biszkopt
     - słodka przekąska
   - locale: pt
-    label: cookie
+    label: biscoito
     aliases:
     - biscoitos
     - doce lanche
   - locale: zh-CN
-    label: 曲奇
-    aliases:
-    - 饼干
+    label: 饼干
+    aliases: []
   - locale: zh-TW
-    label: 曲奇
-    aliases:
-    - 餅乾
+    label: 餅乾
+    aliases: []
   - locale: ja
     label: クッキー
     aliases:
@@ -4191,7 +4063,6 @@ prompts:
   - locale: nl
     label: maïs
     aliases:
-    - maïs
     - maïskolf
   - locale: de
     label: Mais
@@ -4200,12 +4071,10 @@ prompts:
   - locale: pl
     label: kukurydza
     aliases:
-    - kukurydza
     - kukurydza na kolbie
   - locale: pt
     label: milho
     aliases:
-    - milho
     - milho na espiga
   - locale: zh-CN
     label: 玉米
@@ -4252,14 +4121,11 @@ prompts:
     - bovini
     - toro
     - bestiame
-    - moo-moo
-    - ox
   - locale: nl
-    label: koeien
+    label: koe
     aliases:
     - runderen
     - stier
-    - moo-moo
     - os
   - locale: de
     label: Kuh
@@ -4274,7 +4140,6 @@ prompts:
     - bydła
     - byk
     - bydło
-    - moo-moo
     - woł
   - locale: pt
     label: vaca
@@ -4383,7 +4248,6 @@ prompts:
   - locale: it
     label: cetriolo
     aliases:
-    - pickle
     - zucca
   - locale: nl
     label: komkommer
@@ -4410,7 +4274,7 @@ prompts:
     - 酸黄瓜
     - 葫芦
   - locale: zh-TW
-    label: 黃瓜
+    label: 小黃瓜
     aliases:
     - 酸黃瓜
     - 葫蘆
@@ -4436,14 +4300,12 @@ prompts:
     - vaso
     - copa
     - cáliz
-    - mug
   - locale: fr
     label: tasse
     aliases:
     - bécher
     - calice
     - verre
-    - tasse
   - locale: it
     label: tazza
     aliases:
@@ -4467,7 +4329,6 @@ prompts:
     - zlewka
     - kielich
     - szkło
-    - kubek
   - locale: pt
     label: xícara
     aliases:
@@ -4528,9 +4389,8 @@ prompts:
     - Schneidbrett
     - Küchenbrett
   - locale: pl
-    label: Płyta tnąca
+    label: deska do krojenia
     aliases:
-    - deska do krojenia
     - deska przygotowawcza
   - locale: pt
     label: tábua de corte
@@ -4572,7 +4432,7 @@ prompts:
     - danse
     - ballet
   - locale: it
-    label: danzare
+    label: ballare
     aliases:
     - danza
     - discoteca
@@ -4584,15 +4444,13 @@ prompts:
     - disco
     - ballerina
   - locale: de
-    label: Tanz
+    label: Tanzen
     aliases:
-    - tanz
     - disco
     - ballerina
   - locale: pl
     label: taniec
     aliases:
-    - taniec
     - disco
     - balerina
   - locale: pt
@@ -4615,8 +4473,7 @@ prompts:
     - 芭蕾舞者
   - locale: ja
     label: ダンス
-    aliases:
-    - ダンス
+    aliases: []
   - locale: ko
     label: 댄스
     aliases:
@@ -4645,7 +4502,6 @@ prompts:
     aliases:
     - scrivania studio
     - tavolo
-    - workstation
   - locale: nl
     label: bureau
     aliases:
@@ -4704,7 +4560,6 @@ prompts:
     label: médico
     aliases:
     - doctor
-    - doc
     - cirujano
   - locale: fr
     label: médecin
@@ -4716,13 +4571,10 @@ prompts:
     label: medico
     aliases:
     - doc.
-    - medico
     - chirurgo
   - locale: nl
     label: arts
     aliases:
-    - doc
-    - arts
     - chirurg
   - locale: de
     label: Arzt
@@ -4733,24 +4585,18 @@ prompts:
   - locale: pl
     label: lekarz
     aliases:
-    - doc
     - medyk
-    - lekarz
     - chirurg
   - locale: pt
     label: médico
     aliases:
-    - doc
-    - médico
     - cirurgião
   - locale: zh-CN
     label: 医生
-    aliases:
-    - 医生
+    aliases: []
   - locale: zh-TW
     label: 醫生
-    aliases:
-    - 醫生
+    aliases: []
   - locale: ja
     label: 医者
     aliases:
@@ -4851,7 +4697,6 @@ prompts:
   - locale: it
     label: bambola
     aliases:
-    - action figure
     - pupazzo
   - locale: nl
     label: pop
@@ -4874,22 +4719,19 @@ prompts:
     - figura da ação
     - pessoa do brinquedo
   - locale: zh-CN
-    label: 洋娃娃
+    label: 娃娃
     aliases:
     - 玩偶
-    - 娃娃
     - 动作人偶
   - locale: zh-TW
-    label: 洋娃娃
+    label: 娃娃
     aliases:
     - 玩偶
-    - 娃娃
     - 動作人偶
   - locale: ja
     label: 人形
     aliases:
     - フィギュア
-    - ぬいぐるみ
   - locale: ko
     label: 인형
     aliases:
@@ -4913,22 +4755,18 @@ prompts:
   - locale: it
     label: delfino
     aliases:
-    - flipper
     - focena
   - locale: nl
     label: dolfijn
     aliases:
-    - flipper
     - bruinvis
   - locale: de
     label: Delfin
     aliases:
-    - Flipper
     - Schweinswal
   - locale: pl
-    label: delfina
+    label: delfin
     aliases:
-    - flipper
     - morświn
   - locale: pt
     label: golfinho
@@ -4958,7 +4796,6 @@ prompts:
     label: cúpula
     aliases:
     - domo
-    - bóveda
   - locale: fr
     label: dôme
     aliases:
@@ -4983,13 +4820,11 @@ prompts:
   - locale: pl
     label: Kopuła
     aliases:
-    - cupola
     - półkula
     - zakrzywiony dach
   - locale: pt
     label: Cúpula
     aliases:
-    - cúpula
     - hemisfério
     - telhado curvo
   - locale: zh-CN
@@ -5021,12 +4856,10 @@ prompts:
     label: puerta
     aliases:
     - entrada
-    - puerta
   - locale: fr
     label: porte
     aliases:
     - entrée
-    - porte
   - locale: it
     label: porta
     aliases:
@@ -5087,12 +4920,10 @@ prompts:
   - locale: fr
     label: dragon
     aliases:
-    - créature mythique
     - dinosaure volant
   - locale: it
     label: drago
     aliases:
-    - bestia mitica
     - sputafuoco
     - viverna
   - locale: nl
@@ -5109,27 +4940,22 @@ prompts:
   - locale: pl
     label: smok
     aliases:
-    - bestia mityczna
     - oddychający ogniem
-    - wyvern
   - locale: pt
     label: dragão
     aliases:
     - monstro mítico
     - respirador de fogo
-    - wyvern
   - locale: zh-CN
     label: 龙
     aliases:
     - 巨龙
     - 喷火龙
-    - 神兽
   - locale: zh-TW
     label: 龍
     aliases:
     - 巨龍
     - 噴火龍
-    - 神獸
   - locale: ja
     label: ドラゴン
     aliases:
@@ -5167,8 +4993,7 @@ prompts:
     - Insekt
   - locale: pl
     label: ważka
-    aliases:
-    - owad
+    aliases: []
   - locale: pt
     label: libélula
     aliases:
@@ -5183,7 +5008,7 @@ prompts:
     label: トンボ
     aliases: []
   - locale: ko
-    label: 드래곤플라이
+    label: 잠자리
     aliases:
     - 4개의 날개로 비행
 - id: dress
@@ -5202,15 +5027,13 @@ prompts:
     label: robe
     aliases:
     - froc
-    - robe
   - locale: it
     label: vestito
     aliases:
     - abito
   - locale: nl
     label: jurk
-    aliases:
-    - jurk
+    aliases: []
   - locale: de
     label: Kleid
     aliases:
@@ -5252,7 +5075,6 @@ prompts:
     aliases:
     - power drill
     - hole maker
-    - tool
   - locale: es
     label: taladro
     aliases:
@@ -5263,23 +5085,19 @@ prompts:
     aliases:
     - foreuse
     - vilebrequin
-    - outil
   - locale: it
     label: trapano
     aliases:
     - trapano elettrico
     - avvitatore
-    - attrezzo
   - locale: nl
     label: boormachine
     aliases:
     - boor
-    - gereedschap
   - locale: de
     label: Bohrer
     aliases:
     - Bohrmaschine
-    - Werkzeug
   - locale: pl
     label: wiertarka
     aliases:
@@ -5289,19 +5107,16 @@ prompts:
     aliases:
     - furadeira elétrica
     - parafusadeira
-    - ferramenta
   - locale: zh-CN
     label: 电钻
     aliases:
     - 钻头
     - 钻孔机
-    - 工具
   - locale: zh-TW
     label: 電鑽
     aliases:
     - 鑽頭
     - 鑽孔機
-    - 工具
   - locale: ja
     label: ドリル
     aliases:
@@ -5328,7 +5143,6 @@ prompts:
     label: tambour
     aliases:
     - batterie
-    - percussion
   - locale: it
     label: tamburo
     aliases:
@@ -5347,7 +5161,6 @@ prompts:
     label: Trommel
     aliases:
     - Schlagzeug
-    - Snare
     - Bongo
   - locale: pl
     label: bęben
@@ -5361,7 +5174,6 @@ prompts:
     aliases:
     - bateria
     - percussão
-    - bongo
     - caixa
   - locale: zh-CN
     label: 鼓
@@ -5418,7 +5230,6 @@ prompts:
     label: kaczka
     aliases:
     - kaczątko
-    - mallard
   - locale: pt
     label: pato
     aliases:
@@ -5426,12 +5237,10 @@ prompts:
     - marreco
   - locale: zh-CN
     label: 鸭子
-    aliases:
-    - 鸭子
+    aliases: []
   - locale: zh-TW
     label: 鴨子
-    aliases:
-    - 鴨子
+    aliases: []
   - locale: ja
     label: アヒル
     aliases:
@@ -5457,7 +5266,7 @@ prompts:
     - mare aux canards
     - petit lac
   - locale: it
-    label: stagno di anatra
+    label: laghetto delle anatre
     aliases:
     - acqua con anatre
     - piccolo lago
@@ -5489,7 +5298,7 @@ prompts:
     label: 鴨子池塘
     aliases: []
   - locale: ja
-    label: 鴨池
+    label: 池
     aliases:
     - 鴨と水
   - locale: ko
@@ -5520,7 +5329,7 @@ prompts:
     aliases:
     - gehoororgaan
   - locale: de
-    label: Ohren
+    label: Ohr
     aliases:
     - hörorgan
   - locale: pl
@@ -5818,7 +5627,6 @@ prompts:
   - locale: nl
     label: Elektriciteit
     aliases:
-    - vermogen
     - huidige
     - spanning
     - bliksem
@@ -5834,11 +5642,9 @@ prompts:
     - prąd
     - napięcie
     - błyskawica
-    - energia
   - locale: pt
     label: eletricidade
     aliases:
-    - energia
     - corrente
     - tensão
   - locale: zh-CN
@@ -5857,8 +5663,7 @@ prompts:
     - 閃電
   - locale: ja
     label: 電気
-    aliases:
-    - パワー
+    aliases: []
   - locale: ko
     label: 전기
     aliases:
@@ -5873,7 +5678,6 @@ prompts:
     aliases:
     - small creature
     - santa helper
-    - pixie
   - locale: es
     label: elfo
     aliases:
@@ -5886,7 +5690,6 @@ prompts:
     label: elfo
     aliases:
     - folletto
-    - creatura magica
     - aiutante di babbo natale
   - locale: nl
     label: elf
@@ -5898,7 +5701,6 @@ prompts:
     label: Elf
     aliases:
     - Elfe
-    - Kobold
     - Wichtel
   - locale: pl
     label: elf
@@ -5914,75 +5716,60 @@ prompts:
     label: 小精灵
     aliases:
     - 精灵
-    - 仙子
   - locale: zh-TW
     label: 小精靈
     aliases:
     - 精靈
-    - 仙子
   - locale: ja
     label: エルフ
     aliases:
-    - 妖精
     - 小人
   - locale: ko
     label: 엘프
-    aliases:
-    - 요정
+    aliases: []
 - id: energy
   translations:
   - locale: en
     label: Energy
     aliases:
-    - power
-    - force
     - vitality
     - fuel
   - locale: es
     label: energía
     aliases:
     - poder
-    - fuerza
     - vitalidad
   - locale: fr
     label: énergie
     aliases:
     - puissance
-    - force
     - vitalité
   - locale: it
     label: Energia
     aliases:
-    - potenza
-    - forza
     - vitalità
     - carburante
   - locale: nl
     label: Energie
     aliases:
     - vermogen
-    - kracht
     - vitaliteit
     - brandstof
   - locale: de
     label: Energie
     aliases:
-    - Kraft
-    - Strom
     - Leistung
     - Vitalität
   - locale: pl
     label: Energia
     aliases:
     - moc
-    - siła
     - witalność
     - paliwo
   - locale: pt
     label: Energia
     aliases:
     - potência
-    - força
     - vitalidade
     - combustível
   - locale: zh-CN
@@ -5999,8 +5786,7 @@ prompts:
     - 燃料
   - locale: ja
     label: エネルギー
-    aliases:
-    - パワー
+    aliases: []
   - locale: ko
     label: 에너지
     aliases:
@@ -6032,25 +5818,21 @@ prompts:
   - locale: nl
     label: motor
     aliases:
-    - motor
     - zuiger
     - machinedeel
   - locale: de
     label: Motor
     aliases:
-    - motor
     - kolben
     - maschinenteil
   - locale: pl
     label: silnik
     aliases:
-    - silnik
     - tłok
     - część maszyny
   - locale: pt
     label: motor
     aliases:
-    - motor
     - pistão
     - parte da máquina
   - locale: zh-CN
@@ -6098,7 +5880,6 @@ prompts:
     label: gum
     aliases:
     - correctiegereedschap
-    - rubber
   - locale: de
     label: Radiergummi
     aliases:
@@ -6112,7 +5893,6 @@ prompts:
     label: borracha
     aliases:
     - ferramenta de correção
-    - borracha
   - locale: zh-CN
     label: 橡皮擦
     aliases:
@@ -6182,13 +5962,12 @@ prompts:
     - 达尔文
     - 自然选择
   - locale: zh-TW
-    label: 進化
+    label: 演化
     aliases:
-    - 演化
     - 達爾文
     - 自然選擇
   - locale: ja
-    label: エボリューション
+    label: 進化
     aliases:
     - ダーウィン
   - locale: ko
@@ -6214,24 +5993,19 @@ prompts:
     label: excité
     aliases:
     - avide
-    - hype
     - ravi
   - locale: it
-    label: eccitato
+    label: emozionato
     aliases:
     - impaziente
-    - hype
-    - emozionato
   - locale: nl
     label: opgewonden
     aliases:
     - enthousiast
-    - hype
   - locale: de
     label: aufgeregt
     aliases:
     - eifrig
-    - Hype
     - begeistert
   - locale: pl
     label: podekscytowany
@@ -6331,7 +6105,6 @@ prompts:
     aliases:
     - sprite
     - pixie
-    - magical creature
   - locale: es
     label: hada
     aliases:
@@ -6344,13 +6117,10 @@ prompts:
     label: fata
     aliases:
     - fatina
-    - creatura magica
   - locale: nl
     label: fee
     aliases:
-    - sprite
     - elfje
-    - magisch wezen
   - locale: de
     label: Fee
     aliases:
@@ -6358,15 +6128,12 @@ prompts:
     - magisches Wesen
   - locale: pl
     label: wróżka
-    aliases:
-    - elf
-    - magiczne stworzenie
+    aliases: []
   - locale: pt
     label: fada
     aliases:
     - espírito
     - ninfa
-    - criatura mágica
   - locale: zh-CN
     label: 仙子
     aliases:
@@ -6426,7 +6193,6 @@ prompts:
   - locale: pl
     label: rolnik
     aliases:
-    - rolnik
     - kultywator
     - hodowla
   - locale: pt
@@ -6441,9 +6207,8 @@ prompts:
     - 农夫
     - 种植者
   - locale: zh-TW
-    label: 農民
+    label: 農夫
     aliases:
-    - 農夫
     - 種植者
   - locale: ja
     label: 農家
@@ -6489,7 +6254,6 @@ prompts:
     label: Angst
     aliases:
     - eng
-    - angst
     - fobie
     - terreur
     - horror
@@ -6559,21 +6323,18 @@ prompts:
     - caserma
   - locale: nl
     label: brandweerkazerne
-    aliases:
-    - brandweerkazerne
-    - station
+    aliases: []
   - locale: de
     label: Feuerwache
     aliases:
     - Feuerwehrhaus
     - Wache
   - locale: pl
-    label: straż pożarna
+    label: remiza
     aliases:
-    - remiza
     - stacja
   - locale: pt
-    label: Posto de bombeiros
+    label: quartel de bombeiros
     aliases:
     - corpo de bombeiros
     - estação
@@ -6603,20 +6364,16 @@ prompts:
     label: bombero
     aliases:
     - oficial de bomberos
-    - bombero
   - locale: fr
     label: pompier
-    aliases:
-    - pompier
+    aliases: []
   - locale: it
     label: pompiere
     aliases:
     - ufficiale del fuoco
-    - pompiere
   - locale: nl
     label: brandweerman
     aliases:
-    - brandweerman
     - brandweerman.
   - locale: de
     label: Feuerwehrmann
@@ -6627,12 +6384,10 @@ prompts:
     label: strażak
     aliases:
     - oficer straży pożarnej
-    - strażak
   - locale: pt
     label: bombeiro
     aliases:
     - oficial de fogo
-    - bombeiro
   - locale: zh-CN
     label: 消防员
     aliases:
@@ -6659,7 +6414,6 @@ prompts:
     label: pez
     aliases:
     - peces de oro
-    - guppy
   - locale: fr
     label: poisson
     aliases:
@@ -6681,15 +6435,12 @@ prompts:
     - Goldfisch
     - Guppy
   - locale: pl
-    label: ryby
-    aliases:
-    - goldfish
-    - guppy
+    label: ryba
+    aliases: []
   - locale: pt
-    label: peixes
+    label: peixe
     aliases:
     - peixe-dourado
-    - guppy
   - locale: zh-CN
     label: 鱼
     aliases:
@@ -6767,7 +6518,6 @@ prompts:
     label: flor
     aliases:
     - florescer
-    - flor
     - margarida
     - planta
     - rosa
@@ -6887,7 +6637,6 @@ prompts:
   - locale: nl
     label: mist
     aliases:
-    - mist
     - waas
     - wolk op de grond
   - locale: de
@@ -6898,7 +6647,6 @@ prompts:
   - locale: pl
     label: mgła
     aliases:
-    - mgła
     - chmura na ziemi
   - locale: pt
     label: nevoeiro
@@ -7018,27 +6766,22 @@ prompts:
     aliases:
     - fut
     - balompié
-    - soccer
   - locale: fr
     label: football
     aliases:
     - jeu de balle
-    - football
   - locale: it
     label: calcio
     aliases:
     - palla gioco
-    - calcio
   - locale: nl
     label: voetbal
     aliases:
     - balspel
-    - voetbal
   - locale: de
     label: Fußball
     aliases:
     - ball spiel
-    - fußball
   - locale: pl
     label: piłka nożna
     aliases:
@@ -7048,7 +6791,6 @@ prompts:
     label: futebol
     aliases:
     - jogo de bola
-    - futebol
   - locale: zh-CN
     label: 足球
     aliases:
@@ -7063,7 +6805,7 @@ prompts:
     - アメリカンフットボール
     - フットボール
   - locale: ko
-    label: 풋볼
+    label: 축구
     aliases:
     - 공 게임
 - id: fork
@@ -7082,7 +6824,6 @@ prompts:
     label: fourchette
     aliases:
     - couvert
-    - ustensile
   - locale: it
     label: forchetta
     aliases:
@@ -7145,13 +6886,11 @@ prompts:
     label: fontana
     aliases:
     - getto d'acqua
-    - spray
     - caratteristica dell'acqua
   - locale: nl
     label: fontein
     aliases:
     - waterstraal
-    - spray
     - waterfunctie
   - locale: de
     label: Springbrunnen
@@ -7162,7 +6901,6 @@ prompts:
     label: fontanna
     aliases:
     - strumień wody
-    - spray
     - oczko wodne
   - locale: pt
     label: fonte
@@ -7214,7 +6952,6 @@ prompts:
   - locale: nl
     label: Vrijheid
     aliases:
-    - vrijheid
     - onafhankelijk
     - geen kettingen
   - locale: de
@@ -7225,7 +6962,6 @@ prompts:
   - locale: pl
     label: Wolność
     aliases:
-    - wolność
     - niezależne
     - brak łańcuchów
   - locale: pt
@@ -7334,7 +7070,6 @@ prompts:
     aliases:
     - papas fritas
     - papas
-    - chips
   - locale: fr
     label: frites
     aliases:
@@ -7343,7 +7078,6 @@ prompts:
     label: patatine fritte
     aliases:
     - patatine
-    - chips
     - fritte
   - locale: nl
     label: frietjes
@@ -7407,7 +7141,7 @@ prompts:
     aliases:
     - vliegende schijf
   - locale: de
-    label: Frisbe
+    label: Frisbee
     aliases:
     - flugscheibe
   - locale: pl
@@ -7420,12 +7154,10 @@ prompts:
     - disco voador
   - locale: zh-CN
     label: 飞盘
-    aliases:
-    - 飞盘
+    aliases: []
   - locale: zh-TW
     label: 飛盤
-    aliases:
-    - 飛盤
+    aliases: []
   - locale: ja
     label: フリスビー
     aliases:
@@ -7585,16 +7317,14 @@ prompts:
     label: reus
     aliases:
     - groot persoon
-    - titan
     - kolossus
     - lang
     - enorm
   - locale: de
-    label: Riesen
+    label: Riese
     aliases:
     - große person
     - titan
-    - colossus
     - groß
     - enorm
   - locale: pl
@@ -7607,7 +7337,6 @@ prompts:
     label: gigante
     aliases:
     - pessoa enorme
-    - titan
     - colosso
     - alto
     - enorme
@@ -7656,9 +7385,8 @@ prompts:
     aliases:
     - Fäustlinge
   - locale: pl
-    label: rękawice
-    aliases:
-    - rękawiczki
+    label: rękawiczki
+    aliases: []
   - locale: pt
     label: luvas
     aliases:
@@ -7704,19 +7432,16 @@ prompts:
   - locale: nl
     label: lijm
     aliases:
-    - lijm
     - plakken
     - kleverige vloeistof
   - locale: de
     label: Kleber
     aliases:
     - Klebstoff
-    - Paste
     - klebrige Flüssigkeit
   - locale: pl
     label: klej
     aliases:
-    - klej
     - pasta
     - lepka ciecz
   - locale: pt
@@ -7772,11 +7497,9 @@ prompts:
     - orco
     - mostriciattolo
   - locale: nl
-    label: goblin
+    label: kobold
     aliases:
-    - orc
     - klein monster
-    - imp
     - gremlin
   - locale: de
     label: Kobold
@@ -7784,19 +7507,15 @@ prompts:
     - Goblin
     - Ork
     - Gremlin
-    - Wichtel
   - locale: pl
     label: goblin
     aliases:
     - mały potwór
-    - imp
     - gremlin
   - locale: pt
     label: goblin
     aliases:
-    - orc
     - duende
-    - monstro
   - locale: zh-CN
     label: 哥布林
     aliases:
@@ -7819,7 +7538,6 @@ prompts:
     label: 고블린
     aliases:
     - 오크
-    - 괴물
     - 도깨비
 - id: goldfish
   translations:
@@ -7839,7 +7557,7 @@ prompts:
     aliases:
     - carpe dorée
   - locale: it
-    label: pesci rossi
+    label: pesce rosso
     aliases:
     - pesce arancione
     - animale domestico pesce
@@ -7900,8 +7618,7 @@ prompts:
     - hoyo
   - locale: fr
     label: golf
-    aliases:
-    - putting
+    aliases: []
   - locale: it
     label: golf
     aliases:
@@ -7967,9 +7684,7 @@ prompts:
     label: mazza da golf
     aliases:
     - putter
-    - driver
     - ferro
-    - wedge
     - bastone da golf
   - locale: nl
     label: golfclub
@@ -8085,7 +7800,6 @@ prompts:
     aliases:
     - pesanteur
     - poids
-    - force
     - attraction
   - locale: it
     label: Gravità
@@ -8170,7 +7884,6 @@ prompts:
     aliases:
     - chitarra acustica
     - chitarra elettrica
-    - stringhe
   - locale: nl
     label: gitaar
     aliases:
@@ -8243,7 +7956,6 @@ prompts:
   - locale: nl
     label: kauwgom
     aliases:
-    - kauwgom
     - bubbergum
   - locale: de
     label: Kaugummi
@@ -8251,9 +7963,8 @@ prompts:
     - Kaugummiblase
     - Bubblegum
   - locale: pl
-    label: guma
-    aliases:
-    - guma do żucia
+    label: guma do żucia
+    aliases: []
   - locale: pt
     label: chiclete
     aliases:
@@ -8291,7 +8002,6 @@ prompts:
   - locale: fr
     label: ourson en gélatine
     aliases:
-    - bonbon
     - ourson
   - locale: it
     label: orsetto gommoso
@@ -8304,13 +8014,11 @@ prompts:
     aliases:
     - snoepbeer
     - geleibeer
-    - snack
   - locale: de
     label: Gummibär
     aliases:
     - Gummibärchen
     - Fruchtgummi
-    - Snack
   - locale: pl
     label: żelek
     aliases:
@@ -8322,7 +8030,6 @@ prompts:
     aliases:
     - urso doce
     - ursinho-de-mel
-    - snack
   - locale: zh-CN
     label: 小熊软糖
     aliases:
@@ -8484,18 +8191,15 @@ prompts:
     - mallet
     - sledgehammer
     - nail driver
-    - tool
   - locale: es
     label: martillo
     aliases:
     - mazo
-    - herramienta
   - locale: fr
     label: marteau
     aliases:
     - maillet
     - masse
-    - outil
   - locale: it
     label: martello
     aliases:
@@ -8507,37 +8211,31 @@ prompts:
     aliases:
     - voorhamer
     - klauwhamer
-    - gereedschap
   - locale: de
     label: Hammer
     aliases:
     - Holzhammer
     - Vorschlaghammer
-    - Werkzeug
   - locale: pl
     label: młotek
     aliases:
     - młot
-    - narzędzie
   - locale: pt
     label: martelo
     aliases:
     - marreta
-    - ferramenta
   - locale: zh-CN
     label: 锤子
     aliases:
     - 木槌
     - 大锤
     - 铁锤
-    - 工具
   - locale: zh-TW
-    label: 錘子
+    label: 鐵鎚
     aliases:
     - 木槌
     - 大錘
     - 鐵錘
-    - 工具
   - locale: ja
     label: ハンマー
     aliases:
@@ -8645,7 +8343,6 @@ prompts:
     aliases:
     - vingers
     - vuist
-    - palm
   - locale: de
     label: Hand
     aliases:
@@ -8711,7 +8408,6 @@ prompts:
     label: felice
     aliases:
     - allegro
-    - felice
     - gioia
     - sorridente
   - locale: nl
@@ -8768,7 +8464,6 @@ prompts:
     aliases:
     - 기쁨
     - 즐거움
-    - 웃음
 - id: harmonica
   translations:
   - locale: en
@@ -8781,14 +8476,14 @@ prompts:
   - locale: it
     label: armonica
   - locale: nl
-    label: harmonica
+    label: mondharmonica
   - locale: de
     label: Mundharmonika
     aliases: []
   - locale: pl
     label: harmonijka
   - locale: pt
-    label: harmónica
+    label: gaita
   - locale: zh-CN
     label: 口琴
   - locale: zh-TW
@@ -8888,37 +8583,27 @@ prompts:
     - hélio
   - locale: it
     label: elicottero
-    aliases:
-    - elicottero
-    - helo
+    aliases: []
   - locale: nl
     label: helikopter
-    aliases:
-    - helikopter
-    - helo
+    aliases: []
   - locale: de
     label: Hubschrauber
     aliases:
     - Helikopter
     - Heli
   - locale: pl
-    label: śmigłowiec
-    aliases:
-    - śmigłowiec
-    - helo
+    label: helikopter
+    aliases: []
   - locale: pt
     label: helicóptero
-    aliases:
-    - helicóptero
-    - helo
+    aliases: []
   - locale: zh-CN
     label: 直升机
-    aliases:
-    - 直升机
+    aliases: []
   - locale: zh-TW
     label: 直升機
-    aliases:
-    - 直升機
+    aliases: []
   - locale: ja
     label: ヘリコプター
     aliases:
@@ -8964,7 +8649,6 @@ prompts:
   - locale: pl
     label: Kask
     aliases:
-    - hard hat
     - ochrona głowy
     - wisor
   - locale: pt
@@ -9006,10 +8690,9 @@ prompts:
     aliases:
     - bâton de hockey
   - locale: it
-    label: Bastone di hockey
+    label: bastone da hockey
     aliases:
     - bastone da hockey su ghiaccio
-    - puck striker
   - locale: nl
     label: hockeystick
     aliases:
@@ -9023,7 +8706,6 @@ prompts:
     label: Kij hokejowy
     aliases:
     - kij hokejowy na lodzie
-    - puck striker
   - locale: pt
     label: taco de hóquei
     aliases:
@@ -9190,15 +8872,12 @@ prompts:
     - car horn
     - trumpet
   - locale: es
-    label: cuerno
+    label: bocina
     aliases:
-    - bocina
     - trompa
   - locale: fr
-    label: corne
-    aliases:
-    - klaxon
-    - trompe
+    label: klaxon
+    aliases: []
   - locale: it
     label: clacson
     aliases:
@@ -9206,7 +8885,7 @@ prompts:
     - corno
     - trombetta
   - locale: nl
-    label: hoorn
+    label: toeter
     aliases:
     - gewei
     - autohoorn
@@ -9218,7 +8897,7 @@ prompts:
     - Autohupe
     - Horn
   - locale: pl
-    label: róg
+    label: klakson
     aliases:
     - poroża
     - klakson samochodowy
@@ -9412,7 +9091,6 @@ prompts:
   - locale: it
     label: hotdog
     aliases:
-    - frankfurter
     - hot dog
     - salsiccia
   - locale: nl
@@ -9429,14 +9107,10 @@ prompts:
   - locale: pl
     label: hot dog
     aliases:
-    - frankfurter
-    - hot dog
     - kiełbasa
   - locale: pt
-    label: hotdog
+    label: cachorro-quente
     aliases:
-    - frankfurter
-    - cachorro-quente
     - salsicha
   - locale: zh-CN
     label: 热狗
@@ -9482,8 +9156,6 @@ prompts:
     label: casa
     aliases:
     - costruzione
-    - cottage
-    - casa
     - residenza
     - villa
   - locale: nl
@@ -9513,9 +9185,7 @@ prompts:
     aliases:
     - edifício
     - casa de campo
-    - casa
     - residência
-    - villa
   - locale: zh-CN
     label: 房子
     aliases:
@@ -9573,7 +9243,6 @@ prompts:
     - kegel
     - bevroren yoghurt
     - gelato
-    - sundae
   - locale: de
     label: Eiscreme
     aliases:
@@ -9588,12 +9257,10 @@ prompts:
     - gelato
     - deser lodowy
   - locale: pt
-    label: gelado
+    label: sorvete
     aliases:
     - casquinha
     - iogurte congelado
-    - gelato
-    - sundae
   - locale: zh-CN
     label: 冰淇淋
     aliases:
@@ -9692,7 +9359,7 @@ prompts:
     aliases:
     - boîte à surprise
   - locale: it
-    label: Jack nella scatola
+    label: scatola a sorpresa
     aliases:
     - scatola di sorpresa
   - locale: nl
@@ -9700,11 +9367,11 @@ prompts:
     aliases:
     - verrassingsdoos
   - locale: de
-    label: Jack in der Box
+    label: Schachtelteufel
     aliases:
     - überraschungsbox
   - locale: pl
-    label: Jack w pudełku
+    label: pajacyk w pudełku
     aliases:
     - pudełko niespodzianka
   - locale: pt
@@ -9723,7 +9390,7 @@ prompts:
     label: びっくり箱
     aliases: []
   - locale: ko
-    label: 상자에 잭
+    label: 깜짝 상자
     aliases:
     - 놀라운 상자
 - id: jellybean
@@ -9736,17 +9403,14 @@ prompts:
   - locale: es
     label: gominola
     aliases:
-    - gominolas
     - gomitas
   - locale: fr
     label: haricot gélifié
-    aliases:
-    - bonbon
+    aliases: []
   - locale: it
     label: jellybean
     aliases:
     - jelly bean
-    - candy bean
   - locale: nl
     label: jellybean
     aliases:
@@ -9878,7 +9542,6 @@ prompts:
     aliases:
     - szczęście
     - zachwyt
-    - glee
   - locale: pt
     label: Alegria
     aliases:
@@ -9926,7 +9589,6 @@ prompts:
     aliases:
     - salti
     - rimbalzo
-    - hopping
   - locale: nl
     label: springen
     aliases:
@@ -9939,11 +9601,9 @@ prompts:
     - Hüpfen
     - Sprung
   - locale: pl
-    label: skoki
+    label: skakanie
     aliases:
-    - skoki
     - odbicie
-    - skakanie
   - locale: pt
     label: pulando
     aliases:
@@ -9951,12 +9611,12 @@ prompts:
     - pular
     - saltar
   - locale: zh-CN
-    label: 跳跃
+    label: 跳
     aliases:
     - 蹦跳
     - 跃起
   - locale: zh-TW
-    label: 跳躍
+    label: 跳
     aliases:
     - 蹦跳
     - 躍起
@@ -9999,7 +9659,7 @@ prompts:
     - legge
     - bilancia
   - locale: nl
-    label: Justitie
+    label: rechtvaardigheid
     aliases:
     - eerlijkheid
     - rechter
@@ -10015,14 +9675,12 @@ prompts:
   - locale: pl
     label: Sprawiedliwość
     aliases:
-    - sprawiedliwość
     - sędzia
     - prawo
     - wagi
   - locale: pt
     label: Justiça
     aliases:
-    - justiça
     - juiz
     - lei
     - escalas
@@ -10041,7 +9699,7 @@ prompts:
     - 法律
     - 天平
   - locale: ja
-    label: ジャスティス
+    label: 正義
     aliases:
     - フェアネス
   - locale: ko
@@ -10187,7 +9845,6 @@ prompts:
     - lame
     - poignard
     - couvert
-    - ustensile
   - locale: it
     label: coltello
     aliases:
@@ -10270,7 +9927,6 @@ prompts:
     label: lieveheersbeestje
     aliases:
     - kever
-    - lieveheersbeestje
     - rood insect met stippen
   - locale: de
     label: Marienkäfer
@@ -10282,13 +9938,11 @@ prompts:
     label: biedronka
     aliases:
     - żuk
-    - biedronka
     - czerwony owad z kropkami
   - locale: pt
     label: joaninha
     aliases:
     - besouro
-    - joaninha
     - insecto vermelho com pontos
   - locale: zh-CN
     label: 瓢虫
@@ -10422,13 +10076,10 @@ prompts:
     aliases:
     - grinniken
     - giechelen
-    - ha-ha
-    - amusement
   - locale: de
     label: Lachen
     aliases:
     - Kichern
-    - Ha-ha
     - Amüsement
   - locale: pl
     label: śmiech
@@ -10439,8 +10090,6 @@ prompts:
   - locale: pt
     label: Rindo
     aliases:
-    - rindo
-    - ha-ha
     - diversão
   - locale: zh-CN
     label: 大笑
@@ -10624,12 +10273,10 @@ prompts:
   - locale: nl
     label: Sla
     aliases:
-    - sla
     - bladgroen
   - locale: de
     label: Salat
     aliases:
-    - salat
     - blattgrün
   - locale: pl
     label: sałata
@@ -10739,7 +10386,6 @@ prompts:
   - locale: it
     label: faro
     aliases:
-    - beacon
     - torre costiera
     - luce del mare
   - locale: nl
@@ -10763,7 +10409,6 @@ prompts:
   - locale: pt
     label: farol
     aliases:
-    - farol
     - torre costeira
     - luz do mar
   - locale: zh-CN
@@ -10775,7 +10420,7 @@ prompts:
     aliases:
     - 航標
   - locale: ja
-    label: ライトハウス
+    label: 灯台
     aliases:
     - ビーコン
   - locale: ko
@@ -10818,7 +10463,6 @@ prompts:
   - locale: pl
     label: piorun
     aliases:
-    - piorun
     - iskra elektryczna
     - światła burzowe
   - locale: pt
@@ -10938,7 +10582,6 @@ prompts:
   - locale: nl
     label: lolly
     aliases:
-    - zuurstok
     - snoepje
   - locale: de
     label: Lutscher
@@ -10967,7 +10610,7 @@ prompts:
     - ペロペロキャンディ
     - 棒付きキャンディ
   - locale: ko
-    label: 롤리팝
+    label: 막대사탕
     aliases:
     - 막대 사탕
 - id: love
@@ -11145,12 +10788,10 @@ prompts:
     label: Maracas
     aliases:
     - shaker
-    - schlagzeug
   - locale: pl
-    label: marakas
+    label: marakasy
     aliases:
     - shakery
-    - perkusja
   - locale: pt
     label: maracas
     aliases:
@@ -11316,7 +10957,6 @@ prompts:
     aliases:
     - kruid
     - pepermunt
-    - spearmint
     - menthol
   - locale: de
     label: Minze
@@ -11329,7 +10969,6 @@ prompts:
     aliases:
     - zioła
     - mięta pieprzowa
-    - mięta
     - mentol
   - locale: pt
     label: hortelã
@@ -11391,7 +11030,7 @@ prompts:
     - Handspiegel
     - Rückspiegel
   - locale: pl
-    label: lusterko
+    label: lustro
     aliases:
     - szkło odbijające
     - szkło
@@ -11445,12 +11084,12 @@ prompts:
     - atoomgroep
     - chemische binding
   - locale: de
-    label: Moleküle
+    label: Molekül
     aliases:
     - atomgruppe
     - chemische bindung
   - locale: pl
-    label: Molekuł
+    label: cząsteczka
     aliases:
     - grupa atomowa
     - wiązanie chemiczne
@@ -11486,8 +11125,7 @@ prompts:
     - night
   - locale: es
     label: luna
-    aliases:
-    - satélite
+    aliases: []
   - locale: fr
     label: lune
     aliases:
@@ -11503,14 +11141,12 @@ prompts:
     label: maan
     aliases:
     - halve maan
-    - maan
     - maanster
     - nacht
   - locale: de
     label: Mond
     aliases:
     - halbmond
-    - lunar
     - mondstern
     - nacht
   - locale: pl
@@ -11524,7 +11160,6 @@ prompts:
     label: lua
     aliases:
     - crescente
-    - lunar
     - estrela lunar
     - noite
   - locale: zh-CN
@@ -11557,7 +11192,6 @@ prompts:
     label: mosquito
     aliases:
     - pest
-    - stinger
   - locale: es
     label: mosquito
     aliases:
@@ -11569,8 +11203,7 @@ prompts:
     - insecte piqueur
   - locale: it
     label: zanzara
-    aliases:
-    - pungiglione
+    aliases: []
   - locale: nl
     label: mug
     aliases:
@@ -11585,7 +11218,6 @@ prompts:
     label: komar
     aliases:
     - szkodniki
-    - żądło
   - locale: pt
     label: mosquito
     aliases:
@@ -11631,7 +11263,6 @@ prompts:
   - locale: nl
     label: motorfiets
     aliases:
-    - fiets
     - chopper
     - motor
   - locale: de
@@ -11709,7 +11340,7 @@ prompts:
     - Bergkette
     - Gipfel
   - locale: pl
-    label: góry
+    label: góra
     aliases:
     - wzgórze
     - pasmo górskie
@@ -11768,7 +11399,6 @@ prompts:
     label: topo
     aliases:
     - roditore
-    - mouse
   - locale: nl
     label: muis
     aliases:
@@ -11786,12 +11416,10 @@ prompts:
     aliases:
     - gryzoń
     - mysz komputerowa
-    - squeaker
   - locale: pt
     label: rato
     aliases:
     - roedor
-    - mouse
   - locale: zh-CN
     label: 老鼠
     aliases:
@@ -11818,19 +11446,16 @@ prompts:
     label: mouth
     aliases:
     - lips
-    - teeth
     - tongue
   - locale: es
     label: boca
     aliases:
     - labios
-    - dientes
     - lengua
   - locale: fr
     label: bouche
     aliases:
     - lèvres
-    - dents
     - langue
   - locale: it
     label: bocca
@@ -11839,39 +11464,33 @@ prompts:
     label: mond
     aliases:
     - lippen
-    - tanden
     - tong
   - locale: de
     label: Mund
     aliases:
     - lippen
-    - zähne
     - zunge
   - locale: pl
     label: usta
     aliases:
     - wargi
-    - zęby
     - język
   - locale: pt
     label: boca
     aliases:
     - lábios
-    - dentes
     - língua
   - locale: zh-CN
     label: 嘴巴
     aliases:
     - 嘴
     - 嘴唇
-    - 牙齿
     - 舌头
   - locale: zh-TW
     label: 嘴巴
     aliases:
     - 嘴
     - 嘴唇
-    - 牙齒
     - 舌頭
   - locale: ja
     label: 口
@@ -11888,9 +11507,8 @@ prompts:
     aliases:
     - Wolfgang Amadeus Mozart
   - locale: es
-    label: Wolfgang Amadeus Mozart
-    aliases:
-    - Mozart
+    label: Mozart
+    aliases: []
   - locale: fr
     label: Wolfgang Amadeus Mozart
     aliases:
@@ -12028,13 +11646,10 @@ prompts:
   - locale: it
     label: fungo
     aliases:
-    - toadstool
-    - fungo
     - spore
   - locale: nl
-    label: paddestoel
+    label: paddenstoel
     aliases:
-    - paddenstoel
     - schimmel
     - sporen
   - locale: de
@@ -12043,10 +11658,9 @@ prompts:
     - Fliegenpilz
     - Sporen
   - locale: pl
-    label: grzyby
+    label: grzyb
     aliases:
     - toadstol
-    - grzyby
     - zarodniki
   - locale: pt
     label: cogumelo
@@ -12153,9 +11767,8 @@ prompts:
     - French Emperor
     - general
   - locale: es
-    label: Napoleón Bonaparte
+    label: Napoleón
     aliases:
-    - Napoleón
     - emperador francés
   - locale: fr
     label: Napoléon Bonaparte
@@ -12341,7 +11954,7 @@ prompts:
     - 記事本
     - 日記本
   - locale: ja
-    label: ノートブック
+    label: ノート
     aliases:
     - ジャーナル
   - locale: ko
@@ -12433,10 +12046,9 @@ prompts:
     - anello
     - lacrime
   - locale: nl
-    label: uien
+    label: ui
     aliases:
     - bolgewassen
-    - ring
     - tranen
   - locale: de
     label: Zwiebel
@@ -12490,7 +12102,7 @@ prompts:
     - agrume
     - couleur orange
   - locale: it
-    label: arancione
+    label: arancia
     aliases:
     - agrumi
     - colore arancione
@@ -12502,7 +12114,6 @@ prompts:
   - locale: de
     label: Orange
     aliases:
-    - citrus
     - farbe orange
   - locale: pl
     label: pomarańcza
@@ -12555,7 +12166,6 @@ prompts:
     label: padella
     aliases:
     - tegame
-    - pentola
   - locale: nl
     label: pan
     aliases:
@@ -12565,15 +12175,13 @@ prompts:
     label: Pfanne
     aliases:
     - Bratpfanne
-    - Kochtopf
     - Kochutensil
   - locale: pl
     label: patelnia
     aliases: []
   - locale: pt
-    label: panela
-    aliases:
-    - frigideira
+    label: frigideira
+    aliases: []
   - locale: zh-CN
     label: 平底锅
     aliases:
@@ -12586,8 +12194,7 @@ prompts:
     - 鍋
   - locale: ja
     label: フライパン
-    aliases:
-    - 鍋
+    aliases: []
   - locale: ko
     label: 팬
     aliases:
@@ -12613,10 +12220,9 @@ prompts:
     - jardin
     - espace vert
   - locale: it
-    label: parco giochi
+    label: parco
     aliases:
     - giardino
-    - parco giochi
     - parco pubblico
     - spazio verde
   - locale: nl
@@ -12698,7 +12304,7 @@ prompts:
     - pratende vogel
     - tropische vogel
   - locale: de
-    label: Papageien
+    label: Papagei
     aliases:
     - macau
     - sprechender vogel
@@ -12706,7 +12312,6 @@ prompts:
   - locale: pl
     label: papuga
     aliases:
-    - macaw
     - gadający ptak
     - tropikalny ptak
   - locale: pt
@@ -12838,8 +12443,7 @@ prompts:
     - owoce gruszki
   - locale: pt
     label: pera
-    aliases:
-    - pêra
+    aliases: []
   - locale: zh-CN
     label: 梨
     aliases:
@@ -13057,7 +12661,6 @@ prompts:
   - locale: es
     label: piano
     aliases:
-    - piano
     - teclado
     - piano derecho
   - locale: fr
@@ -13069,7 +12672,6 @@ prompts:
   - locale: it
     label: pianoforte
     aliases:
-    - pianoforte
     - tastiera
     - pianoforte verticale
   - locale: nl
@@ -13081,10 +12683,9 @@ prompts:
   - locale: de
     label: Klavier
     aliases:
-    - klavier
     - tastatur
   - locale: pl
-    label: fortepian
+    label: pianino
     aliases:
     - fortepian grand
     - klawiatura
@@ -13123,9 +12724,8 @@ prompts:
     aliases:
     - Pablo Picasso
   - locale: es
-    label: Pablo Picasso
-    aliases:
-    - Picasso
+    label: Picasso
+    aliases: []
   - locale: fr
     label: Pablo Picasso
     aliases:
@@ -13190,7 +12790,6 @@ prompts:
     label: picknickmand
     aliases:
     - levensmiddelenmand
-    - picknickmand
   - locale: de
     label: Picknickkorb
     aliases:
@@ -13245,7 +12844,6 @@ prompts:
   - locale: it
     label: maiale
     aliases:
-    - hog
     - porcellino
     - maialino
   - locale: nl
@@ -13261,7 +12859,6 @@ prompts:
   - locale: pl
     label: świnia
     aliases:
-    - świnia
     - świnka
     - prosięta
     - świń
@@ -13370,20 +12967,16 @@ prompts:
     - les ananas
   - locale: it
     label: ananas
-    aliases:
-    - ananas
+    aliases: []
   - locale: nl
     label: ananas
-    aliases:
-    - ananas
+    aliases: []
   - locale: de
     label: Ananas
-    aliases:
-    - ananas
+    aliases: []
   - locale: pl
     label: ananas
-    aliases:
-    - ananas
+    aliases: []
   - locale: pt
     label: abacaxi
     aliases:
@@ -13413,7 +13006,6 @@ prompts:
   - locale: es
     label: pizza
     aliases:
-    - dough
     - pizza de pepperoni
   - locale: fr
     label: pizza
@@ -13481,7 +13073,6 @@ prompts:
   - locale: fr
     label: avion
     aliases:
-    - avion
     - aéronefs
     - jet
   - locale: it
@@ -13489,7 +13080,6 @@ prompts:
     aliases:
     - aeroplano
     - aeromobili
-    - aereo
     - jet
   - locale: nl
     label: vliegtuig
@@ -13505,9 +13095,7 @@ prompts:
   - locale: pl
     label: samolot
     aliases:
-    - samolot
     - statki powietrzne
-    - jet
   - locale: pt
     label: avião
     aliases:
@@ -13565,13 +13153,11 @@ prompts:
   - locale: de
     label: Teller
     aliases:
-    - Gericht
     - Platte
     - Untertasse
   - locale: pl
     label: talerz
     aliases:
-    - naczynie
     - półmisek
     - spodek
   - locale: pt
@@ -13596,8 +13182,7 @@ prompts:
     - プレート
   - locale: ko
     label: 접시
-    aliases:
-    - 그릇
+    aliases: []
 - id: pliers
   translations:
   - locale: en
@@ -13664,7 +13249,6 @@ prompts:
     - cop
     - lawman
     - police
-    - police officer
   - locale: es
     label: policía
     aliases:
@@ -13688,7 +13272,6 @@ prompts:
     - agent
     - wetsdienaar
     - politie
-    - politieagent
   - locale: de
     label: Polizist
     aliases:
@@ -13705,7 +13288,6 @@ prompts:
     aliases:
     - polícia
     - homem da lei
-    - policial
   - locale: zh-CN
     label: 警察
     aliases:
@@ -13740,9 +13322,8 @@ prompts:
     - cacerola
     - marmita
   - locale: fr
-    label: pot
+    label: casserole
     aliases:
-    - casserole
     - marmite
   - locale: it
     label: pentola
@@ -13750,7 +13331,7 @@ prompts:
     - casseruola
     - pentola di cottura
   - locale: nl
-    label: pot
+    label: kookpan
     aliases:
     - sauspan
     - kookpot
@@ -13766,7 +13347,6 @@ prompts:
     aliases:
     - rondel
     - garnek do gotowania
-    - naczynie
   - locale: pt
     label: panela
     aliases:
@@ -13779,7 +13359,7 @@ prompts:
     - 汤锅
     - 煮锅
   - locale: zh-TW
-    label: 鍋
+    label: 鍋子
     aliases:
     - 湯鍋
     - 煮鍋
@@ -13869,12 +13449,10 @@ prompts:
     - puzzle
   - locale: fr
     label: puzzle
-    aliases:
-    - jigsaw
+    aliases: []
   - locale: it
     label: puzzle
-    aliases:
-    - jigsaw
+    aliases: []
   - locale: nl
     label: puzzel
     aliases:
@@ -13986,7 +13564,6 @@ prompts:
   - locale: fr
     label: lapin
     aliases:
-    - lapin
     - lièvre
   - locale: it
     label: coniglio
@@ -14005,12 +13582,10 @@ prompts:
   - locale: pl
     label: królik
     aliases:
-    - królik
     - zając
   - locale: pt
     label: coelho
     aliases:
-    - coelho
     - lebre
   - locale: zh-CN
     label: 兔子
@@ -14041,7 +13616,6 @@ prompts:
     - rainfall
     - shower
     - showers
-    - storm
   - locale: es
     label: lluvia
     aliases:
@@ -14056,10 +13630,8 @@ prompts:
     label: pioggia
     aliases:
     - gocce
-    - pioggia
     - doccia
     - docce
-    - tempesta
   - locale: nl
     label: regen
     aliases:
@@ -14067,16 +13639,13 @@ prompts:
     - neerslag
     - douche
     - douches
-    - storm
   - locale: de
     label: Regen
     aliases:
     - tröpfchen
     - niederschlag
-    - regen
     - dusche
     - duschen
-    - sturm
   - locale: pl
     label: deszcz
     aliases:
@@ -14085,12 +13654,10 @@ prompts:
     - opady deszczu
     - prysznic
     - prysznice
-    - burza
   - locale: pt
     label: chuva
     aliases:
     - gotas
-    - tempestade
     - garoa
   - locale: zh-CN
     label: 雨
@@ -14109,7 +13676,6 @@ prompts:
     aliases:
     - にわか雨
     - 降雨
-    - 嵐
   - locale: ko
     label: 비
     aliases:
@@ -14222,7 +13788,6 @@ prompts:
     label: czytanie
     aliases:
     - studiowanie
-    - perusing
     - bukmacher
   - locale: pt
     label: leitura
@@ -14231,15 +13796,15 @@ prompts:
     - percussão
     - verme de biblioteca
   - locale: zh-CN
-    label: 读取
+    label: 阅读
     aliases:
     - 学习
   - locale: zh-TW
-    label: 讀取
+    label: 閱讀
     aliases:
     - 學習
   - locale: ja
-    label: インフォメーション
+    label: 読書
     aliases:
     - トレーニング
   - locale: ko
@@ -14272,14 +13837,12 @@ prompts:
     aliases:
     - bistrot
     - caffè
-    - diner
     - cibo
   - locale: nl
     label: restaurant
     aliases:
     - bistro
     - cafe
-    - diner
     - eetgelegenheid
   - locale: de
     label: Restaurant
@@ -14320,7 +13883,6 @@ prompts:
     label: 식당
     aliases:
     - 레스토랑
-    - 식당
     - 카페
 - id: river
   translations:
@@ -14364,7 +13926,6 @@ prompts:
   - locale: pl
     label: rzeka
     aliases:
-    - brook
     - strumień
     - szlak wodny
   - locale: pt
@@ -14375,15 +13936,13 @@ prompts:
     - fluxo
     - via navegável
   - locale: zh-CN
-    label: 河流
+    label: 河
     aliases:
-    - 河
     - 小溪
     - 水道
   - locale: zh-TW
-    label: 河流
+    label: 河
     aliases:
-    - 河
     - 小溪
     - 水道
   - locale: ja
@@ -14416,13 +13975,10 @@ prompts:
     - bot
   - locale: it
     label: robot
-    aliases:
-    - automaton
-    - bot
+    aliases: []
   - locale: nl
     label: robot
     aliases:
-    - automaton
     - bot
   - locale: de
     label: Roboter
@@ -14433,7 +13989,6 @@ prompts:
   - locale: pl
     label: robot
     aliases:
-    - automaton
     - bot
   - locale: pt
     label: robô
@@ -14468,14 +14023,13 @@ prompts:
     label: cubo de Rubik
     aliases:
     - cubo mágico
-    - rompecabezas
   - locale: fr
     label: rubik's cube
     aliases:
     - cube magique
     - cube de puzzle
   - locale: it
-    label: Il cubo di Rubik
+    label: cubo di Rubik
     aliases:
     - cubo magico
     - puzzle cubo
@@ -14485,9 +14039,8 @@ prompts:
     - magische kubus
     - puzzelkubus
   - locale: de
-    label: Rubik's cube
+    label: Zauberwürfel
     aliases:
-    - zauberwürfel
     - puzzle würfel
   - locale: pl
     label: kostka Rubika
@@ -14506,7 +14059,7 @@ prompts:
     aliases:
     - 魔方
   - locale: ja
-    label: Rubikのキューブ
+    label: ルービックキューブ
     aliases:
     - 魔法のキューブ
   - locale: ko
@@ -14683,7 +14236,6 @@ prompts:
     aliases:
     - huilen
     - omlaag
-    - verdrietig
     - ongelukkig
   - locale: de
     label: traurig
@@ -14704,7 +14256,6 @@ prompts:
     aliases:
     - chorando
     - para baixo
-    - triste
     - infeliz
   - locale: zh-CN
     label: 伤心
@@ -14749,7 +14300,6 @@ prompts:
     label: panino
     aliases:
     - club sandwich
-    - sub
   - locale: nl
     label: broodje
     aliases:
@@ -14764,12 +14314,10 @@ prompts:
     label: kanapka
     aliases:
     - kanapka klubowa
-    - sub
   - locale: pt
     label: sanduíche
     aliases:
     - sanduíche clube
-    - sub
   - locale: zh-CN
     label: 三明治
     aliases:
@@ -14805,7 +14353,7 @@ prompts:
     - sonde spatiale
     - orbiteur
   - locale: it
-    label: satellite satellitare
+    label: satellite
     aliases:
     - sonda spaziale
     - orbitante
@@ -14814,18 +14362,15 @@ prompts:
     label: satelliet
     aliases:
     - ruimtesonde
-    - orbiter
     - antenne in de ruimte
   - locale: de
     label: Satellit
     aliases:
     - Raumsonde
-    - Orbiter
   - locale: pl
     label: satelita
     aliases:
     - sonda kosmiczna
-    - orbiter
     - antena w przestrzeni
   - locale: pt
     label: satélite
@@ -14861,12 +14406,10 @@ prompts:
     - handsaw
     - blade
     - wood cutter
-    - tool
   - locale: es
     label: sierra
     aliases:
     - serrucho
-    - herramienta
   - locale: fr
     label: scie
     aliases:
@@ -14878,7 +14421,6 @@ prompts:
     - seghetto
     - sega a mano
     - lama
-    - attrezzo
   - locale: nl
     label: zaag
     aliases:
@@ -14890,18 +14432,15 @@ prompts:
     - Handsäge
     - Sägeblatt
     - Holzschneider
-    - Werkzeug
   - locale: pl
     label: piła
     aliases:
     - piła ręczna
     - brzeszczot
-    - narzędzie
   - locale: pt
     label: serrote
     aliases:
     - serra
-    - ferramenta
   - locale: zh-CN
     label: 锯子
     aliases:
@@ -14936,7 +14475,6 @@ prompts:
     aliases:
     - miedo
     - temeroso
-    - asustado
     - terrificado
   - locale: fr
     label: effrayé
@@ -14949,12 +14487,10 @@ prompts:
     aliases:
     - paura
     - temuto
-    - spaventato
     - terrorizzato
   - locale: nl
     label: bang
     aliases:
-    - bang
     - angstig
     - doodsbang
   - locale: de
@@ -14968,13 +14504,11 @@ prompts:
     aliases:
     - strach
     - bojaźliwy
-    - przestraszony
     - przerażony
   - locale: pt
     label: assustado
     aliases:
     - medo
-    - assustado
     - aterrorizado
   - locale: zh-CN
     label: 害怕
@@ -15016,7 +14550,6 @@ prompts:
   - locale: it
     label: Sciarpa
     aliases:
-    - muffler
     - avvolgere
   - locale: nl
     label: sjaal
@@ -15077,13 +14610,11 @@ prompts:
     label: scuola
     aliases:
     - accademia
-    - college
     - università
   - locale: nl
     label: school
     aliases:
     - academie
-    - college
     - universiteit
   - locale: de
     label: Schule
@@ -15208,7 +14739,6 @@ prompts:
     label: schroevendraaier
     aliases:
     - kruiskop
-    - gereedschap
   - locale: de
     label: Schraubendreher
     aliases:
@@ -15219,7 +14749,6 @@ prompts:
     label: śrubokręt
     aliases:
     - wkrętak
-    - narzędzie
   - locale: pt
     label: chave de fenda
     aliases:
@@ -15241,9 +14770,8 @@ prompts:
     - ねじ回し
     - プラスドライバー
   - locale: ko
-    label: 스크류 드라이버
+    label: 드라이버
     aliases:
-    - 드라이버
     - 십자 드라이버
 - id: seahorse
   translations:
@@ -15271,11 +14799,11 @@ prompts:
     aliases:
     - Seepferd
   - locale: pl
-    label: koń morski
+    label: konik morski
     aliases:
     - kucyk morski
   - locale: pt
-    label: Cavalo marinho
+    label: cavalo-marinho
     aliases:
     - pônei marinho
   - locale: zh-CN
@@ -15363,7 +14891,6 @@ prompts:
   - locale: it
     label: cintura di sicurezza
     aliases:
-    - cintura di sicurezza
     - fibbia
     - cinghia auto
   - locale: nl
@@ -15374,7 +14901,6 @@ prompts:
   - locale: de
     label: Sicherheitsgurt
     aliases:
-    - sicherheitsgurt
     - schnallen
     - autoriemen
   - locale: pl
@@ -15385,7 +14911,6 @@ prompts:
   - locale: pt
     label: cinto de segurança
     aliases:
-    - cinto de segurança
     - fivela de fecho
     - precinta do carro
   - locale: zh-CN
@@ -15411,9 +14936,8 @@ prompts:
     aliases:
     - William Shakespeare
   - locale: es
-    label: William Shakespeare
-    aliases:
-    - Shakespeare
+    label: Shakespeare
+    aliases: []
   - locale: fr
     label: William Shakespeare
     aliases:
@@ -15461,7 +14985,6 @@ prompts:
     aliases:
     - hair soap
     - hair wash
-    - cleanser
   - locale: es
     label: champú
     aliases:
@@ -15481,18 +15004,15 @@ prompts:
     aliases:
     - haarzeep
     - haar wassen
-    - reiniger
   - locale: de
     label: Shampoo
     aliases:
     - Haarwäsche
-    - Reiniger
   - locale: pl
     label: szampon
     aliases:
     - mydło do włosów
     - mycie włosów
-    - środek czyszczący
   - locale: pt
     label: shampoo
     aliases:
@@ -15543,7 +15063,7 @@ prompts:
     - agnello
     - montone
   - locale: nl
-    label: Schapen
+    label: schaap
     aliases:
     - ooi
     - lam
@@ -15566,15 +15086,13 @@ prompts:
     - carneiro
     - cordeiro
   - locale: zh-CN
-    label: 绵羊
+    label: 羊
     aliases:
-    - 羊
     - 羔羊
     - 公羊
   - locale: zh-TW
-    label: 綿羊
+    label: 羊
     aliases:
-    - 羊
     - 羔羊
     - 公羊
   - locale: ja
@@ -15625,16 +15143,14 @@ prompts:
     - T-Shirt
     - Oberteil
   - locale: pl
-    label: koszulka
+    label: koszula
     aliases:
     - bluzka
     - t-shirt
-    - koszula
   - locale: pt
     label: camisa
     aliases:
     - blusa
-    - t-shirt
     - topo
   - locale: zh-CN
     label: 衬衫
@@ -15675,14 +15191,12 @@ prompts:
     label: chaussures
     aliases:
     - bottes
-    - chaussures
     - baskets
   - locale: it
     label: scarpe
     aliases:
     - stivali
     - calzature
-    - sneakers
   - locale: nl
     label: schoenen
     aliases:
@@ -15693,15 +15207,13 @@ prompts:
     label: Schuhe
     aliases:
     - stiefeletten
-    - schuhe
   - locale: pl
     label: buty
     aliases:
-    - buty
     - obuwie
     - trampki
   - locale: pt
-    label: calçados
+    label: sapatos
     aliases:
     - botas
     - calçado
@@ -15719,7 +15231,7 @@ prompts:
     - 靴子
     - 運動鞋
   - locale: ja
-    label: シューズ
+    label: 靴
     aliases:
     - ブーツ
   - locale: ko
@@ -15767,7 +15279,6 @@ prompts:
     aliases:
     - natrysk
     - kabina prysznicowa
-    - kąpiel
   - locale: pt
     label: chuveiro
     aliases:
@@ -15805,31 +15316,26 @@ prompts:
   - locale: fr
     label: crevette
     aliases:
-    - crevette
     - petits mollusques
   - locale: it
-    label: gamberetti
+    label: gamberetto
     aliases:
     - piccoli crostacei
   - locale: nl
-    label: garnalen
+    label: garnaal
     aliases:
-    - garnalen
     - kleine schelpdieren
   - locale: de
-    label: Garnelen
+    label: Garnele
     aliases:
-    - garnelen
     - kleine schalentiere
   - locale: pl
-    label: krewetki
+    label: krewetka
     aliases:
-    - krewetka
     - małe skorupiaki
   - locale: pt
     label: camarão
     aliases:
-    - camarão
     - marisco pequeno
   - locale: zh-CN
     label: 虾
@@ -15869,7 +15375,7 @@ prompts:
     - chant
     - vocalise
   - locale: it
-    label: canto
+    label: cantare
     aliases:
     - voce
     - coro
@@ -15962,11 +15468,9 @@ prompts:
     - Spülbecken
     - Wasserhahn
   - locale: pl
-    label: zlew
+    label: umywalka
     aliases:
-    - umywalka
     - kran
-    - tap
   - locale: pt
     label: pia
     aliases:
@@ -16123,17 +15627,14 @@ prompts:
   - locale: es
     label: esquí
     aliases:
-    - esquí
     - deportes de nieve
   - locale: fr
     label: ski
     aliases:
-    - ski
     - sports de neige
   - locale: it
     label: sci
     aliases:
-    - sci
     - sport neve
   - locale: nl
     label: skiën
@@ -16146,9 +15647,8 @@ prompts:
     - ski
     - schneesport
   - locale: pl
-    label: narty
+    label: narciarstwo
     aliases:
-    - narty
     - sporty śnieżne
   - locale: pt
     label: esquiar
@@ -16157,8 +15657,7 @@ prompts:
     - desportos de neve
   - locale: zh-CN
     label: 滑雪
-    aliases:
-    - 滑雪
+    aliases: []
   - locale: zh-TW
     label: 滑雪
     aliases:
@@ -16233,45 +15732,37 @@ prompts:
     aliases:
     - tall building
     - high-rise
-    - tower
   - locale: es
     label: rascacielos
     aliases:
     - edificio alto
-    - torre
   - locale: fr
     label: gratte-ciel
     aliases:
     - grand immeuble
-    - tour
   - locale: it
     label: Grattacielo
     aliases:
     - edificio alto
-    - torre
     - palazzo
   - locale: nl
     label: wolkenkrabber
     aliases:
     - hoog gebouw
     - hoogbouw
-    - toren
   - locale: de
     label: Wolkenkratzer
     aliases:
     - Hochhaus
-    - Turm
   - locale: pl
     label: Drapacz chmur
     aliases:
     - wysoki budynek
     - wysoki wzrost
-    - wieża
   - locale: pt
-    label: arranha-céus
+    label: arranha-céu
     aliases:
     - edifício alto
-    - torre
   - locale: zh-CN
     label: 摩天大楼
     aliases:
@@ -16283,15 +15774,13 @@ prompts:
     - 高樓
     - 大廈
   - locale: ja
-    label: スカイスクレイパー
-    aliases:
-    - 高層ビル
+    label: 高層ビル
+    aliases: []
   - locale: ko
     label: 마천루
     aliases:
     - 고층 건물
     - 빌딩
-    - 타워
 - id: sleeping
   translations:
   - locale: en
@@ -16315,7 +15804,6 @@ prompts:
   - locale: it
     label: dormire
     aliases:
-    - napping
     - addormentato
     - si'.
     - letto
@@ -16326,18 +15814,15 @@ prompts:
     - duppen
     - in slaap
     - zzz
-    - bed
     - dromen
   - locale: de
     label: schlafen
     aliases:
-    - napping
-    - schlafen
     - zzz
     - bett
     - träumen
   - locale: pl
-    label: zasypianie
+    label: spanie
     aliases:
     - drzemka
     - sen
@@ -16354,14 +15839,12 @@ prompts:
     - sonhando
   - locale: zh-CN
     label: 睡觉
-    aliases:
-    - 睡觉
+    aliases: []
   - locale: zh-TW
     label: 睡覺
-    aliases:
-    - 睡覺
+    aliases: []
   - locale: ja
-    label: 寝取られ
+    label: 寝る
     aliases:
     - ナッピング
   - locale: ko
@@ -16413,7 +15896,6 @@ prompts:
   - locale: pt
     label: sonolento
     aliases:
-    - sonolento
     - exausto
     - cansado
   - locale: zh-CN
@@ -16515,14 +15997,12 @@ prompts:
   - locale: it
     label: serpente
     aliases:
-    - serpente
     - cobra
     - vipera
     - rettile
   - locale: nl
     label: slang
     aliases:
-    - slang
     - cobra
     - adder
     - reptiel
@@ -16536,15 +16016,12 @@ prompts:
   - locale: pl
     label: wąż
     aliases:
-    - wąż
     - kobra
-    - viper
     - gad
   - locale: pt
     label: cobra
     aliases:
     - serpente
-    - cobra
     - víbora
     - réptil
   - locale: zh-CN
@@ -16593,7 +16070,6 @@ prompts:
   - locale: it
     label: neve
     aliases:
-    - blizzard
     - cristallo di ghiaccio
     - polvere bianca
     - tempo invernale
@@ -16682,8 +16158,8 @@ prompts:
   - locale: de
     label: Seife
     aliases:
+    - reiniger
     - Seifenstück
-    - Reiniger
     - Blasen
     - Schaum
   - locale: pl
@@ -16733,21 +16209,19 @@ prompts:
     - ballon
     - football
   - locale: it
-    label: Palla di calcio
+    label: pallone da calcio
     aliases:
     - calcio
   - locale: nl
     label: Voetbal
-    aliases:
-    - voetbal
+    aliases: []
   - locale: de
     label: Fußball
     aliases:
     - Ball
   - locale: pl
-    label: Piłka nożna
-    aliases:
-    - piłka nożna
+    label: piłka do nogi
+    aliases: []
   - locale: pt
     label: Bola de Futebol
     aliases:
@@ -16763,7 +16237,7 @@ prompts:
     aliases:
     - サッカー
   - locale: ko
-    label: 축구 공
+    label: 축구공
     aliases:
     - 풋볼
 - id: socks
@@ -16805,8 +16279,7 @@ prompts:
     - pończochy
   - locale: pt
     label: meias
-    aliases:
-    - meias
+    aliases: []
   - locale: zh-CN
     label: 袜子
     aliases:
@@ -16845,13 +16318,11 @@ prompts:
     label: spatola
     aliases:
     - paletta
-    - flipper
     - utensili da cucina
   - locale: nl
     label: spatel
     aliases:
     - draaier
-    - flipper
     - keukengereedschap
   - locale: de
     label: Pfannenwender
@@ -16892,28 +16363,24 @@ prompts:
     - arachnid
   - locale: es
     label: araña
-    aliases:
-    - arachnid
+    aliases: []
   - locale: fr
     label: araignée
-    aliases:
-    - arachnid
+    aliases: []
   - locale: it
     label: ragno
     aliases:
     - aracnide
   - locale: nl
     label: spin
-    aliases:
-    - arachnid
+    aliases: []
   - locale: de
-    label: Spinnen
+    label: Spinne
     aliases:
     - arachid
   - locale: pl
     label: pająk
-    aliases:
-    - arachnid
+    aliases: []
   - locale: pt
     label: aranha
     aliases:
@@ -16976,7 +16443,6 @@ prompts:
     label: łyżka
     aliases:
     - sztućce
-    - ladle
     - łyżeczka
   - locale: pt
     label: colher
@@ -17014,7 +16480,6 @@ prompts:
     label: estrella
     aliases:
     - estrella brillante
-    - twinkle
   - locale: fr
     label: étoile
     aliases:
@@ -17024,7 +16489,6 @@ prompts:
     label: stella
     aliases:
     - stella luminosa
-    - twinkle
   - locale: nl
     label: ster
     aliases:
@@ -17083,14 +16547,13 @@ prompts:
     - stella del mare
   - locale: nl
     label: zeester
-    aliases:
-    - zeester
+    aliases: []
   - locale: de
     label: Seestern
     aliases:
     - Meeresstern
   - locale: pl
-    label: rozgwiazdy
+    label: rozgwiazda
     aliases:
     - gwiazda morska
   - locale: pt
@@ -17107,15 +16570,14 @@ prompts:
     label: ヒトデ
     aliases: []
   - locale: ko
-    label: 스타피어
+    label: 불가사리
     aliases:
     - 바다 별
 - id: steering-wheel
   translations:
   - locale: en
     label: steering wheel
-    aliases:
-    - wheel
+    aliases: []
   - locale: es
     label: volante
     aliases:
@@ -17126,24 +16588,19 @@ prompts:
     - direction
   - locale: it
     label: volante
-    aliases:
-    - ruota
+    aliases: []
   - locale: nl
-    label: stuurwiel
-    aliases:
-    - wiel
+    label: stuur
+    aliases: []
   - locale: de
     label: Lenkrad
-    aliases:
-    - rad
+    aliases: []
   - locale: pl
     label: kierownica
-    aliases:
-    - koło
+    aliases: []
   - locale: pt
     label: volante
-    aliases:
-    - roda
+    aliases: []
   - locale: zh-CN
     label: 方向盘
     aliases: []
@@ -17157,7 +16614,6 @@ prompts:
   - locale: ko
     label: 핸들
     aliases:
-    - 휠
     - 운전대
 - id: store
   translations:
@@ -17183,7 +16639,6 @@ prompts:
     aliases:
     - mercato
     - uscita
-    - negozio
   - locale: nl
     label: winkel
     aliases:
@@ -17250,20 +16705,17 @@ prompts:
   - locale: it
     label: tempesta
     aliases:
-    - tempesta
     - tuono
     - uragano
   - locale: nl
     label: storm
     aliases:
-    - storm
     - donder
     - regenbui
     - orkaan
   - locale: de
     label: Sturm
     aliases:
-    - tempest
     - gewitter
     - regensturm
     - hurrikan
@@ -17272,12 +16724,10 @@ prompts:
     aliases:
     - burzy
     - grzmot
-    - burza
     - huragan
   - locale: pt
     label: tempestade
     aliases:
-    - tempestade
     - trovão
     - furacão
   - locale: zh-CN
@@ -17296,7 +16746,6 @@ prompts:
     label: 嵐
     aliases:
     - 暴風雨
-    - 雷
     - ハリケーン
   - locale: ko
     label: 폭풍
@@ -17327,7 +16776,7 @@ prompts:
     aliases:
     - aardbeien
   - locale: de
-    label: Erdbeeren
+    label: Erdbeere
     aliases:
     - beeren
   - locale: pl
@@ -17373,7 +16822,6 @@ prompts:
   - locale: it
     label: sottomarino
     aliases:
-    - sub
     - sommergibile
   - locale: nl
     label: duikboot
@@ -17387,12 +16835,10 @@ prompts:
   - locale: pl
     label: łódź podwodna
     aliases:
-    - sub
     - podwodne
   - locale: pt
     label: submarino
     aliases:
-    - sub
     - submersível
   - locale: zh-CN
     label: 潜艇
@@ -17415,41 +16861,32 @@ prompts:
     label: sun
     aliases:
     - solar
-    - star
     - sunlight
     - sunny
     - sunshine
   - locale: es
     label: sol
     aliases:
-    - solar
-    - estrella
     - soleado
   - locale: fr
     label: soleil
     aliases:
     - solaire
-    - étoile
-    - soleil
     - ensoleillé
   - locale: it
     label: sole
     aliases:
     - solare
-    - stella
     - luce solare
-    - sole
   - locale: nl
     label: zon
     aliases:
     - zonnig
-    - ster
     - zonlicht
     - zonneschijn
   - locale: de
     label: Sonne
     aliases:
-    - Stern
     - Sonnenlicht
     - sonnig
     - Sonnenschein
@@ -17457,18 +16894,13 @@ prompts:
     label: słońce
     aliases:
     - energia słoneczna
-    - gwiazda
     - światło słoneczne
     - słoneczny
-    - słońce
   - locale: pt
     label: sol
     aliases:
-    - solar
-    - estrela
     - luz solar
     - ensolarado
-    - sol
   - locale: zh-CN
     label: 太阳
     aliases:
@@ -17535,7 +16967,7 @@ prompts:
     - zszokowany
     - zdumiony
   - locale: pt
-    label: surpresa
+    label: surpreso
     aliases:
     - espantado
     - choque
@@ -17544,12 +16976,10 @@ prompts:
     label: 惊讶
     aliases:
     - 震惊
-    - 惊吓
   - locale: zh-TW
     label: 驚訝
     aliases:
     - 震驚
-    - 驚嚇
   - locale: ja
     label: 驚き
     aliases:
@@ -17585,17 +17015,14 @@ prompts:
     label: Zwemmen
     aliases:
     - zwembadsport
-    - zwemmen
   - locale: de
     label: Schwimmen
     aliases:
     - pool sport
-    - schwimmen
   - locale: pl
     label: pływanie
     aliases:
     - sporty basenowe
-    - pływanie
   - locale: pt
     label: natação
     aliases:
@@ -17612,7 +17039,7 @@ prompts:
     - 游泳池
     - 游泳運動
   - locale: ja
-    label: スイミング
+    label: 水泳
     aliases:
     - プールスポーツ
   - locale: ko
@@ -17749,12 +17176,12 @@ prompts:
     aliases:
     - handtrommel
   - locale: de
-    label: Tambourin
+    label: Tamburin
     aliases:
     - jingeln
     - handtrommel
   - locale: pl
-    label: tamburyna
+    label: tamburyn
     aliases:
     - dżingle
     - bęben ręczny
@@ -17799,15 +17226,14 @@ prompts:
     - nastro di misura
     - righello
   - locale: nl
-    label: bandmaat
+    label: rolmaat
     aliases:
     - meetlint
     - liniaal
     - lange liniaal
   - locale: de
-    label: Bandmaß
+    label: Maßband
     aliases:
-    - Maßband
     - Messband
     - Lineal
   - locale: pl
@@ -17819,7 +17245,6 @@ prompts:
   - locale: pt
     label: fita métrica
     aliases:
-    - fita métrica
     - régua
     - régua longa
   - locale: zh-CN
@@ -17862,7 +17287,6 @@ prompts:
     aliases:
     - éducateur
     - instructeur
-    - professeur
     - maître d'école
     - tuteur
   - locale: it
@@ -17872,7 +17296,6 @@ prompts:
     - istruttore
     - professore
     - maestro della scuola
-    - tutor
   - locale: nl
     label: leraar
     aliases:
@@ -17880,7 +17303,6 @@ prompts:
     - instructeur
     - hoogleraar
     - schoolmeester
-    - tutor
   - locale: de
     label: Lehrer
     aliases:
@@ -17888,7 +17310,6 @@ prompts:
     - Lehrkraft
     - Professor
     - Schulmeister
-    - Tutor
   - locale: pl
     label: nauczyciel
     aliases:
@@ -17901,7 +17322,6 @@ prompts:
     aliases:
     - educador
     - instrutor
-    - professor
     - mestre da escola
     - tutor
   - locale: zh-CN
@@ -18032,7 +17452,6 @@ prompts:
     aliases:
     - ząb
     - kły
-    - pearly whites
     - uśmiech
   - locale: pt
     label: dentes
@@ -18188,19 +17607,15 @@ prompts:
     aliases:
     - tente de camping
     - abri
-    - teepee
   - locale: it
     label: tenda
     aliases:
     - tenda da campeggio
     - rifugio
-    - teepee
   - locale: nl
     label: tent
     aliases:
-    - camping tent
     - schuilplaats
-    - teepee
   - locale: de
     label: Zelt
     aliases:
@@ -18212,13 +17627,11 @@ prompts:
     aliases:
     - namiot kempingowy
     - schronienie
-    - teepee
   - locale: pt
-    label: tenda
+    label: barraca
     aliases:
     - tenda de campismo
     - abrigo
-    - teepee
   - locale: zh-CN
     label: 帐篷
     aliases:
@@ -18263,7 +17676,6 @@ prompts:
   - locale: nl
     label: donder
     aliases:
-    - boom
     - gerommel
   - locale: de
     label: Donner
@@ -18272,9 +17684,7 @@ prompts:
     - Grollen
   - locale: pl
     label: Grzmot
-    aliases:
-    - boom
-    - rumble
+    aliases: []
   - locale: pt
     label: trovão
     aliases:
@@ -18305,65 +17715,53 @@ prompts:
     label: toffee
     aliases:
     - butterscotch
-    - caramel
     - sticky candy
   - locale: es
-    label: caramelo
+    label: tofe
     aliases:
     - dulce
-    - tofe
   - locale: fr
-    label: caramel
+    label: toffee
     aliases:
     - bonbon collant
   - locale: it
-    label: Toffee
+    label: caramella mou
     aliases:
-    - burro
-    - caramello
     - caramelle appiccicose
   - locale: nl
     label: toffee
     aliases:
     - boterkaramel
-    - karamel
     - kleverig snoepje
   - locale: de
     label: Karamellbonbon
     aliases:
     - Toffee
-    - Karamell
     - klebriges Bonbon
   - locale: pl
     label: toffi
     aliases:
-    - karmel
     - krówka
   - locale: pt
     label: toffee
     aliases:
     - caramelo amanteigado
-    - caramelo
     - doces pegajosos
   - locale: zh-CN
     label: 太妃糖
     aliases:
-    - 焦糖
     - 软糖
   - locale: zh-TW
     label: 太妃糖
     aliases:
-    - 焦糖
     - 軟糖
   - locale: ja
     label: トフィー
     aliases:
-    - キャラメル
     - キャンディ
   - locale: ko
     label: 토피
     aliases:
-    - 캐러멜
     - 끈적한 사탕
 - id: toilet
   translations:
@@ -18397,8 +17795,6 @@ prompts:
   - locale: nl
     label: toilet
     aliases:
-    - toilet
-    - commode
     - porseleinen troon
   - locale: de
     label: Toilette
@@ -18415,10 +17811,9 @@ prompts:
     - muszla klozetowa
     - sedes
   - locale: pt
-    label: banheiro
+    label: vaso sanitário
     aliases:
     - privada
-    - lavatório
     - trono de porcelana
   - locale: zh-CN
     label: 马桶
@@ -18455,9 +17850,9 @@ prompts:
   - locale: it
     label: pomodoro
   - locale: nl
-    label: tomaten
+    label: tomaat
   - locale: de
-    label: Tomaten
+    label: Tomate
   - locale: pl
     label: pomidor
   - locale: pt
@@ -18497,15 +17892,13 @@ prompts:
   - locale: nl
     label: gereedschapskist
     aliases:
-    - gereedschapskist
     - reparatieset
   - locale: de
     label: Werkzeugkasten
     aliases:
-    - werkzeugkasten
     - reparatursatz
   - locale: pl
-    label: Skrzynka narzędziowa
+    label: skrzynka na narzędzia
     aliases:
     - skrzynia narzędziowa
     - zestaw naprawczy
@@ -18554,12 +17947,10 @@ prompts:
   - locale: nl
     label: tandenborstel
     aliases:
-    - tandenborstel
     - borstel
   - locale: de
     label: Zahnbürste
     aliases:
-    - zahnbürste
     - bürsten
   - locale: pl
     label: szczoteczka do zębów
@@ -18603,8 +17994,7 @@ prompts:
     - pâte dentifrice
   - locale: it
     label: dentifricio
-    aliases:
-    - dentifricio
+    aliases: []
   - locale: nl
     label: tandpasta
     aliases:
@@ -18666,11 +18056,9 @@ prompts:
     aliases:
     - Wirbelsturm
     - Zyklon
-    - Twister
   - locale: pl
     label: Tornado
     aliases:
-    - twister
     - cyklon
   - locale: pt
     label: Tornado
@@ -18740,7 +18128,6 @@ prompts:
   - locale: pt
     label: toalha
     aliases:
-    - toalha
     - toalha de banho
     - pano de secagem
   - locale: zh-CN
@@ -18769,69 +18156,57 @@ prompts:
     label: Tower
     aliases:
     - spire
-    - skyscraper
     - turret
     - tall building
   - locale: es
     label: torre
     aliases:
     - atalaya
-    - rascacielos
   - locale: fr
     label: tour
     aliases:
-    - gratte-ciel
     - clocher
   - locale: it
     label: torre
     aliases:
     - guglia
-    - grattacielo
     - torretta
     - alto edificio
   - locale: nl
     label: Toren
     aliases:
     - spits
-    - wolkenkrabber
-    - toren
     - hoog gebouw
   - locale: de
     label: Turm
     aliases:
     - Turmspitze
-    - Wolkenkratzer
     - Türmchen
     - Hochhaus
   - locale: pl
     label: Wieża
     aliases:
     - iglica
-    - drapacz chmur
     - wieżyczka
     - wysoki budynek
   - locale: pt
     label: torre
     aliases:
-    - arranha-céu
     - prédio alto
   - locale: zh-CN
     label: 塔
     aliases:
     - 塔楼
     - 高塔
-    - 摩天大楼
   - locale: zh-TW
     label: 塔
     aliases:
     - 塔樓
     - 高塔
-    - 摩天大樓
   - locale: ja
     label: 塔
     aliases:
     - タワー
-    - 高層ビル
   - locale: ko
     label: 탑
     aliases:
@@ -18866,7 +18241,6 @@ prompts:
   - locale: nl
     label: trein
     aliases:
-    - express
     - locomotief
     - spoorweg
   - locale: de
@@ -19008,7 +18382,6 @@ prompts:
     - 숲
     - 소나무
     - 참나무
-    - 식물
 - id: triangle
   translations:
   - locale: en
@@ -19023,15 +18396,15 @@ prompts:
   - locale: it
     label: triangolo
   - locale: nl
-    label: driehoek
+    label: triangel
   - locale: de
-    label: Dreieck
+    label: Triangel
   - locale: pl
     label: trójkąt
   - locale: pt
     label: triângulo
   - locale: zh-CN
-    label: 三角形
+    label: 三角铁
   - locale: zh-TW
     label: 三角鐵
     aliases: []
@@ -19056,7 +18429,6 @@ prompts:
     label: trol
     aliases:
     - monstruo
-    - duende
     - ogro
   - locale: fr
     label: troll
@@ -19094,7 +18466,6 @@ prompts:
   - locale: pt
     label: troll
     aliases:
-    - monstro
     - criatura da caverna
     - troll da internet
     - habitante da ponte
@@ -19113,8 +18484,7 @@ prompts:
     - 妖怪
   - locale: ko
     label: 트롤
-    aliases:
-    - 괴물
+    aliases: []
 - id: trousers
   translations:
   - locale: en
@@ -19139,10 +18509,9 @@ prompts:
     - jeans
     - calzoni
   - locale: nl
-    label: broeken
+    label: broek
     aliases:
     - jeans
-    - broek
   - locale: de
     label: Hose
     aliases:
@@ -19153,7 +18522,6 @@ prompts:
     label: spodnie
     aliases:
     - jeansy
-    - spodnie
   - locale: pt
     label: calça
     aliases:
@@ -19201,14 +18569,10 @@ prompts:
   - locale: it
     label: camion
     aliases:
-    - camion
-    - pickup
     - furgone
   - locale: nl
     label: vrachtwagen
     aliases:
-    - vrachtwagen
-    - pickup
     - bestelwagen
   - locale: de
     label: LKW
@@ -19218,15 +18582,12 @@ prompts:
   - locale: pl
     label: ciężarówka
     aliases:
-    - ciężarówka
-    - pickup
     - furgonetka
   - locale: pt
     label: caminhão
     aliases:
     - camião
     - caminhonete
-    - van
   - locale: zh-CN
     label: 卡车
     aliases:
@@ -19323,13 +18684,11 @@ prompts:
     - baúl
     - cajuela
   - locale: fr
-    label: tronc
+    label: coffre
     aliases:
-    - trompe
-    - coffre
     - malle
   - locale: it
-    label: tronco
+    label: bagagliaio
     aliases:
     - baule
   - locale: nl
@@ -19396,26 +18755,22 @@ prompts:
     label: Vertrouwen
     aliases:
     - geloof
-    - vertrouwen
     - betrouwbaarheid
   - locale: de
     label: Vertrauen
     aliases:
     - glauben
-    - vertrauen
     - zuverlässigkeit
   - locale: pl
     label: Zaufanie
     aliases:
     - wiara
-    - zaufanie
     - niezawodność
   - locale: pt
     label: Confiança
     aliases:
     - fé
     - crença
-    - confiança
     - fiabilidade
   - locale: zh-CN
     label: 信任
@@ -19455,17 +18810,14 @@ prompts:
     label: tortue
     aliases:
     - tortue marine
-    - tortue
   - locale: it
     label: tartaruga
     aliases:
     - tartaruga di mare
-    - tartaruga
   - locale: nl
     label: schildpad
     aliases:
     - zeeschildpad
-    - schildpad
   - locale: de
     label: Schildkröte
     aliases:
@@ -19475,12 +18827,10 @@ prompts:
     label: żółw
     aliases:
     - żółw morski
-    - żółw
   - locale: pt
     label: tartaruga
     aliases:
     - tartaruga marinha
-    - tartaruga
   - locale: zh-CN
     label: 乌龟
     aliases:
@@ -19508,7 +18858,6 @@ prompts:
     label: unicorn
     aliases:
     - horned horse
-    - magical creature
     - mythic beast
   - locale: es
     label: unicornio
@@ -19518,18 +18867,14 @@ prompts:
     label: licorne
     aliases:
     - cheval à corne
-    - créature mythique
   - locale: it
     label: unicorno
     aliases:
     - cavallo cornuto
-    - creatura magica
-    - bestia mitica
   - locale: nl
     label: eenhoorn
     aliases:
     - gehoornde paard
-    - magisch wezen
     - mythisch beest
   - locale: de
     label: Einhorn
@@ -19541,21 +18886,16 @@ prompts:
     label: jednorożec
     aliases:
     - rogaty koń
-    - magiczne stworzenie
-    - bestia mityczna
   - locale: pt
     label: unicórnio
     aliases:
     - cavalo com chifre
-    - criatura mágica
   - locale: zh-CN
     label: 独角兽
-    aliases:
-    - 神兽
+    aliases: []
   - locale: zh-TW
     label: 獨角獸
-    aliases:
-    - 神獸
+    aliases: []
   - locale: ja
     label: ユニコーン
     aliases:
@@ -19596,7 +18936,7 @@ prompts:
     aliases:
     - スピード
   - locale: ko
-    label: 벨로시티
+    label: 속도
 - id: violin
   translations:
   - locale: en
@@ -19619,8 +18959,6 @@ prompts:
     label: violino
     aliases:
     - strumento inchinato
-    - fiddle
-    - stringhe
   - locale: nl
     label: viool
     aliases:
@@ -19636,7 +18974,6 @@ prompts:
     label: skrzypce
     aliases:
     - instrument łuskany
-    - skrzypce
     - struny
   - locale: pt
     label: violino
@@ -19716,7 +19053,7 @@ prompts:
     aliases:
     - ネットゲーム
   - locale: ko
-    label: 볼리볼
+    label: 배구
     aliases:
     - 그물 게임
     - 서비스 및 스파이크
@@ -19728,12 +19065,10 @@ prompts:
     - melon
   - locale: es
     label: sandía
-    aliases:
-    - melón
+    aliases: []
   - locale: fr
     label: pastèque
-    aliases:
-    - melon
+    aliases: []
   - locale: it
     label: anguria
     aliases:
@@ -19748,8 +19083,7 @@ prompts:
     - melone
   - locale: pl
     label: arbuz
-    aliases:
-    - melon
+    aliases: []
   - locale: pt
     label: melancia
     aliases:
@@ -19767,7 +19101,7 @@ prompts:
     aliases:
     - すいか
   - locale: ko
-    label: 물 멜론
+    label: 수박
     aliases:
     - 멜론
 - id: waving
@@ -20244,12 +19578,10 @@ prompts:
     label: 女巫
     aliases:
     - 巫婆
-    - 魔法师
   - locale: zh-TW
     label: 女巫
     aliases:
     - 巫婆
-    - 魔法師
   - locale: ja
     label: 魔女
     aliases:
@@ -20292,9 +19624,9 @@ prompts:
   - locale: de
     label: Zauberer
     aliases:
+    - sorcer
     - Magier
     - Hexenmeister
-    - Warlock
   - locale: pl
     label: czarodziej
     aliases:
@@ -20358,7 +19690,6 @@ prompts:
     label: 'Wurm'
     aliases:
     - Regenwurm
-    - Raupe
     - Made
   - locale: pl
     label: robak
@@ -20367,9 +19698,8 @@ prompts:
     - pełzacz
     - przynęta
   - locale: pt
-    label: verme
+    label: minhoca
     aliases:
-    - minhoca
     - rastejante
     - isco
   - locale: zh-CN
@@ -20388,7 +19718,6 @@ prompts:
     label: ミミズ
     aliases:
     - 虫
-    - 幼虫
     - エサ
   - locale: ko
     label: 지렁이
@@ -20413,9 +19742,8 @@ prompts:
     - clé à molette
     - clé anglaise
   - locale: it
-    label: chiave
+    label: chiave inglese
     aliases:
-    - spanner
     - chiave regolabile
   - locale: nl
     label: moersleutel
@@ -20430,13 +19758,11 @@ prompts:
   - locale: pl
     label: klucz
     aliases:
-    - klucz
     - regulowany klucz
   - locale: pt
     label: chave inglesa
     aliases:
     - chave de boca
-    - ferramenta
   - locale: zh-CN
     label: 扳手
     aliases:
@@ -20462,8 +19788,7 @@ prompts:
     - yo yo
   - locale: es
     label: yoyó
-    aliases:
-    - yoyo
+    aliases: []
   - locale: fr
     label: yo-yo
     aliases:
@@ -20474,20 +19799,16 @@ prompts:
     - yoyo
   - locale: nl
     label: yo-yo
-    aliases:
-    - yo yo
+    aliases: []
   - locale: de
     label: Jo-Jo
-    aliases:
-    - Yo-Yo
+    aliases: []
   - locale: pl
-    label: yo- yo
-    aliases:
-    - yo yo
+    label: jo-jo
+    aliases: []
   - locale: pt
-    label: yo-yo
-    aliases:
-    - yo yo
+    label: ioiô
+    aliases: []
   - locale: zh-CN
     label: 溜溜球
     aliases:
@@ -21543,9 +20864,9 @@ system_categories:
   - locale: nl
     name: Dingen die rond zijn
   - locale: de
-    name: Dinge, die rund sind
+    name: Runde Dinge
   - locale: pl
-    name: Rzeczy, które są okrągłe
+    name: Okrągłe rzeczy
   - locale: pt
     name: Coisas redondas
   - locale: zh-CN

@@ -155,8 +155,14 @@ class GameRoom:
             return
         await self.scheduler.cancel_scoring_timeout()
         session_maker = get_session_maker()
-        async with session_maker() as db:
-            round_complete_event = await rounds.score_round(self, db)
+        try:
+            async with session_maker() as db:
+                round_complete_event = await rounds.score_round(self, db)
+        except Exception:
+            # The scoring timeout is already cancelled, so an escape here would strand
+            # the room in GUESSING. End the round without points instead.
+            logger.exception("[GameRoom %s] Scoring failed, ending the round without points", self.room_id)
+            round_complete_event = rounds.no_points_round_event(self)
 
         # Snapshot this round's drawings into the end-of-game gallery before the
         # next round clears round_drawings, so reconnecting clients can recover it.
