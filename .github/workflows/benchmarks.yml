@@ -3,8 +3,9 @@ name: benchmarks
 # CodSpeed measures the stroke-path benchmarks in backend/tests/benchmarks on every PR
 # and compares them with main. Simulation mode counts CPU instructions, so a noisy
 # runner does not move the result. Every push to main runs, not only backend changes:
-# a PR is compared with its base commit, which needs a result of its own. A public
-# repo uploads without a token.
+# a PR is compared with its base commit, which needs a result of its own. The upload
+# signs in with the job's OIDC token, so there is no secret; the tokenless upload for
+# public repos was refused with 401 "Repository not found".
 
 on:
   push:
@@ -26,6 +27,9 @@ jobs:
     name: CodSpeed
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
