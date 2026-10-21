@@ -65,6 +65,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "basilica",
             "bistro",
             "bot",
+            "burger",
             "bus",
             "doctor",
             "horror",
@@ -76,6 +77,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "parka",
             "puzzle",
             "romance",
+            "soccer",
             "softball",
             "terminal",
             "terror",
@@ -94,14 +96,17 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "bistro",
             "bonnet",
             "bot",
+            "burger",
             "cheeseburger",
             "chef",
             "club sandwich",
             "cobra",
             "college",
+            "cookie",
             "cyclone",
             "express",
             "football",
+            "force",
             "graphite",
             "guppy",
             "jet",
@@ -126,7 +131,6 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "it": frozenset(
         {
-            "chopper",
             "automobile",
             "baguette",
             "ballerina",
@@ -134,8 +138,11 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "bongo",
             "cheeseburger",
             "chewing gum",
+            "chopper",
             "club sandwich",
             "cobra",
+            "dessert",
+            "flipper",
             "guppy",
             "hot dog",
             "jeans",
@@ -143,8 +150,10 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "jet",
             "jogging",
             "larva",
+            "pickup",
             "pony",
             "putter",
+            "sneakers",
             "softball",
             "t-shirt",
             "terminal",
@@ -156,25 +165,30 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "nl": frozenset(
         {
-            "chopper",
             "ballerina",
             "biscuit",
             "bistro",
             "blouse",
             "bongo",
             "bot",
+            "butterscotch",
             "cafe",
+            "cake",
             "cheeseburger",
+            "chopper",
             "cobra",
+            "cookie",
             "cumulus",
             "dessert",
             "disco",
             "driver",
+            "flipper",
             "gelato",
             "gremlin",
             "guppy",
             "hamburger",
             "horror",
+            "hype",
             "jeans",
             "kitten",
             "menthol",
@@ -201,7 +215,6 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "de": frozenset(
         {
-            "chopper",
             "amusement",
             "baguette",
             "ballerina",
@@ -213,6 +226,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "cafe",
             "cheeseburger",
             "chlorophyll",
+            "chopper",
             "club sandwich",
             "cookie",
             "dessert",
@@ -220,6 +234,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "driver",
             "fairness",
             "fedora",
+            "Flipper",
             "frankfurter",
             "general",
             "goblin",
@@ -235,6 +250,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "menthol",
             "monster",
             "parka",
+            "Patty",
             "pony",
             "portal",
             "professor",
@@ -252,6 +268,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "toast",
             "toffee",
             "truck",
+            "Twister",
             "villa",
             "viper",
             "yacht",
@@ -260,13 +277,13 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "pl": frozenset(
         {
-            "chopper",
             "auto",
             "bistro",
             "bongo",
             "bot",
             "bus",
             "cheeseburger",
+            "chopper",
             "disco",
             "gelato",
             "gremlin",
@@ -275,6 +292,7 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
             "jogging",
             "market",
             "parka",
+            "portal",
             "softball",
             "t-shirt",
             "terminal",
@@ -284,20 +302,27 @@ SHARED_WORDS: dict[str, frozenset[str]] = {
     ),
     "pt": frozenset(
         {
-            "chopper",
             "ananas",
             "basilica",
             "bistro",
+            "bongô",
             "bot",
+            "bowling",
             "cheeseburger",
+            "chopper",
             "cone",
+            "cookie",
+            "harmónica",
             "jeans",
             "larva",
+            "lunar",
             "medusa",
             "playground",
             "portal",
             "puzzle",
             "romance",
+            "solar",
+            "t-shirt",
             "terminal",
             "terror",
             "tutor",
@@ -674,17 +699,6 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
         ),
     ),
     (
-        "pt",
-        "musical-instruments",
-        "percussão",
-        frozenset(
-            {
-                "drum",
-                "maracas",
-            }
-        ),
-    ),
-    (
         "zh-CN",
         "musical-instruments",
         "打击乐器",
@@ -793,7 +807,7 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
     (
         "de",
         "musical-instruments",
-        "Saiten",
+        "Saiteninstrument",
         frozenset(
             {
                 "guitar",
@@ -804,7 +818,7 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
     (
         "en",
         "musical-instruments",
-        "strings",
+        "string instrument",
         frozenset(
             {
                 "guitar",
@@ -815,7 +829,7 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
     (
         "es",
         "musical-instruments",
-        "cuerdas",
+        "instrumento de cuerda",
         frozenset(
             {
                 "guitar",
@@ -826,18 +840,7 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
     (
         "nl",
         "musical-instruments",
-        "snaren",
-        frozenset(
-            {
-                "guitar",
-                "violin",
-            }
-        ),
-    ),
-    (
-        "pl",
-        "musical-instruments",
-        "struny",
+        "snaarinstrument",
         frozenset(
             {
                 "guitar",
@@ -927,17 +930,6 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
         "pl",
         "pets",
         "gryzoń",
-        frozenset(
-            {
-                "hamster",
-                "mouse",
-            }
-        ),
-    ),
-    (
-        "pt",
-        "pets",
-        "roedor",
         frozenset(
             {
                 "hamster",
@@ -1039,18 +1031,6 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
             }
         ),
     ),
-    # the word covers fairy and elf
-    (
-        "de",
-        "fantasy",
-        "Elfe",
-        frozenset(
-            {
-                "elf",
-                "fairy",
-            }
-        ),
-    ),
     (
         "nl",
         "fantasy",
@@ -1104,30 +1084,6 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
             {
                 "gummy-bear",
                 "jellybean",
-            }
-        ),
-    ),
-    # tienda is short for tienda de campaña and also a shop
-    (
-        "es",
-        "buildings",
-        "tienda",
-        frozenset(
-            {
-                "store",
-                "tent",
-            }
-        ),
-    ),
-    # tower and skyscraper are both tall buildings
-    (
-        "de",
-        "architecture",
-        "Hochhaus",
-        frozenset(
-            {
-                "skyscraper",
-                "tower",
             }
         ),
     ),
@@ -1243,6 +1199,30 @@ SHARED_ANSWERS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
             {
                 "witch",
                 "wizard",
+            }
+        ),
+    ),
+    # both are berries in everyday speech
+    (
+        "pt",
+        "fruits",
+        "frutas vermelhas",
+        frozenset(
+            {
+                "blueberry",
+                "strawberry",
+            }
+        ),
+    ),
+    # power is an everyday word for both
+    (
+        "en",
+        "scientific-terms",
+        "power",
+        frozenset(
+            {
+                "electricity",
+                "energy",
             }
         ),
     ),

@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+<!-- cspell:ignore stroom jagody Reiniger Saiten Saiteninstrument -->
+
 ### Added
 
 - For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. The default, one step at 40 rooms, takes about five minutes. See [docs/capacity.md](docs/capacity.md).
@@ -14,6 +16,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- About 100 word cards in 10 languages accept better answers. Words a player would really type were added, such as Dom for cathedral in German and stroom for electricity in Dutch, and wrong ones were removed: Polish jagody (blueberries) from strawberry, German Reiniger (a household cleaner) from soap. A word that only names the strings, like German Saiten, is now the instrument family (Saiteninstrument). A language model suggested the changes; each was checked against the card's category and the deck's rules.
 - **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
 - Strokes are smoother, in the game and on the lobby doodle. A stroke now thins and thickens with the speed of your pen, like ink, and curves stay round instead of turning into short straight segments. Taps leave a dot.
 - Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. With every player drawing at once, one server now holds about 200 rooms of 6 instead of about 60.
