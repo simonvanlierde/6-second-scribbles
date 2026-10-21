@@ -30,6 +30,8 @@ class LocalizedScoringTargets:
     category_id: int
     category_name: str
     targets: list[GuessTarget]
+    # The targets' language, whose rules the guesses are matched with.
+    locale: str
 
 
 SYSTEM_CATEGORY_SOURCE = "system"
@@ -189,21 +191,12 @@ async def select_category_ids(
     return [category.id for category in _select_scored_categories(valid_categories, requested_locales, total_needed)]
 
 
-async def deal_category(
-    db: AsyncSession,
-    *,
-    category_id: int,
-    preferred_locale: LanguageCode,
-    fallback_locale: LanguageCode,
-) -> PlayerPromptAssignmentState:
-    """Build one player's card from a category.
+def _card_locale(category: Category, preferred_locale: LanguageCode | str, fallback_locale: LanguageCode | str) -> str:
+    """Pick the locale for a player's card and for scoring their guesses.
 
-    The card uses the first locale the category is translated into from: the player's,
-    the room's, the category's default, English; failing all, its alphabetically first.
+    It is the first locale the category is playable in from the player's, the room's, the
+    category's default and English; failing all, its alphabetically first.
     """
-    category = await _get_visible_category_or_404(db, category_id=category_id)
-    prompts_by_cat = await _load_category_prompts(db, [category_id])
-
     candidate_locales = _normalize_locale_list(
         [preferred_locale, fallback_locale, category.default_locale],
         fallback=DEFAULT_LANGUAGE_CODE,
@@ -215,7 +208,21 @@ async def deal_category(
         chosen_locale = min(available)
     if chosen_locale is None:
         raise HTTPException(status_code=404, detail="Category has no available locales")
+    return chosen_locale
 
+
+async def deal_category(
+    db: AsyncSession,
+    *,
+    category_id: int,
+    preferred_locale: LanguageCode,
+    fallback_locale: LanguageCode,
+) -> PlayerPromptAssignmentState:
+    """Build one player's card from a category, in the locale `_card_locale` picks."""
+    category = await _get_visible_category_or_404(db, category_id=category_id)
+    prompts_by_cat = await _load_category_prompts(db, [category_id])
+
+    chosen_locale = _card_locale(category, preferred_locale, fallback_locale)
     ct = category.translations.get(chosen_locale)
     if ct is None:
         raise HTTPException(status_code=404, detail="Category translation not found")
@@ -247,28 +254,23 @@ async def get_localized_scoring_targets(
     category_id: int,
     prompt_ids: list[int],
     preferred_locale: LanguageCode,
+    fallback_locale: LanguageCode,
 ) -> LocalizedScoringTargets:
-    """Resolve prompt ids to localized scoring targets."""
-    # Check cache first
-    cached = await redis.get_cached_localized_scoring_targets(category_id, preferred_locale, prompt_ids)
+    """Resolve prompt ids to scoring targets, in the locale the guesser's own card would use."""
+    # Both locales pick the result, so both are in the cache key.
+    cache_locale = f"{preferred_locale}>{fallback_locale}"
+    cached = await redis.get_cached_localized_scoring_targets(category_id, cache_locale, prompt_ids)
     if cached is not None:
         return LocalizedScoringTargets(
             category_id=cached["category_id"],
             category_name=cached["category_name"],
             targets=[GuessTarget(**t) for t in cached["targets"]],
+            locale=cached["locale"],
         )
 
     category = await _get_visible_category_or_404(db, category_id=category_id)
 
-    target_locale = _normalize_locale(preferred_locale)
-    if target_locale not in category.translations:
-        target_locale = _normalize_locale(category.default_locale)
-        if target_locale not in category.translations:
-            target_locale = next(iter(category.translations.keys()), None)
-
-    if target_locale is None:
-        raise HTTPException(status_code=404, detail="Category translation not found")
-
+    target_locale = _card_locale(category, preferred_locale, fallback_locale)
     ct = category.translations.get(target_locale)
     if ct is None:
         raise HTTPException(status_code=404, detail="Category translation not found")
@@ -286,6 +288,8 @@ async def get_localized_scoring_targets(
         if pt:
             targets.append(GuessTarget(item_id=p.id, label=pt.get("label", ""), aliases=pt.get("aliases", [])))
 
-    result = LocalizedScoringTargets(category_id=category.id, category_name=ct.get("name", ""), targets=targets)
-    await redis.cache_localized_scoring_targets(category_id, preferred_locale, prompt_ids, asdict(result))
+    result = LocalizedScoringTargets(
+        category_id=category.id, category_name=ct.get("name", ""), targets=targets, locale=target_locale
+    )
+    await redis.cache_localized_scoring_targets(category_id, cache_locale, prompt_ids, asdict(result))
     return result

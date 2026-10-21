@@ -1,4 +1,5 @@
 """Focused tests for service-layer helpers."""
+# spell-checker: ignore animales, gato, gatos
 
 from __future__ import annotations
 
@@ -22,6 +23,8 @@ from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateE
 from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
+
+SPANISH = "es"
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -112,6 +115,7 @@ class TestRoundService:
                 return_value=category_service.LocalizedScoringTargets(
                     category_id=1,
                     category_name="Animals",
+                    locale="en",
                     targets=[
                         category_service.GuessTarget(item_id=11, label="cat", aliases=[]),
                         category_service.GuessTarget(item_id=12, label="dog", aliases=[]),
@@ -127,6 +131,41 @@ class TestRoundService:
         assert event.results[0].correct_guesses == 2
         assert room.metadata.game_phase == GamePhase.ROUND_RESULTS
         assert room.metadata.player_scores == {"player-1": 20, "player-2": 20}
+
+    async def test_score_round_matches_guesses_in_the_targets_language(
+        self,
+        make_ws: Callable[..., TestWebSocket],
+        mocker: MockerFixture,
+    ) -> None:
+        """A guesser scored in the room's language is matched with that language's rules, not their own."""
+        room = GameRoom("ROOM-LOCALE")
+        await player_lifecycle.add_player(room, "player-1", "Alice", cast("WebSocket", make_ws()))
+        await player_lifecycle.add_player(room, "player-2", "Bob", cast("WebSocket", make_ws()))
+        room.metadata.player_locales = {"player-1": "sv", "player-2": "es"}
+        room.metadata.default_locale = "es"
+        room.metadata.player_assignments = {
+            "player-2": PlayerPromptAssignmentState(
+                category_id=1, category="Animales", item_ids=[11], items=["gato"], alternatives={}
+            ),
+        }
+        room.metadata.guess_submissions = [
+            GuessSubmissionState(player_id="player-1", target_player_id="player-2", guesses=["gatos"]),
+        ]
+        targets = category_service.LocalizedScoringTargets(
+            category_id=1,
+            category_name="Animales",
+            locale="es",
+            targets=[category_service.GuessTarget(item_id=11, label="gato", aliases=[])],
+        )
+        lookup = mocker.patch.object(
+            category_service, "get_localized_scoring_targets", new=AsyncMock(return_value=targets)
+        )
+        match = mocker.spy(round_service.guess_matcher, "score_guesses_against_targets")
+
+        await round_service.score_round(room, AsyncMock())
+
+        assert lookup.await_args_list[0].kwargs["fallback_locale"] == SPANISH
+        assert match.call_args_list[0].args[2] == SPANISH
 
 
 class TestPlayerLifecycleService:
