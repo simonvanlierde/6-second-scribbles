@@ -174,8 +174,13 @@ function handleImageError(playerId: string) {
           </div>
         </HdCard>
 
-        <!-- Guess panel -->
-        <div class="guess-panel">
+        <!-- Guess panel. It scrolls, so once submitted (nothing inside takes focus)
+             it takes focus itself, letting keyboard users scroll it. -->
+        <section
+          class="guess-panel"
+          :aria-label="$t('guessing.yourGuesses')"
+          :tabindex="submittedPlayers.includes(assignedTargetPlayer.id) ? 0 : undefined"
+        >
           <HdCard v-if="submittedPlayers.includes(assignedTargetPlayer.id)" variant="postit" class="guess-submitted">
             <svg
               viewBox="0 0 24 24"
@@ -222,7 +227,7 @@ function handleImageError(playerId: string) {
             </HdCard>
             <HdCard variant="postit" class="guess-hint">{{ $t("guessing.hint") }}</HdCard>
           </template>
-        </div>
+        </section>
       </template>
 
       <div v-else class="guessing-phase__waiting">

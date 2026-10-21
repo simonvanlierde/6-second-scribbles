@@ -89,6 +89,17 @@ describe("GuessingPhase", () => {
     expect(wrapper.text()).toContain("Guesses submitted");
   });
 
+  it("keeps the scrolling guess panel reachable by keyboard once nothing in it can take focus", async () => {
+    const wrapper = mount(GuessingPhase);
+    const panel = wrapper.get(".guess-panel");
+    expect(panel.attributes("aria-label")).toBe("Your guesses");
+
+    await wrapper.find("input.guess-input").setValue("cat");
+    await wrapper.find(".guess-card__submit").trigger("click");
+
+    expect(panel.attributes("tabindex")).toBe("0");
+  });
+
   it("confirms before submitting an empty guess list", async () => {
     const wrapper = mount(GuessingPhase);
 
