@@ -108,6 +108,9 @@ async def add_player(
     )
 
     _settle_host_on_join(room, player_id, name, user_id=user_id, is_reconnecting_host=is_reconnecting_host)
+    # Emptying the room cancelled the return to the lobby; whoever comes back restarts it.
+    if room.metadata.game_phase == GamePhase.FINAL_RESULTS and not room.scheduler.is_restart_pending():
+        room.scheduler.schedule_restart()
     return player, is_reconnecting_host
 
 
