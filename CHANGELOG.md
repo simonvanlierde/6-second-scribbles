@@ -14,7 +14,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
-- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later, and the server handles far more busy lobbies on the same CPU.
+- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. With every player drawing at once, one server now holds about 200 rooms of 6 instead of about 60.
 
 ### Removed
 
@@ -22,6 +22,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The server no longer turns players away once about 1,000 are connected. It ran out of open files, one per connection, long before it ran out of CPU.
 - When the lobby drawpad changed size, for example when you rotated your phone, the other players' strokes disappeared from it.
 - In French, the player count now uses the singular for zero, as French grammar does.
 - If your device's clock ran slightly behind the server's, the drawing timer ended the moment a round started and your guesses were sent straight away.

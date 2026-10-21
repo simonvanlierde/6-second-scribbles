@@ -6,61 +6,53 @@ memory, one uvicorn worker), and where it starts to slow down.
 
 ## Result
 
-With every player scribbling at once, one backend holds up to about **80 rooms of
-6 players (480 WebSocket connections)** with the p95 broadcast latency under
-250 ms. (p95 means 95% of messages arrive at least this fast.) At 90 rooms, p95
-reaches 264 ms. CPU is the limit: from 70 rooms on, the single worker sits near its
-1.0 CPU cap, while memory stays under 270 MiB of the 1 GiB limit.
+With every player scribbling at once, one backend holds about **200 rooms of 6
+players (1,200 WebSocket connections)** with the p95 broadcast latency under
+250 ms. (p95 means 95% of messages arrive at least this fast.) In the run below,
+p95 stays near 52 ms up to 160 rooms; 50 ms of that is the server's stroke tick,
+which holds each room's doodle fragments and sends them out together. At 240 rooms
+one run reached 445 ms, and at 280 rooms the next one 127 ms, so the knee sits
+somewhere from 200 to 280 rooms. Backend CPU was at 82% at 280 rooms, and memory
+stayed under 280 MiB of the 1 GiB limit.
 
-Commit `85ddbea` made each broadcast serialize to JSON once instead of once per
-recipient. That moved the knee, where latency starts to climb fast, from about 70
-to about 80 rooms. The gain is small, because the server still sends once per
-recipient.
-
-### After: one serialization per broadcast
-
-Measured on 2026-10-12 against commit `85ddbea`. The 70 to 90 room rows come from
-a second run. The first run gave p95 192 ms at 70 rooms, 126 ms at 80 and 601 ms
-at 100. So expect about ±50% noise between runs near the knee.
+Measured on 2026-10-21. Rows up to 140 rooms come from commit `b9f6804`, and the
+rest from `30537fb`, which raised the backend's open file limit: with Docker's
+default soft limit of 1024 descriptors, one per WebSocket, the server turned away
+connections from about 1,000 players on, with CPU to spare.
 
 | Rooms | Players/room | Connections | p50 | p95 | Deliveries/s | Backend CPU | Backend memory | Errors |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 5 | 6 | 30 | 1 ms | 2 ms | 1,833 | 16% | 101 MiB | 0 |
-| 10 | 6 | 60 | 1 ms | 2 ms | 3,671 | 25% | 112 MiB | 0 |
-| 20 | 6 | 120 | 1 ms | 2 ms | 7,769 | 40% | 131 MiB | 0 |
-| 40 | 6 | 240 | 1 ms | 11 ms | 15,171 | 65% | 170 MiB | 0 |
-| 50 | 6 | 300 | 2 ms | 13 ms | 18,898 | 75% | 189 MiB | 0 |
-| 60 | 6 | 360 | 3 ms | 28 ms | 22,245 | 83% | 212 MiB | 0 |
-| 70 | 6 | 420 | 14 ms | 55 ms | 25,859 | 88% | 220 MiB | 0 |
-| 80 | 6 | 480 | 33 ms | 155 ms | 29,313 | 93% | 243 MiB | 0 |
-| 90 | 6 | 540 | 47 ms | 264 ms | 31,530 | 92% | 262 MiB | 0 |
+| 40 | 6 | 240 | 46 ms | 52 ms | 4,773 | 22% | 116 MiB | 0 |
+| 60 | 6 | 360 | 46 ms | 52 ms | 7,288 | 28% | 130 MiB | 0 |
+| 80 | 6 | 480 | 45 ms | 52 ms | 9,136 | 37% | 143 MiB | 0 |
+| 100 | 6 | 600 | 45 ms | 52 ms | 11,680 | 44% | 154 MiB | 0 |
+| 120 | 6 | 720 | 44 ms | 53 ms | 13,088 | 53% | 170 MiB | 0 |
+| 140 | 6 | 840 | 44 ms | 59 ms | 15,090 | 55% | 181 MiB | 0 |
+| 160 | 6 | 960 | 44 ms | 53 ms | 16,900 | 58% | 184 MiB | 0 |
+| 200 | 6 | 1,200 | 51 ms | 144 ms | 19,555 | 74% | 221 MiB | 0 |
+| 240 | 6 | 1,440 | 52 ms | 445 ms | 20,979 | 77% | 259 MiB | 0 |
+| 280 | 6 | 1,680 | 51 ms | 127 ms | 26,678 | 82% | 270 MiB | 0 |
 
-### Before: one serialization per recipient
+Each row is one run, so expect noise near the knee; `just loadtest-ab` (below)
+repeats runs when two versions need comparing.
 
-Measured on 2026-10-12 against commit `71d868c`.
+**Earlier versions.** v0.3.0, driven the way its browser client sent strokes (one
+message per screen frame, points as pixel objects), reached p95 674 ms at 60 rooms
+on the same host and day, at 90% CPU. On 2026-10-12, commit `85ddbea` held about
+80 rooms. Four changes moved the knee: the browser sends every 50 ms instead of
+every frame, the server batches each room's fragments per 50 ms tick, points travel
+as flat integers, and per-message deflate is off.
 
-| Rooms | Players/room | Connections | p50 | p95 | Deliveries/s | Backend CPU | Backend memory | Errors |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 5 | 6 | 30 | 1 ms | 2 ms | 1,863 | 16% | 98 MiB | 0 |
-| 10 | 6 | 60 | 1 ms | 2 ms | 3,960 | 29% | 111 MiB | 0 |
-| 20 | 6 | 120 | 1 ms | 2 ms | 7,887 | 46% | 130 MiB | 0 |
-| 40 | 6 | 240 | 2 ms | 6 ms | 15,376 | 71% | 167 MiB | 0 |
-| 50 | 6 | 300 | 3 ms | 33 ms | 18,570 | 83% | 180 MiB | 0 |
-| 60 | 6 | 360 | 15 ms | 63 ms | 22,524 | 91% | 208 MiB | 0 |
-| 70 | 6 | 420 | 46 ms | 198 ms | 25,313 | 91% | 225 MiB | 0 |
-| 80 | 6 | 480 | 95 ms | 354 ms | 29,480 | 95% | 250 MiB | 0 |
-
-Both runs used one host: `AMD Ryzen 7 H 255 w/ Radeon 780M Graphics`, 8 cores and
+The runs used one host: `AMD Ryzen 7 H 255 w/ Radeon 780M Graphics`, 8 cores and
 16 threads (from `/proc/cpuinfo`). Backend CPU is the `docker stats` CPU, averaged
 over the step, where 100% is the whole 1.0 CPU limit. Memory is the peak.
 Deliveries/s counts the stroke fragments that reached another player. The load
 generator ran on the same host, outside the limited container, and used at most
-34% of one core per process.
+59% of one core per process.
 
-**Bottleneck:** the event loop's CPU. Each relayed stroke is sent once per player
-in the room, so the work grows with rooms × players². Past the knee, either send
-fewer messages (batch the stroke fragments per frame on the server) or give the
-worker more CPU.
+**Bottleneck:** the event loop's CPU. Each room sends every player one batch per
+50 ms tick, however many fragments arrived in it, so the work grows with rooms ×
+players, plus the parsing of each incoming fragment.
 
 ## Workload
 
