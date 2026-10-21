@@ -79,7 +79,6 @@ onMounted(() => {
     <GameHeader
       variant="final"
       :title="$t('finalResults.gameOver')"
-      :status="$t('finalResults.playersReady', { count: store.readyCount, total: store.totalPlayers })"
       @leave="leaveDialog?.request()"
     />
 

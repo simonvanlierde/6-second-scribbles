@@ -251,7 +251,6 @@
     "readyForNext": "準備好開始下一局",
     "readyWaiting": "已準備 — 等待房主…",
     "backHome": "返回首頁",
-    "playersReady": "{count} / {total} 名玩家已準備",
     "noWinner": "這次沒有贏家",
     "noWinnerDetail": "沒有人得分。"
   },

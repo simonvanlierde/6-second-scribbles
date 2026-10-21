@@ -251,7 +251,6 @@
     "readyForNext": "Ready for next game",
     "readyWaiting": "Ready — waiting for host…",
     "backHome": "Back home",
-    "playersReady": "{count} / {total} players ready",
     "noWinner": "No winner this time",
     "noWinnerDetail": "Nobody scored any points."
   },

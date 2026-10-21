@@ -251,7 +251,6 @@
     "readyForNext": "Gotowy na następną grę",
     "readyWaiting": "Gotowy — czekam na hosta…",
     "backHome": "Powrót do strony głównej",
-    "playersReady": "{count} / {total} graczy gotowych",
     "noWinner": "Tym razem bez zwycięzcy",
     "noWinnerDetail": "Nikt nie zdobył punktów."
   },

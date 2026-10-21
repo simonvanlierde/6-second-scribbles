@@ -130,6 +130,11 @@ describe("ResultsView", () => {
     expect(wrapper.find(".winner-card__ribbon").exists()).toBe(false);
   });
 
+  it("shows no ready count in the game-over header", () => {
+    const wrapper = mount(ResultsView);
+    expect(wrapper.find(".game-header").text()).not.toMatch(/ready/i);
+  });
+
   it("lists every player in the standings", () => {
     const wrapper = mount(ResultsView);
     expect(wrapper.findAll(".final-standings__row")).toHaveLength(2);

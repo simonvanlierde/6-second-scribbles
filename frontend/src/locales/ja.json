@@ -251,7 +251,6 @@
     "readyForNext": "次のゲームの準備完了",
     "readyWaiting": "準備完了 — ホストを待っています…",
     "backHome": "ホームに戻る",
-    "playersReady": "{count} / {total} 人が準備完了",
     "noWinner": "今回は勝者なし",
     "noWinnerDetail": "誰も得点できませんでした。"
   },

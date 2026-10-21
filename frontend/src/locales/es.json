@@ -251,7 +251,6 @@
     "readyForNext": "Listo para la próxima partida",
     "readyWaiting": "Listo — esperando al anfitrión…",
     "backHome": "Volver al inicio",
-    "playersReady": "{count} / {total} jugadores listos",
     "noWinner": "Esta vez no hay ganador",
     "noWinnerDetail": "Nadie ha sumado puntos."
   },
