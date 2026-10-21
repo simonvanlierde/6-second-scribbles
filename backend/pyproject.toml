@@ -26,7 +26,6 @@
 
   db-migrations = ["alembic>=1.20.0"]
   db-seed = ["pyyaml>=6.0.1"]
-  db-translate = ["argostranslate>=1.11.0", "opencc-python-reimplemented>=0.1.7", "pyyaml>=6.0.1"]
   testing = [
     "fakeredis>=2.38.0",
     "greenlet>=3.5.6",
@@ -38,10 +37,6 @@
     "pytest>=9.1.1",
     "testcontainers>=4.15.0",
   ]
-
-[tool.uv]
-  # GHSA-v5jw-96jm-7h2c: argostranslate 1.11.0 pins stanza==1.10.1. Drop once argostranslate allows >=1.12.2.
-  override-dependencies = ["stanza>=1.12.2"]
 
 [tool.pytest.ini_options]
   addopts = ["--strict-markers", "--tb=short", "-v"]
@@ -58,7 +53,7 @@
 [tool.coverage.run]
   branch = true
   omit   = ["alembic/*"]
-  source = ["app", "scripts", "translation"]
+  source = ["app", "scripts"]
 
 [tool.coverage.report]
   fail_under = 80

@@ -57,11 +57,6 @@ FROM deps-base AS db-seed-deps
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --group db-seed --no-install-project
 
-FROM deps-base AS db-translate-deps
-
-RUN --mount=type=cache,target=/root/.cache/uv \
-    UV_COMPILE_BYTECODE=0 uv sync --frozen --only-group db-translate --no-install-project
-
 # ── Source Layers ─────────────────────────────────────────────────────────────
 FROM runtime-base AS app-source
 
@@ -78,12 +73,6 @@ FROM app-source AS seed-source
 
 COPY scripts/seed_data.py ./scripts/seed_data.py
 COPY scripts/seed_data.yaml ./scripts/seed_data.yaml
-
-FROM runtime-base AS translate-source
-
-COPY scripts/auto_translate_seed_data.py ./scripts/auto_translate_seed_data.py
-COPY scripts/seed_data.yaml ./scripts/seed_data.yaml
-COPY translation ./translation
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 FROM uv-base AS dev
@@ -136,12 +125,3 @@ COPY --chown=appuser:appuser --from=seed-source /app /app
 USER 1001:1001
 
 CMD ["python", "scripts/seed_data.py"]
-
-FROM runtime-base AS db-translate
-
-COPY --chown=appuser:appuser --from=db-translate-deps /opt/.venv /opt/.venv
-COPY --chown=appuser:appuser --from=translate-source /app /app
-
-USER 1001:1001
-
-CMD ["python", "scripts/auto_translate_seed_data.py"]
