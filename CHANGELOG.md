@@ -13,7 +13,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen. Players who had the game open during the update need to reload the page before the doodle works again.
+- **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
 - Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later, and the server handles far more busy lobbies on the same CPU.
 
 ### Removed

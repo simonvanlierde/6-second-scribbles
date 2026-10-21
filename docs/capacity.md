@@ -72,8 +72,7 @@ the real room protocol, with one WebSocket per player:
   `draw_stroke_partial` fragments at 20 per second (six points each, as the
   browser sends them every 50 ms), with 0.5 to 1.5 s between strokes. That is
   about 7 messages per second per player, so this is a busy lobby, not an
-  average one. `--send-hz 60` replays the older client, which sent one fragment
-  per browser frame. The server sends each room's fragments out together every
+  average one. The server sends each room's fragments out together every
   50 ms, as one `draw_stroke_batch`.
 - After 7.5 to 22.5 s in the lobby, the host starts a one-round game. The server
   deals the cards. Each player sends a 56 KiB `draw_stroke`, the largest
@@ -110,7 +109,6 @@ when it finishes. To aim the test at a backend you already run, use
 ```bash
 just loadtest-ab 85ddbea main                          # 3 runs each, one 20 s step at 40 rooms: about 5 minutes
 just loadtest-ab main HEAD --runs 5 --rooms 60,70,80   # other flags, such as --duration, pass through to run.py
-just loadtest-ab c7bbe1c HEAD --a-args=--point-objects  # flags for one side: A predates pad coordinates
 ```
 
 This builds each commit's prod stack from a temporary worktree outside the
