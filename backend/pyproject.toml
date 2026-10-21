@@ -21,7 +21,7 @@
     { include-group = "db-seed" },
     { include-group = "testing" },
     "ruff>=0.16.9",
-    "ty>=0.0.84",
+    "ty>=0.0.87",
   ]
 
   db-migrations = ["alembic>=1.20.0"]
