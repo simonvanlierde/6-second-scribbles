@@ -56,7 +56,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- About 450 word cards in nine languages had a wrong sense or a stray accepted answer ("cancello" for cake, a presentation slide for the playground slide); they now use the everyday word, and the Japanese footer credits Gamely Games again.
+- About 450 word cards in nine languages had a wrong sense or a stray accepted answer (Italian "gate" for cake, Korean "presentation slide" for the playground slide); they now use the everyday word, and the Japanese footer credits Gamely Games again.
 - The message for a room that briefly turns away new players, after many players left it in a short time, is translated into every language.
 - A category without a translation in the room's language is now dealt in the next language it has, so the round still starts.
 - Two players could get the same avatar colour. Colours are now unique within a room; a colour picked in settings is kept unless another player already has it.
