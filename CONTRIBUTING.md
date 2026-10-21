@@ -5,6 +5,11 @@ follow [Running locally](README.md#running-locally).
 
 ## Before you open a PR
 
+Install the git hooks once per clone with [prek](https://prek.j178.dev):
+`uv tool install prek`, then `prek install`. They format and lint what you commit,
+check the commit message, and spell-check what you push. CI runs them too. In a
+clone that still has the old lefthook hooks, `prek install -f` replaces them.
+
 Run these first. `just check` and `just test` cover most of what CI runs. The
 accessibility and e2e jobs are below.
 
@@ -12,6 +17,7 @@ accessibility and e2e jobs are below.
 just check      # contracts, lint, types, and security checks
 just test       # frontend + backend test suites
 just format     # auto-format everything
+just hooks      # every git hook over the whole repo
 ```
 
 If you change what the backend sends or accepts, run `just generate-contracts` so

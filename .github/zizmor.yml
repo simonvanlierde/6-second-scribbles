@@ -1,0 +1,5 @@
+rules:
+  # TODO: switch the local actions to `uses: $/...` once actionlint parses it.
+  # actionlint 1.7.12 rejects that form as an action without a ref.
+  self-repository:
+    disable: true
