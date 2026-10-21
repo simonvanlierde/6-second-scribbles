@@ -119,6 +119,17 @@ onMounted(async () => {
     transform: rotate(360deg);
   }
 }
+/* No spinning for reduced motion: a slow fade still shows it is working. */
+@media (prefers-reduced-motion: reduce) {
+  .reconnect-banner__spinner {
+    animation: reconnect-pulse 2s ease-in-out infinite;
+  }
+}
+@keyframes reconnect-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
 .reconnect-banner-enter-active,
 .reconnect-banner-leave-active {
   transition: opacity 0.2s ease;

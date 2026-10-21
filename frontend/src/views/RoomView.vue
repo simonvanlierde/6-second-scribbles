@@ -135,4 +135,15 @@ watch(gamePhase, async () => {
     transform: rotate(360deg);
   }
 }
+/* No spinning for reduced motion: a slow fade still shows it is working. */
+@media (prefers-reduced-motion: reduce) {
+  .room-connecting__spinner {
+    animation: room-connecting-pulse 2s ease-in-out infinite;
+  }
+}
+@keyframes room-connecting-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
 </style>
