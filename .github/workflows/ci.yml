@@ -384,10 +384,12 @@ jobs:
       - name: Start the prod stack
         run: docker compose up -d --wait --wait-timeout 180
 
+      # /api/health answers 503 when the database or Redis is down; --fail-with-body
+      # still fails the step on that, and prints which one through jq.
       - name: Smoke test
         run: |
           curl -fsS http://127.0.0.1/healthz
-          curl -fsS http://127.0.0.1/api/health | jq -e '.status == "ok"'
+          curl -sS --fail-with-body http://127.0.0.1/api/health | jq -e '.status == "ok"'
 
       - name: Check container hardening
         run: |

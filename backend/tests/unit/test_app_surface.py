@@ -49,9 +49,10 @@ def test_root_endpoint(test_client: TestClient) -> None:
     """Health endpoint returns the expected service metadata."""
     response = test_client.get("/api/health")
 
-    assert response.status_code == 200
     payload = response.json()
     assert payload["status"] in OK_STATUSES
+    healthy = payload["status"] == OK_STATUSES[0]
+    assert response.status_code == (status.HTTP_200_OK if healthy else status.HTTP_503_SERVICE_UNAVAILABLE)
     assert payload["service"] == SERVICE_NAME
     assert payload[VERSION_KEY] == tomllib.loads(PYPROJECT.read_text())["project"]["version"]
     assert DATABASE_KEY in payload
