@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. See [docs/capacity.md](docs/capacity.md).
+- For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. The default, one step at 40 rooms, takes about five minutes. See [docs/capacity.md](docs/capacity.md).
 - For contributors: an end-to-end axe check of the lobby, drawing, guessing and round results screens, in both colour schemes.
 
 ### Removed

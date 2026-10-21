@@ -105,15 +105,16 @@ when it finishes. To aim the test at a backend you already run, use
 ### Comparing two commits
 
 ```bash
-just loadtest-ab 85ddbea main                          # 3 runs each at 40, 50 and 60 rooms
-just loadtest-ab main HEAD --runs 5 --rooms 60,70,80   # other flags pass through to run.py
+just loadtest-ab 85ddbea main                          # 3 runs each, one 20 s step at 40 rooms: about 5 minutes
+just loadtest-ab main HEAD --runs 5 --rooms 60,70,80   # other flags, such as --duration, pass through to run.py
 ```
 
 This builds each commit's prod stack from a temporary worktree outside the
 checkout, but always drives it with the load generator from your
 checkout, so an old server meets today's workload. Runs alternate A, B, A, B, so
-a change in host load during the comparison hits both commits alike. Each run
-starts on a fresh database. The backend container is pinned to one CPU (still
+a change in host load during the comparison hits both commits alike. Both stacks
+are built and seeded once and stay up for every run, on `LOADTEST_AB_PORT` and the
+port after it (18100 and 18101 by default). The backend container is pinned to one CPU (still
 capped at 1.0 CPU), the load generator to up to three other cores, and Postgres
 and Redis to what is left. On a CPU with hyperthreads, the backend's and the
 generator's twin threads stay idle. The script prints the host load before each

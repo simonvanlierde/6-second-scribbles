@@ -6,10 +6,13 @@ the run reports zero deliveries and a knee at the first step instead of failing.
 
 from __future__ import annotations
 
+import json
+from collections import Counter
+
 import pytest
 
 from app.rooms.protocol import CLIENT_EVENT_ADAPTER
-from loadtest.run import FAKE_DRAWING, sent_at, start_game_message, stroke_fragment
+from loadtest.run import FAKE_DRAWING, StepResult, sent_at, start_game_message, stroke_fragment
 
 PLAYER = "lt-1000-0"
 
@@ -40,3 +43,21 @@ def test_the_other_bot_messages_are_valid() -> None:
         {"type": "leave"},
     ):
         CLIENT_EVENT_ADAPTER.validate_python(message)
+
+
+def test_a_step_with_errors_serializes_to_json() -> None:
+    """`--json` keeps the error counts, which `ab.py` reads back."""
+    errors: Counter[str] = Counter({"disconnect": 2})
+    step = StepResult(
+        rooms=40,
+        players=6,
+        p50_ms=1.0,
+        p95_ms=2.0,
+        deliveries_per_s=100.0,
+        cpu_pct=50.0,
+        mem_mib=150.0,
+        errors=errors,
+        rounds_scored=3,
+        generator_cpu_pct=30.0,
+    )
+    assert json.loads(json.dumps(step.as_json()))["errors"] == {"disconnect": 2}

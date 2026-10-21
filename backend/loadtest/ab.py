@@ -5,7 +5,8 @@ directory and run as the prod-limited stack from ``just loadtest``. The load gen
 comes from this checkout (``backend/loadtest/`` is also copied into each worktree for
 its compose override), so old servers are measured with today's generator.
 
-Runs alternate A, B, A, B... so slow drift in host load hits both refs alike. CPUs
+Both stacks are built and seeded once, on their own ports, and stay up for every run;
+the idle one uses next to no CPU. Runs alternate A, B, A, B... so slow drift in host load hits both refs alike. CPUs
 are split so the two sides do not compete:
 
 - The backend container gets one CPU (``cpuset``) on a physical core whose other
@@ -13,6 +14,10 @@ are split so the two sides do not compete:
 - The load generator runs under ``taskset`` on up to three other cores, one process
   per CPU, again on cores whose sibling stays idle where the allowed set permits.
 - Postgres and Redis get the allowed CPUs left over.
+
+The default is one 40-room step measured for 20 seconds, three runs per ref: about
+five minutes. Backend CPU per 1,000 deliveries/s is the number to compare there, and
+it holds up on a busy host far better than p95 does.
 
 All three come from this process's ``Cpus_allowed_list``, since a session may be
 fenced to part of the host and taskset silently drops CPUs outside it.
@@ -40,7 +45,7 @@ from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1]
 REPO = BACKEND.parent
-PORT = int(os.environ.get("LOADTEST_AB_PORT", "18100"))
+PORT = int(os.environ.get("LOADTEST_AB_PORT", "18100"))  # B gets PORT + 1
 LOAD_WARNING = 1.5
 STACK_TIMEOUT = 900  # seconds for build + migrations + healthy backend + seed
 STEP_TIMEOUT = 600  # seconds per load step before the generator counts as hung
@@ -96,9 +101,10 @@ def split_cpus(allowed: list[int]) -> tuple[int, list[int], list[int]]:
 class Stack:
     """The prod-limited stack of one ref, built from its own temporary worktree."""
 
-    def __init__(self, label: str, ref: str, workdir: Path, override: Path) -> None:
+    def __init__(self, label: str, ref: str, workdir: Path, override: Path, port: int) -> None:
         self.label = label
         self.ref = ref
+        self.port = port
         self.project = f"tmp-6ss-ab-{label.lower()}"
         self.container = f"{self.project}-backend-1"
         self.tree = workdir / f"tree-{label.lower()}"
@@ -131,7 +137,7 @@ class Stack:
     def run(self, *args: str, timeout: float) -> bool:
         """Run one compose command in the ref's worktree; False on failure or timeout."""
         log = self.workdir / f"{self.project}.log"
-        env = {**os.environ, "LOADTEST_PORT": str(PORT)}
+        env = {**os.environ, "LOADTEST_PORT": str(self.port)}
         with log.open("a") as out:
             try:
                 result = subprocess.run(  # fixed argv
@@ -185,7 +191,7 @@ def run_generator(stack: Stack, cpus: list[int], rooms: str, extra: list[str], o
         "-m",
         "loadtest.run",
         "--url",
-        f"ws://127.0.0.1:{PORT}",
+        f"ws://127.0.0.1:{stack.port}",
         "--container",
         stack.container,
         "--rooms",
@@ -249,8 +255,11 @@ def parse_args(argv: list[str] | None) -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument("ref_a")
     parser.add_argument("ref_b")
     parser.add_argument("--runs", type=int, default=3, help="runs per ref, alternating A, B, A, B...")
-    parser.add_argument("--rooms", default="40,50,60", help="comma-separated room counts per run")
-    return parser.parse_known_args(argv)
+    parser.add_argument("--rooms", default="40", help="comma-separated room counts per run")
+    args, extra = parser.parse_known_args(argv)
+    if not any(arg.startswith("--duration") for arg in extra):
+        extra += ["--duration", "20"]
+    return args, extra
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -265,25 +274,24 @@ def main(argv: list[str] | None = None) -> int:
         f'services:\n  backend:\n    cpuset: "{backend_cpu}"\n'
         f'  database:\n    cpuset: "{rest_list}"\n  cache:\n    cpuset: "{rest_list}"\n'
     )
-    stacks = {"A": Stack("A", args.ref_a, workdir, override), "B": Stack("B", args.ref_b, workdir, override)}
+    stacks = {
+        "A": Stack("A", args.ref_a, workdir, override, PORT),
+        "B": Stack("B", args.ref_b, workdir, override, PORT + 1),
+    }
     results: dict[str, dict[int, list[dict]]] = {"A": defaultdict(list), "B": defaultdict(list)}
     status = 0
     try:
         for stack in stacks.values():
             stack.checkout()
+            if not stack.up():
+                print(f"{stack.label} ({stack.ref}) failed to start; see {workdir / stack.project}.log", flush=True)
+                return 1
         for run in range(1, args.runs + 1):
             for stack in stacks.values():
                 print(f"\nrun {run}/{args.runs}, {stack.label} ({stack.ref})", flush=True)
                 if load_average() > LOAD_WARNING:
                     print(f"  warning: host load is above {LOAD_WARNING}; expect noisier numbers", flush=True)
-                if not stack.up():
-                    print(
-                        f"  {stack.label} ({stack.ref}) failed to start; see {workdir / stack.project}.log", flush=True
-                    )
-                    stack.down()
-                    return 1
                 steps = run_generator(stack, generator_cpus, args.rooms, extra, workdir / f"{stack.label}-{run}.json")
-                stack.down()
                 if not steps:
                     print(f"  {stack.label}: the run produced no results", flush=True)
                     return 1

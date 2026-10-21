@@ -364,6 +364,11 @@ class StepResult:
     rounds_scored: int
     generator_cpu_pct: float
 
+    def as_json(self) -> dict[str, object]:
+        """The fields as plain JSON values."""
+        # asdict alone would rebuild the Counter from (key, value) pairs and count the pairs.
+        return {**dataclasses.asdict(self), "errors": dict(self.errors)}
+
     @property
     def connections(self) -> int:
         """Open sockets at this step."""
@@ -471,7 +476,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             # Rewritten after every step, so a run cut short still leaves its finished steps.
             with open(args.json, "w", encoding="utf-8") as out:  # noqa: PTH123
-                json.dump([dataclasses.asdict(r) for r in results], out)
+                json.dump([r.as_json() for r in results], out)
         print(last.row(), flush=True)  # noqa: T201
         if last.generator_cpu_pct > 80:
             print("  warning: a load-generator process was near a full core; raise --workers", flush=True)  # noqa: T201
