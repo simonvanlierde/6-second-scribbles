@@ -7,6 +7,8 @@ import random
 import time
 from typing import TYPE_CHECKING
 
+from fastapi import HTTPException
+
 from app.categories import service as category_service
 from app.core.types import GamePhase
 from app.rooms.protocol import (
@@ -281,13 +283,24 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             )
             continue
 
-        scoring_targets = await category_service.get_localized_scoring_targets(
-            db,
-            category_id=target_assignment.category_id,
-            prompt_ids=target_assignment.item_ids,
-            preferred_locale=room.get_player_locale(player_id),
-        )
-        matched_guesses = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
+        try:
+            scoring_targets = await category_service.get_localized_scoring_targets(
+                db,
+                category_id=target_assignment.category_id,
+                prompt_ids=target_assignment.item_ids,
+                preferred_locale=room.get_player_locale(player_id),
+            )
+            targets = scoring_targets.targets
+        except HTTPException as exc:
+            # A reseed can delete the round's category mid-round; those guesses score 0.
+            logger.warning(
+                "[GameRoom %s] No scoring targets for category %s (%s), scoring as 0",
+                room.room_id,
+                target_assignment.category_id,
+                exc.detail,
+            )
+            targets = []
+        matched_guesses = guess_matcher.score_guesses_against_targets(guesses, targets)
         correct_count = len(matched_guesses)
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
@@ -295,7 +308,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             player_id=player_id,
             guesses=guesses,
             matched_guesses=set(matched_guesses),
-            targets=scoring_targets.targets,
+            targets=targets,
             miss_candidates=miss_candidates,
         )
 
@@ -309,7 +322,7 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
                 playerId=player_id,
                 targetPlayerId=target_player_id,
                 correctGuesses=correct_count,
-                totalItems=len(scoring_targets.targets),
+                totalItems=len(targets),
                 pointsEarned=points_earned,
             ),
         )
@@ -322,6 +335,12 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
         scores=dict(room.metadata.player_scores),
         highlights=compute_highlights(results, room.metadata.guess_submissions, miss_candidates),
     )
+
+
+def no_points_round_event(room: GameRoom) -> RoundCompleteServerEvent:
+    """End the round without new points, for when scoring itself failed."""
+    room.metadata.game_phase = GamePhase.ROUND_RESULTS
+    return RoundCompleteServerEvent(results=[], scores=dict(room.metadata.player_scores))
 
 
 def game_complete_event(room: GameRoom) -> GameCompleteServerEvent:
