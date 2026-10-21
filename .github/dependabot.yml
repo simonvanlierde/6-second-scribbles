@@ -24,14 +24,18 @@ updates:
     groups:
       hooks: {patterns: ["*"]}
 
-  # Dev tooling lands as one PR. A runtime dependency gets its own, so a risky bump
-  # is not buried in lint-tool churn. Advisories ignore the version-update groups,
+  # Dev tooling lands as one PR and runtime minor and patch bumps as another, so a risky
+  # bump is not buried in lint-tool churn. A runtime major gets its own PR. Advisories ignore the version-update groups,
   # so the security group keeps them to one PR and one CI run per ecosystem.
   - package-ecosystem: npm
     directory: /
     schedule: {interval: weekly}
     cooldown: {default-days: 7, semver-major-days: 30}
     groups:
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+        patterns: ["*"]
       dev-tooling:
         dependency-type: development
         update-types: [minor, patch]
@@ -45,6 +49,10 @@ updates:
     schedule: {interval: weekly}
     cooldown: {default-days: 7, semver-major-days: 30}
     groups:
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+        patterns: ["*"]
       dev-tooling:
         dependency-type: development
         update-types: [minor, patch]
