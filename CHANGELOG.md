@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- The Argos Translate machine translation of seed data is gone: the `db-translate` dependency group and Docker target, the `translate-seed` and `seed-auto` recipes, and the `ARGOS_MODELS_DIR` volume in the dev Compose file. Seed translations are now written and reviewed by hand. The game never used it at runtime.
+
 ### Fixed
 
 - If your device's clock ran slightly behind the server's, the drawing timer ended the moment a round started and your guesses were sent straight away.
