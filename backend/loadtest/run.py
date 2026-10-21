@@ -1,8 +1,8 @@
 """Ramp WebSocket load against the room server until broadcast latency degrades.
 
 Each simulated room has one host and N-1 guests speaking the real room protocol:
-every player scribbles on the shared lobby drawpad (``draw_stroke_partial`` at
-the browser's frame rate), and every room regularly plays a one-round game
+every player scribbles on the shared lobby drawpad (``draw_stroke_partial`` 20
+times a second, as the browser sends them), and every room regularly plays a one-round game
 (server-dealt cards, a drawing, ready, guesses, scoring, restart). The
 measured latency is send-to-receive time of a stroke fragment as seen by the
 other players in the room, which is the hot broadcast path.
@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import dataclasses
 import json
 import math
 import multiprocessing
@@ -36,10 +37,10 @@ from websockets.exceptions import ConnectionClosed, InvalidHandshake
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-# A browser frame: SharedDrawpad.vue flushes buffered points once per animation frame.
-FRAME_HZ = 60
-STROKE_FRAMES = 30  # half a second of continuous drawing per stroke
-POINTS_PER_FRAME = 2
+# SharedDrawpad.vue sends buffered points every 50 ms.
+SEND_HZ = 20
+STROKE_FRAGMENTS = 10  # half a second of continuous drawing per stroke
+POINTS_PER_FRAGMENT = 6
 PAUSE_SECONDS = (0.5, 1.5)  # gap between strokes, uniform
 # The largest drawing the frontend sends: encodeDrawing (frontend/src/lib/
 # drawingImage.ts) shrinks every drawing to at most 56 KiB of data URL.
@@ -54,6 +55,49 @@ SERVER_ERROR_TYPES = {
     "kick_error",
 }
 MAX_ROOMS = 500  # settings.max_total_rooms
+
+
+# The server bounds game timers (15-180 s) and stroke widths (at most 64), so the
+# generator must send values a real client could; tests/unit/test_loadtest_messages.py
+# validates these messages against the server's protocol models.
+MIN_ROUND_SECONDS = 15
+SEND_TIME_PREFIX = "t"
+
+
+def stroke_fragment(player_id: str, points: list[int], sent: float, *, start: bool) -> dict[str, object]:
+    """A lobby stroke fragment whose `color` carries the monotonic send time.
+
+    The server relays the fragment unchanged, so the receiver reads the time back
+    from `color`; `width` stays a real pen width the server accepts.
+    """
+    return {
+        "type": "draw_stroke_partial",
+        "playerId": player_id,
+        "stroke": {"color": f"{SEND_TIME_PREFIX}{sent:.6f}", "width": 4, "points": points},
+        "strokeStart": start,
+    }
+
+
+def sent_at(stroke: dict[str, object]) -> float:
+    """The monotonic send time a fragment from `stroke_fragment` carries."""
+    return float(str(stroke["color"]).removeprefix(SEND_TIME_PREFIX))
+
+
+def start_game_message(draw_seconds: float) -> dict[str, object]:
+    """A one-round start_game within the server's timer bounds.
+
+    Players press ready before the timer runs out, so a long limit does not slow
+    the rounds down.
+    """
+    return {
+        "type": "start_game",
+        "rounds": 1,
+        "difficulty": "easy",
+        "drawingTimeLimit": max(MIN_ROUND_SECONDS, math.ceil(draw_seconds)),
+        "guessingTimeLimit": MIN_ROUND_SECONDS,
+    }
+
+
 LOBBY, FINAL = "lobby", "final"
 # The room phase each server event moves a client into.
 PHASE_AFTER = {
@@ -190,6 +234,15 @@ class Player:
             await asyncio.sleep(2.0 if self.is_host else 0.5)
             await self.send({"type": "leave"})
 
+    def record_relay(self, msg: dict, now: float) -> None:
+        """Time the other players' stroke fragments in a relayed message."""
+        window_start, window_end = self.cfg.window
+        if not window_start <= now <= window_end:
+            return
+        for fragment in msg["fragments"]:
+            if fragment.get("playerId") != self.player_id:
+                self.stats.latencies_ms.append((now - sent_at(fragment["stroke"])) * 1000)
+
     async def receive_loop(self) -> None:
         """Track the room phase, react to the game flow, and time stroke relays."""
         assert self.ws is not None  # noqa: S101 # set by run() before this starts
@@ -199,10 +252,8 @@ class Player:
             kind = msg.get("type")
             self.phase = PHASE_AFTER.get(kind, self.phase)
             match kind:
-                case "draw_stroke_partial":
-                    window_start, window_end = self.cfg.window
-                    if msg.get("playerId") != self.player_id and window_start <= now <= window_end:
-                        self.stats.latencies_ms.append((now - msg["stroke"]["width"]) * 1000)
+                case "draw_stroke_batch":
+                    self.record_relay(msg, now)
                 case "player_joined" if msg.get("playerId") == self.player_id:
                     if self.is_host and not msg.get("isHost"):
                         self.stats.errors["not_host"] += 1
@@ -245,24 +296,17 @@ class Player:
             if self.phase != LOBBY:
                 await asyncio.sleep(0.2)
                 continue
-            x, y = rng.uniform(0, 800), rng.uniform(0, 600)
-            for frame in range(STROKE_FRAMES):
+            # Pad coordinates, 0-10000 across and down the pad; a step of 60 is about
+            # 5 px on an 800 px wide pad.
+            x, y = rng.randint(0, 10_000), rng.randint(0, 10_000)
+            for frame in range(STROKE_FRAGMENTS):
                 points = []
-                for _ in range(POINTS_PER_FRAME):
-                    x, y = x + rng.uniform(-5, 5), y + rng.uniform(-5, 5)
-                    points.append({"x": round(x, 1), "y": round(y, 1)})
-                # The server relays the fragment unchanged, so `width` carries the
-                # monotonic send time and the receiver subtracts it.
-                stroke = {"color": "#1f2937", "width": time.monotonic(), "points": points}
-                await self.send(
-                    {
-                        "type": "draw_stroke_partial",
-                        "playerId": self.player_id,
-                        "stroke": stroke,
-                        "strokeStart": frame == 0,
-                    }
-                )
-                await asyncio.sleep(1 / FRAME_HZ)
+                for _ in range(POINTS_PER_FRAGMENT):
+                    x = min(10_000, max(0, x + rng.randint(-60, 60)))
+                    y = min(10_000, max(0, y + rng.randint(-60, 60)))
+                    points += [x, y]
+                await self.send(stroke_fragment(self.player_id, points, time.monotonic(), start=frame == 0))
+                await asyncio.sleep(1 / SEND_HZ)
             await asyncio.sleep(rng.uniform(*PAUSE_SECONDS))
 
     async def host_loop(self) -> None:
@@ -271,15 +315,7 @@ class Player:
             # Jitter the lobby time so rooms' games do not line up.
             await asyncio.sleep(random.uniform(0.5, 1.5) * self.cfg.lobby_seconds)  # noqa: S311
             if self.phase == LOBBY:
-                await self.send(
-                    {
-                        "type": "start_game",
-                        "rounds": 1,
-                        "difficulty": "easy",
-                        "drawingTimeLimit": max(1, math.ceil(self.cfg.draw_seconds)),
-                        "guessingTimeLimit": 10,
-                    }
-                )
+                await self.send(start_game_message(self.cfg.draw_seconds))
             # The server ignores start_game until a second player has joined, so the
             # phase may stay in the lobby; otherwise wait for the final results.
             await asyncio.sleep(0.5)
@@ -337,6 +373,11 @@ class StepResult:
     errors: Counter[str]
     rounds_scored: int
     generator_cpu_pct: float
+
+    def as_json(self) -> dict[str, object]:
+        """The fields as plain JSON values."""
+        # asdict alone would rebuild the Counter from (key, value) pairs and count the pairs.
+        return {**dataclasses.asdict(self), "errors": dict(self.errors)}
 
     @property
     def connections(self) -> int:
@@ -421,9 +462,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--container", help="backend container to sample with docker stats")
     parser.add_argument("--prefix", type=int, default=10, help="two-digit room code prefix")
     parser.add_argument("--smoke", action="store_true", help="a few seconds at tiny load; fails on any problem")
+    parser.add_argument("--keep-going", action="store_true", help="run every step, also past the knee")
+    parser.add_argument("--json", metavar="PATH", help="also write the step results to PATH as JSON")
     args = parser.parse_args(argv)
     if args.smoke:
-        args.rooms, args.players, args.duration, args.lobby_seconds, args.draw_seconds = "2", 3, 8, 4, 1
+        # The host starts the game 4-12 s in and the window opens at about 3 s, so every
+        # window holds some lobby drawing and still sees the round scored.
+        args.rooms, args.players, args.duration, args.lobby_seconds, args.draw_seconds = "2", 3, 20, 8, 1
     return args
 
 
@@ -436,14 +481,21 @@ def main(argv: list[str] | None = None) -> int:
     print(TABLE_HEADER, flush=True)  # noqa: T201
     knee: StepResult | None = None
     last: StepResult | None = None
+    results: list[StepResult] = []
     for rooms in steps:
         last = run_step(args, rooms)
+        results.append(last)
+        if args.json:
+            # Rewritten after every step, so a run cut short still leaves its finished steps.
+            with open(args.json, "w", encoding="utf-8") as out:  # noqa: PTH123
+                json.dump([r.as_json() for r in results], out)
         print(last.row(), flush=True)  # noqa: T201
         if last.generator_cpu_pct > 80:
             print("  warning: a load-generator process was near a full core; raise --workers", flush=True)  # noqa: T201
-        if is_knee(last.p95_ms, sum(last.errors.values()), args.p95_limit):
+        if is_knee(last.p95_ms, sum(last.errors.values()), args.p95_limit) and knee is None:
             knee = last
-            break
+            if not args.keep_going:
+                break
     if args.smoke:
         ok = last is not None and knee is None and last.rounds_scored > 0
         print("smoke: ok" if ok else "smoke: FAILED (errors, no deliveries, or no round scored)")  # noqa: T201

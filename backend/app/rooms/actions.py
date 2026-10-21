@@ -16,6 +16,7 @@ from app.rooms.protocol import (
     PlayerJoinedEvent,
     PlayerLeftEvent,
     ReactionReceivedServerEvent,
+    StrokeFragment,
     send_ws_message,
 )
 
@@ -220,6 +221,8 @@ async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClea
     if not await require_host(session, "clear the drawpad"):
         return
     session.room.clear_lobby_strokes()
+    # A batch already going out must land before the clear, or players see it after.
+    await session.room.wait_for_lobby_batch()
     await session.room.broadcast(event)
 
 
@@ -279,12 +282,13 @@ async def handle_watch(session: RoomWebSocketSession, event: WatchEvent) -> None
 
 
 async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEvent | DrawStrokePartialEvent) -> None:
-    """Handle a draw-stroke event (broadcast as-is).
+    """Handle a draw-stroke event.
 
-    The in-game path carries a full `drawing` PNG; retain the latest one per player
-    so reconnecting clients recover it via room_state. The lobby shared drawpad
-    relays vector `stroke` fragments; fold those into the room's authoritative
-    stroke list so late joiners hydrate the collective doodle via room_state.
+    The in-game path carries a full `drawing` PNG, broadcast as-is; retain the latest
+    one per player so reconnecting clients recover it via room_state. The lobby shared
+    drawpad sends vector `stroke` fragments; fold those into the room's authoritative
+    stroke list so late joiners hydrate the collective doodle via room_state, and
+    relay them in the room's next `draw_stroke_batch`.
     """
     if not session.player_id:
         return
@@ -297,10 +301,13 @@ async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEve
             return
         if event.stroke is not None:
             session.room.apply_lobby_partial(session.player_id, event.stroke, is_start=event.stroke_start)
-    else:
-        drawing = (event.model_extra or {}).get("drawing")
-        if isinstance(drawing, str):
-            session.room.round_drawings[session.player_id] = drawing
+            session.room.queue_lobby_fragment(
+                StrokeFragment(player_id=session.player_id, stroke=event.stroke, stroke_start=event.stroke_start)
+            )
+        return
+    drawing = (event.model_extra or {}).get("drawing")
+    if isinstance(drawing, str):
+        session.room.round_drawings[session.player_id] = drawing
     await session.room.broadcast(event)
 
 

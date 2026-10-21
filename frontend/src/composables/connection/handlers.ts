@@ -157,18 +157,15 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
       }
       break;
 
-    case "draw_stroke_partial":
-      // An in-progress stroke arrives as delta fragments; append them to the
-      // sender's active stroke (a new stroke when strokeStart is set).
-      if (message.stroke && message.playerId && message.playerId !== store.localPlayerId) {
+    case "draw_stroke_batch":
+      // In-progress strokes arrive as delta fragments, batched per server tick; append
+      // each to its sender's active stroke (a new stroke when strokeStart is set).
+      for (const fragment of message.fragments) {
+        if (fragment.playerId === store.localPlayerId) continue;
         store.applyPartialStroke(
-          message.playerId,
-          {
-            color: message.stroke.color,
-            width: message.stroke.width,
-            points: message.stroke.points ?? [],
-          },
-          message.strokeStart ?? false,
+          fragment.playerId,
+          { color: fragment.stroke.color, width: fragment.stroke.width, points: fragment.stroke.points ?? [] },
+          fragment.strokeStart,
         );
       }
       break;

@@ -1,9 +1,7 @@
-import { expect, test } from "@playwright/test";
-
-type E2EPage = Parameters<Parameters<typeof test>[1]>[0]["page"];
+import { expect, type Page, test } from "@playwright/test";
 
 // The name now lives in the Settings panel (opened from the gear), not on Home.
-async function setPlayerName(page: E2EPage, name: string) {
+async function setPlayerName(page: Page, name: string) {
   await page.getByRole("button", { name: /^settings$/i }).click();
   const nameInput = page.getByPlaceholder(/pick a name/i);
   await nameInput.fill(name);
@@ -11,7 +9,7 @@ async function setPlayerName(page: E2EPage, name: string) {
   await expect(nameInput).toBeHidden();
 }
 
-async function createRoom(page: E2EPage, playerName = "Test Player") {
+async function createRoom(page: Page, playerName = "Test Player") {
   await page.goto("/");
   await setPlayerName(page, playerName);
   await page.getByRole("button", { name: /create room/i }).click();
