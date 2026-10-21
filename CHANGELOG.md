@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-21
+
 ### Upgrade notes
 
 - A migration drops six database indexes that duplicated unique constraints or were never queried. It drops them concurrently, so it takes no long table lock.
@@ -167,7 +169,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   registered accounts, locale-aware prompt categories, and a deployable
   Docker Compose stack.
 
-[Unreleased]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/simonvanlierde/6-second-scribbles/releases/tag/v0.1.0
