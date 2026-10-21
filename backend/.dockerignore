@@ -45,5 +45,5 @@ justfile
 scripts/.seed_translation_hash
 scripts/seed_data _bk copy.yaml
 
-# Translation cache 
+# Translation cache
 **/.translation_cache.json

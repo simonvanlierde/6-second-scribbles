@@ -17,7 +17,7 @@ services:
       # Python, not curl: the image ships no curl. urlopen raises on a non-2xx status,
       # and /api/health answers 503 while the database or Redis is down. With Redis down
       # the answer takes about 5 s (the Redis client's connect wait), so wait 8 s for it.
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=8)" ]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=8)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -26,7 +26,7 @@ services:
   cache:
     image: redis:8-alpine
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -37,7 +37,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/18/docker
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER" ]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -61,7 +61,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost/healthz" ]
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -13,5 +13,5 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Translation cache 
+# Translation cache
 .translation_cache.json

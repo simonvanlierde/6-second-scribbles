@@ -27,7 +27,7 @@ x-hardening: &hardening
 services:
 
   backend:
-    <<: *hardening
+    !!merge <<: *hardening
     logging: *logging
     build:
       target: prod
@@ -56,7 +56,7 @@ services:
           memory: 1g
 
   cache:
-    <<: *hardening
+    !!merge <<: *hardening
     logging: *logging
     # Started as the image's redis user, the entrypoint skips its switch from root,
     # which is what needed capabilities.
@@ -90,7 +90,7 @@ services:
           pids: 512
 
   database-migrations:
-    <<: *hardening
+    !!merge <<: *hardening
     build:
       target: db-migrations
     restart: "no"
@@ -106,7 +106,7 @@ services:
   # No source mount (unlike dev): the seed YAML baked into the image at build
   # time is used, keeping prod seeds reproducible.
   database-seed:
-    <<: *hardening
+    !!merge <<: *hardening
     build:
       context: ./backend
       target: db-seed
@@ -127,7 +127,7 @@ services:
       - db-seed
 
   frontend:
-    <<: *hardening
+    !!merge <<: *hardening
     logging: *logging
     build:
       target: prod
@@ -157,7 +157,7 @@ services:
           memory: 128m
 
   cloudflared:
-    <<: *hardening
+    !!merge <<: *hardening
     logging: *logging
     # Pinned by tag and digest, so a deploy is reproducible and Dependabot has a
     # version to compare when it proposes the next release.
@@ -168,7 +168,7 @@ services:
         condition: service_started
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
-    command: [ "tunnel", "--no-autoupdate", "run" ]
+    command: ["tunnel", "--no-autoupdate", "run"]
     profiles:
       - tunnel
 
