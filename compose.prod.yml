@@ -54,6 +54,11 @@ services:
         limits:
           cpus: "1.0"
           memory: 1g
+    # Each WebSocket holds a file descriptor, and Python keeps Docker's soft limit of
+    # 1024, which turned players away at about 1000 connections with CPU to spare.
+    # Caddy and cloudflared, as Go programs, raise theirs to the hard limit themselves.
+    ulimits:
+      nofile: 65536
 
   cache:
     !!merge <<: *hardening
