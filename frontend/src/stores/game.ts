@@ -4,7 +4,6 @@ import { computed, ref } from "vue";
 import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
-import { normalizeGamePhase } from "@/shared/gamePhase";
 import { getBrowserLocale } from "@/shared/locales";
 import type {
   Card,
@@ -65,11 +64,9 @@ export const useGameStore = defineStore(
     const localPlayerId = ref<string>("");
     const localPlayerName = ref<string>("");
     const localPlayerLocale = ref<string>(getBrowserLocale());
-    // Null until chosen or derived: setLocalPlayer fills it with a deterministic
-    // per-id colour so fresh players don't all default to the same one.
+    // Null until the player picks one in settings; until then the server picks a
+    // colour nobody else in the room has.
     const localPlayerColor = ref<AvatarColor | null>(null);
-    const pendingLocalPlayerId = ref<string | null>(null);
-    const pendingLocalPlayerName = ref<string | null>(null);
     const isSpectatorMode = ref<boolean>(false);
 
     // --- Room & players ---
@@ -83,7 +80,7 @@ export const useGameStore = defineStore(
     const kickVotes = ref<Map<string, KickVote>>(new Map());
 
     // --- Game flow ---
-    const gamePhase = ref(normalizeGamePhase(undefined));
+    const gamePhase = ref<GamePhase>("lobby");
     const currentRound = ref<number>(0);
     const maxRounds = ref<number>(GAME_SETTINGS.rounds.DEFAULT);
     const difficulty = ref<Difficulty>(GAME_SETTINGS.difficulty.DEFAULT);
@@ -108,14 +105,18 @@ export const useGameStore = defineStore(
 
     // --- Room settings ---
     const defaultLocale = ref<string>("en");
-    const customCategoryIds = ref<number[] | null>(null);
     const isPrivateRoom = ref<boolean>(false);
 
     // --- Computed ---
     const localPlayer = computed(() => players.value.get(localPlayerId.value));
-    // Resolved avatar colour: the chosen colour, or a deterministic per-id one.
-    // Centralised so consumers don't each re-hardcode the `?? getAvatarColor` fallback.
-    const localAvatarColor = computed(() => localPlayerColor.value ?? getAvatarColor(localPlayerId.value));
+    // The local player's avatar colour: picked, else the one the room assigned, else a per-id one.
+    const localAvatarColor = computed(
+      // The server only assigns colour tokens, so a room colour is an AvatarColor.
+      () =>
+        localPlayerColor.value ??
+        (localPlayer.value?.color as AvatarColor | undefined) ??
+        getAvatarColor(localPlayerId.value),
+    );
     const playersList = computed(() => Array.from(players.value.values()));
     const canStartGame = computed(() => players.value.size >= 2 && gamePhase.value === "lobby");
     const isHost = computed(() => hostId.value === localPlayerId.value);
@@ -124,9 +125,6 @@ export const useGameStore = defineStore(
     function setLocalPlayer(id: string, name: string) {
       localPlayerId.value = id;
       localPlayerName.value = name;
-      if (!localPlayerColor.value) {
-        localPlayerColor.value = getAvatarColor(id);
-      }
     }
 
     function setLocalPlayerColor(color: AvatarColor) {
@@ -136,22 +134,6 @@ export const useGameStore = defineStore(
 
     function setSpectatorMode(visible: boolean) {
       isSpectatorMode.value = visible;
-    }
-
-    function setPendingLocalPlayer(id: string, name: string) {
-      pendingLocalPlayerId.value = id;
-      pendingLocalPlayerName.value = name;
-    }
-
-    function clearPendingLocalPlayer() {
-      pendingLocalPlayerId.value = null;
-      pendingLocalPlayerName.value = null;
-    }
-
-    function confirmPendingLocalPlayer(id: string) {
-      if (pendingLocalPlayerId.value !== id || !pendingLocalPlayerName.value) return;
-      setLocalPlayer(id, pendingLocalPlayerName.value);
-      clearPendingLocalPlayer();
     }
 
     function setLocalPlayerLocale(nextLocale: string) {
@@ -165,7 +147,7 @@ export const useGameStore = defineStore(
 
     function addPlayer(id: string, name: string) {
       if (!players.value.has(id)) {
-        players.value.set(id, { id, name, score: 0, connected: true });
+        players.value.set(id, { id, name, score: 0, color: getAvatarColor(id), connected: true });
       }
       if (players.value.size === 1 && !hostId.value) {
         hostId.value = id;
@@ -187,7 +169,8 @@ export const useGameStore = defineStore(
           id: incoming.id,
           name: incoming.name,
           score: existing?.score ?? 0,
-          color: incoming.color ?? existing?.color ?? null,
+          // The server always sends a colour; the per-id one only fills the nullable contract field.
+          color: incoming.color ?? existing?.color ?? getAvatarColor(incoming.id),
           currentCard: existing?.currentCard,
           drawing: existing?.drawing,
           connected: incoming.connected ?? existing?.connected ?? true,
@@ -280,8 +263,8 @@ export const useGameStore = defineStore(
       scores: Record<string, number>;
       highlights?: RoundHighlights | null;
     }) {
-      setRoundResults(event.results);
-      setRoundHighlights(event.highlights ?? null);
+      lastRoundResults.value = event.results;
+      lastHighlights.value = event.highlights ?? null;
       updateScores(event.scores);
       // Snapshot this round's drawings for the end-of-game gallery before the
       // next start_round clears them. currentRound still names the finished round.
@@ -310,10 +293,6 @@ export const useGameStore = defineStore(
       totalPlayers.value = total;
     }
 
-    function setRoundResults(results: RoundResult[]) {
-      lastRoundResults.value = results;
-    }
-
     /**
      * Snapshot the round's drawings into the gallery and fold its correct-guess
      * count into the running total. Called on round_complete while players still
@@ -330,7 +309,7 @@ export const useGameStore = defineStore(
             round,
             playerId: player.id,
             name: player.name,
-            color: player.color ?? getAvatarColor(player.id),
+            color: player.color,
             drawing: player.drawing,
           });
         }
@@ -338,10 +317,6 @@ export const useGameStore = defineStore(
       for (const result of lastRoundResults.value) {
         totalGuessesMade.value += result.correctGuesses;
       }
-    }
-
-    function setRoundHighlights(highlights: RoundHighlights | null) {
-      lastHighlights.value = highlights;
     }
 
     function updateScores(scores: Record<string, number>) {
@@ -355,21 +330,13 @@ export const useGameStore = defineStore(
 
     function getFinalScores() {
       return playersList.value
-        .map((p) => ({ playerId: p.id, playerName: p.name, score: p.score }))
+        .map((p) => ({ playerId: p.id, playerName: p.name, score: p.score, color: p.color }))
         .sort((a, b) => b.score - a.score);
-    }
-
-    function getWinner() {
-      return getFinalScores()[0];
     }
 
     // --- Actions: room settings ---
     function setDefaultLocale(nextLocale: string) {
       defaultLocale.value = nextLocale;
-    }
-
-    function setCustomCategoryIds(nextCategoryIds: number[] | null) {
-      customCategoryIds.value = nextCategoryIds ? [...nextCategoryIds] : null;
     }
 
     function setPrivacy(isPrivate: boolean) {
@@ -396,7 +363,7 @@ export const useGameStore = defineStore(
       setPlayers(roomState.players);
       hostId.value = roomState.hostId ?? null;
       enterPhase(
-        normalizeGamePhase(roomState.gamePhase),
+        roomState.gamePhase,
         roomState.readyCount ?? readyCount.value,
         roomState.totalPlayers ?? totalPlayers.value,
       );
@@ -444,7 +411,6 @@ export const useGameStore = defineStore(
       }
       if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
-      customCategoryIds.value = roomState.customCategoryIds ?? null;
       if (roomState.isPrivate !== undefined) isPrivateRoom.value = roomState.isPrivate;
       // Only treat a snapshot that reflects our own membership (i.e. the one sent
       // after our join completes) as authoritative hydration. A spectator has no
@@ -477,7 +443,6 @@ export const useGameStore = defineStore(
       players.value.clear();
       kickVotes.value.clear();
       hostId.value = null;
-      clearPendingLocalPlayer();
       currentRound.value = 0;
       maxRounds.value = GAME_SETTINGS.rounds.DEFAULT;
       difficulty.value = GAME_SETTINGS.difficulty.DEFAULT;
@@ -500,7 +465,6 @@ export const useGameStore = defineStore(
       setLocalPadVisible(true);
       setRoomPadVisible(true);
       defaultLocale.value = "en";
-      customCategoryIds.value = null;
       localPlayerLocale.value = getBrowserLocale();
       isPrivateRoom.value = false;
     }
@@ -511,8 +475,6 @@ export const useGameStore = defineStore(
       hydrated,
       localPlayerId,
       localPlayerName,
-      pendingLocalPlayerId,
-      pendingLocalPlayerName,
       players,
       hostId,
       currentRound,
@@ -537,7 +499,6 @@ export const useGameStore = defineStore(
       readyCount,
       totalPlayers,
       defaultLocale,
-      customCategoryIds,
       localPlayerLocale,
       localPlayerColor,
       localAvatarColor,
@@ -553,9 +514,6 @@ export const useGameStore = defineStore(
       // Actions
       setLocalPlayer,
       setSpectatorMode,
-      setPendingLocalPlayer,
-      clearPendingLocalPlayer,
-      confirmPendingLocalPlayer,
       setLocalPlayerLocale,
       setLocalPlayerColor,
       setRoomCode,
@@ -573,14 +531,8 @@ export const useGameStore = defineStore(
       onGameComplete,
       onRestartGame,
       setReadyStatus,
-      setRoundResults,
-      captureRoundDrawings,
-      setRoundHighlights,
-      updateScores,
       getFinalScores,
-      getWinner,
       setDefaultLocale,
-      setCustomCategoryIds,
       setPrivacy,
       applySettingsUpdate,
       applyRoomState,

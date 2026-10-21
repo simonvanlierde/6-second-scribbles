@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { GAME_SETTINGS } from "@/config/gameConfig";
+import type { RoundResult } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
 function createMemoryStorage(): Storage {
@@ -106,7 +107,7 @@ describe("setPlayers", () => {
   it("preserves scores for existing players", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
-    store.updateScores({ p1: 42 });
+    store.onGameComplete({ finalScores: { p1: 42 } });
     store.setPlayers([{ id: "p1", name: "Alice" }]);
     expect(store.playersList[0]?.score).toBe(42);
   });
@@ -200,7 +201,7 @@ describe("onStartGame", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
     store.addPlayer("p2", "Bob");
-    store.updateScores({ p1: 10, p2: 5 });
+    store.onGameComplete({ finalScores: { p1: 10, p2: 5 } });
     store.onStartGame({ difficulty: "hard", rounds: 8, drawingTimeLimit: 90, guessingTimeLimit: 60 });
     expect(store.playersList.every((p) => p.score === 0)).toBe(true);
     expect(store.currentRound).toBe(0);
@@ -316,7 +317,7 @@ describe("onGameComplete", () => {
     store.setReadyStatus(2, 2);
     store.onGameComplete({ finalScores: { p1: 30, p2: 20 } });
     expect(store.gamePhase).toBe("final_results");
-    expect(store.getWinner()?.playerId).toBe("p1");
+    expect(store.getFinalScores()[0]?.playerId).toBe("p1");
     expect(store.readyCount).toBe(0);
     expect(store.totalPlayers).toBe(2);
   });
@@ -326,7 +327,7 @@ describe("onRestartGame", () => {
   it("returns to the lobby and resets round counter and all scores to 0", () => {
     const store = useGameStore();
     store.addPlayer("p1", "Alice");
-    store.updateScores({ p1: 99 });
+    store.onGameComplete({ finalScores: { p1: 99 } });
     store.currentRound = 3;
     store.gamePhase = "final_results";
     store.onRestartGame();
@@ -373,19 +374,9 @@ describe("getFinalScores", () => {
     store.addPlayer("p1", "Alice");
     store.addPlayer("p2", "Bob");
     store.addPlayer("p3", "Carol");
-    store.updateScores({ p1: 10, p2: 30, p3: 20 });
+    store.onGameComplete({ finalScores: { p1: 10, p2: 30, p3: 20 } });
     const scores = store.getFinalScores();
     expect(scores.map((s) => s.playerId)).toEqual(["p2", "p3", "p1"]);
-  });
-});
-
-describe("getWinner", () => {
-  it("returns the player with the highest score", () => {
-    const store = useGameStore();
-    store.addPlayer("p1", "Alice");
-    store.addPlayer("p2", "Bob");
-    store.updateScores({ p1: 5, p2: 15 });
-    expect(store.getWinner()?.playerId).toBe("p2");
   });
 });
 
@@ -393,7 +384,12 @@ describe("getWinner", () => {
 // Drawing history (end-of-game gallery)
 // ---------------------------------------------------------------------------
 
-describe("captureRoundDrawings", () => {
+function completeRound(store: ReturnType<typeof useGameStore>, round: number, results: RoundResult[] = []) {
+  store.currentRound = round;
+  store.onRoundComplete({ results, scores: {} });
+}
+
+describe("onRoundComplete drawing history", () => {
   it("snapshots one entry per player that submitted a drawing", () => {
     const store = useGameStore();
     store.setPlayers([
@@ -405,7 +401,7 @@ describe("captureRoundDrawings", () => {
     store.setPlayerDrawing("p2", "data:image/png;base64,BBB");
     // p3 never drew.
 
-    store.captureRoundDrawings(1);
+    completeRound(store, 1);
 
     expect(store.drawingHistory).toHaveLength(2);
     expect(store.drawingHistory.map((d) => d.playerId)).toEqual(["p1", "p2"]);
@@ -421,9 +417,9 @@ describe("captureRoundDrawings", () => {
     const store = useGameStore();
     store.setPlayers([{ id: "p1", name: "Alice" }]);
     store.setPlayerDrawing("p1", "data:image/png;base64,R1");
-    store.captureRoundDrawings(1);
+    completeRound(store, 1);
     store.setPlayerDrawing("p1", "data:image/png;base64,R2");
-    store.captureRoundDrawings(2);
+    completeRound(store, 2);
 
     expect(store.drawingHistory.map((d) => d.round)).toEqual([1, 2]);
     expect(store.drawingHistory.map((d) => d.drawing)).toEqual([
@@ -435,7 +431,7 @@ describe("captureRoundDrawings", () => {
   it("folds the round's correct guesses into totalGuessesMade", () => {
     const store = useGameStore();
     store.setPlayers([{ id: "p1", name: "Alice" }]);
-    store.setRoundResults([
+    completeRound(store, 1, [
       {
         playerId: "p1",
         targetPlayerId: "p2",
@@ -451,7 +447,6 @@ describe("captureRoundDrawings", () => {
         pointsEarned: 20,
       },
     ]);
-    store.captureRoundDrawings(1);
 
     expect(store.totalGuessesMade).toBe(5);
   });
@@ -460,7 +455,7 @@ describe("captureRoundDrawings", () => {
     const store = useGameStore();
     store.setPlayers([{ id: "p1", name: "Alice" }]);
     store.setPlayerDrawing("p1", "data:image/png;base64,AAA");
-    store.setRoundResults([
+    completeRound(store, 1, [
       {
         playerId: "p1",
         targetPlayerId: "p2",
@@ -469,14 +464,13 @@ describe("captureRoundDrawings", () => {
         pointsEarned: 10,
       },
     ]);
-    store.captureRoundDrawings(1);
 
     store.onRestartGame();
     expect(store.drawingHistory).toHaveLength(0);
     expect(store.totalGuessesMade).toBe(0);
 
     store.setPlayerDrawing("p1", "data:image/png;base64,BBB");
-    store.captureRoundDrawings(2);
+    completeRound(store, 2);
     store.reset();
     expect(store.drawingHistory).toHaveLength(0);
     expect(store.totalGuessesMade).toBe(0);

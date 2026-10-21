@@ -7,7 +7,7 @@ from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState, R
 
 LEAVER = "leaver"
 STAYER = "stayer"
-IDENTITY_FIELDS = {"player_user_ids", "player_rejoin_keys"}
+IDENTITY_FIELDS = {"player_user_ids", "player_rejoin_keys", "player_departed_at"}
 
 FIELD_GROUPS = (
     RoomMetadataState.SEAT_FIELDS,
@@ -39,6 +39,7 @@ def _metadata_with_both_players() -> RoomMetadataState:
         submitted_players={LEAVER, STAYER},
         player_scores={LEAVER: 10, STAYER: 20},
         player_seats={LEAVER: 0, STAYER: 1},
+        player_departed_at={LEAVER: 1.0, STAYER: 1.0},
     )
 
 

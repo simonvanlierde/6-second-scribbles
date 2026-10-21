@@ -1,16 +1,9 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import {
-  handleConnectionEvent,
-  handleDrawingEvent,
-  handleGameFlowEvent,
-  handleKickEvent,
-  handleResultsEvent,
-} from "@/composables/connection/handlers";
+import { handleServerEvent } from "@/composables/connection/handlers";
 import { useNotifications } from "@/composables/notifications";
 import { BACKEND_HOST, UI_TIMINGS } from "@/config/gameConfig";
 import { type ClientEvent, ClientEventSchema, type ServerEvent, ServerEventSchema } from "@/generated/protocol";
-import { i18n } from "@/i18n";
 import { createLogger } from "@/shared/logger";
 import { getRejoinKey } from "@/shared/playerIdentity";
 import { useGameStore } from "@/stores/game";
@@ -19,9 +12,6 @@ const log = createLogger("WebSocket");
 
 // Singleton WebSocket connection shared across all components
 let ws: WebSocket | null = null;
-const connectionError = ref<string | null>(null);
-const lastJoinError = ref<{ error: string; message: string } | null>(null);
-const currentRoomCode = ref<string | null>(null);
 const isObserverConnection = ref(false);
 let heartbeatInterval: number | null = null;
 
@@ -54,7 +44,6 @@ export function useGameConnection() {
     router,
     showNotification,
     send,
-    isObserverConnection,
   };
 
   function connect(roomCode: string, options: ConnectOptions = {}) {
@@ -85,14 +74,11 @@ export function useGameConnection() {
     const url = `${BACKEND_HOST}/ws/${normalizedRoomCode}`;
     const socket = new WebSocket(url);
     ws = socket;
-    currentRoomCode.value = normalizedRoomCode;
 
     socket.onopen = () => {
       if (ws !== socket) return;
       connectionStatus.value = "connected";
       reconnectAttempts = 0;
-      connectionError.value = null;
-      lastJoinError.value = null;
 
       if (!observeOnly) {
         store.addPlayer(store.localPlayerId, store.localPlayerName);
@@ -101,7 +87,7 @@ export function useGameConnection() {
           playerId: store.localPlayerId,
           name: store.localPlayerName,
           preferredLocale: store.localPlayerLocale,
-          preferredColor: store.localAvatarColor,
+          preferredColor: store.localPlayerColor,
           rejoinKey: getRejoinKey(),
         });
         send({
@@ -128,13 +114,11 @@ export function useGameConnection() {
         handleMessage(result.data);
       } catch (error) {
         log.error("Failed to parse message:", error, "Raw:", event.data);
-        connectionError.value = "Failed to process server message";
       }
     };
 
     socket.onerror = (error) => {
       log.error("Connection error:", error);
-      connectionError.value = "Connection error occurred";
     };
 
     socket.onclose = (event) => {
@@ -143,7 +127,6 @@ export function useGameConnection() {
       // or an in-flight retry superseded this one).
       if (ws !== socket) return;
       stopHeartbeat();
-      currentRoomCode.value = null;
       isObserverConnection.value = false;
       ws = null;
 
@@ -181,58 +164,7 @@ export function useGameConnection() {
 
   function handleMessage(message: ServerEvent) {
     log.debug("Received:", message.type);
-
-    switch (message.type) {
-      case "join_error":
-      case "host_restored":
-      case "room_state":
-      case "player_joined":
-      case "player_left":
-      case "player_presence":
-      case "host_changed":
-        handleConnectionEvent(message, ctx);
-        break;
-
-      case "start_game":
-      case "start_round":
-      case "start_guessing":
-      case "round_complete":
-      case "game_complete":
-      case "restart_game":
-      case "ready_status":
-      case "settings_update":
-      case "default_locale_update":
-      case "room_custom_categories_update":
-        handleGameFlowEvent(message, ctx);
-        break;
-
-      case "draw_stroke":
-      case "draw_stroke_partial":
-      case "drawpad_clear":
-      case "pad_visibility":
-        handleDrawingEvent(message, ctx);
-        break;
-
-      case "reaction_received":
-        handleResultsEvent(message, ctx);
-        break;
-
-      case "kick_vote_started":
-      case "kick_vote_updated":
-      case "player_kicked":
-      case "kick_vote_expired":
-      case "kick_error":
-        handleKickEvent(message, ctx);
-        break;
-
-      case "protocol_error":
-        // The server drops oversized frames; without this a drawing that did not
-        // fit would vanish and guessers would wait for it forever.
-        if (message.error === "payload_too_large")
-          showNotification(i18n.global.t("notifications.drawingTooLarge"), "error", 8000);
-        else log.warn("Server rejected a message:", message.error);
-        break;
-    }
+    handleServerEvent(message, ctx);
   }
 
   function startHeartbeat() {
@@ -269,16 +201,12 @@ export function useGameConnection() {
       ws = null;
     }
     connectionStatus.value = "disconnected";
-    currentRoomCode.value = null;
     isObserverConnection.value = false;
     store.setSpectatorMode(false);
   }
 
   return {
     connectionStatus,
-    connectionError,
-    lastJoinError,
-    currentRoomCode,
     connect,
     send,
     disconnect,

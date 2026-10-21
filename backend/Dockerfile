@@ -1,13 +1,16 @@
-# spell-checker: ignore healthchecks, PYTHONUNBUFFERED, PYTHONDONTWRITEBYTECODE
+# spell-checker: ignore PYTHONUNBUFFERED, PYTHONDONTWRITEBYTECODE
 
 # The Debian release is in the tag so a rebuild never moves to the next one by itself.
 FROM python:3.14-slim-trixie AS runtime-base
 
-# Install curl for healthchecks, create non-root user for all runtime stages.
+# Create the non-root user for all runtime stages.
 # The upgrade takes Debian security fixes the base image has not been rebuilt with yet.
 # Docker caches this layer, so it reruns only when the base image changes: deploy with
 # `docker compose build --pull` so a new base image reaches it.
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && \
+# pip is removed because uv installs everything and nothing calls pip at runtime; its
+# vendored libraries were the only fixable HIGH findings in the image.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* && \
+    rm -rf /usr/local/lib/python3.14/site-packages/pip /usr/local/lib/python3.14/site-packages/pip-*.dist-info /usr/local/bin/pip* && \
     useradd --create-home --home-dir /home/appuser --shell /bin/false appuser
 
 ENV VIRTUAL_ENV=/opt/.venv \
@@ -94,6 +97,11 @@ CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "800
 
 # ── Prod ──────────────────────────────────────────────────────────────────────
 FROM runtime-base AS prod
+
+LABEL org.opencontainers.image.source="https://github.com/simonvanlierde/6-second-scribbles" \
+      org.opencontainers.image.title="6 Second Scribbles backend" \
+      org.opencontainers.image.description="FastAPI backend and WebSocket server for 6 Second Scribbles" \
+      org.opencontainers.image.licenses="MIT"
 
 COPY --chown=appuser:appuser --from=prod-deps /opt/.venv /opt/.venv
 COPY --chown=appuser:appuser --from=app-source /app /app

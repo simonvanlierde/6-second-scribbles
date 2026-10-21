@@ -10,7 +10,7 @@ import { showNotification } from "@/composables/notifications";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { CreateRoomResponseSchema, QuickPlayResponseSchema, RoomStatusResponseSchema } from "@/generated/api";
-import { apiRequest } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 import { generateRandomName } from "@/shared/nameGenerator";
 import { getOrCreatePlayerId } from "@/shared/playerIdentity";
 import { isValidRoomCode, normalizeRoomCode } from "@/shared/roomCode";
@@ -34,6 +34,11 @@ function ensurePlayerName(resume: () => void): boolean {
   return false;
 }
 
+// 429 means the network's room cap or the creation rate limit; an immediate retry fails too.
+function roomCreationError(err: unknown, fallbackKey: string): string {
+  return t(err instanceof ApiError && err.status === 429 ? "notifications.tooManyRooms" : fallbackKey);
+}
+
 async function navigateToRoom(roomCode: string) {
   const playerId = getOrCreatePlayerId();
   store.setLocalPlayer(playerId, store.localPlayerName.trim());
@@ -45,13 +50,14 @@ async function navigateToRoom(roomCode: string) {
 async function handleCreateRoom() {
   if (!ensurePlayerName(handleCreateRoom)) return;
   try {
-    const data = await apiRequest("/api/rooms", {
+    // Trailing slash: the backend route is "/" under /rooms, so "/api/rooms" costs a 307 redirect.
+    const data = await apiRequest("/api/rooms/", {
       method: "POST",
       schema: CreateRoomResponseSchema,
     });
     await navigateToRoom(data.room_code);
-  } catch {
-    showNotification(t("notifications.createRoomFailed"), "error");
+  } catch (err) {
+    showNotification(roomCreationError(err, "notifications.createRoomFailed"), "error");
   }
 }
 
@@ -97,8 +103,8 @@ async function handleQuickPlay() {
       schema: QuickPlayResponseSchema,
     });
     await navigateToRoom(data.room_code);
-  } catch {
-    showNotification(t("notifications.connectFailed"), "error");
+  } catch (err) {
+    showNotification(roomCreationError(err, "notifications.connectFailed"), "error");
   } finally {
     isQuickPlaying.value = false;
   }

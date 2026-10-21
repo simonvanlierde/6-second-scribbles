@@ -16,7 +16,6 @@
       "reaction_send": "#/$defs/ReactionSendEvent",
       "request_game_state": "#/$defs/RequestGameStateEvent",
       "restart_game": "#/$defs/RestartGameEvent",
-      "room_custom_categories_update": "#/$defs/RoomCustomCategoriesUpdateEvent",
       "settings_update": "#/$defs/SettingsUpdateEvent",
       "start_game": "#/$defs/StartGameEvent",
       "submit_guess": "#/$defs/SubmitGuessEvent",
@@ -106,6 +105,7 @@
         "rounds": {
           "anyOf": [
             {
+              "maximum": 10,
               "minimum": 1,
               "type": "integer"
             },
@@ -118,7 +118,8 @@
         "drawingTimeLimit": {
           "anyOf": [
             {
-              "minimum": 1,
+              "maximum": 180,
+              "minimum": 15,
               "type": "integer"
             },
             {
@@ -130,7 +131,8 @@
         "guessingTimeLimit": {
           "anyOf": [
             {
-              "minimum": 1,
+              "maximum": 180,
+              "minimum": 15,
               "type": "integer"
             },
             {
@@ -263,6 +265,7 @@
         "rounds": {
           "anyOf": [
             {
+              "maximum": 10,
               "minimum": 1,
               "type": "integer"
             },
@@ -275,7 +278,8 @@
         "drawingTimeLimit": {
           "anyOf": [
             {
-              "minimum": 1,
+              "maximum": 180,
+              "minimum": 15,
               "type": "integer"
             },
             {
@@ -287,7 +291,8 @@
         "guessingTimeLimit": {
           "anyOf": [
             {
-              "minimum": 1,
+              "maximum": 180,
+              "minimum": 15,
               "type": "integer"
             },
             {
@@ -315,33 +320,6 @@
       },
       "required": ["type"],
       "title": "DefaultLocaleUpdateEvent",
-      "type": "object"
-    },
-    {
-      "properties": {
-        "type": {
-          "const": "room_custom_categories_update",
-          "title": "Type",
-          "type": "string"
-        },
-        "categoryIds": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Categoryids"
-        }
-      },
-      "required": ["type"],
-      "title": "RoomCustomCategoriesUpdateEvent",
       "type": "object"
     },
     {

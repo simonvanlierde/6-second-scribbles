@@ -18,16 +18,10 @@ TIGGER = "tigger"
 TIGER = "tiger"
 ELEFANT = "elefant"
 ELEPHANT = "elephant"
-EXACT = "exact"
-FUZZY = "fuzzy"
-ALTERNATIVE = "alternative"
-NONE = "none"
 ONE_HUNDRED = 100.0
 THRESHOLD = 85
 COLOR = "color"
 COLOUR = "colour"
-CAT_MATCH = "cat"
-GIRAFFE_MATCH = "giraffe"
 
 
 class TestGuessMatcher:
@@ -89,44 +83,28 @@ class TestGuessMatcher:
         assert score < THRESHOLD
 
     def test_match_guess_exact(self, matcher: GuessMatcher) -> None:
-        """Test matching a guess with exact match."""
-        correct = [CAT, DOG, "bird"]
-        result = matcher.match_guess(CAT, correct)
-
-        assert result.matched
-        assert result.matched_item == CAT_MATCH
-        assert result.similarity == ONE_HUNDRED
-        assert result.method == EXACT
+        """An exact match scores full similarity."""
+        assert matcher.match_guess(CAT, CAT) == ONE_HUNDRED
 
     def test_match_guess_fuzzy(self, matcher: GuessMatcher) -> None:
-        """Test matching a guess with fuzzy match."""
-        correct = [GIRAFFE, ELEPHANT, "zebra"]
+        """A near miss on the target matches with its fuzzy similarity."""
         # girafe scores ~92% against giraffe — above the 85% threshold
-        result = matcher.match_guess(GIRAFE, correct)
+        similarity = matcher.match_guess(GIRAFE, GIRAFFE)
 
-        assert result.matched
-        assert result.matched_item == GIRAFFE_MATCH
-        assert result.similarity >= THRESHOLD
-        assert result.method == FUZZY
+        assert similarity is not None
+        assert THRESHOLD <= similarity < ONE_HUNDRED
 
     def test_match_guess_with_alternatives(self, matcher: GuessMatcher) -> None:
-        """Test matching with alternative spellings."""
-        correct = [COLOR]
-        alternatives = [COLOUR]  # British spelling
-
-        result = matcher.match_guess(COLOUR, correct, alternatives)
-
-        assert result.matched
-        assert result.method == ALTERNATIVE
+        """An exact alias matches."""
+        assert matcher.match_guess(COLOUR, COLOR, [COLOUR]) == ONE_HUNDRED
 
     def test_match_guess_no_match(self, matcher: GuessMatcher) -> None:
-        """Test no match found."""
-        correct = [CAT, DOG]
-        result = matcher.match_guess(ELEPHANT, correct)
+        """A different word does not match."""
+        assert matcher.match_guess(ELEPHANT, CAT) is None
 
-        assert not result.matched
-        assert result.matched_item is None
-        assert result.method == NONE
+    def test_match_guess_blank_guess(self, matcher: GuessMatcher) -> None:
+        """A guess that normalizes to nothing never matches."""
+        assert matcher.match_guess("  ", CAT) is None
 
     def test_match_guess_non_latin_script(self, matcher: GuessMatcher) -> None:
         """Non-Latin answers must score (regression: ascii-ignore blanked them)."""
@@ -135,8 +113,8 @@ class TestGuessMatcher:
         cjk_cat = "猫"
         assert normalize_text(cyrillic_cat.capitalize()) == cyrillic_cat
         assert normalize_text(cjk_cat) == cjk_cat
-        assert matcher.match_guess(cyrillic_cat, [cyrillic_cat]).matched
-        assert matcher.match_guess(cjk_cat, [cjk_cat]).matched
+        assert matcher.match_guess(cyrillic_cat, cyrillic_cat) is not None
+        assert matcher.match_guess(cjk_cat, cjk_cat) is not None
 
     def test_normalize_text_strips_accents(self) -> None:
         """Accents are still stripped so café matches cafe."""

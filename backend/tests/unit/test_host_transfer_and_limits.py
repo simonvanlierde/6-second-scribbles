@@ -12,7 +12,8 @@ from fastapi import WebSocketDisconnect
 
 from app.core.config import settings
 from app.core.rate_limits import client_network
-from app.rooms import kick_vote
+from app.core.types import GamePhase
+from app.rooms import kick_vote, player_lifecycle
 from app.rooms import router as room_router
 from app.rooms.manager import ClientRoomLimitError, GameRoom, PlayerInfo, RoomCapacityError, RoomManager, room_manager
 from app.rooms.player_lifecycle import KICKED_ERROR
@@ -48,19 +49,21 @@ class TestDelayedHostTransfer:
 
         ws1, ws2 = make_ws(), make_ws()
 
-        _player, _ = await room.add_player(HOST_PLAYER_ID, "Host Player", as_websocket(ws1))
+        _player, _ = await player_lifecycle.add_player(room, HOST_PLAYER_ID, "Host Player", as_websocket(ws1))
         assert room.host_id == HOST_PLAYER_ID
         assert room.last_host_id == HOST_PLAYER_ID
 
-        await room.add_player(SECOND_PLAYER_ID, "Player 2", as_websocket(ws2))
+        await player_lifecycle.add_player(room, SECOND_PLAYER_ID, "Player 2", as_websocket(ws2))
         assert len(room.players) == 2
 
-        await room.remove_player(HOST_PLAYER_ID)
+        await player_lifecycle.remove_player(room, HOST_PLAYER_ID)
         assert len(room.players) == 1
         assert room.pending_host_transfer is not None
 
         ws1_new = make_ws()
-        _player, is_reconnecting = await room.add_player(HOST_PLAYER_ID, "Host Player", as_websocket(ws1_new))
+        _player, is_reconnecting = await player_lifecycle.add_player(
+            room, HOST_PLAYER_ID, "Host Player", as_websocket(ws1_new)
+        )
 
         assert is_reconnecting
         assert room.host_id == HOST_PLAYER_ID
@@ -78,17 +81,44 @@ class TestDelayedHostTransfer:
 
         ws1, ws2 = make_ws(), make_ws()
 
-        await room.add_player(HOST_PLAYER_ID, "Host Player", as_websocket(ws1))
-        await room.add_player(SECOND_PLAYER_ID, "Player 2", as_websocket(ws2))
+        await player_lifecycle.add_player(room, HOST_PLAYER_ID, "Host Player", as_websocket(ws1))
+        await player_lifecycle.add_player(room, SECOND_PLAYER_ID, "Player 2", as_websocket(ws2))
 
         assert room.host_id == HOST_PLAYER_ID
 
-        await room.remove_player(HOST_PLAYER_ID)
+        await player_lifecycle.remove_player(room, HOST_PLAYER_ID)
         assert room.pending_host_transfer is not None
         await room.pending_host_transfer
 
         assert room.host_id == SECOND_PLAYER_ID
         assert room.last_host_id == SECOND_PLAYER_ID
+
+    async def test_host_leaving_after_a_drop_restarts_the_single_transfer(
+        self,
+        make_ws: Callable[..., TestWebSocket],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A host who drops mid-game and then leaves gets one transfer, not two racing ones."""
+        room = room_manager.get_or_create_room("CODE40")
+        monkeypatch.setattr("app.rooms.manager.settings.host_transfer_delay_ms", 3600_000)
+        await player_lifecycle.add_player(room, HOST_PLAYER_ID, "Host Player", as_websocket(make_ws()))
+        await player_lifecycle.add_player(room, SECOND_PLAYER_ID, "Player 2", as_websocket(make_ws()))
+        room.metadata.game_phase = GamePhase.DRAWING
+
+        await player_lifecycle.disconnect_player(room, HOST_PLAYER_ID)
+        first_transfer = room.pending_host_transfer
+        assert first_transfer is not None
+
+        await player_lifecycle.remove_player(room, HOST_PLAYER_ID)
+        second_transfer = room.pending_host_transfer
+        await asyncio.wait([first_transfer], timeout=1)  # far short of the hour-long grace
+
+        assert first_transfer.done()
+        assert second_transfer is not None
+        assert second_transfer is not first_transfer
+        assert room.host_id == HOST_PLAYER_ID  # the stopped transfer handed nothing over
+        assert not second_transfer.done()
+        second_transfer.cancel()
 
 
 class TestPlayerLimitEnforcement:
@@ -100,12 +130,12 @@ class TestPlayerLimitEnforcement:
         room = room_manager.get_or_create_room(room_id)
 
         for i in range(10):
-            await room.add_player(f"player_{i}", f"Player {i}", as_websocket(make_ws()))
+            await player_lifecycle.add_player(room, f"player_{i}", f"Player {i}", as_websocket(make_ws()))
 
         assert len(room.players) == 10
 
         with pytest.raises(ValueError, match="Room is full"):
-            await room.add_player(PLAYER_11_ID, "Player 11", as_websocket(make_ws()))
+            await player_lifecycle.add_player(room, PLAYER_11_ID, "Player 11", as_websocket(make_ws()))
 
         assert len(room.players) == 10
 
@@ -115,18 +145,18 @@ class TestPlayerLimitEnforcement:
         room = room_manager.get_or_create_room(room_id)
 
         for i in range(10):
-            await room.add_player(f"player_{i}", f"Player {i}", as_websocket(make_ws()))
+            await player_lifecycle.add_player(room, f"player_{i}", f"Player {i}", as_websocket(make_ws()))
 
         assert len(room.players) == 10
 
-        await room.remove_player("player_5")
+        await player_lifecycle.remove_player(room, "player_5")
         assert len(room.players) == 9
 
-        await room.add_player("player_10", "Player 10", as_websocket(make_ws()))
+        await player_lifecycle.add_player(room, "player_10", "Player 10", as_websocket(make_ws()))
         assert len(room.players) == 10
 
         with pytest.raises(ValueError, match="Room is full"):
-            await room.add_player("player_5", "Player 5", as_websocket(make_ws()))
+            await player_lifecycle.add_player(room, "player_5", "Player 5", as_websocket(make_ws()))
 
 
 class TestWebSocketRoomFull:
@@ -201,11 +231,11 @@ class TestGhostPlayerPrevention:
         room = room_manager.get_or_create_room(room_id)
 
         ws1 = make_ws()
-        _player1, _ = await room.add_player(PLAYER_123_ID, "Test Player", as_websocket(ws1))
+        _player1, _ = await player_lifecycle.add_player(room, PLAYER_123_ID, "Test Player", as_websocket(ws1))
         assert room.players[PLAYER_123_ID].websocket == ws1
 
         ws2 = make_ws()
-        _player2, _ = await room.add_player(PLAYER_123_ID, "Test Player", as_websocket(ws2))
+        _player2, _ = await player_lifecycle.add_player(room, PLAYER_123_ID, "Test Player", as_websocket(ws2))
 
         assert PLAYER_123_ID in room.players
         assert room.players[PLAYER_123_ID].websocket == ws2
@@ -239,13 +269,13 @@ async def test_stuck_socket_does_not_hold_up_the_room(monkeypatch: pytest.Monkey
 async def test_kicked_player_cannot_rejoin(make_ws: Callable[..., TestWebSocket]) -> None:
     """A vote-kicked player id is refused when it tries to join the same room again."""
     room = GameRoom("CODE13")
-    await room.add_player("host", "Host", as_websocket(make_ws()))
-    await room.add_player("troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
+    await player_lifecycle.add_player(room, "host", "Host", as_websocket(make_ws()))
+    await player_lifecycle.add_player(room, "troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
 
     await kick_vote.kick_player(room, "troll")
 
     with pytest.raises(ValueError, match=KICKED_ERROR):
-        await room.add_player("troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
+        await player_lifecycle.add_player(room, "troll", "Troll", as_websocket(make_ws()), rejoin_key="troll-key")
     await room.scheduler.shutdown()
 
 

@@ -6,8 +6,8 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from app.core.types import GamePhase
-from app.rooms import rounds
-from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR
+from app.rooms import kick_vote, player_lifecycle, rounds
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR, SEATS_BUSY_ERROR
 from app.rooms.protocol import (
     DefaultLocaleUpdateServerEvent,
     DrawStrokePartialEvent,
@@ -16,7 +16,6 @@ from app.rooms.protocol import (
     PlayerJoinedEvent,
     PlayerLeftEvent,
     ReactionReceivedServerEvent,
-    RoomCustomCategoriesUpdateServerEvent,
     send_ws_message,
 )
 
@@ -40,7 +39,6 @@ if TYPE_CHECKING:
         ReactionSendEvent,
         RequestGameStateEvent,
         RestartGameEvent,
-        RoomCustomCategoriesUpdateEvent,
         SettingsUpdateEvent,
         StartGameEvent,
         SubmitGuessEvent,
@@ -99,7 +97,8 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
         return
 
     try:
-        _player, is_reconnecting_host = await session.room.add_player(
+        _player, is_reconnecting_host = await player_lifecycle.add_player(
+            session.room,
             event.player_id,
             event.name,
             session.websocket,
@@ -114,6 +113,8 @@ async def handle_join(session: RoomWebSocketSession, event: JoinEvent) -> None:
             error, message = IDENTITY_CONFLICT_ERROR, "This player is already in use in another browser or account."
         elif str(exc) == KICKED_ERROR:
             error, message = KICKED_ERROR, "You were removed from this room."
+        elif str(exc) == SEATS_BUSY_ERROR:
+            error, message = SEATS_BUSY_ERROR, "Too many players left this room just now. Try again in a few minutes."
         else:
             error, message = "room_full", str(exc)
         await send_ws_message(
@@ -161,12 +162,11 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     if event.player_id != session.player_id:
         await session.send_error("player_ready_error", "invalid_player", "Ready updates must match your connection.")
         return
-    ready_status = session.room.mark_player_ready(event.player_id)
+    ready_status = rounds.mark_player_ready(session.room, event.player_id)
     await broadcast_and_persist(session, ready_status)
 
     if session.room.metadata.game_phase == GamePhase.DRAWING and rounds.all_connected_players_ready(session.room):
-        session.room.scheduler.schedule_scoring_timeout(session.room.start_guessing())
-        await broadcast_and_persist(session, rounds.guessing_event_payload(session.room))
+        await session.room.enter_guessing()
 
 
 async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessEvent) -> None:
@@ -178,22 +178,21 @@ async def handle_submit_guess(session: RoomWebSocketSession, event: SubmitGuessE
             "Guess submissions must match your connection.",
         )
         return
-    await session.room.record_guess_submission(
+    if rounds.record_guess_submission(
+        session.room,
         player_id=event.player_id,
         target_player_id=event.target_player_id,
         guesses=event.guesses,
-    )
+    ):
+        await session.room.score_and_broadcast_round()
 
 
 async def handle_restart_game(session: RoomWebSocketSession, event: RestartGameEvent) -> None:
     """Handle a restart-game event."""
     if not await require_host(session, "restart the game"):
         return
-    session.room.reset_game()
-    # Players who dropped during the finished game and never returned are cleared
-    # as we go back to the lobby (they were kept through final results).
-    await session.room.prune_disconnected()
-    await broadcast_and_persist(session, event)
+    del event
+    await session.room.restart_game()
 
 
 async def handle_settings_update(session: RoomWebSocketSession, event: SettingsUpdateEvent) -> None:
@@ -214,21 +213,6 @@ async def handle_default_locale_update(session: RoomWebSocketSession, event: Def
         return
     session.room.metadata.default_locale = event.locale
     await broadcast_and_persist(session, DefaultLocaleUpdateServerEvent(locale=event.locale))
-
-
-async def handle_room_custom_categories_update(
-    session: RoomWebSocketSession,
-    event: RoomCustomCategoriesUpdateEvent,
-) -> None:
-    """Handle a host updating room-level private category overrides."""
-    if not await require_host(session, "update room categories"):
-        return
-    category_ids = event.category_ids
-    session.room.metadata.custom_category_ids = sorted(set(category_ids)) if category_ids is not None else None
-    await broadcast_and_persist(
-        session,
-        RoomCustomCategoriesUpdateServerEvent(categoryIds=session.room.metadata.custom_category_ids),
-    )
 
 
 async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClearEvent) -> None:
@@ -259,18 +243,16 @@ async def handle_initiate_kick(session: RoomWebSocketSession, event: InitiateKic
     """Handle initiating a kick vote."""
     if not session.player_id:
         return
-    result = await session.room.initiate_kick_vote(session.player_id, event.target_player_id)
-    if not result.success:
-        await session.send_error("kick_error", result.error or "Failed to initiate kick vote", "")
+    if error := await kick_vote.initiate_kick_vote(session.room, session.player_id, event.target_player_id):
+        await session.send_error("kick_error", error, "")
 
 
 async def handle_cast_kick_vote(session: RoomWebSocketSession, event: CastKickVoteEvent) -> None:
     """Handle casting a kick vote."""
     if not session.player_id:
         return
-    result = await session.room.cast_kick_vote(session.player_id, event.target_player_id)
-    if not result.success:
-        await session.send_error("kick_error", result.error or "Failed to cast vote", "")
+    if error := await kick_vote.cast_kick_vote(session.room, session.player_id, event.target_player_id):
+        await session.send_error("kick_error", error, "")
 
 
 async def handle_request_game_state(session: RoomWebSocketSession, event: RequestGameStateEvent) -> None:
@@ -352,7 +334,7 @@ async def handle_disconnect(session: RoomWebSocketSession) -> None:
     current = session.room.players.get(session.player_id)
     if current is not None and current.websocket is not session.websocket:
         return
-    await session.room.disconnect_player(session.player_id)
+    await player_lifecycle.disconnect_player(session.room, session.player_id)
 
 
 async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None:
@@ -360,7 +342,7 @@ async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None
     del event
     if not session.player_id:
         return
-    await session.room.remove_player(session.player_id, forget_identity=True)
+    await player_lifecycle.remove_player(session.room, session.player_id, forget_identity=True)
     await broadcast_and_persist(session, PlayerLeftEvent(playerId=session.player_id))
 
 
@@ -376,7 +358,6 @@ _HANDLERS: dict[str, _Handler] = {
     "restart_game": handle_restart_game,
     "settings_update": handle_settings_update,
     "default_locale_update": handle_default_locale_update,
-    "room_custom_categories_update": handle_room_custom_categories_update,
     "draw_stroke": handle_draw_stroke,
     "draw_stroke_partial": handle_draw_stroke,
     "drawpad_clear": handle_drawpad_clear,

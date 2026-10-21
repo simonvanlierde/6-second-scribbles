@@ -11,7 +11,6 @@
     "you": "あなた",
     "unknown": "不明",
     "pointsShort": "{count}点",
-    "roomCode": "ルーム {code}",
     "roundProgress": "ラウンド {current} / {total}",
     "countdownIn": "{count}秒後",
     "unavailable": "利用できません",
@@ -90,9 +89,7 @@
     "roomInProgress": "このルームは進行中です。今は観戦でき、ロビーに戻ったら参加できます。",
     "playersInRoom": "ルーム内に{count}人のプレイヤー | ルーム内に{count}人のプレイヤー",
     "invalidCodeText": "ルームコードは A–Z と 0–9 を使う 6 文字です。コードを確認してもう一度試してください。",
-    "roomNotExist": "このルームは存在しません。ロビーに戻ります...",
     "tryGoBack": "ロビーに戻ってコードをもう一度入力してください。",
-    "backToLobby": "ロビーに戻る",
     "enterYourName": "名前を入力",
     "yourName": "あなたの名前",
     "back": "戻る",
@@ -150,20 +147,16 @@
   "spectator": {
     "drawingRound": "描画ラウンド",
     "guessingRound": "予想ラウンド",
-    "roomBackInLobby": "ルームがロビーに戻りました",
     "roundResults": "ラウンド結果",
     "finalResults": "最終結果",
     "watchingRoom": "ルームを観戦中",
-    "joinableAgain": "ルームに再び参加できます。準備ができたら次のゲームに飛び込もう。",
     "watchingLive": "ライブ更新を観戦中です。ルームがロビーに戻ったら参加できます。",
-    "joinNextGame": "次のゲームに参加",
     "leaveRoom": "ルームから退出",
     "players": "プレイヤー",
     "drawings": "絵",
     "roundStatus": "ラウンドの状況",
     "noDrawingsYet": "まだ公開された絵はありません。",
     "guessingInProgress": "予想が進行中です。ラウンドが終わり次第、次へ進みます。",
-    "lobbyAgain": "ルームは再びロビーで待機中です。「次のゲームに参加」からプレイヤーとして入れます。",
     "betweenRounds": "このルームはラウンドの合間です。最新情報をリアルタイムでお届けします。",
     "drawingAlt": "{name}さんの絵"
   },
@@ -185,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "ルームの作成に失敗しました。もう一度お試しください。",
+    "tooManyRooms": "このネットワークから開いているルームが多すぎます。ルームを閉じるか、友だちのルームに参加するか、数分待ってからもう一度お試しください。",
     "drawingTooLarge": "絵のデータが大きすぎて送信できなかったため、他のプレイヤーには表示されません。",
     "enterRoomCode": "ルームコードを入力してください",
     "invalidRoomCode": "ルームコードは6文字です（A–Z, 0–9）",
@@ -192,6 +186,7 @@
     "connectFailed": "接続に失敗しました。もう一度お試しください。",
     "roundInProgressJoinLater": "このラウンドはすでに進行中です。次のラウンドから参加できます。",
     "spectatorsFull": "このルームはこれ以上観戦者を受け入れられません。",
+    "seatsBusy": "このルームから退出したプレイヤーが多すぎます。数分後にもう一度お試しください。",
     "unableToJoinRoom": "ルームに参加できません",
     "hostStatusRestored": "ホスト権限が復元されました",
     "youAreNowHost": "あなたがホストになりました",
@@ -216,8 +211,6 @@
     "cancel": "キャンセル"
   },
   "localeSelector": {
-    "disabledHelp": "利用できない言語は、プレイ可能なコンテンツがそろうまで無効になっています。",
-    "reasonUnavailable": "{name}：{reason}",
     "noPlayableCategories": "プレイ可能なカテゴリーがまだありません",
     "missingPromptCoverage": "難易度ごとのお題が不足しています",
     "failedToLoad": "言語の利用状況の読み込みに失敗しました"

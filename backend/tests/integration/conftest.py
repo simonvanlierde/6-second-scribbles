@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Self
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from alembic import command
+from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -19,7 +23,6 @@ import app.main as main_module
 from app.core import database
 from app.core import redis as redis_module
 from app.core.config import settings
-from app.core.migrations import run_migrations
 from scripts import seed_data
 
 if TYPE_CHECKING:
@@ -31,6 +34,16 @@ if TYPE_CHECKING:
 fastapi_app = main_module.application
 
 _POSTGRES_PASSWORD = uuid4().hex
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _upgrade_database() -> None:
+    """Apply every Alembic migration to the database the settings point at."""
+    config = Config(str(_BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
+    config.set_main_option("prepend_sys_path", str(_BACKEND_ROOT))
+    config.set_main_option("sqlalchemy.url", settings.database_url)
+    command.upgrade(config, "head")
 
 
 def _postgres_host_port(container: PostgresContainer) -> tuple[str, int]:
@@ -113,7 +126,7 @@ async def configure_integration_settings(
     settings.redis_host = redis_container.get_container_host_ip()
     settings.redis_port = int(redis_container.get_exposed_port(6379))
 
-    await run_migrations()
+    await asyncio.to_thread(_upgrade_database)
     await database.close_db()
     await redis_module.close_redis()
     yield

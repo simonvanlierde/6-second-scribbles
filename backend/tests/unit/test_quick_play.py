@@ -10,7 +10,7 @@ from fakeredis.aioredis import FakeRedis
 
 from app.core.config import settings
 from app.rooms import router as room_router
-from tests.helpers import JoinedPlayer, joined_players
+from tests.support import JoinedPlayer, joined_players
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient

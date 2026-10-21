@@ -23,13 +23,4 @@ async def get_current_user(
     return user
 
 
-async def get_optional_current_user(
-    db: AsyncSessionDep,
-    session_id: str | None = Cookie(default=None, alias=settings.session_cookie_name),
-) -> User | None:
-    """Return the authenticated user when a valid session exists."""
-    return await get_user_by_session(db, session_id)
-
-
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
-OptionalCurrentUserDep = Annotated[User | None, Depends(get_optional_current_user)]

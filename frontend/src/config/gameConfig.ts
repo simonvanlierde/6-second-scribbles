@@ -20,14 +20,11 @@ export const UI_TIMINGS = {
   HEARTBEAT_INTERVAL_MS: 60_000,
   JOIN_ERROR_REDIRECT_MS: 2_000,
   SETTINGS_FLASH_MS: 900,
-  COPY_TOOLTIP_MS: 800,
 } as const;
 
 export const GAME_TIMINGS = {
   /** Countdown (seconds) shown on the round-results screen before server advances. */
   ROUND_RESULTS_COUNTDOWN_S: 15,
-  /** If all players are ready, host auto-restarts the game after this delay. */
-  AUTO_RESTART_TIMEOUT_MS: 60_000,
 } as const;
 
 export const STORAGE_KEYS = {

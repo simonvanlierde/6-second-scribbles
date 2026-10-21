@@ -21,7 +21,7 @@ import contextlib
 import logging
 import secrets
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -29,33 +29,30 @@ from fastapi import HTTPException
 from app.categories import service as category_service
 from app.core.config import settings
 from app.core.database import get_session_maker
-from app.core.redis import delete_room_state
+from app.core.redis import delete_room_state, load_all_room_states, save_room_state
 from app.core.types import (
     GamePhase,
     LanguageCode,
 )
 from app.rooms import kick_vote, player_lifecycle, rounds
-from app.rooms import lifecycle as room_lifecycle
+from app.rooms.player_lifecycle import PlayerInfo
 from app.rooms.protocol import (
     DrawStrokePayload,
     GalleryDrawingPayload,
     PlayerCardPayload,
-    PlayerLeftEvent,
-    PlayerListItem,
-    PlayerPresenceEvent,
     PlayerSnapshot,
-    ReadyStatusEvent,
+    RestartGameEvent,
     RoomStateEvent,
     StartRoundServerEvent,
     StrokeDelta,
     WebSocketMessage,
     encode_ws_message,
-    send_ws_message,
 )
 from app.rooms.scheduler import RoomTaskScheduler, create_logged_task
 from app.rooms.state import (
     PlayerPromptAssignmentState,
     RoomMetadataState,
+    RoomState,
 )
 
 # spell-checker: ignore reconnections
@@ -64,8 +61,6 @@ if TYPE_CHECKING:
     from fastapi import WebSocket
 
     from app.rooms.kick_vote import KickVote
-    from app.rooms.results import KickVoteResult
-    from app.rooms.state import RoomState
 
 logger = logging.getLogger(__name__)
 
@@ -88,18 +83,6 @@ class RoomCapacityError(Exception):
 
 class ClientRoomLimitError(RoomCapacityError):
     """Raised when one client already holds its share of open rooms."""
-
-
-@dataclass
-class PlayerInfo:
-    """Information about a player in a game room."""
-
-    id: str
-    name: str
-    websocket: WebSocket
-    last_activity: float = field(default_factory=time.time)
-    color: str | None = None
-    connected: bool = True
 
 
 @dataclass(frozen=True)
@@ -137,7 +120,6 @@ class GameRoom:
         self.last_host_id: str | None = None  # Track last host for reconnection
         self.last_host_user_id: str | None = None  # Authenticated owner of last host, for reclaim checks
         self.created_at = time.time()
-        self.last_activity = time.time()
         # When the room last had no connected players. A new room starts empty,
         # so one that nobody ever joins still expires after the TTL.
         self.emptied_at: float | None = self.created_at
@@ -224,7 +206,7 @@ class GameRoom:
             await self.persist()
             return
         next_round = round_number or (self.metadata.current_round + 1)
-        round_start_time = self.start_round(round_number=next_round, cards=assignments)
+        round_start_time = rounds.start_round(self, round_number=next_round, cards=assignments)
         await self.send_round_start(
             next_round,
             {
@@ -237,52 +219,42 @@ class GameRoom:
         self.scheduler.schedule_guessing_start(self.metadata.drawing_time_limit or 30)
 
     async def _build_server_round_assignments(self) -> dict[str, PlayerPromptAssignmentState]:
-        """Fetch one canonical category per player, then localize it per player."""
+        """Pick one category per player, then deal each player its card in their own locale."""
         if not self.players:
             return {}
 
-        player_ids = list(self.players.keys())
-        participant_locales = [self.get_player_locale(player_id) for player_id in player_ids]
-
-        session_maker = get_session_maker()
-        async with session_maker() as db:
-            response = await category_service.select_category_sets(
+        player_ids = list(self.players)
+        async with get_session_maker()() as db:
+            category_ids = await category_service.select_category_ids(
                 db,
                 difficulty=self.metadata.difficulty,
-                count=1,
                 player_count=len(player_ids),
-                locale=self.metadata.default_locale,
-                locales=participant_locales,
+                locales=[self.get_player_locale(player_id) for player_id in player_ids],
+                room_locale=self.metadata.default_locale,
             )
-
-        selected_sets = response.selections
-        if not selected_sets:
-            raise HTTPException(status_code=404, detail="No categories available for round")
-
-        assignments: dict[str, PlayerPromptAssignmentState] = {}
-
-        async with session_maker() as db:
-            for index, player_id in enumerate(player_ids):
-                # Reuse categories when fewer are available than there are players.
-                selected_category = selected_sets[index % len(selected_sets)]
-                localized_category = await category_service.get_localized_category_set(
+            # Reuse categories when fewer are available than there are players.
+            return {
+                player_id: await category_service.deal_category(
                     db,
-                    category_id=selected_category.category_id,
+                    category_id=category_ids[index % len(category_ids)],
                     preferred_locale=self.get_player_locale(player_id),
                     fallback_locale=self.metadata.default_locale,
                 )
-                assignments[player_id] = PlayerPromptAssignmentState(
-                    category_id=localized_category.category_id,
-                    category=localized_category.category_name,
-                    item_ids=localized_category.item_ids,
-                    items=localized_category.items,
-                    alternatives=localized_category.alternatives,
-                )
+                for index, player_id in enumerate(player_ids)
+            }
 
-        return assignments
+    async def restart_game(self) -> None:
+        """Send the room back to the lobby after a finished game."""
+        rounds.reset_game(self)
+        # Players who dropped during the finished game and never returned are cleared
+        # as we go back to the lobby (they were kept through final results).
+        await player_lifecycle.prune_disconnected(self)
+        await self.broadcast(RestartGameEvent(type="restart_game"))
+        await self.persist()
 
     async def check_idle_players(self) -> None:
-        """Check for and disconnect idle players during active game phases."""
+        """Drop expired kick votes, and disconnect idle players during active game phases."""
+        kick_vote.cleanup_expired_votes(self)
         if self.metadata.game_phase not in (GamePhase.LOBBY, GamePhase.FINAL_RESULTS):
             now = time.time()
             idle_players = []
@@ -309,35 +281,6 @@ class GameRoom:
                     with contextlib.suppress(Exception):
                         await player.websocket.close(code=1000, reason="Disconnected due to inactivity")
 
-    async def add_player(
-        self,
-        player_id: str,
-        name: str,
-        websocket: WebSocket,
-        *,
-        preferred_locale: LanguageCode | None = None,
-        user_id: str | None = None,
-        preferred_color: str | None = None,
-        rejoin_key: str | None = None,
-    ) -> tuple[PlayerInfo, bool]:
-        """Add a player to the room.
-
-        Returns tuple: (player, is_reconnecting_host)
-        Raises ValueError if room is full
-        """
-        return await player_lifecycle.add_player(
-            self,
-            player_id,
-            name,
-            websocket,
-            preferred_locale=preferred_locale,
-            user_id=user_id,
-            preferred_color=preferred_color,
-            rejoin_key=rejoin_key,
-            max_players=settings.max_players,
-            player_info_factory=PlayerInfo,
-        )
-
     def add_observer(self, websocket: WebSocket) -> bool:
         """Register a spectator socket; return False when the room has no spectator seats left."""
         if len(self.observers) >= settings.max_observers:
@@ -348,100 +291,6 @@ class GameRoom:
     def remove_observer(self, websocket: WebSocket) -> None:
         """Forget a spectator socket."""
         self.observers = [observer for observer in self.observers if observer.websocket is not websocket]
-
-    def _new_host_transfer_task(self, old_host_id: str) -> asyncio.Task[object]:
-        """Create the delayed host-transfer task (shared by remove/disconnect paths)."""
-        return create_logged_task(
-            self._delayed_host_transfer(old_host_id),
-            name=f"host_transfer_{self.room_id}",
-        )
-
-    def _restart_host_transfer(self, old_host_id: str) -> None:
-        """Cancel any pending host transfer and start a fresh grace window."""
-        if self.pending_host_transfer:
-            self.pending_host_transfer.cancel()
-        self.pending_host_transfer = self._new_host_transfer_task(old_host_id)
-
-    def _maybe_auto_score(self) -> None:
-        """Score the round now if every connected player with a target has submitted.
-
-        A player leaving/disconnecting mid-guessing is no longer "expected" to
-        submit, so the remaining connected players may now all be done. The check
-        is computed live (it ignores departed players) so scoring can trigger
-        without waiting for the timeout and without a stale counter.
-        """
-        if self.metadata.game_phase == GamePhase.GUESSING and rounds.all_expected_guesses_submitted(self):
-            create_logged_task(self.score_and_broadcast_round(), name=f"auto_score_{self.room_id}")
-
-    async def remove_player(self, player_id: str, *, forget_identity: bool = False) -> None:
-        """Remove a player from the room; see player_lifecycle.remove_player for `forget_identity`."""
-        await player_lifecycle.remove_player(
-            self,
-            player_id,
-            host_transfer_delay_ms=settings.host_transfer_delay_ms,
-            schedule_host_transfer=self._new_host_transfer_task,
-            forget_identity=forget_identity,
-        )
-        self._maybe_auto_score()
-
-    async def disconnect_player(self, player_id: str) -> None:
-        """Handle a socket drop.
-
-        In the lobby, remove the player outright; during a game keep them as a
-        'reconnecting' presence so peers can keep playing.
-        """
-        player = self.players.get(player_id)
-        if player is None:
-            return
-
-        if self.metadata.game_phase == GamePhase.LOBBY:
-            await self.remove_player(player_id)
-            await self.broadcast(PlayerLeftEvent(playerId=player_id))
-            await self.persist()
-            return
-
-        # `player.connected` may already be False if a broadcast send to this
-        # socket failed first (broadcast() marks it to stop retrying). That marks
-        # the socket dead but does NOT run migration/presence — so we must not
-        # early-return here, or a host whose send failed would never be replaced.
-        # Double-invocation for the same live socket can't happen: on_disconnect
-        # fires once per connection and handle_disconnect drops stale sockets.
-        player.connected = False
-        await self.broadcast(PlayerPresenceEvent(playerId=player_id, connected=False))
-
-        # Host migration: keep the existing grace so a quick refresh keeps the role.
-        if player_id == self.host_id and any(p.connected for p in self.players.values()):
-            self._restart_host_transfer(player_id)
-
-        # A now-disconnected non-submitter no longer blocks scoring.
-        self._maybe_auto_score()
-
-        # If nobody is connected anymore, mark the room for hibernation/TTL cleanup.
-        if self.is_empty():
-            self.emptied_at = time.time()
-        await self.persist()
-
-    async def prune_disconnected(self) -> None:
-        """Remove all disconnected players (called at game start / restart)."""
-        for player_id in [pid for pid, p in self.players.items() if not p.connected]:
-            await self.remove_player(player_id)
-            await self.broadcast(PlayerLeftEvent(playerId=player_id))
-
-    async def _delayed_host_transfer(self, old_host_id: str) -> None:
-        """Transfer host after a delay, allowing for reconnection."""
-        await player_lifecycle.delayed_host_transfer(
-            self,
-            old_host_id,
-            host_transfer_delay_ms=settings.host_transfer_delay_ms,
-        )
-
-    def update_player_activity(self, player_id: str) -> None:
-        """Update the last activity timestamp for a player."""
-        player_lifecycle.update_player_activity(self, player_id)
-
-    def is_host(self, player_id: str | None) -> bool:
-        """Return whether the given player currently owns the room."""
-        return player_lifecycle.is_host(self, player_id)
 
     def apply_lobby_partial(self, player_id: str, stroke: StrokeDelta, *, is_start: bool) -> None:
         """Fold a relayed stroke fragment into the authoritative lobby doodle.
@@ -491,10 +340,7 @@ class GameRoom:
         card = PlayerCardPayload.model_validate(assignment.model_dump()) if assignment else None
         return RoomStateEvent.model_validate(
             {
-                "players": [
-                    PlayerSnapshot(id=player.id, name=player.name, color=player.color, connected=player.connected)
-                    for player in self._ordered_players()
-                ],
+                "players": self.get_player_list(),
                 "hostId": self.host_id,
                 "gamePhase": self.metadata.game_phase,
                 "difficulty": self.metadata.difficulty,
@@ -514,7 +360,6 @@ class GameRoom:
                 "padVisibility": self.metadata.pad_visibility,
                 "isPrivate": self.metadata.is_private,
                 "defaultLocale": self.metadata.default_locale,
-                "customCategoryIds": self.metadata.custom_category_ids,
             },
         )
 
@@ -526,40 +371,16 @@ class GameRoom:
         """Return the authenticated user id associated with a player connection, if any."""
         return self.metadata.player_user_ids.get(player_id)
 
-    def start_round(self, *, round_number: int | None, cards: dict[str, PlayerPromptAssignmentState] | None) -> int:
-        """Transition the room into a new drawing round and return the start timestamp."""
-        self.scheduler.cancel_round_tasks()
-        return rounds.start_round(self, round_number=round_number, cards=cards)
+    async def enter_guessing(self) -> None:
+        """Move from drawing to guessing, tell everyone, and arm the scoring timeout.
 
-    def start_guessing(self) -> int:
-        """Transition into the guessing phase and return the scoring timeout."""
+        Runs from the drawing timer or early, once every connected player is ready.
+        """
         self.scheduler.cancel_guessing_start()
-        return rounds.start_guessing(self)
-
-    def reset_game(self) -> None:
-        """Reset mutable game state back to the lobby."""
-        self.scheduler.cancel_round_tasks()
-        rounds.reset_game(self)
-
-    def mark_player_ready(self, player_id: str) -> ReadyStatusEvent:
-        """Record that a player is ready and return the shared ready-status payload."""
-        return rounds.mark_player_ready(self, player_id)
-
-    async def record_guess_submission(
-        self,
-        *,
-        player_id: str,
-        target_player_id: str,
-        guesses: list[str],
-    ) -> None:
-        """Store a guess submission and score immediately when all players are done."""
-        if rounds.record_guess_submission(
-            self,
-            player_id=player_id,
-            target_player_id=target_player_id,
-            guesses=guesses,
-        ):
-            await self.score_and_broadcast_round()
+        timeout_seconds = rounds.start_guessing(self)
+        await self.broadcast(rounds.guessing_event_payload(self))
+        await self.persist()
+        self.scheduler.schedule_scoring_timeout(timeout_seconds)
 
     async def broadcast(self, message: WebSocketMessage, exclude: str | None = None) -> None:
         """Broadcast a message to all connected players in the room."""
@@ -617,45 +438,16 @@ class GameRoom:
             event = StartRoundServerEvent(round=round_number, cards={}, roundStartTime=round_start_time)
             await self._deliver_to_observers(encode_ws_message(event))
 
-    async def send_to_player(self, player_id: str, message: WebSocketMessage) -> None:
-        """Send a message to a specific player."""
-        if player_id in self.players:
-            player = self.players[player_id]
-            try:
-                await send_ws_message(player.websocket, message)
-            except Exception:
-                logger.exception("[GameRoom %s] Error sending to %s", self.room_id, player.name)
-                await self.remove_player(player_id)
-
     def _ordered_players(self) -> list[PlayerInfo]:
         """Players in stable seat order (insertion order for any without a seat)."""
         seats = self.metadata.player_seats
         return sorted(self.players.values(), key=lambda p: seats.get(p.id, len(seats)))
 
-    def get_player_list(self) -> list[PlayerListItem]:
+    def get_player_list(self) -> list[PlayerSnapshot]:
         """Get the list of all players in the room, in stable seat order."""
         return [
-            PlayerListItem(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
+            PlayerSnapshot(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
         ]
-
-    async def initiate_kick_vote(self, initiator_id: str, target_player_id: str) -> KickVoteResult:
-        """Initiate a vote to kick a player.
-
-        Returns a JSON-safe status payload with info about the vote.
-        """
-        return await kick_vote.initiate_kick_vote(self, initiator_id, target_player_id)
-
-    async def cast_kick_vote(self, voter_id: str, target_player_id: str) -> KickVoteResult:
-        """Cast a vote to kick a player."""
-        return await kick_vote.cast_kick_vote(self, voter_id, target_player_id)
-
-    async def kick_player(self, player_id: str, reason: str = "Kicked") -> None:
-        """Kick a player from the room."""
-        await kick_vote.kick_player(self, player_id, reason)
-
-    def cleanup_expired_votes(self) -> int:
-        """Remove expired kick votes."""
-        return kick_vote.cleanup_expired_votes(self)
 
     # ------------------------------------------------------------------ #
     # Redis persistence                                                    #
@@ -663,16 +455,33 @@ class GameRoom:
 
     def to_state(self) -> RoomState:
         """Serialize room state to a validated model for Redis storage."""
-        return room_lifecycle.to_state(self)
+        return RoomState(
+            room_id=self.room_id,
+            host_id=self.host_id,
+            last_host_id=self.last_host_id,
+            created_at=self.created_at,
+            emptied_at=self.emptied_at,
+            is_hibernated=self.is_hibernated,
+            metadata=self.metadata,
+        )
 
     @classmethod
     def from_state(cls, state: RoomState) -> GameRoom:
         """Restore a room from a Redis-persisted state model (no players reconnect yet)."""
-        return room_lifecycle.from_state(state, room_factory=cls)
+        room = cls(state.room_id)
+        room.host_id = state.host_id
+        room.last_host_id = state.last_host_id
+        room.created_at = state.created_at
+        # Restored rooms have no connected players yet; start their empty clock now
+        # if the saved state had players, or the room would never expire.
+        room.emptied_at = state.emptied_at or time.time()
+        room.is_hibernated = state.is_hibernated
+        room.metadata = state.metadata.model_copy(deep=True)
+        return room
 
     async def persist(self) -> None:
         """Write current room state to Redis."""
-        await room_lifecycle.persist(self)
+        await save_room_state(self.room_id, self.to_state())
 
     # ------------------------------------------------------------------ #
 
@@ -684,17 +493,24 @@ class GameRoom:
         """
         return not any(player.connected for player in self.players.values())
 
+    def _empty_for(self, seconds: int) -> bool:
+        """Whether the room has had no connected player for at least `seconds`."""
+        return self.is_empty() and self.emptied_at is not None and time.time() - self.emptied_at >= seconds
+
     def should_hibernate(self) -> bool:
-        """Check if room should be hibernated (empty for < hibernation timeout)."""
-        return room_lifecycle.should_hibernate(self)
+        """Check if room should be hibernated after being empty long enough."""
+        return not self.is_hibernated and self._empty_for(settings.room_hibernation_delay_seconds)
 
     def should_be_removed(self) -> bool:
-        """Check if room should be permanently removed."""
-        return room_lifecycle.should_be_removed(self)
+        """Check if room should be permanently removed after its TTL expires."""
+        return self._empty_for(settings.room_ttl_seconds)
 
     def hibernate(self) -> None:
-        """Put room into hibernation mode."""
-        room_lifecycle.hibernate(self)
+        """Put an empty room into hibernation mode."""
+        if self.is_hibernated or not self.is_empty():
+            return
+        logger.info("[GameRoom %s] Entering hibernation mode (age: %.0fs)", self.room_id, time.time() - self.created_at)
+        self.is_hibernated = True
 
 
 class RoomManager:
@@ -708,7 +524,6 @@ class RoomManager:
 
     # Cleanup interval (1 minute)
     CLEANUP_INTERVAL_SECONDS = 60
-    room_type = GameRoom
 
     def __init__(self):
         self.rooms: dict[str, GameRoom] = {}
@@ -730,7 +545,13 @@ class RoomManager:
 
     async def _restore_from_redis(self) -> None:
         """Load persisted room states from Redis on startup."""
-        await room_lifecycle.restore_rooms_from_redis(self)
+        states = await load_all_room_states()
+        for state in states:
+            room = GameRoom.from_state(state)
+            self.rooms[state.room_id] = room
+            room.scheduler.start_idle_check()
+        if states:
+            logger.info("[RoomManager] Restored %s room(s) from Redis", len(states))
 
     async def stop(self) -> None:
         """Stop the room manager and cleanup tasks."""
@@ -752,15 +573,33 @@ class RoomManager:
         while self.is_running:
             try:
                 await asyncio.sleep(self.CLEANUP_INTERVAL_SECONDS)
-                await self._run_cleanup()
+                await self.run_cleanup()
             except asyncio.CancelledError:
                 break
             except Exception:
                 logger.exception("[RoomManager] Error in cleanup loop")
 
-    async def _run_cleanup(self) -> None:
-        """Run cleanup and hibernation checks on all rooms."""
-        await room_lifecycle.run_cleanup(self)
+    async def run_cleanup(self) -> tuple[int, int]:
+        """Hibernate rooms empty for a while, remove those past their TTL; return both counts."""
+        total_rooms = len(self.rooms)
+        to_remove = [room_id for room_id, room in self.rooms.items() if room.should_be_removed()]
+        to_hibernate = [
+            room for room in self.rooms.values() if room.room_id not in to_remove and room.should_hibernate()
+        ]
+
+        for room in to_hibernate:
+            room.hibernate()
+        for room_id in to_remove:
+            await self.remove_room(room_id)
+
+        if to_hibernate or to_remove:
+            logger.info(
+                "[RoomManager] Cleanup: %s total, %s hibernated, %s removed",
+                total_rooms,
+                len(to_hibernate),
+                len(to_remove),
+            )
+        return len(to_hibernate), len(to_remove)
 
     def get_or_create_room(self, room_id: str, *, creator: str | None = None) -> GameRoom:
         """Get an existing room or create a new one.

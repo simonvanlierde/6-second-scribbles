@@ -61,9 +61,12 @@ down-clean:
     {{ dev_compose }} down -v
 
 # Start full prod stack in Docker (infra + backend + built frontend).
+# --pull fetches new base images, so their security fixes reach the build.
 [group('docker')]
 up-prod:
-    {{ prod_compose }} up -d --build
+    {{ prod_compose }} build --pull
+    {{ prod_compose }} pull --ignore-buildable
+    {{ prod_compose }} up -d
 
 # Stop full prod stack.
 [group('docker')]
@@ -170,7 +173,7 @@ build:
 [group('contracts')]
 generate-contracts:
     just backend/generate-contracts
-    pnpm exec biome format --write --config-path . contracts/openapi.json contracts/room-events.json contracts/jsonschema
+    pnpm exec biome format --write --config-path . contracts/openapi.json contracts/jsonschema
     just frontend/generate-contracts
 
 # Validate that all tracked contract artifacts are reproducible.

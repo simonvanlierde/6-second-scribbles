@@ -11,7 +11,6 @@
     "you": "Tú",
     "unknown": "Desconocido",
     "pointsShort": "{count} pts",
-    "roomCode": "Sala {code}",
     "roundProgress": "Ronda {current} / {total}",
     "countdownIn": "en {count}s",
     "unavailable": "No disponible",
@@ -90,9 +89,7 @@
     "roomInProgress": "La sala está en curso. Puedes mirar ahora y unirte cuando vuelva al vestíbulo.",
     "playersInRoom": "{count} jugador en la sala | {count} jugadores en la sala",
     "invalidCodeText": "Los códigos de sala tienen 6 caracteres usando A–Z y 0–9. Revisa el código e inténtalo de nuevo.",
-    "roomNotExist": "Esta sala no existe; te llevamos de vuelta al vestíbulo...",
     "tryGoBack": "Intenta volver al vestíbulo y volver a introducir el código.",
-    "backToLobby": "Volver al vestíbulo",
     "enterYourName": "Ingresa tu nombre",
     "yourName": "Tu nombre",
     "back": "Atrás",
@@ -150,20 +147,16 @@
   "spectator": {
     "drawingRound": "Ronda de dibujo",
     "guessingRound": "Ronda de adivinar",
-    "roomBackInLobby": "La sala ha vuelto a la sala de espera",
     "roundResults": "Resultados de la ronda",
     "finalResults": "Resultados finales",
     "watchingRoom": "Mirando la sala",
-    "joinableAgain": "La sala vuelve a estar abierta. Únete a la próxima partida cuando quieras.",
     "watchingLive": "Viendo las actualizaciones en directo. Puedes unirte cuando la sala vuelva a la sala de espera.",
-    "joinNextGame": "Unirse a la próxima partida",
     "leaveRoom": "Salir de la sala",
     "players": "Jugadores",
     "drawings": "Dibujos",
     "roundStatus": "Estado de la ronda",
     "noDrawingsYet": "Aún no se ha publicado ningún dibujo.",
     "guessingInProgress": "La fase para adivinar está en curso. Continuaremos cuando termine la ronda.",
-    "lobbyAgain": "La sala vuelve a estar en la sala de espera. Usa “Unirse a la próxima partida” para entrar como jugador.",
     "betweenRounds": "Esta sala está entre rondas. Te mantendremos al día en directo.",
     "drawingAlt": "Dibujo de {name}"
   },
@@ -185,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "No se pudo crear la sala. Inténtalo de nuevo.",
+    "tooManyRooms": "Hay demasiadas salas abiertas desde tu red. Cierra una, únete a la sala de un amigo o espera unos minutos.",
     "drawingTooLarge": "Tu dibujo era demasiado grande para enviarlo, así que los demás no pueden verlo.",
     "enterRoomCode": "Introduce un código de sala",
     "invalidRoomCode": "El código de sala debe tener 6 caracteres (A–Z, 0–9)",
@@ -192,6 +186,7 @@
     "connectFailed": "No se pudo conectar. Inténtalo de nuevo.",
     "roundInProgressJoinLater": "Esta ronda ya está en curso. Puedes unirte en la próxima.",
     "spectatorsFull": "Esta sala no admite más espectadores.",
+    "seatsBusy": "Demasiados jugadores acaban de salir de esta sala. Inténtalo de nuevo en unos minutos.",
     "unableToJoinRoom": "No se pudo unir a la sala",
     "hostStatusRestored": "Estado de anfitrión restaurado",
     "youAreNowHost": "Ahora eres el anfitrión",
@@ -216,8 +211,6 @@
     "cancel": "Cancelar"
   },
   "localeSelector": {
-    "disabledHelp": "Los idiomas no disponibles están desactivados hasta que su contenido jugable esté listo.",
-    "reasonUnavailable": "{name}: {reason}",
     "noPlayableCategories": "Aún no hay categorías jugables",
     "missingPromptCoverage": "Falta cobertura de retos en todas las dificultades",
     "failedToLoad": "No se pudo cargar la disponibilidad de idiomas"

@@ -21,41 +21,8 @@ FALLBACK = "Fallback"
 class TestCategoryService:
     """Focused tests for CategoryService methods."""
 
-    async def test_list_categories_filters_by_difficulty_and_language(self, db_session: AsyncSession) -> None:
-        """Filter categories by difficulty and language."""
-        db_session.add(
-            Category(
-                difficulty="easy",
-                source="system",
-                available_locales=["en"],
-                translations={"en": {"name": "Easy EN"}},
-            )
-        )
-        db_session.add(
-            Category(
-                difficulty="easy",
-                source="system",
-                available_locales=["fr"],
-                translations={"fr": {"name": "Facile FR"}},
-            )
-        )
-        db_session.add(
-            Category(
-                difficulty="hard",
-                source="system",
-                available_locales=["en"],
-                translations={"en": {"name": "Hard EN"}},
-            )
-        )
-        await db_session.commit()
-
-        response = await category_service.list_categories(db_session, difficulty="easy", language="en")
-
-        assert len(response) == 1
-        assert [category.name for category in response] == ["Easy EN"]
-
     @pytest.mark.usefixtures("_deterministic_sample")
-    async def test_select_category_sets_returns_localized_items(self, db_session: AsyncSession) -> None:
+    async def test_select_and_deal_returns_localized_items(self, db_session: AsyncSession) -> None:
         """Return localized category sets with alternatives."""
         category = Category(
             difficulty="medium",
@@ -76,24 +43,21 @@ class TestCategoryService:
         db_session.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=dog_prompt.id, sort_order=2))
         await db_session.commit()
 
-        response = await category_service.select_category_sets(
-            db_session,
-            difficulty="medium",
-            count=1,
-            player_count=1,
-            locale="en",
-            locales=["en"],
+        category_ids = await category_service.select_category_ids(
+            db_session, difficulty="medium", player_count=1, locales=["en"], room_locale="en"
+        )
+        card = await category_service.deal_category(
+            db_session, category_id=category_ids[0], preferred_locale="en", fallback_locale="en"
         )
 
-        assert len(response.selections) == 1
-        selection = response.selections[0]
-        assert selection.category_name == ANIMALS
-        assert selection.items == ["cat", "dog"]
-        assert selection.alternatives["cat"] == ["kitty"]
+        assert category_ids == [category.id]
+        assert card.category == ANIMALS
+        assert card.items == ["cat", "dog"]
+        assert card.alternatives["cat"] == ["kitty"]
 
     @pytest.mark.usefixtures("_deterministic_sample")
-    async def test_select_category_sets_falls_back_to_english(self, db_session: AsyncSession) -> None:
-        """Test that select_category_sets falls back to English when the requested locale is not available."""
+    async def test_select_and_deal_fall_back_to_english(self, db_session: AsyncSession) -> None:
+        """Selection and dealing fall back to English when the requested locale is not available."""
         category = Category(
             difficulty="medium",
             source="system",
@@ -107,14 +71,12 @@ class TestCategoryService:
         db_session.add(category_service.CategoryPrompt(category_id=category.id, prompt_id=prompt.id, sort_order=1))
         await db_session.commit()
 
-        response = await category_service.select_category_sets(
-            db_session,
-            difficulty="medium",
-            count=1,
-            player_count=1,
-            locale="es",
-            locales=["es"],
+        category_ids = await category_service.select_category_ids(
+            db_session, difficulty="medium", player_count=1, locales=["es"], room_locale="es"
+        )
+        card = await category_service.deal_category(
+            db_session, category_id=category_ids[0], preferred_locale="es", fallback_locale="es"
         )
 
-        assert len(response.selections) == 1
-        assert response.selections[0].category_name == FALLBACK
+        assert category_ids == [category.id]
+        assert card.category == FALLBACK

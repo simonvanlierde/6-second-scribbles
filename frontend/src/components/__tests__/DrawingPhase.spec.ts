@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 
 import DrawingPhase from "@/components/DrawingPhase.vue";
+import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import { DRAWING_PAPER } from "@/config/drawing";
 import { useGameStore } from "@/stores/game";
 
@@ -25,6 +28,7 @@ const sendMock = vi.hoisted(() => vi.fn());
 const playMock = vi.hoisted(() => vi.fn());
 const draftRestoreMock = vi.hoisted(() => vi.fn());
 const draftClearMock = vi.hoisted(() => vi.fn());
+const leaveRoomMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/composables/useDrawingCanvas", () => ({
   useDrawingCanvas: () => canvasMocks,
@@ -42,6 +46,10 @@ vi.mock("@/composables/useGameConnection", () => ({
 
 vi.mock("@/composables/useGameTimer", () => ({
   useGameTimer: () => ({ timeLeft: ref(45), isWarning: ref(false), stop: vi.fn() }),
+}));
+
+vi.mock("@/composables/useLeaveRoom", () => ({
+  useLeaveRoom: () => ({ leaveRoom: leaveRoomMock }),
 }));
 
 vi.mock("@/composables/useRoundDraft", () => ({
@@ -110,6 +118,7 @@ describe("DrawingPhase", () => {
     playMock.mockReset();
     draftRestoreMock.mockReset();
     draftClearMock.mockReset();
+    leaveRoomMock.mockReset();
     seedDrawing();
   });
 
@@ -187,5 +196,17 @@ describe("DrawingPhase", () => {
     expect(canvasMocks.setWidth).toHaveBeenCalledWith(8);
     expect(canvasMocks.undo).toHaveBeenCalledTimes(1);
     expect(canvasMocks.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks before leaving mid-drawing from the header", async () => {
+    HTMLDialogElement.prototype.showModal = vi.fn(); // jsdom has no modal dialogs
+    HTMLDialogElement.prototype.close = vi.fn();
+    const wrapper = mountPhase();
+
+    wrapper.findComponent(GameHeader).vm.$emit("leave");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(LeaveRoomDialog).findComponent(HdDialog).props("open")).toBe(true);
+    expect(leaveRoomMock).not.toHaveBeenCalled();
   });
 });

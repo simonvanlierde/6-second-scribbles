@@ -515,7 +515,7 @@ function selectTheme(value: Theme) {
   align-items: center;
   gap: 6px;
   max-width: 55%;
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 12px;
   background: var(--color-card);
   border: 2px solid var(--color-ink);

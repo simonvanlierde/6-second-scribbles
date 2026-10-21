@@ -10,13 +10,24 @@ describe("game store — localPlayerColor", () => {
     localStorage.clear();
   });
 
-  it("assigns a deterministic color after setLocalPlayer if none is set", () => {
+  it("leaves the colour unpicked after setLocalPlayer, showing the room's or a per-id one", () => {
     const store = useGameStore();
-    // Force-clear the default so setLocalPlayer's guard derives a new colour.
-    store.setLocalPlayerColor(AVATAR_COLORS[0]);
-    store.localPlayerColor = "" as never;
     store.setLocalPlayer("player-abc", "Simon");
-    expect(store.localPlayerColor).toBe(getAvatarColor("player-abc"));
+    expect(store.localPlayerColor).toBeNull();
+    expect(store.localAvatarColor).toBe(getAvatarColor("player-abc"));
+
+    store.setPlayers([{ id: "player-abc", name: "Simon", color: AVATAR_COLORS[4] }]);
+    expect(store.localAvatarColor).toBe(AVATAR_COLORS[4]);
+  });
+
+  it("setPlayers keeps the server's colour and fills one for a player without", () => {
+    const store = useGameStore();
+    store.setPlayers([
+      { id: "p1", name: "Ann", color: AVATAR_COLORS[1] },
+      { id: "p2", name: "Bob", color: null },
+    ]);
+    expect(store.players.get("p1")?.color).toBe(AVATAR_COLORS[1]);
+    expect(store.players.get("p2")?.color).toBe(getAvatarColor("p2"));
   });
 
   it("setLocalPlayerColor accepts a valid AvatarColor", () => {

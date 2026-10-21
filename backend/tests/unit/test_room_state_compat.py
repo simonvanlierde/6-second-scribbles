@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from app.core.types import GamePhase
+from app.rooms import player_lifecycle, rounds
 from app.rooms.manager import GameRoom
 from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
 from app.rooms.state import RoomState
@@ -140,19 +141,19 @@ async def test_saved_room_restores_and_plays(make_ws: Callable[..., TestWebSocke
     assert card is not None
     assert card.category == HOST_CATEGORY
 
-    await room.add_player(HOST, "Al", as_websocket(make_ws()), user_id="user-1", rejoin_key="key-p1")
+    await player_lifecycle.add_player(room, HOST, "Al", as_websocket(make_ws()), user_id="user-1", rejoin_key="key-p1")
     with pytest.raises(ValueError, match=IDENTITY_CONFLICT_ERROR):
-        await room.add_player(GUEST, "Bo", as_websocket(make_ws()), rejoin_key="wrong")
-    await room.add_player(GUEST, "Bo", as_websocket(make_ws()), rejoin_key="key-p2")
+        await player_lifecycle.add_player(room, GUEST, "Bo", as_websocket(make_ws()), rejoin_key="wrong")
+    await player_lifecycle.add_player(room, GUEST, "Bo", as_websocket(make_ws()), rejoin_key="key-p2")
     assert room.host_id == HOST
     assert room.metadata.player_seats == {HOST: 0, GUEST: 1}
 
-    await room.remove_player(GUEST, forget_identity=True)
+    await player_lifecycle.remove_player(room, GUEST, forget_identity=True)
     assert GUEST not in room.metadata.player_assignments
     assert GUEST not in room.metadata.player_rejoin_keys
     assert room.metadata.player_scores[GUEST] == 10
 
-    room.reset_game()
+    rounds.reset_game(room)
     assert room.metadata.game_phase == GamePhase.LOBBY
     assert room.metadata.player_scores == {HOST: 0}
     assert room.metadata.is_private

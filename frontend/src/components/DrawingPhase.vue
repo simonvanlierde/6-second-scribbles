@@ -4,14 +4,12 @@ import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vu
 import DrawingCanvasStage from "@/components/DrawingCanvasStage.vue";
 import DrawingToolbar from "@/components/DrawingToolbar.vue";
 import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
 import HdButton from "@/components/ui/HdButton.vue";
 import HdCard from "@/components/ui/HdCard.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
 import { useDrawingCanvas } from "@/composables/useDrawingCanvas";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameTimer } from "@/composables/useGameTimer";
-import { useLeaveRoom } from "@/composables/useLeaveRoom";
-import { useRoomLeave } from "@/composables/useRoomLeave";
 import { useRoundDraft } from "@/composables/useRoundDraft";
 import { useSound } from "@/composables/useSound";
 import { BRUSH_SIZES, DRAW_PALETTE, DRAWING_PAPER } from "@/config/drawing";
@@ -24,18 +22,16 @@ const store = useGameStore();
 const { send } = useGameConnection();
 const { play } = useSound();
 const canvas = useDrawingCanvas();
-const { shouldConfirm, dialog: leaveDialog } = useRoomLeave();
-const { leaveRoom } = useLeaveRoom();
 
 const canvasElement = useTemplateRef<HTMLCanvasElement>("canvasElement");
 const hasSubmittedDrawing = ref(false);
-const leaveDialogOpen = ref(false);
+const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
 const doneItems = ref<Set<number>>(new Set());
 
 const category = computed(() => store.localPlayerCard?.category || i18n.global.t("drawing.loadingCategory"));
 const items = computed(() => store.localPlayerCard?.items || []);
 
-const { timeLeft, stop: stopTimer } = useGameTimer({
+const { timeLeft } = useGameTimer({
   startTime: () => store.roundStartTime,
   duration: () => store.drawingTimeLimit,
   onExpire: () => endDrawingPhase(),
@@ -118,24 +114,11 @@ function toggleItem(index: number) {
   else next.add(index);
   doneItems.value = next;
 }
-
-function showLeaveDialog() {
-  if (!shouldConfirm.value) {
-    confirmLeave();
-    return;
-  }
-  leaveDialogOpen.value = true;
-}
-
-function confirmLeave() {
-  stopTimer();
-  leaveRoom();
-}
 </script>
 
 <template>
   <div class="drawing-phase">
-    <GameHeader :time-left="timeLeft" @leave="showLeaveDialog" />
+    <GameHeader :time-left="timeLeft" @leave="leaveDialog?.request()" />
 
     <div class="drawing-phase__body">
       <!-- Category sidebar -->
@@ -206,15 +189,7 @@ function confirmLeave() {
       {{ hasSubmittedDrawing ? $t("drawing.waiting") : $t("drawing.finish") }}
     </HdButton>
 
-    <HdDialog
-      v-model:open="leaveDialogOpen"
-      :title="leaveDialog.title"
-      :message="leaveDialog.message"
-      :confirm-label="leaveDialog.confirmLabel"
-      :cancel-label="leaveDialog.cancelLabel"
-      variant="danger"
-      @confirm="confirmLeave"
-    />
+    <LeaveRoomDialog ref="leaveDialog" />
   </div>
 </template>
 

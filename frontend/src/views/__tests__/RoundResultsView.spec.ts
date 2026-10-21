@@ -23,23 +23,25 @@ function seedRoundResults() {
     { id: "p3", name: "Carol", connected: false },
   ]);
   store.localPlayerId = "p2";
-  store.updateScores({ p1: 8, p2: 12, p3: 4 });
   store.currentRound = 2;
   store.maxRounds = 3;
   store.setPlayerDrawing("p1", "data:image/png;base64,AAAA");
-  store.setRoundResults([
-    {
-      playerId: "p2",
-      targetPlayerId: "p1",
-      correctGuesses: 3,
-      totalItems: 5,
-      pointsEarned: 6,
+  store.onRoundComplete({
+    results: [
+      {
+        playerId: "p2",
+        targetPlayerId: "p1",
+        correctGuesses: 3,
+        totalItems: 5,
+        pointsEarned: 6,
+      },
+    ],
+    scores: { p1: 8, p2: 12, p3: 4 },
+    highlights: {
+      bestGuesser: { playerId: "p2", detail: "3/5" },
+      speedDemon: null,
+      wildestMiss: null,
     },
-  ]);
-  store.setRoundHighlights({
-    bestGuesser: { playerId: "p2", detail: "3/5" },
-    speedDemon: null,
-    wildestMiss: null,
   });
   return store;
 }

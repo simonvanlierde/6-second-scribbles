@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
+import { effectScope, nextTick, ref } from "vue";
 
 import { useGameTimer } from "@/composables/useGameTimer";
 
@@ -55,5 +55,20 @@ describe("useGameTimer", () => {
     await nextTick();
 
     expect(timeLeft.value).toBe(2);
+  });
+
+  it("stops ticking once the screen that owns it goes away", () => {
+    const onExpire = vi.fn();
+    const scope = effectScope();
+    const timer = scope.run(() => useGameTimer({ startTime: Date.now(), duration: 2, onExpire }));
+
+    vi.advanceTimersByTime(1_000);
+    expect(timer?.timeLeft.value).toBe(1);
+
+    scope.stop();
+    vi.advanceTimersByTime(5_000);
+
+    expect(timer?.timeLeft.value).toBe(1);
+    expect(onExpire).not.toHaveBeenCalled();
   });
 });

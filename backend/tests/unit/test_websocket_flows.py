@@ -10,7 +10,7 @@ import pytest
 
 from app.core.config import settings
 from app.core.types import GamePhase
-from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR
+from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, MAX_ABSENT_BINDINGS
 from tests.constants import (
     ALICE,
     BOB,
@@ -31,12 +31,13 @@ from tests.constants import (
     READY_STATUS,
     ROOM_STATE,
     ROUND_COMPLETE,
+    SEATS_BUSY,
     START_GAME,
     START_GUESSING,
     START_ROUND,
     VOTE_KICK_PUBLIC_ONLY_ERROR,
 )
-from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
+from tests.support import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -51,7 +52,7 @@ def test_full_game_flow(test_client: TestClient) -> None:
         "GAME01",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         start_messages = (receive_json(ws1), receive_json(ws2))
         assert [message["type"] for message in start_messages] == [START_GAME, START_GAME]
 
@@ -121,7 +122,7 @@ def test_server_starts_guessing_after_round_timer(
         "CODE00",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 1})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_GAME, START_GAME]
 
         assert [receive_json(ws1)["type"], receive_json(ws2)["type"]] == [START_ROUND, START_ROUND]
@@ -294,6 +295,37 @@ def test_lobby_refresh_keeps_the_seat_bound_to_its_key(test_client: TestClient) 
             assert reply["type"] == PLAYER_JOINED
 
 
+def test_drop_flood_cannot_free_a_refreshing_guest_seat(test_client: TestClient) -> None:
+    """Throwaway ids that join and drop cannot push out the binding of a guest who just refreshed."""
+    room_id = "FLOOD1"
+
+    with test_client.websocket_connect(f"/ws/{room_id}") as host:
+        receive_json(host)
+        join_player(host, PLAYER_1, ALICE, rejoin_key="host-key")
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest:
+            receive_json(guest)
+            join_player(guest, PLAYER_2, BOB, rejoin_key="guest-key")
+
+        for i in range(MAX_ABSENT_BINDINGS):
+            with test_client.websocket_connect(f"/ws/{room_id}") as throwaway:
+                receive_json(throwaway)
+                reply = join_player(throwaway, f"throwaway{i}", "x", rejoin_key=f"key{i}")
+        # The guest's binding plus 39 throwaways reach the cap, so the last newcomer waits.
+        assert reply["type"] == JOIN_ERROR
+        assert reply["error"] == SEATS_BUSY
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as intruder:
+            receive_json(intruder)
+            reply = join_player(intruder, PLAYER_2, "Mallory", rejoin_key="other-key")
+            assert reply["type"] == JOIN_ERROR
+            assert reply["error"] == IDENTITY_CONFLICT_ERROR
+
+        with test_client.websocket_connect(f"/ws/{room_id}") as guest_again:
+            receive_json(guest_again)
+            assert join_player(guest_again, PLAYER_2, BOB, rejoin_key="guest-key")["type"] == PLAYER_JOINED
+
+
 def test_multiple_rooms_can_progress_independently(test_client: TestClient) -> None:
     """Separate rooms can progress independently."""
     with ExitStack() as stack:
@@ -337,7 +369,7 @@ def test_three_player_full_round(test_client: TestClient, dealt_cards: dict[str,
     ) as (ws1, ws2, ws3):
         sockets = {PLAYER_1: ws1, PLAYER_2: ws2, PLAYER_3: ws3}
 
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         for ws in (ws1, ws2, ws3):
             assert receive_json(ws)["type"] == START_GAME
 
@@ -478,7 +510,7 @@ def test_round_complete_includes_highlights(test_client: TestClient) -> None:
         "CODE09",
         [JoinedPlayer(PLAYER_1, ALICE), JoinedPlayer(PLAYER_2, BOB)],
     ) as (ws1, ws2):
-        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 10})
+        send_json(ws1, {"type": START_GAME, "difficulty": MEDIUM, "rounds": 1, "drawingTimeLimit": 15})
         receive_json(ws1)
         receive_json(ws2)
 

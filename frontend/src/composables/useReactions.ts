@@ -1,7 +1,8 @@
 import { reactive } from "vue";
 
-export const REACTION_KEYS = ["laugh", "shock", "art", "mind-blown", "think"] as const;
-export type ReactionKey = (typeof REACTION_KEYS)[number];
+import type { ServerEventOf } from "@/generated/protocol";
+
+export type ReactionKey = ServerEventOf<"reaction_received">["reactionKey"];
 
 export const REACTION_EMOJI: Record<ReactionKey, string> = {
   laugh: "😂",
@@ -10,6 +11,9 @@ export const REACTION_EMOJI: Record<ReactionKey, string> = {
   "mind-blown": "🤯",
   think: "🤔",
 };
+
+/** The reactions in the order the pad and the counts show them. */
+export const REACTION_KEYS = Object.keys(REACTION_EMOJI) as ReactionKey[];
 
 type Counts = Record<ReactionKey, number>;
 type ReactionsState = Record<string, Counts>;

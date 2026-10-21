@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 import app.main as main_module
 from app.core.types import GamePhase
+from app.rooms import player_lifecycle
 from app.rooms.manager import room_manager
 from tests.constants import (
     MEDIUM,
@@ -25,7 +26,7 @@ from tests.constants import (
     ROOM_STATE,
     TEST_ROOM_ID,
 )
-from tests.helpers import JoinedPlayer, join_player, joined_players, receive_json, send_json
+from tests.support import JoinedPlayer, join_player, joined_players, receive_json, send_json
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -48,9 +49,10 @@ def test_root_endpoint(test_client: TestClient) -> None:
     """Health endpoint returns the expected service metadata."""
     response = test_client.get("/api/health")
 
-    assert response.status_code == 200
     payload = response.json()
     assert payload["status"] in OK_STATUSES
+    healthy = payload["status"] == OK_STATUSES[0]
+    assert response.status_code == (status.HTTP_200_OK if healthy else status.HTTP_503_SERVICE_UNAVAILABLE)
     assert payload["service"] == SERVICE_NAME
     assert payload[VERSION_KEY] == tomllib.loads(PYPROJECT.read_text())["project"]["version"]
     assert DATABASE_KEY in payload
@@ -75,7 +77,7 @@ async def test_room_status_for_existing_and_missing_room(async_client: AsyncClie
     assert missing_response.json() == {"exists": False}
 
     room = room_manager.get_or_create_room(TEST_ROOM_ID)
-    await room.add_player(PLAYER_ONE_ID, PLAYER_ONE_NAME, AsyncMock())
+    await player_lifecycle.add_player(room, PLAYER_ONE_ID, PLAYER_ONE_NAME, AsyncMock())
     room.metadata.game_phase = GamePhase.DRAWING
 
     existing_response = await async_client.get(f"/api/rooms/{TEST_ROOM_ID}/status")
@@ -227,6 +229,39 @@ def test_invalid_start_game_difficulty_returns_protocol_error(test_client: TestC
         send_json(ws2, {"type": "start_game", "difficulty": "expert", "rounds": 3, "drawingTimeLimit": 30})
 
         assert receive_json(ws2) == {
+            "type": "protocol_error",
+            "error": "invalid_payload",
+            "message": "Invalid websocket payload.",
+        }
+
+
+@pytest.mark.parametrize("event_type", ["start_game", "settings_update"])
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {"rounds": 0},
+        {"rounds": 11},
+        {"rounds": 1_000_000},
+        {"drawingTimeLimit": 14},
+        {"drawingTimeLimit": 181},
+        {"guessingTimeLimit": 1},
+        {"guessingTimeLimit": 86_400},
+    ],
+)
+def test_out_of_range_settings_return_protocol_error(
+    test_client: TestClient,
+    event_type: str,
+    settings: dict[str, object],
+) -> None:
+    """Settings outside the lobby's bounds (1-10 rounds, 15-180 s timers) are rejected."""
+    with joined_players(
+        test_client,
+        "CODE22",
+        [JoinedPlayer(PLAYER_ONE_ID, PLAYER_ONE_NAME), JoinedPlayer(PLAYER_TWO_ID, PLAYER_TWO_NAME)],
+    ) as (ws1, _ws2):
+        send_json(ws1, {"type": event_type, **settings})
+
+        assert receive_json(ws1) == {
             "type": "protocol_error",
             "error": "invalid_payload",
             "message": "Invalid websocket payload.",

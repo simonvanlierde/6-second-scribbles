@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import HomeCreateJoin from "@/components/home/HomeCreateJoin.vue";
 import { i18n } from "@/i18n";
+import { ApiError } from "@/lib/api";
 import { useGameStore } from "@/stores/game";
 
 const apiRequestMock = vi.fn();
@@ -12,7 +13,8 @@ const openForNameMock = vi.fn();
 const pushMock = vi.fn();
 const showNotificationMock = vi.fn();
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api")>()),
   apiRequest: (...args: unknown[]) => apiRequestMock(...args),
 }));
 
@@ -77,7 +79,7 @@ describe("HomeCreateJoin", () => {
     await flushPromises();
 
     expect(apiRequestMock).toHaveBeenCalledWith(
-      "/api/rooms",
+      "/api/rooms/",
       expect.objectContaining({
         method: "POST",
       }),
@@ -86,6 +88,20 @@ describe("HomeCreateJoin", () => {
     expect(store.roomCode).toBe("ABC123");
     expect(connectMock).toHaveBeenCalledWith("ABC123");
     expect(pushMock).toHaveBeenCalledWith({ name: "room", params: { roomCode: "ABC123" } });
+  });
+
+  it("explains a refused room creation (429) instead of asking to retry", async () => {
+    const store = useGameStore();
+    store.localPlayerName = "Simon";
+    apiRequestMock.mockRejectedValueOnce(new ApiError(429, "Too many open rooms from your network."));
+
+    const wrapper = mountPanel();
+    await wrapper.findAll("button")[0].trigger("click");
+    await flushPromises();
+
+    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.tooManyRooms"), "error");
+    expect(i18n.global.t("notifications.tooManyRooms")).toContain("wait a few minutes");
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("quick play assigns a generated name before joining a room", async () => {
@@ -104,6 +120,29 @@ describe("HomeCreateJoin", () => {
       }),
     );
     expect(connectMock).toHaveBeenCalledWith("FAST01");
+  });
+
+  it("quick play explains a refused room (429) and stays on the home screen", async () => {
+    apiRequestMock.mockRejectedValueOnce(new ApiError(429, "Too many open rooms from your network."));
+
+    const wrapper = mountPanel();
+    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await flushPromises();
+
+    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.tooManyRooms"), "error");
+    expect(connectMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("quick play reports other failures as a connection problem", async () => {
+    apiRequestMock.mockRejectedValueOnce(new ApiError(503, "Service unavailable"));
+
+    const wrapper = mountPanel();
+    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await flushPromises();
+
+    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.connectFailed"), "error");
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("reports an invalid room code before checking the backend", async () => {

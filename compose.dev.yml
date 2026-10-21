@@ -55,6 +55,7 @@ services:
       - ${ARGOS_MODELS_DIR:-./backend/.argos-models}:/home/appuser/.local/share/argos-translate
     environment:
       POSTGRES_HOST: database
+      REDIS_HOST: cache
     env_file:
       - backend/.env.dev
     profiles:

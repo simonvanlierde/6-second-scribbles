@@ -14,7 +14,6 @@ from app.rooms.manager import ClientRoomLimitError, RoomCapacityError, room_mana
 from app.rooms.schemas import (
     CreateRoomResponse,
     QuickPlayResponse,
-    RandomRoomResponse,
     RoomStatusResponse,
 )
 from app.rooms.state import RoomState
@@ -29,28 +28,10 @@ RoomCode = Annotated[str, Path(pattern=f"^[{ALLOWED_CHARS}]{{{ROOM_CODE_LENGTH}}
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
 
-@router.get("/random", response_model=RandomRoomResponse)
-async def get_random_room() -> RandomRoomResponse:
-    """Find a random public room that's available to join."""
-    return await get_random_joinable_room()
-
-
 @router.get("/{room_id}/status", response_model=RoomStatusResponse, response_model_exclude_none=True)
 async def room_status(room_id: RoomCode) -> RoomStatusResponse:
     """Get the status of a room."""
     return get_room_status(room_id=room_id)
-
-
-async def get_random_joinable_room() -> RandomRoomResponse:
-    """Find a public room that can be joined."""
-    room_code = room_manager.find_random_public_room(max_players=settings.max_players)
-
-    if not room_code:
-        raise HTTPException(status_code=404, detail="No available public rooms found. Try creating a new room!")
-
-    room = room_manager.get_room(room_code)
-    player_count = len(room.players) if room else 0
-    return RandomRoomResponse(room_code=room_code, player_count=player_count, max_players=settings.max_players)
 
 
 def get_room_status(*, room_id: str) -> RoomStatusResponse:

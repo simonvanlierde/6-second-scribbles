@@ -30,7 +30,6 @@ describe("auth store", () => {
     await store.bootstrap("nl", "Guest");
 
     expect(store.currentUser).toEqual(user);
-    expect(store.bootstrapError).toBeNull();
     expect(apiRequestMock).toHaveBeenCalledTimes(1);
     expect(apiRequestMock.mock.calls[0][0]).toBe("/api/me");
   });
@@ -52,7 +51,26 @@ describe("auth store", () => {
     );
   });
 
-  it("stores the bootstrap error when guest auth also fails", async () => {
+  it("ignores a second bootstrap while the first is still running", async () => {
+    // Two guest accounts for one browser would split its rooms and kick bans.
+    let resolveMe: (value: typeof user) => void = () => {};
+    apiRequestMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveMe = resolve;
+      }),
+    );
+
+    const store = useAuthStore();
+    const first = store.bootstrap("en", null);
+    await store.bootstrap("en", null);
+    resolveMe(user);
+    await first;
+
+    expect(apiRequestMock).toHaveBeenCalledTimes(1);
+    expect(store.currentUser).toEqual(user);
+  });
+
+  it("stays signed out when guest auth also fails", async () => {
     apiRequestMock.mockRejectedValueOnce(new Error("not signed in"));
     apiRequestMock.mockRejectedValueOnce(new Error("guest auth failed"));
 
@@ -60,7 +78,5 @@ describe("auth store", () => {
     await store.bootstrap("en", null);
 
     expect(store.currentUser).toBeNull();
-    expect(store.bootstrapError).toBe("guest auth failed");
-    expect(store.isBootstrapping).toBe(false);
   });
 });

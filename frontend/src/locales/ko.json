@@ -11,7 +11,6 @@
     "you": "나",
     "unknown": "알 수 없음",
     "pointsShort": "{count}점",
-    "roomCode": "방 {code}",
     "roundProgress": "라운드 {current} / {total}",
     "countdownIn": "{count}초 후",
     "unavailable": "사용 불가",
@@ -90,9 +89,7 @@
     "roomInProgress": "이 방은 진행 중이에요. 지금은 관전할 수 있고, 로비로 돌아오면 참여할 수 있어요.",
     "playersInRoom": "방에 {count}명 있어요 | 방에 {count}명 있어요",
     "invalidCodeText": "방 코드는 A–Z와 0–9를 사용하는 6자입니다. 코드를 확인하고 다시 시도하세요.",
-    "roomNotExist": "이 방은 존재하지 않아요. 로비로 돌아갈게요...",
     "tryGoBack": "로비로 돌아가 코드를 다시 입력해 보세요.",
-    "backToLobby": "로비로 돌아가기",
     "enterYourName": "이름을 입력하세요",
     "yourName": "이름",
     "back": "뒤로",
@@ -150,20 +147,16 @@
   "spectator": {
     "drawingRound": "그리기 라운드",
     "guessingRound": "맞히기 라운드",
-    "roomBackInLobby": "방이 다시 로비로 돌아왔어요",
     "roundResults": "라운드 결과",
     "finalResults": "최종 결과",
     "watchingRoom": "방 구경 중",
-    "joinableAgain": "방에 다시 입장할 수 있어요. 준비되면 언제든 다음 게임에 들어오세요.",
     "watchingLive": "실시간 업데이트를 보고 있어요. 방이 로비로 돌아오면 참여할 수 있어요.",
-    "joinNextGame": "다음 게임 참여",
     "leaveRoom": "방 나가기",
     "players": "플레이어",
     "drawings": "그림",
     "roundStatus": "라운드 상태",
     "noDrawingsYet": "아직 공개된 그림이 없어요.",
     "guessingInProgress": "맞히기가 진행 중이에요. 라운드가 끝나면 넘어갈게요.",
-    "lobbyAgain": "방이 다시 로비에서 대기 중이에요. “다음 게임 참여”를 눌러 플레이어로 입장하세요.",
     "betweenRounds": "이 방은 라운드 사이예요. 실시간으로 계속 알려드릴게요.",
     "drawingAlt": "{name}님의 그림"
   },
@@ -185,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "방을 만들지 못했어요. 다시 시도해 주세요.",
+    "tooManyRooms": "이 네트워크에서 열린 방이 너무 많아요. 방을 하나 닫거나, 친구의 방에 참여하거나, 몇 분 후에 다시 시도해 주세요.",
     "drawingTooLarge": "그림이 너무 커서 보내지 못했어요. 다른 플레이어에게는 보이지 않아요.",
     "enterRoomCode": "방 코드를 입력해 주세요",
     "invalidRoomCode": "방 코드는 6자여야 해요 (A–Z, 0–9)",
@@ -192,6 +186,7 @@
     "connectFailed": "연결에 실패했어요. 다시 시도해 주세요.",
     "roundInProgressJoinLater": "이 라운드는 이미 진행 중이에요. 다음 라운드에 참여할 수 있어요.",
     "spectatorsFull": "이 방은 더 이상 관전자를 받을 수 없어요.",
+    "seatsBusy": "방금 이 방에서 나간 플레이어가 너무 많아요. 몇 분 후에 다시 시도해 주세요.",
     "unableToJoinRoom": "방에 들어갈 수 없어요",
     "hostStatusRestored": "방장 권한이 복구됐어요",
     "youAreNowHost": "이제 당신이 방장이에요",
@@ -216,8 +211,6 @@
     "cancel": "취소"
   },
   "localeSelector": {
-    "disabledHelp": "사용 불가한 언어는 플레이 가능한 콘텐츠가 모두 준비될 때까지 비활성화돼요.",
-    "reasonUnavailable": "{name}: {reason}",
     "noPlayableCategories": "아직 플레이 가능한 카테고리가 없어요",
     "missingPromptCoverage": "난이도별 제시어가 부족해요",
     "failedToLoad": "언어 사용 가능 여부를 불러오지 못했어요"

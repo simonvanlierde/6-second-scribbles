@@ -9,14 +9,6 @@ from pydantic import BaseModel
 from app.core.types import GamePhase
 
 
-class RandomRoomResponse(BaseModel):
-    """Response for finding a random joinable room."""
-
-    room_code: str
-    player_count: int
-    max_players: int
-
-
 class RoomStatusResponse(BaseModel):
     """Response for room status checks."""
 

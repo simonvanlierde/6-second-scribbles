@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Annotated, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
@@ -13,8 +13,9 @@ from app.core.types import (
     Difficulty,
     GamePhase,
     LanguageCode,
-    PositiveRoundCount,
     PositiveRoundLengthSeconds,
+    RoundCount,
+    RoundLengthSeconds,
 )
 
 if TYPE_CHECKING:
@@ -23,11 +24,6 @@ if TYPE_CHECKING:
 type Payload = dict[str, object]
 type WebSocketMessage = BaseModel | Payload
 JOIN_EVENT_TYPE = "join"
-
-
-class EventCatalogEntry(TypedDict):
-    group: str
-    summary: str
 
 
 class ClientEventModel(BaseModel):
@@ -65,9 +61,9 @@ class GameSettingsEventModel(ClientEventModel):
     """Shared client payload fields for updating game settings."""
 
     difficulty: Difficulty | None = None
-    rounds: PositiveRoundCount | None = None
-    drawing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
-    guessing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
+    rounds: RoundCount | None = None
+    drawing_time_limit: RoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
+    guessing_time_limit: RoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
 
 
 class StartGameEvent(GameSettingsEventModel):
@@ -134,11 +130,6 @@ class SettingsUpdateEvent(GameSettingsEventModel):
 class DefaultLocaleUpdateEvent(ClientEventModel):
     type: Literal["default_locale_update"]
     locale: LanguageCode = "en"
-
-
-class RoomCustomCategoriesUpdateEvent(ClientEventModel):
-    type: Literal["room_custom_categories_update"]
-    category_ids: list[int] | None = Field(default=None, alias="categoryIds")
 
 
 class DrawEventModel(ClientEventModel):
@@ -239,7 +230,6 @@ ClientEvent = Annotated[
     | WatchEvent
     | SettingsUpdateEvent
     | DefaultLocaleUpdateEvent
-    | RoomCustomCategoriesUpdateEvent
     | DrawStrokeEvent
     | DrawStrokePartialEvent
     | DrawpadClearEvent
@@ -294,15 +284,6 @@ class PlayerSnapshot(BaseModel):
     connected: bool = True
 
 
-class PlayerListItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    name: str
-    color: str | None = None
-    connected: bool = True
-
-
 class GalleryDrawingPayload(BaseModel):
     """One completed drawing retained for the end-of-game gallery."""
 
@@ -342,13 +323,12 @@ class RoomStateEvent(ServerEventModel):
     pad_visibility: bool = Field(alias="padVisibility")
     is_private: bool = Field(alias="isPrivate")
     default_locale: LanguageCode = Field(alias="defaultLocale")
-    custom_category_ids: list[int] | None = Field(default=None, alias="customCategoryIds")
 
 
 class PlayerJoinedEvent(ServerPlayerEventModel):
     type: Literal["player_joined"] = "player_joined"
     name: str
-    players: list[PlayerListItem]
+    players: list[PlayerSnapshot]
     is_host: bool = Field(alias="isHost")
 
 
@@ -409,11 +389,6 @@ class HostChangedEvent(ServerEventModel):
 class DefaultLocaleUpdateServerEvent(ServerEventModel):
     type: Literal["default_locale_update"] = "default_locale_update"
     locale: LanguageCode
-
-
-class RoomCustomCategoriesUpdateServerEvent(ServerEventModel):
-    type: Literal["room_custom_categories_update"] = "room_custom_categories_update"
-    category_ids: list[int] | None = Field(default=None, alias="categoryIds")
 
 
 class PlayerLeftEvent(ServerPlayerEventModel):
@@ -495,7 +470,7 @@ class GameCompleteServerEvent(ServerEventModel):
 class ReactionReceivedServerEvent(ServerEventModel):
     type: Literal["reaction_received"] = "reaction_received"
     drawing_id: str = Field(alias="drawingId")
-    reaction_key: str = Field(alias="reactionKey")
+    reaction_key: ReactionKey = Field(alias="reactionKey")
     sender_id: str = Field(alias="senderId")
 
 
@@ -530,7 +505,6 @@ ServerEvent = Annotated[
     | ReadyStatusEvent
     | HostChangedEvent
     | DefaultLocaleUpdateServerEvent
-    | RoomCustomCategoriesUpdateServerEvent
     | PlayerLeftEvent
     | PlayerPresenceEvent
     | KickVoteStartedEvent
@@ -562,74 +536,6 @@ ERROR_EVENT_MODELS: dict[ErrorEventType, type[ServerErrorEvent]] = {
     "submit_guess_error": SubmitGuessErrorEvent,
     "join_error": JoinErrorEvent,
     "kick_error": KickErrorEvent,
-}
-
-CLIENT_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
-    "heartbeat": {"group": "connection", "summary": "Keep the websocket session alive."},
-    "join": {"group": "connection", "summary": "Join a room with the local player identity."},
-    "leave": {"group": "connection", "summary": "Explicitly leave the room (immediate removal)."},
-    "request_game_state": {"group": "connection", "summary": "Request the latest room snapshot."},
-    "watch": {"group": "connection", "summary": "Watch the room as a spectator without joining."},
-    "player_ready": {"group": "gameFlow", "summary": "Mark the current player as ready."},
-    "restart_game": {"group": "gameFlow", "summary": "Restart the game from the lobby state."},
-    "settings_update": {"group": "gameFlow", "summary": "Update shared game settings."},
-    "start_game": {"group": "gameFlow", "summary": "Host starts a game with room settings."},
-    "submit_guess": {"group": "gameFlow", "summary": "Submit guesses for another player's drawing."},
-    "default_locale_update": {"group": "roomSettings", "summary": "Change the room default locale."},
-    "room_custom_categories_update": {
-        "group": "roomSettings",
-        "summary": "Override the host's private category selection for this room.",
-    },
-    "privacy_changed": {"group": "roomSettings", "summary": "Change the room privacy setting."},
-    "draw_stroke": {"group": "drawing", "summary": "Broadcast a completed draw stroke."},
-    "draw_stroke_partial": {"group": "drawing", "summary": "Broadcast an in-progress draw stroke."},
-    "drawpad_clear": {"group": "drawing", "summary": "Clear the shared drawpad."},
-    "pad_visibility": {"group": "drawing", "summary": "Show or hide the shared drawpad."},
-    "cast_kick_vote": {"group": "moderation", "summary": "Cast a vote in an active kick vote."},
-    "initiate_kick": {"group": "moderation", "summary": "Start a kick vote for a target player."},
-    "reaction_send": {"group": "results", "summary": "Send a reaction to a drawing during round results."},
-}
-
-SERVER_EVENT_CATALOG: dict[str, EventCatalogEntry] = {
-    "host_restored": {"group": "connection", "summary": "A reconnecting host regained host status."},
-    "join_error": {"group": "connection", "summary": "Join failed but the connection remained valid."},
-    "player_joined": {"group": "connection", "summary": "A player joined the room."},
-    "player_left": {"group": "connection", "summary": "A player left the room."},
-    "player_presence": {"group": "connection", "summary": "A player's connection status changed."},
-    "room_state": {"group": "connection", "summary": "Current room snapshot."},
-    "game_complete": {"group": "gameFlow", "summary": "Game completion results broadcast."},
-    "ready_status": {"group": "gameFlow", "summary": "Current ready-player counts."},
-    "restart_game": {"group": "gameFlow", "summary": "Game restart broadcast."},
-    "round_complete": {"group": "gameFlow", "summary": "Round completion results broadcast."},
-    "settings_update": {"group": "gameFlow", "summary": "Game settings updated."},
-    "start_game": {"group": "gameFlow", "summary": "Game start broadcast."},
-    "start_guessing": {"group": "gameFlow", "summary": "Guessing phase started."},
-    "start_round": {"group": "gameFlow", "summary": "Round start broadcast with assigned cards."},
-    "default_locale_update": {"group": "roomSettings", "summary": "Room default locale updated."},
-    "room_custom_categories_update": {
-        "group": "roomSettings",
-        "summary": "Room-level private category selection changed.",
-    },
-    "draw_stroke": {"group": "drawing", "summary": "A completed draw stroke relay."},
-    "draw_stroke_partial": {"group": "drawing", "summary": "An in-progress draw stroke relay."},
-    "drawpad_clear": {"group": "drawing", "summary": "Drawpad cleared."},
-    "pad_visibility": {"group": "drawing", "summary": "Shared drawpad visibility changed."},
-    "kick_error": {"group": "moderation", "summary": "Kick workflow error."},
-    "kick_vote_expired": {"group": "moderation", "summary": "Kick vote expired."},
-    "kick_vote_started": {"group": "moderation", "summary": "Kick vote started."},
-    "kick_vote_updated": {"group": "moderation", "summary": "Kick vote tally updated."},
-    "player_kicked": {"group": "moderation", "summary": "A player was kicked from the room."},
-    "permission_error": {"group": "errors", "summary": "Unauthorized action attempt."},
-    "player_ready_error": {"group": "errors", "summary": "Player-ready validation failed."},
-    "protocol_error": {"group": "errors", "summary": "Malformed or invalid websocket payload."},
-    "submit_guess_error": {"group": "errors", "summary": "Guess submission validation failed."},
-    "host_changed": {"group": "gameFlow", "summary": "Host ownership changed."},
-    "reaction_received": {"group": "results", "summary": "A drawing reaction broadcast to the room."},
-}
-
-CONTRACT_EVENT_CATALOG = {
-    "client": CLIENT_EVENT_CATALOG,
-    "server": SERVER_EVENT_CATALOG,
 }
 
 

@@ -22,7 +22,7 @@ def get_client_identifier(conn: HTTPConnection) -> str:
     Accepts any Starlette connection (HTTP ``Request`` or ``WebSocket``). Only
     honours X-Forwarded-For when ``rate_limit_trust_forwarded_for`` is set, since
     a client-supplied value would otherwise let an attacker rotate IPs to bypass
-    per-IP throttles (login/register/room-creation brute force).
+    per-IP throttles (guest sessions, room creation).
     """
     if settings.rate_limit_trust_forwarded_for:
         # Use the RIGHTMOST entry: the trusted proxy (Caddy) appends the real peer

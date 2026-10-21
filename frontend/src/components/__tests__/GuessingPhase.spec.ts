@@ -2,8 +2,10 @@ import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
-
 import GuessingPhase from "@/components/GuessingPhase.vue";
+import GameHeader from "@/components/game/GameHeader.vue";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
 import { useGameStore } from "@/stores/game";
 
 const sendMock = vi.fn();
@@ -112,5 +114,15 @@ describe("GuessingPhase", () => {
     const wrapper = mount(GuessingPhase);
 
     expect(wrapper.text()).toContain("Waiting for your assigned drawing");
+  });
+
+  it("asks before leaving mid-guessing from the header", async () => {
+    const wrapper = mount(GuessingPhase);
+
+    wrapper.findComponent(GameHeader).vm.$emit("leave");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(LeaveRoomDialog).findComponent(HdDialog).props("open")).toBe(true);
+    expect(leaveRoomMock).not.toHaveBeenCalled();
   });
 });

@@ -1,11 +1,13 @@
 """Tests for room hibernation and automatic garbage collection."""
 
+import asyncio
 import time
 from typing import TYPE_CHECKING
 
 import pytest
 
 from app.core.config import settings
+from app.rooms import player_lifecycle
 from app.rooms.manager import GameRoom, RoomManager, room_manager
 from tests.support import as_websocket
 
@@ -29,11 +31,7 @@ PLAYER_2 = "player_2"
 PLAYER_3 = "player_3"
 EXPECTED_HIBERNATED = "hibernated"
 EXPECTED_REMOVED = "removed"
-
-
-async def _run_cleanup(manager: RoomManager) -> None:
-    cleanup = manager.__class__.__dict__["_run_cleanup"]
-    await cleanup(manager)
+CLEANUP_LOOP_ERROR_LOG = "Error in cleanup loop"
 
 
 class TestRoomHibernation:
@@ -44,11 +42,11 @@ class TestRoomHibernation:
         room = room_manager.get_or_create_room(EMPTY_TEST_ROOM)
 
         ws = make_ws()
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(ws))
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws))
         assert not room.is_empty()
         assert room.emptied_at is None
 
-        await room.remove_player(PLAYER_1)
+        await player_lifecycle.remove_player(room, PLAYER_1)
         assert room.is_empty()
         assert room.emptied_at is not None
 
@@ -58,14 +56,14 @@ class TestRoomHibernation:
         assert not room.should_be_removed()
 
         later = time.time() + settings.room_ttl_seconds + 1
-        monkeypatch.setattr("app.rooms.lifecycle.time.time", lambda: later)
+        monkeypatch.setattr("app.rooms.manager.time.time", lambda: later)
 
         assert room.should_be_removed()
 
     async def test_restored_room_without_empty_time_expires(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """A room saved while players were connected starts its empty clock on restore."""
         room = GameRoom(EMPTY_TEST_ROOM)
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(make_ws()))
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(make_ws()))
         assert room.to_state().emptied_at is None
 
         restored = GameRoom.from_state(room.to_state())
@@ -77,8 +75,8 @@ class TestRoomHibernation:
         room = GameRoom(HIBERNATE_TEST_ROOM)
 
         ws = make_ws()
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(ws))
-        await room.remove_player(PLAYER_1)
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws))
+        await player_lifecycle.remove_player(room, PLAYER_1)
 
         assert not room.is_hibernated
         assert not room.should_hibernate()
@@ -96,8 +94,8 @@ class TestRoomHibernation:
         room = GameRoom(REMOVAL_TEST_ROOM)
 
         ws = make_ws()
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(ws))
-        await room.remove_player(PLAYER_1)
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws))
+        await player_lifecycle.remove_player(room, PLAYER_1)
 
         assert not room.should_be_removed()
 
@@ -113,10 +111,19 @@ class TestRoomHibernation:
         room.emptied_at = time.time() - (settings.room_hibernation_delay_seconds + 60)
 
         ws = make_ws()
-        _player, _ = await room.add_player(PLAYER_1, "Player 1", as_websocket(ws))
+        _player, _ = await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws))
 
         assert not room.is_hibernated
         assert room.emptied_at is None
+
+    async def test_occupied_room_never_hibernates(self, make_ws: Callable[..., TestWebSocket]) -> None:
+        """A direct hibernate call leaves a room alone while a player is still connected."""
+        room = GameRoom(HIBERNATE_TEST_ROOM)
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(make_ws()))
+
+        room.hibernate()
+
+        assert not room.is_hibernated
 
 
 class TestRoomManagerCleanup:
@@ -149,12 +156,12 @@ class TestRoomManagerCleanup:
         """Test periodic cleanup transitions: hibernate after 1 min, remove after 5 min."""
         room = managed_room_manager.get_or_create_room(CLEANUP_STATE_TEST_ROOM)
         ws = make_ws()
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(ws))
-        await room.remove_player(PLAYER_1)
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws))
+        await player_lifecycle.remove_player(room, PLAYER_1)
 
         room.emptied_at = time.time() - empty_seconds
 
-        await _run_cleanup(managed_room_manager)
+        await managed_room_manager.run_cleanup()
 
         if expected_state == EXPECTED_REMOVED:
             assert CLEANUP_STATE_TEST_ROOM not in managed_room_manager.rooms
@@ -170,12 +177,39 @@ class TestRoomManagerCleanup:
         """Test that cleanup doesn't affect rooms with players."""
         room = managed_room_manager.get_or_create_room(ACTIVE_ROOM)
         ws = make_ws()
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(ws))
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws))
 
-        await _run_cleanup(managed_room_manager)
+        await managed_room_manager.run_cleanup()
 
         assert ACTIVE_ROOM in managed_room_manager.rooms
         assert not room.is_hibernated
+
+    async def test_cleanup_loop_survives_a_failing_pass(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """One failed cleanup pass is logged, and the next pass still runs."""
+        manager = RoomManager()
+        manager.CLEANUP_INTERVAL_SECONDS = 0
+        passes: list[int] = []
+
+        async def flaky_cleanup() -> tuple[int, int]:
+            passes.append(len(passes))
+            if len(passes) == 1:
+                msg = "cleanup failed"
+                raise RuntimeError(msg)
+            return (0, 0)
+
+        monkeypatch.setattr(manager, "run_cleanup", flaky_cleanup)
+
+        await manager.start()
+        for _ in range(20):
+            if len(passes) >= 2:
+                break
+            await asyncio.sleep(0)
+        await manager.stop()
+
+        assert len(passes) >= 2
+        assert CLEANUP_LOOP_ERROR_LOG in caplog.text
 
 
 class TestRoomManagerStats:
@@ -188,19 +222,19 @@ class TestRoomManagerStats:
         # Active room with players
         active_room = manager.get_or_create_room("ACTIVE")
         ws1 = make_ws()
-        await active_room.add_player(PLAYER_1, "Player 1", as_websocket(ws1))
+        await player_lifecycle.add_player(active_room, PLAYER_1, "Player 1", as_websocket(ws1))
 
         # Empty room (not hibernated yet)
         empty_room = manager.get_or_create_room("EMPTY")
         ws2 = make_ws()
-        await empty_room.add_player(PLAYER_2, "Player 2", as_websocket(ws2))
-        await empty_room.remove_player(PLAYER_2)
+        await player_lifecycle.add_player(empty_room, PLAYER_2, "Player 2", as_websocket(ws2))
+        await player_lifecycle.remove_player(empty_room, PLAYER_2)
 
         # Hibernated room
         hibernated_room = manager.get_or_create_room("HIBERNATED")
         ws3 = make_ws()
-        await hibernated_room.add_player(PLAYER_3, "Player 3", as_websocket(ws3))
-        await hibernated_room.remove_player(PLAYER_3)
+        await player_lifecycle.add_player(hibernated_room, PLAYER_3, "Player 3", as_websocket(ws3))
+        await player_lifecycle.remove_player(hibernated_room, PLAYER_3)
         hibernated_room.is_hibernated = True
 
         stats = manager.get_stats()
@@ -250,23 +284,23 @@ class TestRoomLifecycle:
 
         # 2. Players join
         ws1, ws2 = make_ws(), make_ws()
-        await room.add_player(PLAYER_1, "Player 1", as_websocket(ws1))
-        await room.add_player(PLAYER_2, "Player 2", as_websocket(ws2))
+        await player_lifecycle.add_player(room, PLAYER_1, "Player 1", as_websocket(ws1))
+        await player_lifecycle.add_player(room, PLAYER_2, "Player 2", as_websocket(ws2))
         assert len(room.players) == 2
 
         # 3. Players leave
-        await room.remove_player(PLAYER_1)
-        await room.remove_player(PLAYER_2)
+        await player_lifecycle.remove_player(room, PLAYER_1)
+        await player_lifecycle.remove_player(room, PLAYER_2)
         assert room.is_empty()
         assert room.emptied_at is not None
 
         # 4. Room enters hibernation after 1 minute
         room.emptied_at = time.time() - 65
-        await _run_cleanup(managed_room_manager)
+        await managed_room_manager.run_cleanup()
         assert room.is_hibernated
         assert LIFECYCLE_TEST_ROOM in managed_room_manager.rooms
 
         # 5. Room is removed after 5 minutes total
         room.emptied_at = time.time() - (settings.room_ttl_seconds + 10)
-        await _run_cleanup(managed_room_manager)
+        await managed_room_manager.run_cleanup()
         assert LIFECYCLE_TEST_ROOM not in managed_room_manager.rooms

@@ -75,17 +75,6 @@ async def save_room_state(room_id: str, state: RoomState) -> None:
         logger.exception("[Redis] Failed to save room %s", room_id)
 
 
-async def load_room_state(room_id: str) -> RoomState | None:
-    """Load the room state from Redis. Returns None if not found or on error."""
-    try:
-        r = await get_redis()
-        data = await r.get(_room_key(room_id))
-        return RoomState.model_validate_json(data) if data else None
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to load room %s", room_id)
-        return None
-
-
 async def delete_room_state(room_id: str) -> None:
     """Delete the room state from Redis. This is called when a room is closed."""
     try:
@@ -143,15 +132,6 @@ async def get_session_user_id(session_id: str) -> str | None:
         return None
 
 
-async def delete_session(session_id: str) -> None:
-    """Delete a server-side auth session if it exists."""
-    try:
-        r = await get_redis()
-        await r.delete(_session_key(session_id))
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to delete a session")
-
-
 async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: int) -> tuple[int, int]:
     """Increment a fixed-window rate limit counter and return count plus retry-after seconds."""
     try:
@@ -174,7 +154,7 @@ async def increment_rate_limit(bucket: str, identifier: str, *, window_seconds: 
         logger.exception("[Redis] Failed to increment rate limit %s", bucket)
         # Fail closed: if Redis is unavailable we cannot count attempts, so treat
         # the request as over-limit rather than silently disabling every throttle
-        # (login/register/room-creation) during the outage. Availability trade-off:
+        # (guest sessions, room creation) during the outage. Availability trade-off:
         # a Redis blip 429s these endpoints, but Redis backs sessions/persistence
         # too, so the app is already degraded.
         return sys.maxsize, window_seconds
@@ -191,53 +171,44 @@ def _cat_targets_key(category_id: int, locale: str, prompt_ids: list[int]) -> st
     return f"cat_targets:{category_id}:{locale}:{digest}"
 
 
-async def cache_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int], data: dict) -> None:
-    """Cache the localized scoring targets dictionary for 24 hours."""
+async def _set_json(key: str, ttl_seconds: int, data: object) -> None:
+    """Cache a JSON value; a Redis failure only costs the cache entry."""
     try:
         r = await get_redis()
-        await r.setex(
-            _cat_targets_key(category_id, locale, prompt_ids),
-            settings.category_cache_ttl_seconds,
-            json.dumps(data),
-        )
+        await r.setex(key, ttl_seconds, json.dumps(data, separators=(",", ":")))
     except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to cache scoring targets for %s locale %s", category_id, locale)
+        logger.exception("[Redis] Failed to cache %s", key)
+
+
+async def _get_json(key: str) -> object | None:
+    """Load a cached JSON value; None when it is missing or Redis fails."""
+    try:
+        r = await get_redis()
+        raw = await r.get(key)
+        return json.loads(raw) if raw else None
+    except _PERSISTENCE_ERRORS:
+        logger.exception("[Redis] Failed to load cached %s", key)
+        return None
+
+
+async def cache_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int], data: dict) -> None:
+    """Cache the localized scoring targets dictionary for 24 hours."""
+    await _set_json(_cat_targets_key(category_id, locale, prompt_ids), settings.category_cache_ttl_seconds, data)
 
 
 async def get_cached_localized_scoring_targets(category_id: int, locale: str, prompt_ids: list[int]) -> dict | None:
     """Load cached localized scoring targets dictionary from Redis."""
-    try:
-        r = await get_redis()
-        data = await r.get(_cat_targets_key(category_id, locale, prompt_ids))
-        return json.loads(data) if data else None
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to load cached scoring targets for %s locale %s", category_id, locale)
-        return None
+    payload = await _get_json(_cat_targets_key(category_id, locale, prompt_ids))
+    return payload if isinstance(payload, dict) else None
 
 
 async def cache_category_locale_availability(difficulty: str | None, items: list[dict]) -> None:
     """Cache locale-availability endpoint payload."""
-    try:
-        r = await get_redis()
-        payload = json.dumps(items, separators=(",", ":"))
-        await r.setex(
-            _category_locale_availability_key(difficulty),
-            settings.category_locale_availability_ttl_seconds,
-            payload,
-        )
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to cache locale availability for difficulty=%s", difficulty)
+    key = _category_locale_availability_key(difficulty)
+    await _set_json(key, settings.category_locale_availability_ttl_seconds, items)
 
 
 async def get_cached_category_locale_availability(difficulty: str | None) -> list[dict] | None:
     """Load cached locale-availability endpoint payload."""
-    try:
-        r = await get_redis()
-        raw = await r.get(_category_locale_availability_key(difficulty))
-        if not raw:
-            return None
-        payload = json.loads(raw)
-        return payload if isinstance(payload, list) else None
-    except _PERSISTENCE_ERRORS:
-        logger.exception("[Redis] Failed to load locale availability cache for difficulty=%s", difficulty)
-        return None
+    payload = await _get_json(_category_locale_availability_key(difficulty))
+    return payload if isinstance(payload, list) else None

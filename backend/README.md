@@ -6,8 +6,8 @@ Redis holds runtime state, sessions, and room coordination.
 
 ## Main Modules
 
-- `app/auth/`: guest and account auth flows
-- `app/users/`: current-user profile and preferences
+- `app/auth/`: guest sessions
+- `app/users/`: current-user profile
 - `app/categories/`: category lookup, locale handling, and guess scoring support
 - `app/rooms/`: room lifecycle, gameplay state, and WebSocket orchestration
 - `app/system/`: health and service metadata endpoints
@@ -39,14 +39,7 @@ just generate-contracts
 
 ## Data Model Notes
 
-Each category is stored once as base content, with a separate translation for each
-locale, so one copy of the game logic checks guesses and shows prompts in every
-language. The tables are `categories`, `category_translations`, `category_items`,
-and `category_item_translations`.
-
-## Seed Data
-
-Local seed data includes a demo account:
-
-- username: `demo_host`
-- password: `demo-password`
+Each category and prompt is stored once as base content, with its translations for
+every locale in a JSONB `translations` column, so one copy of the game logic checks
+guesses and shows prompts in every language. The tables are `categories`, `prompts`
+and `category_prompts`.

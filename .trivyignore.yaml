@@ -1,0 +1,38 @@
+# Trivy ignore file for the image scan in .github/workflows/ci.yml.
+# Each entry names one advisory and the one binary it is accepted for, says why, and
+# expires, so the weekly scan fails again if no fixed image has arrived by then.
+# Remove an entry as soon as `caddy:2.11-alpine` ships a Caddy built with the fix.
+
+vulnerabilities:
+  # Go stdlib 1.26.8 in Caddy v2.11.7; fixed in Go 1.26.9.
+  - id: CVE-2026-78667
+    paths:
+      - usr/bin/caddy
+    statement: >-
+      CPU exhaustion from a Range header with many small ranges in ServeContent.
+      Reachable: Caddy's file_server serves the built frontend this way. Accepted until
+      a Caddy image built with Go 1.26.9 exists: the container is capped at 0.5 CPU and
+      restarts on failure, so the impact is a slow or briefly unavailable frontend.
+    expired_at: 2026-11-20
+
+  # Go stdlib 1.26.8 and golang.org/x/net 0.59.0 in Caddy v2.11.7 (two findings, one
+  # advisory); fixed in Go 1.26.9 and x/net 0.60.0.
+  - id: CVE-2026-78669
+    paths:
+      - usr/bin/caddy
+    statement: >-
+      CPU exhaustion from many HTTP/2 SETTINGS frames. Caddy accepts cleartext HTTP/2
+      (h2c) on port 80, but that port is bound to loopback and otherwise reached only by
+      cloudflared, which talks HTTP/1.1 to the origin unless http2Origin is set. Visitors'
+      HTTP/2 frames end at Cloudflare's edge and never reach Caddy.
+    expired_at: 2026-11-20
+
+  # Go stdlib 1.26.8 in Caddy v2.11.7; fixed in Go 1.26.9.
+  - id: CVE-2026-97031
+    paths:
+      - usr/bin/caddy
+    statement: >-
+      Memory exhaustion in a crypto/tls server from repeated ECH outer extension
+      references. Not reachable here: Caddy serves no TLS, the Cloudflare tunnel
+      terminates TLS before traffic reaches it.
+    expired_at: 2026-11-20

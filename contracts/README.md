@@ -5,7 +5,6 @@ hand. [ADR 0001](../docs/adr/0001-committed-generated-contracts.md) explains why
 they are committed.
 
 - `openapi.json`: exported HTTP API schema
-- `room-events.json`: high-level room event definitions
 - `jsonschema/`: JSON Schema files for client and server WebSocket messages
 
 The backend exports these from its route, schema, and room protocol code. The

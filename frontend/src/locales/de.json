@@ -11,7 +11,6 @@
     "you": "Du",
     "unknown": "Unbekannt",
     "pointsShort": "{count} Pkt.",
-    "roomCode": "Raum {code}",
     "roundProgress": "Runde {current} / {total}",
     "countdownIn": "in {count}s",
     "unavailable": "Nicht verfügbar",
@@ -90,9 +89,7 @@
     "roomInProgress": "Der Raum läuft bereits. Du kannst jetzt zusehen und beitreten, wenn er zurück in die Lobby wechselt.",
     "playersInRoom": "{count} Spieler im Raum | {count} Spieler im Raum",
     "invalidCodeText": "Raumcodes bestehen aus 6 Zeichen mit A–Z und 0–9. Prüfe den Code und versuche es erneut.",
-    "roomNotExist": "Dieser Raum existiert nicht. Wir bringen dich zurück zur Lobby...",
     "tryGoBack": "Geh zurück zur Lobby und gib den Code erneut ein.",
-    "backToLobby": "Zurück zur Lobby",
     "enterYourName": "Gib deinen Namen ein",
     "yourName": "Dein Name",
     "back": "Zurück",
@@ -150,20 +147,16 @@
   "spectator": {
     "drawingRound": "Zeichenrunde",
     "guessingRound": "Raterunde",
-    "roomBackInLobby": "Raum ist zurück in der Lobby",
     "roundResults": "Rundenergebnis",
     "finalResults": "Endergebnis",
     "watchingRoom": "Raum beobachten",
-    "joinableAgain": "Der Raum ist wieder offen. Steig beim nächsten Spiel ein, wann immer du bereit bist.",
     "watchingLive": "Du siehst Live-Updates. Du kannst beitreten, wenn der Raum zurück in die Lobby kehrt.",
-    "joinNextGame": "Nächstem Spiel beitreten",
     "leaveRoom": "Raum verlassen",
     "players": "Spieler",
     "drawings": "Zeichnungen",
     "roundStatus": "Rundenstatus",
     "noDrawingsYet": "Es wurden noch keine Zeichnungen veröffentlicht.",
     "guessingInProgress": "Es wird gerade geraten. Wir machen weiter, sobald die Runde vorbei ist.",
-    "lobbyAgain": "Der Raum wartet wieder in der Lobby. Nutze „Nächstem Spiel beitreten“, um als Spieler einzusteigen.",
     "betweenRounds": "Dieser Raum ist zwischen zwei Runden. Wir halten dich live auf dem Laufenden.",
     "drawingAlt": "{name}s Zeichnung"
   },
@@ -185,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Raum konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "tooManyRooms": "Aus deinem Netzwerk sind zu viele Räume offen. Schließ einen, tritt dem Raum eines Freundes bei oder warte ein paar Minuten.",
     "drawingTooLarge": "Deine Zeichnung war zu groß zum Senden, deshalb sehen die anderen sie nicht.",
     "enterRoomCode": "Bitte gib einen Raumcode ein",
     "invalidRoomCode": "Der Raumcode muss 6 Zeichen lang sein (A–Z, 0–9)",
@@ -192,6 +186,7 @@
     "connectFailed": "Verbindung fehlgeschlagen. Bitte versuche es erneut.",
     "roundInProgressJoinLater": "Diese Runde läuft bereits. Du kannst in der nächsten Runde einsteigen.",
     "spectatorsFull": "Dieser Raum kann keine weiteren Zuschauer aufnehmen.",
+    "seatsBusy": "Gerade haben zu viele Spieler diesen Raum verlassen. Versuch es in ein paar Minuten noch einmal.",
     "unableToJoinRoom": "Raum konnte nicht betreten werden",
     "hostStatusRestored": "Host-Status wiederhergestellt",
     "youAreNowHost": "Du bist jetzt der Host",
@@ -216,8 +211,6 @@
     "cancel": "Abbrechen"
   },
   "localeSelector": {
-    "disabledHelp": "Nicht verfügbare Sprachen sind deaktiviert, bis die spielbaren Inhalte vollständig sind.",
-    "reasonUnavailable": "{name}: {reason}",
     "noPlayableCategories": "Noch keine spielbaren Kategorien",
     "missingPromptCoverage": "Fehlende Begriffe über alle Schwierigkeitsgrade hinweg",
     "failedToLoad": "Sprachverfügbarkeit konnte nicht geladen werden"

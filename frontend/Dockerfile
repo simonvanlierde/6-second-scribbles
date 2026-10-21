@@ -37,9 +37,28 @@ WORKDIR /app/frontend
 
 RUN pnpm run build
 
-FROM caddy:2.10-alpine AS prod
+FROM caddy:2.11-alpine AS prod
+
+LABEL org.opencontainers.image.source="https://github.com/simonvanlierde/6-second-scribbles" \
+      org.opencontainers.image.title="6 Second Scribbles frontend" \
+      org.opencontainers.image.description="Caddy serving the 6 Second Scribbles web app and proxying /api to the backend" \
+      org.opencontainers.image.licenses="MIT"
+
+# Takes Alpine security fixes the base image has not been rebuilt with yet. Docker
+# caches this layer: build with --pull so a new base image reaches it.
+RUN apk upgrade --no-cache
+
+# Caddy runs as a fixed non-root uid (the image has no caddy user). The binary's file
+# capability (cap_net_bind_service) is removed: a non-root process cannot exec a binary
+# whose file capability is outside its bounding set, which is empty under cap_drop ALL.
+# Binding :80 relies on net.ipv4.ip_unprivileged_port_start=0 instead, which Docker sets
+# by default and compose.prod.yml sets explicitly. /config and /data are Caddy's
+# XDG_CONFIG_HOME and XDG_DATA_HOME; they are owned by that uid for a plain `docker run`.
+RUN setcap -r /usr/bin/caddy && chown 10001:10001 /config /data
 
 COPY frontend/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/frontend/dist /usr/share/caddy
+
+USER 10001:10001
 
 EXPOSE 80

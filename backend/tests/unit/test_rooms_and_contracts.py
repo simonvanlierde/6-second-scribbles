@@ -6,11 +6,9 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, Mock
 
-import pytest
-from fastapi import HTTPException
-
 from app.core.types import GamePhase
 from app.rooms import actions as room_actions
+from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms import router as room_router
 from app.rooms.manager import GameRoom
 from app.rooms.protocol import (
@@ -23,19 +21,17 @@ from app.rooms.protocol import (
     PlayerReadyEvent,
     PrivacyChangedEvent,
     RestartGameEvent,
-    RoomCustomCategoriesUpdateEvent,
-    RoomCustomCategoriesUpdateServerEvent,
     SettingsUpdateEvent,
     StartGameEvent,
     SubmitGuessEvent,
 )
 from scripts import generate_contracts
-from scripts.generate_contracts import _event_type_for_schema as event_type_for_schema
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    import pytest
     from fastapi import Request, WebSocket
 
     from app.rooms.session import RoomWebSocketSession
@@ -74,16 +70,13 @@ async def test_room_action_handlers_cover_validation_and_updates(
 ) -> None:
     """Action handlers update room state and reject invalid player ids."""
     room = GameRoom("ROOM-ACTIONS")
-    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "host", "Host", cast("WebSocket", make_ws()))
     session = _Session(room, player_id="host", host=True)
 
     broadcast = AsyncMock()
     persist = AsyncMock()
-    start_guessing = Mock(return_value=123)
     monkeypatch.setattr(room, "broadcast", broadcast)
     monkeypatch.setattr(room, "persist", persist)
-    monkeypatch.setattr(room.scheduler, "schedule_scoring_timeout", Mock())
-    monkeypatch.setattr(room, "start_guessing", start_guessing)
 
     await room_actions.handle_settings_update(
         cast("RoomWebSocketSession", session),
@@ -92,16 +85,12 @@ async def test_room_action_handlers_cover_validation_and_updates(
             difficulty="hard",
             rounds=5,
             drawingTimeLimit=40,
-            guessingTimeLimit=20,
+            guessingTimeLimit=25,
         ),
     )
     await room_actions.handle_default_locale_update(
         cast("RoomWebSocketSession", session),
         DefaultLocaleUpdateEvent(type="default_locale_update", locale="nl"),
-    )
-    await room_actions.handle_room_custom_categories_update(
-        cast("RoomWebSocketSession", session),
-        RoomCustomCategoriesUpdateEvent(type="room_custom_categories_update", categoryIds=[5, 3, 3]),
     )
     await room_actions.handle_pad_visibility(
         cast("RoomWebSocketSession", session),
@@ -126,13 +115,11 @@ async def test_room_action_handlers_cover_validation_and_updates(
     assert room.metadata.difficulty == DIFFICULTY_HARD
     assert room.metadata.max_rounds == 5
     assert room.metadata.drawing_time_limit == 40
-    assert room.metadata.guessing_time_limit == 20
+    assert room.metadata.guessing_time_limit == 25
     assert room.metadata.default_locale == DEFAULT_LOCALE
-    assert room.metadata.custom_category_ids == [3, 5]
     assert room.metadata.pad_visibility is False
     assert room.metadata.is_private is True
     assert any(isinstance(call.args[0], DefaultLocaleUpdateServerEvent) for call in broadcast.await_args_list)
-    assert any(isinstance(call.args[0], RoomCustomCategoriesUpdateServerEvent) for call in broadcast.await_args_list)
     assert invalid_ready.error_calls == [
         ("player_ready_error", "invalid_player", "Ready updates must match your connection."),
     ]
@@ -148,8 +135,8 @@ async def test_settings_broadcasts_carry_stored_room_settings(
 ) -> None:
     """start_game and settings_update broadcast the room's stored settings, not the client's echo."""
     room = GameRoom("ROOM-SETTINGS")
-    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
-    await room.add_player("guest", "Guest", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "host", "Host", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "guest", "Guest", cast("WebSocket", make_ws()))
     session = cast("RoomWebSocketSession", _Session(room, player_id="host", host=True))
     broadcast = AsyncMock()
     monkeypatch.setattr(room, "broadcast", broadcast)
@@ -158,7 +145,7 @@ async def test_settings_broadcasts_carry_stored_room_settings(
 
     await room_actions.handle_settings_update(
         session,
-        SettingsUpdateEvent(type="settings_update", rounds=7, drawingTimeLimit=40, guessingTimeLimit=20),
+        SettingsUpdateEvent(type="settings_update", rounds=7, drawingTimeLimit=40, guessingTimeLimit=25),
     )
     # A partial update keeps the other stored settings, and the broadcast says so.
     await room_actions.handle_settings_update(session, SettingsUpdateEvent(type="settings_update", difficulty="hard"))
@@ -168,7 +155,7 @@ async def test_settings_broadcasts_carry_stored_room_settings(
         difficulty="hard",
         rounds=7,
         drawingTimeLimit=40,
-        guessingTimeLimit=20,
+        guessingTimeLimit=25,
     )
 
     # The server fills in defaults for omitted start settings; clients must see them.
@@ -189,25 +176,16 @@ async def test_room_action_handlers_cover_restart_drawpad_and_kick_errors(
 ) -> None:
     """Restart, drawpad, disconnect, and kick-vote error branches stay covered."""
     room = GameRoom("ROOM-MORE-ACTIONS")
-    await room.add_player("host", "Host", cast("WebSocket", make_ws()))
-    await room.add_player("guest", "Guest", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "host", "Host", cast("WebSocket", make_ws()))
+    await player_lifecycle.add_player(room, "guest", "Guest", cast("WebSocket", make_ws()))
     session = _Session(room, player_id="host", host=True)
     non_host = _Session(room, player_id="guest", host=False)
 
     monkeypatch.setattr(room, "broadcast", AsyncMock())
     monkeypatch.setattr(room, "persist", AsyncMock())
-    monkeypatch.setattr(room, "reset_game", Mock())
-    monkeypatch.setattr(room, "remove_player", AsyncMock())
-    monkeypatch.setattr(
-        room,
-        "initiate_kick_vote",
-        AsyncMock(return_value=SimpleNamespace(success=False, error="vote_failed")),
-    )
-    monkeypatch.setattr(
-        room,
-        "cast_kick_vote",
-        AsyncMock(return_value=SimpleNamespace(success=False, error="cast_failed")),
-    )
+    monkeypatch.setattr(rounds, "reset_game", Mock())
+    monkeypatch.setattr(kick_vote, "initiate_kick_vote", AsyncMock(return_value="vote_failed"))
+    monkeypatch.setattr(kick_vote, "cast_kick_vote", AsyncMock(return_value="cast_failed"))
 
     await room_actions.handle_restart_game(
         cast("RoomWebSocketSession", session),
@@ -259,17 +237,14 @@ async def test_room_router_helpers_cover_not_found_and_retry_paths(monkeypatch: 
     monkeypatch.setattr(room_router.room_manager, "get_room", Mock(return_value=None))
     missing_status = room_router.get_room_status(room_id="ROOM02")
 
-    with pytest.raises(HTTPException, match="No available public rooms found"):
-        await room_router.get_random_joinable_room()
-
     assert created.room_code == GENERATED_ROOM_CODE
     assert existing_status.exists is True
     assert existing_status.players == 2
     assert missing_status.exists is False
 
 
-def test_generate_contract_helpers_cover_normalization_and_split(tmp_path: Path) -> None:
-    """Contract helpers normalize schemas, inline refs, and write per-event files."""
+def test_generate_contract_helpers_cover_normalization_and_event_types() -> None:
+    """Contract helpers normalize schemas and inline refs."""
     schema = {
         "$defs": {"Named": {"type": "object", "properties": {"type": {"const": "ping", "default": "ping"}}}},
         "oneOf": [{"$ref": "#/$defs/Named"}],
@@ -277,68 +252,27 @@ def test_generate_contract_helpers_cover_normalization_and_split(tmp_path: Path)
     }
 
     prepared = generate_contracts.prepare(schema)
-    variants, index = generate_contracts.split_union_schema(
-        {
-            "anyOf": [
-                {"properties": {"type": {"const": "ping"}}},
-                {"properties": {"type": {"const": "pong"}}},
-                "ignored",
-            ]
-        }
-    )
-    out_dir = tmp_path / "events"
-    generate_contracts.write_event_schemas(variants, index, out_dir)
 
     assert SCHEMA_DEFS_KEY not in prepared
     assert SCHEMA_ANY_OF_KEY in prepared
     assert prepared["properties"]["type"] == {"const": "ping"}
-    assert sorted(index) == ["ping", "pong"]
-    assert (out_dir / "ping.schema.json").exists()
-    assert (out_dir / "index.json").exists()
 
 
-def test_generate_contract_helpers_cover_errors_and_main(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Error branches and the main write orchestration remain covered."""
-    with pytest.raises(TypeError, match="missing properties"):
-        event_type_for_schema({})
-
-    with pytest.raises(TypeError, match="Expected schema to contain anyOf"):
-        generate_contracts.split_union_schema({})
-
-    with pytest.raises(ValueError, match="client event catalog does not match schema types"):
-        generate_contracts.assert_catalog_matches_index({"join": "join.schema.json"}, {"leave": {}}, "client")
-
+def test_generate_contracts_main_writes_schemas_and_openapi(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Main writes both union schemas and the OpenAPI document, and no event catalog."""
     monkeypatch.setattr(generate_contracts, "CONTRACTS_ROOT", tmp_path)
     monkeypatch.setattr(
         generate_contracts,
         "generate_schema",
         lambda _adapter, *, mode: {"anyOf": [{"properties": {"type": {"const": f"{mode}-event"}}}]},
     )
-    monkeypatch.setattr(
-        generate_contracts,
-        "split_union_schema",
-        lambda schema: (schema["anyOf"], {schema["anyOf"][0]["properties"]["type"]["const"]: "event.schema.json"}),
-    )
-    monkeypatch.setattr(
-        generate_contracts,
-        "CONTRACT_EVENT_CATALOG",
-        {
-            "client": {"validation-event": {}},
-            "server": {"serialization-event": {}},
-        },
-    )
     write_schema = Mock()
-    write_event_schemas = Mock()
-    write_catalog = Mock()
     write_openapi = Mock()
     monkeypatch.setattr(generate_contracts, "write_schema", write_schema)
-    monkeypatch.setattr(generate_contracts, "write_event_schemas", write_event_schemas)
-    monkeypatch.setattr(generate_contracts, "write_event_catalog", write_catalog)
     monkeypatch.setattr(generate_contracts, "write_openapi", write_openapi)
 
     generate_contracts.main()
 
     assert write_schema.call_count == 2
-    assert write_event_schemas.call_count == 2
-    write_catalog.assert_called_once()
+    assert not (tmp_path / "room-events.json").exists()
     write_openapi.assert_called_once()

@@ -152,3 +152,12 @@ vitestBeforeEach(() => {
 config.global.stubs = {
   Transition: { template: "<div><slot /></div>" },
 };
+
+// jsdom has no ResizeObserver; the drawing canvas observes its parent's size.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

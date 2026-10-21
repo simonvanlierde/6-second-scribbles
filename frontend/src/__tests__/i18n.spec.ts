@@ -17,11 +17,19 @@ function flatKeys(messages: Record<string, unknown>, prefix = ""): string[] {
 describe("locale files", () => {
   const enKeys = flatKeys(en);
 
-  it.each(SUPPORTED_LOCALES.filter((l) => l !== "en"))("%s has every key in en.json", (locale) => {
+  it.each(SUPPORTED_LOCALES.filter((l) => l !== "en"))("%s has exactly the keys in en.json", (locale) => {
     const file = Object.entries(localeFiles).find(([path]) => path.endsWith(`/${locale}.json`));
     expect(file, `missing locales/${locale}.json`).toBeDefined();
     const keys = new Set(flatKeys(file?.[1].default ?? {}));
-    expect(enKeys.filter((key) => !keys.has(key))).toEqual([]);
+    expect(
+      enKeys.filter((key) => !keys.has(key)),
+      "missing keys",
+    ).toEqual([]);
+    // A key en.json dropped but a locale still carries is dead text nobody maintains.
+    expect(
+      [...keys].filter((key) => !enKeys.includes(key)),
+      "keys en.json no longer has",
+    ).toEqual([]);
   });
 });
 

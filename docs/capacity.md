@@ -8,20 +8,20 @@ memory, one uvicorn worker), and where it starts to slow down.
 
 With every player scribbling at once, one backend holds up to about **80 rooms of
 6 players (480 WebSocket connections)** with the p95 broadcast latency under
-250 ms. (p95 means 95% of messages arrive at least this fast.) At 90 rooms p95 reaches
-264 ms. CPU is the limit: from 70 rooms on, the single worker sits near its
+250 ms. (p95 means 95% of messages arrive at least this fast.) At 90 rooms, p95
+reaches 264 ms. CPU is the limit: from 70 rooms on, the single worker sits near its
 1.0 CPU cap, while memory stays under 270 MiB of the 1 GiB limit.
 
 Commit `85ddbea` made each broadcast serialize to JSON once instead of once per
 recipient. That moved the knee, where latency starts to climb fast, from about 70
-to about 80 rooms. The gain is modest, because the send itself still happens once
-per recipient.
+to about 80 rooms. The gain is small, because the server still sends once per
+recipient.
 
 ### After: one serialization per broadcast
 
 Measured on 2026-10-12 against commit `85ddbea`. The 70 to 90 room rows come from
-a second run; the first gave p95 192 ms at 70 rooms, 126 ms at 80 and 601 ms at
-100, so expect about ±50% run-to-run noise near the knee.
+a second run. The first run gave p95 192 ms at 70 rooms, 126 ms at 80 and 601 ms
+at 100. So expect about ±50% noise between runs near the knee.
 
 | Rooms | Players/room | Connections | p50 | p95 | Deliveries/s | Backend CPU | Backend memory | Errors |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -50,8 +50,8 @@ Measured on 2026-10-12 against commit `71d868c`.
 | 70 | 6 | 420 | 46 ms | 198 ms | 25,313 | 91% | 225 MiB | 0 |
 | 80 | 6 | 480 | 95 ms | 354 ms | 29,480 | 95% | 250 MiB | 0 |
 
-Both runs used an AMD Ryzen 7 H 255 w/ Radeon 780M Graphics host (8 cores, 16
-threads, from `/proc/cpuinfo`). Backend CPU is the `docker stats` CPU, averaged
+Both runs used one host: `AMD Ryzen 7 H 255 w/ Radeon 780M Graphics`, 8 cores and
+16 threads (from `/proc/cpuinfo`). Backend CPU is the `docker stats` CPU, averaged
 over the step, where 100% is the whole 1.0 CPU limit. Memory is the peak.
 Deliveries/s counts the stroke fragments that reached another player. The load
 generator ran on the same host, outside the limited container, and used at most
@@ -67,16 +67,16 @@ worker more CPU.
 The test script ([`backend/loadtest/run.py`](../backend/loadtest/run.py)) speaks
 the real room protocol, with one WebSocket per player:
 
-- The host opens `/ws/{room}` and joins. The guests join after it.
+- The host opens `/ws/{room}` and joins. The guests join after the host.
 - In the lobby every player draws on the shared drawpad: strokes of 30
   `draw_stroke_partial` fragments at 60 per second (one per browser frame, two
   points each), with 0.5 to 1.5 s between strokes. That is about 20 messages
   per second per player, so this is a busy lobby, not an average one.
 - After 7.5 to 22.5 s in the lobby, the host starts a one-round game. The server
-  deals the cards. Each player sends a 56 KiB `draw_stroke` (the largest
-  drawing the frontend sends; the tables above used 20 KB) and
-  `player_ready`, then submits guesses for its assigned drawing. The host
-  restarts the game after the final results.
+  deals the cards. Each player sends a 56 KiB `draw_stroke`, the largest
+  drawing the frontend sends, and `player_ready`. (The tables above used a
+  20 KB drawing.) Then each player submits guesses for its assigned drawing.
+  The host restarts the game after the final results.
 - Latency is the time from a player sending a stroke fragment to another
   player in the same room receiving the relay. Errors count failed connects,
   unexpected disconnects, and any error event from the server.
@@ -100,6 +100,8 @@ prod build and limits, plus
 in throwaway credentials and publishes the backend on `127.0.0.1:18000`
 (`LOADTEST_PORT` changes it). It removes the stack, its volume, and its images
 when it finishes. To aim the test at a backend you already run, use
-`just backend/loadtest --url ws://127.0.0.1:8000 --smoke`. Outside prod, the
-backend limits room creation to 10 per minute per client, so keep the room
-count small there.
+`just backend/loadtest --url ws://127.0.0.1:8000 --smoke`.
+
+Outside prod, the backend ignores `X-Forwarded-For` by default, so every test room comes
+from the same client. That client may hold at most 5 open rooms and create 10
+rooms a minute, so keep `--rooms` at 5 or below there.

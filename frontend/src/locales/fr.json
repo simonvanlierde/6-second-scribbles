@@ -11,7 +11,6 @@
     "you": "Toi",
     "unknown": "Inconnu",
     "pointsShort": "{count} pts",
-    "roomCode": "Salon {code}",
     "roundProgress": "Manche {current} / {total}",
     "countdownIn": "dans {count}s",
     "unavailable": "Indisponible",
@@ -90,9 +89,7 @@
     "roomInProgress": "La partie est en cours. Tu peux regarder maintenant et rejoindre quand elle reviendra dans le salon.",
     "playersInRoom": "{count} joueur dans le salon | {count} joueurs dans le salon",
     "invalidCodeText": "Les codes de salon comportent 6 caractères utilisant A–Z et 0–9. Vérifie le code et réessaie.",
-    "roomNotExist": "Ce salon n'existe pas, retour à la salle d'attente...",
     "tryGoBack": "Essaie de retourner dans la salle d'attente et de ressaisir le code.",
-    "backToLobby": "Retour au salon",
     "enterYourName": "Entre ton nom",
     "yourName": "Ton nom",
     "back": "Retour",
@@ -150,20 +147,16 @@
   "spectator": {
     "drawingRound": "Manche de dessin",
     "guessingRound": "Manche de devinette",
-    "roomBackInLobby": "Le salon est de retour dans la salle d’attente",
     "roundResults": "Résultats de la manche",
     "finalResults": "Résultats finaux",
     "watchingRoom": "Salon en observation",
-    "joinableAgain": "Le salon est de nouveau accessible. Saute dans la prochaine partie quand tu es prêt.",
     "watchingLive": "Tu suis les mises à jour en direct. Tu pourras rejoindre quand le salon reviendra dans la salle d’attente.",
-    "joinNextGame": "Rejoindre la prochaine partie",
     "leaveRoom": "Quitter le salon",
     "players": "Joueurs",
     "drawings": "Dessins",
     "roundStatus": "État de la manche",
     "noDrawingsYet": "Aucun dessin n’a encore été publié.",
     "guessingInProgress": "Les devinettes sont en cours. On continue dès que la manche est terminée.",
-    "lobbyAgain": "Le salon attend de nouveau dans la salle d’attente. Utilise « Rejoindre la prochaine partie » pour entrer en tant que joueur.",
     "betweenRounds": "Ce salon est entre deux manches. On te tient au courant en direct.",
     "drawingAlt": "Dessin de {name}"
   },
@@ -185,6 +178,7 @@
   },
   "notifications": {
     "createRoomFailed": "Échec de la création du salon. Réessaie.",
+    "tooManyRooms": "Trop de salons sont ouverts depuis ton réseau. Ferme-en un, rejoins le salon d’un ami ou attends quelques minutes.",
     "drawingTooLarge": "Ton dessin est trop lourd pour être envoyé, les autres joueurs ne peuvent donc pas le voir.",
     "enterRoomCode": "Saisis un code de salon",
     "invalidRoomCode": "Le code du salon doit comporter 6 caractères (A–Z, 0–9)",
@@ -192,6 +186,7 @@
     "connectFailed": "Échec de la connexion. Réessaie.",
     "roundInProgressJoinLater": "Cette manche est déjà en cours. Tu pourras rejoindre la prochaine.",
     "spectatorsFull": "Ce salon ne peut plus accueillir de spectateurs.",
+    "seatsBusy": "Trop de joueurs viennent de quitter ce salon. Réessaie dans quelques minutes.",
     "unableToJoinRoom": "Impossible de rejoindre le salon",
     "hostStatusRestored": "Statut d’hôte restauré",
     "youAreNowHost": "Tu es maintenant l’hôte",
@@ -216,8 +211,6 @@
     "cancel": "Annuler"
   },
   "localeSelector": {
-    "disabledHelp": "Les langues indisponibles sont désactivées jusqu’à ce que tout le contenu jouable soit prêt.",
-    "reasonUnavailable": "{name} : {reason}",
     "noPlayableCategories": "Aucune catégorie jouable pour l’instant",
     "missingPromptCoverage": "Couverture des consignes incomplète selon les difficultés",
     "failedToLoad": "Échec du chargement de la disponibilité des langues"

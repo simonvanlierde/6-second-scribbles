@@ -1,7 +1,7 @@
 """Application configuration via pydantic-settings."""
 
 import os
-from typing import TYPE_CHECKING, Annotated, Literal  # Needed for runtime  validation of Pydantic Settings
+from typing import TYPE_CHECKING, Annotated  # Needed for runtime  validation of Pydantic Settings
 
 from pydantic import SecretStr, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -41,16 +41,8 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     auth_session_ttl_seconds: int = 60 * 60 * 24 * 30
     session_cookie_name: str = "scribbles_session"
-    session_cookie_secure: bool = False
-    session_cookie_same_site: Literal["lax", "strict", "none"] = "lax"
     auth_guest_rate_limit: int = 20
     auth_guest_rate_window_seconds: int = 60
-    auth_register_rate_limit: int = 10
-    auth_register_rate_window_seconds: int = 60
-    auth_login_rate_limit: int = 10
-    auth_login_rate_window_seconds: int = 60
-    category_mutation_rate_limit: int = 30
-    category_mutation_rate_window_seconds: int = 60
     category_locale_availability_ttl_seconds: int = 120
     category_cache_ttl_seconds: int = 60 * 60 * 24
 
@@ -90,6 +82,8 @@ class Settings(BaseSettings):
     drawing_to_guessing_buffer_seconds: int = 2
     round_results_countdown_seconds: int = 15
     game_complete_delay_seconds: int = 5
+    # How long the final results stay up before the server sends the room back to the lobby.
+    final_results_restart_seconds: int = 180
     kick_vote_timeout_seconds: int = 60
 
     # Abuse / overload protection
@@ -113,19 +107,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _prod_safety_checks(self) -> Self:
-        # Apply environment-specific cookie security defaults.
         if not IS_PROD:
-            # Local development often runs over plain HTTP, so avoid browser
-            # warnings by keeping the cookie first-party unless explicitly
-            # overridden in the environment.
-            self.session_cookie_same_site = "lax"
-            self.session_cookie_secure = False
             if not self.allowed_origins:
                 self.allowed_origins = ["*"]
         else:
-            # Production: stricter cookie policy for same-origin setup (via Caddy proxy).
-            self.session_cookie_same_site = "lax"
-            self.session_cookie_secure = True
             # Production safety checks: ensure explicit origins and no wildcard.
             if not self.allowed_origins:
                 msg = (

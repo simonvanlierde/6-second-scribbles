@@ -5,16 +5,14 @@ import { useGameStore } from "@/stores/game";
 
 /**
  * The shared "leave room" action used by every in-game view: send the explicit
- * leave (via disconnect), reset local state, and return home. Pass `beforeLeave`
- * for view-specific cleanup (e.g. clearing a results auto-restart timer).
+ * leave (via disconnect), reset local state, and return home.
  */
-export function useLeaveRoom(beforeLeave?: () => void) {
+export function useLeaveRoom() {
   const router = useRouter();
   const store = useGameStore();
   const { disconnect } = useGameConnection();
 
   function leaveRoom() {
-    beforeLeave?.();
     disconnect();
     store.reset();
     void router.push({ name: "home" });

@@ -13,17 +13,15 @@ from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms import actions as websocket_action_service
 from app.rooms import kick_vote as kick_vote_service
-from app.rooms import lifecycle as room_lifecycle_service
-from app.rooms import player_lifecycle as player_lifecycle_service
+from app.rooms import player_lifecycle
 from app.rooms import rounds as round_service
-from app.rooms import router as room_service
 from app.rooms import scheduler as scheduler_service
 from app.rooms import ws_router as websocket_service
-from app.rooms.manager import GameRoom, RoomManager, room_manager
+from app.rooms.manager import GameRoom, RoomManager
 from app.rooms.protocol import HeartbeatEvent, RequestGameStateEvent, RoomStateEvent
 from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from tests.constants import ROOM_42, ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
+from tests.constants import ROOM_HIBERNATE, ROOM_STATE, ROUND_COMPLETE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -33,20 +31,6 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from tests.support import TestWebSocket
-
-
-class TestRoomService:
-    """Focused tests for RoomService methods that don't require WebSocket context."""
-
-    async def test_get_random_joinable_room_returns_counts(self, make_ws: Callable[..., TestWebSocket]) -> None:
-        """Test that get_random_joinable_room returns the correct player count for a room with players."""
-        room = room_manager.get_or_create_room(ROOM_42)
-        await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
-
-        response = await room_service.get_random_joinable_room()
-
-        assert response.room_code == ROOM_42
-        assert response.player_count == 1
 
 
 class TestKickVoteService:
@@ -83,11 +67,11 @@ class TestRoomLifecycleService:
         """Hibernate a room once it stays empty long enough."""
         manager = RoomManager()
         room = manager.get_or_create_room(ROOM_HIBERNATE)
-        await room.add_player("player-1", "Player 1", cast("WebSocket", make_ws()))
-        await room.remove_player("player-1")
+        await player_lifecycle.add_player(room, "player-1", "Player 1", cast("WebSocket", make_ws()))
+        await player_lifecycle.remove_player(room, "player-1")
         room.emptied_at = time.time() - (settings.room_hibernation_delay_seconds + 5)
 
-        hibernated_count, removed_count = await room_lifecycle_service.run_cleanup(manager)
+        hibernated_count, removed_count = await manager.run_cleanup()
 
         assert hibernated_count == 1
         assert removed_count == 0
@@ -104,8 +88,8 @@ class TestRoundService:
     ) -> None:
         """Score a round and return the broadcast event."""
         room = GameRoom("ROOM-SCORE")
-        await room.add_player("player-1", "Alice", cast("WebSocket", make_ws()))
-        await room.add_player("player-2", "Bob", cast("WebSocket", make_ws()))
+        await player_lifecycle.add_player(room, "player-1", "Alice", cast("WebSocket", make_ws()))
+        await player_lifecycle.add_player(room, "player-2", "Bob", cast("WebSocket", make_ws()))
         room.metadata.current_round = 1
         room.metadata.max_rounds = 3
         room.metadata.player_assignments = {
@@ -151,10 +135,10 @@ class TestPlayerLifecycleService:
     async def test_is_host_reflects_current_host_assignment(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """Test that is_host correctly identifies the host player based on the current room state."""
         room = GameRoom("ROOM-HOST")
-        await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
+        await player_lifecycle.add_player(room, "host-1", "Host", cast("WebSocket", make_ws()))
 
-        assert player_lifecycle_service.is_host(room, "host-1")
-        assert not player_lifecycle_service.is_host(room, "other-player")
+        assert player_lifecycle.is_host(room, "host-1")
+        assert not player_lifecycle.is_host(room, "other-player")
 
 
 class TestWebSocketService:
@@ -195,7 +179,7 @@ class _FakeSession:
     error_calls: list[tuple[str, str, str]] = field(default_factory=list)
 
     def is_host(self) -> bool:
-        return self.room.is_host(self.player_id)
+        return player_lifecycle.is_host(self.room, self.player_id)
 
     def state_request_allowed(self) -> bool:
         return True
@@ -210,7 +194,7 @@ class TestWebSocketActionService:
     async def test_require_host_uses_protocol_context(self, make_ws: Callable[..., TestWebSocket]) -> None:
         """Test that require_host correctly checks the session's host status and sends an error if not the host."""
         room = GameRoom("ROOM-ACT")
-        await room.add_player("host-1", "Host", cast("WebSocket", make_ws()))
+        await player_lifecycle.add_player(room, "host-1", "Host", cast("WebSocket", make_ws()))
         session = _FakeSession(room=room, websocket=AsyncMock(), player_id="not-host")
 
         allowed = await websocket_action_service.require_host(cast("RoomWebSocketSession", session), "start the game")
@@ -284,13 +268,13 @@ class TestRegressionGuards:
         host, voter, target = "host", "voter", "target"
         room = GameRoom("ROOM-KVCLEAN")
         for pid in (host, voter, target):
-            await room.add_player(pid, pid, cast("WebSocket", make_ws()))
+            await player_lifecycle.add_player(room, pid, pid, cast("WebSocket", make_ws()))
         room.active_kick_votes = {
             target: kick_vote_service.KickVote(target_player_id=target, target_player_name=target, voters={voter}),
             host: kick_vote_service.KickVote(target_player_id=host, target_player_name=host, voters={voter, target}),
         }
 
-        await room.remove_player(target)
+        await player_lifecycle.remove_player(room, target)
 
         assert target not in room.active_kick_votes
         assert target not in room.active_kick_votes[host].voters

@@ -5,10 +5,9 @@ import HdAvatar from "@/components/ui/HdAvatar.vue";
 import HdButton from "@/components/ui/HdButton.vue";
 import HdDialog from "@/components/ui/HdDialog.vue";
 import HdPill from "@/components/ui/HdPill.vue";
-import { getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
+import { getAvatarInitial } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { i18n } from "@/i18n";
-import type { Player } from "@/shared/types";
 import { useGameStore } from "@/stores/game";
 
 const store = useGameStore();
@@ -64,11 +63,6 @@ function cancelKick() {
 function voteToKick(targetPlayerId: string) {
   send({ type: "cast_kick_vote", targetPlayerId });
 }
-
-function colorFor(player: Player): string {
-  // Prefer server-supplied colour; fall back to a deterministic per-id one.
-  return player.color ?? getAvatarColor(player.id);
-}
 </script>
 
 <template>
@@ -78,7 +72,7 @@ function colorFor(player: Player): string {
         <div class="player-row__who">
           <HdAvatar
             :initial="getAvatarInitial(player.name)"
-            :color="colorFor(player)"
+            :color="player.color"
             size="sm"
             :disconnected="!player.connected"
           />

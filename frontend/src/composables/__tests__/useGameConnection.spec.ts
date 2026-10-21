@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useNotifications } from "@/composables/notifications";
+import { AVATAR_COLORS } from "@/composables/useAvatar";
 import { useGameConnection } from "@/composables/useGameConnection";
 import { useGameStore } from "@/stores/game";
 
@@ -396,6 +397,22 @@ describe("client message handlers", () => {
 
     const types = socket?.sent.map((payload) => JSON.parse(payload).type);
     expect(types).toEqual(["join", "request_game_state"]);
+    disconnect();
+  });
+
+  it("leaves the avatar colour to the server unless the player picked one", () => {
+    const store = useGameStore();
+    store.setLocalPlayer("p1", "Alice");
+    const { connect, disconnect } = useGameConnection();
+
+    connect("ROOM01");
+    MockWebSocket.instances[0]?.onopen?.();
+    store.setLocalPlayerColor(AVATAR_COLORS[2]);
+    connect("ROOM01");
+    MockWebSocket.instances[1]?.onopen?.();
+
+    const joins = MockWebSocket.instances.map((socket) => JSON.parse(socket.sent[0] ?? "{}"));
+    expect(joins.map((join) => join.preferredColor)).toEqual([null, AVATAR_COLORS[2]]);
     disconnect();
   });
 

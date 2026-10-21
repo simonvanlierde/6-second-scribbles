@@ -4,33 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.core.types import Difficulty, LanguageCode
-
-
-class CategoryListItem(BaseModel):
-    """Compact localized category representation used by list endpoints."""
-
-    id: int
-    name: str
-    difficulty: Difficulty
-    locale: LanguageCode | None
-
-
-class SelectedCategorySet(BaseModel):
-    """One selected localized category set for game setup."""
-
-    category_id: int
-    category_name: str
-    item_ids: list[int]
-    items: list[str]
-    alternatives: dict[str, list[str]]
-
-
-class CategorySelectionResponse(BaseModel):
-    """Response for room-scoped category selection."""
-
-    difficulty: Difficulty
-    selections: list[SelectedCategorySet]
+from app.core.types import LanguageCode
 
 
 class LocaleAvailabilityItem(BaseModel):

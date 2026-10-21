@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 from sqlalchemy import text
 
 from app import __version__
@@ -21,8 +21,12 @@ OK_STATUS = "ok"
 
 
 @router.get("/health", response_model=AppInfoResponse)
-async def health() -> AppInfoResponse:
-    """Health check endpoint including Redis and database connectivity."""
+async def health(response: Response) -> AppInfoResponse:
+    """Health check endpoint including Redis and database connectivity.
+
+    Answers 503 with the same body when either is down, so container health checks and
+    `docker compose up --wait` see a degraded backend as failing.
+    """
     db_status = "ok"
     cache_status = "ok"
 
@@ -44,6 +48,8 @@ async def health() -> AppInfoResponse:
         cache_status = "error"
 
     all_ok = db_status == OK_STATUS and cache_status == OK_STATUS
+    if not all_ok:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return AppInfoResponse(
         status="ok" if all_ok else "degraded",
         service="Six Second Scribbles API",

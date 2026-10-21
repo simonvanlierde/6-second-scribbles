@@ -7,6 +7,16 @@ type ApiRequestOptions<T> = {
   schema?: ZodType<T>;
 };
 
+/** A non-2xx response; `message` is the backend's `detail` when it sent one. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> = {}): Promise<T> {
   const response = await fetch(`${API_HOST}${path}`, {
     method: options.method ?? "GET",
@@ -27,7 +37,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> 
       /* keep generic error */
     }
 
-    throw new Error(detail);
+    throw new ApiError(response.status, detail);
   }
 
   if (response.status === 204) {

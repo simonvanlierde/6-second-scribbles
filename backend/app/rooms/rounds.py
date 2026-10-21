@@ -55,6 +55,7 @@ def start_round(
     cards: dict[str, PlayerPromptAssignmentState] | None,
 ) -> int:
     """Transition the room into a new drawing round and return the start timestamp."""
+    room.scheduler.cancel_round_tasks()
     round_start_time = int(time.time() * 1000)
     room.metadata.reset_round(cards=cards)
     room.metadata.round_start_time = round_start_time
@@ -121,14 +122,9 @@ def guessing_event_payload(room: GameRoom) -> StartGuessingEvent:
     )
 
 
-def start_guessing_event(room: GameRoom) -> StartGuessingEvent:
-    """Transition into guessing and return the broadcast event."""
-    start_guessing(room)
-    return guessing_event_payload(room)
-
-
 def reset_game(room: GameRoom) -> None:
     """Reset mutable game state back to the lobby."""
+    room.scheduler.cancel_round_tasks()
     room.metadata.reset_game(room.players)
     room.round_drawings.clear()
     room.drawing_history.clear()
@@ -291,14 +287,14 @@ async def score_round(room: GameRoom, db: AsyncSession) -> RoundCompleteServerEv
             prompt_ids=target_assignment.item_ids,
             preferred_locale=room.get_player_locale(player_id),
         )
-        scoring_result = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
-        correct_count = scoring_result.score
+        matched_guesses = guess_matcher.score_guesses_against_targets(guesses, scoring_targets.targets)
+        correct_count = len(matched_guesses)
         points_earned = correct_count * POINTS_PER_CORRECT_GUESS
 
         _collect_miss_candidates(
             player_id=player_id,
             guesses=guesses,
-            matched_guesses={match.guess for match in scoring_result.matches},
+            matched_guesses=set(matched_guesses),
             targets=scoring_targets.targets,
             miss_candidates=miss_candidates,
         )

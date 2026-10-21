@@ -36,7 +36,7 @@ export type LocaleOption = {
   reason?: string;
 };
 
-export const LOCALE_LABELS: Record<string, string> = {
+const LOCALE_LABELS: Record<string, string> = {
   en: "English",
   de: "Deutsch",
   es: "Español",

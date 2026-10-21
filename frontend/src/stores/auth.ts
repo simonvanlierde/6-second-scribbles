@@ -1,20 +1,21 @@
 import { defineStore } from "pinia";
-import { readonly, ref } from "vue";
+import { ref } from "vue";
 
 import { type UserResponse, UserResponseSchema } from "@/generated/api";
 import { apiRequest } from "@/lib/api";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("Auth");
 
 export type AuthUser = UserResponse;
 
 export const useAuthStore = defineStore("auth", () => {
   const currentUser = ref<AuthUser | null>(null);
-  const isBootstrapping = ref(false);
-  const bootstrapError = ref<string | null>(null);
+  let bootstrapping = false;
 
   async function bootstrap(preferredLocale: string, displayName: string | null) {
-    if (isBootstrapping.value) return;
-    isBootstrapping.value = true;
-    bootstrapError.value = null;
+    if (bootstrapping) return;
+    bootstrapping = true;
     try {
       currentUser.value = await apiRequest("/api/me", {
         schema: UserResponseSchema,
@@ -27,17 +28,15 @@ export const useAuthStore = defineStore("auth", () => {
           schema: UserResponseSchema,
         });
       } catch (err) {
-        bootstrapError.value = err instanceof Error ? err.message : "Failed to authenticate";
+        log.warn("Guest sign-in failed:", err);
       }
     } finally {
-      isBootstrapping.value = false;
+      bootstrapping = false;
     }
   }
 
   return {
     currentUser,
-    isBootstrapping: readonly(isBootstrapping),
-    bootstrapError: readonly(bootstrapError),
     bootstrap,
   };
 });

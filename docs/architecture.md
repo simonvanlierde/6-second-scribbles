@@ -4,14 +4,14 @@ A Vue 3 single-page frontend, a FastAPI backend, and committed contracts that ke
 the two in sync. The [frontend](../frontend/README.md) and
 [backend](../backend/README.md) READMEs cover each side.
 
-## Runtime Topology
+## Runtime topology
 
 The live demo runs on my own server as the Compose stack in
 [`compose.prod.yml`](../compose.prod.yml), started with `just up-prod`. The only
 way in from outside is a Cloudflare Tunnel (`cloudflared`, in the Compose `tunnel`
-profile). Caddy serves the built SPA and passes `/api` and `/ws` on to the backend
-over the internal Docker network, so nothing is published straight to the internet. Database migrations
-run to completion before the backend starts.
+profile). Caddy serves the built SPA and passes `/api` and `/ws` to the backend
+over the internal Docker network. No port is open to the internet. The backend
+starts only after the database migrations finish.
 
 ```mermaid
 flowchart TD
@@ -31,10 +31,10 @@ flowchart TD
     Migrations -.->|completes first| Backend
 ```
 
-The comments in `compose.prod.yml` give the reason for each resource limit, the
-loopback bind, and the digest pin on `cloudflared`.
+The comments in `compose.prod.yml` explain each resource limit, the loopback bind,
+and the digest pin on `cloudflared`.
 
-## Contract-First Boundary
+## Contract-first boundary
 
 The backend owns the wire format and exports it into `contracts/`. The frontend
 generates its types from those files, and CI fails if the backend no longer
@@ -46,7 +46,7 @@ flowchart LR
     subgraph Backend
         Protocol["Room protocol +<br/>route schemas"]
     end
-    Contracts["contracts/<br/>openapi.json<br/>room-events.json<br/>jsonschema/"]
+    Contracts["contracts/<br/>openapi.json<br/>jsonschema/"]
     subgraph Frontend
         Generated["src/generated/<br/>api.ts + protocol.ts"]
     end
@@ -56,7 +56,7 @@ flowchart LR
     Contracts -.->|check-contracts in CI| Contracts
 ```
 
-## Game Loop
+## Game loop
 
 A room is a small state machine. The backend drives it and pushes each change to
 every client over WebSockets.
@@ -72,6 +72,6 @@ stateDiagram-v2
     final_results --> lobby: restart_game
 ```
 
-[`GamePhase`](../backend/app/core/types.py) defines the phase values. The client
-and server message types that drive the transitions live in
+[`GamePhase`](../backend/app/core/types.py) defines the phases. The client and
+server messages that drive the transitions are in
 [`app/rooms/protocol.py`](../backend/app/rooms/protocol.py).

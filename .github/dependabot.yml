@@ -45,3 +45,34 @@ updates:
         update-types: [ "version-update:semver-major" ]
     cooldown:
       default-days: 7
+
+  # Base images in both Docker builds and the service images in compose. Majors stay
+  # manual: a new Postgres major needs a dump and restore.
+  - package-ecosystem: docker
+    directories: [ "/backend", "/frontend" ]
+    schedule:
+      interval: monthly
+    groups:
+      docker-images:
+        patterns: [ "*" ]
+    ignore:
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-major" ]
+      # ctranslate2 has no cp315 wheels yet; see backend/.python-version.
+      - dependency-name: python
+        versions: [ ">=3.15" ]
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      compose-images:
+        patterns: [ "*" ]
+    ignore:
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-major" ]
+    cooldown:
+      default-days: 7

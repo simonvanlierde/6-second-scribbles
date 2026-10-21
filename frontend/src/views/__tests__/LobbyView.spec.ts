@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,14 +10,6 @@ const sendMock = vi.fn();
 const copyMock = vi.fn();
 const showNotificationMock = vi.fn();
 const leaveRoomMock = vi.fn();
-
-vi.mock("@vueuse/core", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@vueuse/core")>();
-  return {
-    ...actual,
-    useClipboard: () => ({ copy: copyMock }),
-  };
-});
 
 vi.mock("@/composables/useGameConnection", () => ({
   useGameConnection: () => ({ send: sendMock }),
@@ -70,6 +62,7 @@ describe("LobbyView", () => {
     setActivePinia(createPinia());
     sendMock.mockReset();
     copyMock.mockReset();
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: copyMock }, configurable: true });
     showNotificationMock.mockReset();
     leaveRoomMock.mockReset();
   });
@@ -102,6 +95,18 @@ describe("LobbyView", () => {
 
     expect(copyMock).toHaveBeenCalledWith("ABC123");
     expect(showNotificationMock).toHaveBeenCalledWith("Copied!");
+  });
+
+  it("does not claim the code was copied when clipboard access is denied", async () => {
+    seedLobby();
+    copyMock.mockRejectedValueOnce(new DOMException("Write permission denied.", "NotAllowedError"));
+    const wrapper = mountLobby();
+
+    await wrapper.find(".lobby-code").trigger("click");
+    await flushPromises();
+
+    expect(copyMock).toHaveBeenCalledWith("ABC123");
+    expect(showNotificationMock).not.toHaveBeenCalled();
   });
 
   it("lets the host manage shared drawpad visibility and clearing", async () => {
