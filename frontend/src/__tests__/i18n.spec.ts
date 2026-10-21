@@ -1,4 +1,4 @@
-// cspell:ignore joueur joueurs salon gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
+// cspell:ignore dans joueur joueurs salon gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
 import { afterEach, describe, expect, it } from "vitest";
 
 import { i18n, setLocale } from "@/i18n";

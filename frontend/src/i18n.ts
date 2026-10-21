@@ -1,4 +1,4 @@
-// cspell:ignore gracz gracze graczy
+// cspell:ignore gracz gracze graczy joueur joueurs jogadores
 import { createI18n } from "vue-i18n";
 import en from "./locales/en.json";
 import { SUPPORTED_LOCALES } from "./shared/locales";

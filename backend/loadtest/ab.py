@@ -210,7 +210,7 @@ def failed(step: dict) -> bool:
     return sum(step["errors"].values()) > 0 or not step["deliveries_per_s"]
 
 
-def cpu_per_kdeliveries(step: dict) -> float:
+def cpu_per_thousand_deliveries(step: dict) -> float:
     """Backend CPU % spent per 1,000 deliveries/s."""
     return step["cpu_pct"] / (step["deliveries_per_s"] / 1000) if step["deliveries_per_s"] else math.nan
 
@@ -219,11 +219,11 @@ METRICS = {
     "p95 ms": lambda s: s["p95_ms"],
     "CPU %": lambda s: s["cpu_pct"],
     "deliveries/s": lambda s: s["deliveries_per_s"],
-    "CPU %/1k del/s": cpu_per_kdeliveries,
+    "CPU %/1k del/s": cpu_per_thousand_deliveries,
 }
 
 
-def summarise(results: dict[str, dict[int, list[dict]]], labels: dict[str, str]) -> None:
+def summarize(results: dict[str, dict[int, list[dict]]], labels: dict[str, str]) -> None:
     """Print median and range per step, ref and metric, then the ratio B/A of the medians."""
     print(f"\nA = {labels['A']}, B = {labels['B']}\n")
     print("| Rooms | Metric | A median | A range | B median | B range | B/A |")
@@ -294,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
                             f"  {stack.label}: run {run} errored at {step['rooms']} rooms: {step['errors']}", flush=True
                         )
                         status = 1
-        summarise(results, {label: stack.ref for label, stack in stacks.items()})
+        summarize(results, {label: stack.ref for label, stack in stacks.items()})
     finally:
         for stack in stacks.values():
             stack.down(images=True)
