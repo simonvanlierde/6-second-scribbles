@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import random
 import time
 from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, Mock, patch
@@ -310,6 +311,27 @@ class TestGameRoom:
 
         assert len(game_room.lobby_strokes) == 1
         assert len(game_room.lobby_strokes[0].points) == manager_module.MAX_STROKE_POINTS
+
+    async def test_lobby_point_total_tracks_every_change(
+        self, game_room: GameRoom, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The running point total matches the strokes through starts, extensions, trims and clears."""
+        monkeypatch.setattr(manager_module, "MAX_LOBBY_POINTS", 50)
+        monkeypatch.setattr(manager_module, "MAX_LOBBY_STROKES", 8)
+        monkeypatch.setattr(manager_module, "MAX_STROKE_POINTS", 12)
+        rng = random.Random(7)  # noqa: S311 - a seeded sequence, not a secret
+        new_stroke_share = 0.3
+        for step in range(2_000):
+            player = f"p{rng.randrange(4)}"
+            points = [StrokePoint(x=step, y=0)] * rng.randrange(1, 6)
+            game_room.apply_lobby_partial(
+                player, StrokeDelta(color="#000", width=3, points=points), is_start=rng.random() < new_stroke_share
+            )
+            if step % 500 == 499:
+                game_room.clear_lobby_strokes()
+            actual = sum(len(stroke.points) for stroke in game_room.lobby_strokes)
+            assert game_room._lobby_points == actual  # noqa: SLF001
+            assert actual <= manager_module.MAX_LOBBY_POINTS or len(game_room.lobby_strokes) == 1
 
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""
