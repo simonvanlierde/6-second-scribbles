@@ -18,7 +18,8 @@
     "soundMute": "Couper le son",
     "soundUnmute": "Activer le son",
     "and": "et",
-    "gotIt": "Compris"
+    "gotIt": "Compris",
+    "close": "Fermer"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "activé",
     "soundOff": "désactivé",
     "about": "À propos",
-    "namePrompt": "Choisis un nom pour continuer."
+    "namePrompt": "Choisis un nom pour continuer.",
+    "decrease": "Diminuer {label}",
+    "increase": "Augmenter {label}",
+    "avatarColor": "Couleur de l’avatar"
   },
   "lobby": {
     "leaveRoom": "Quitter le salon",
@@ -106,7 +110,10 @@
     "clear": "Effacer",
     "loadingCategory": "Chargement…",
     "hint": "Touche un élément une fois que tu l’as dessiné.",
-    "undo": "Annuler"
+    "undo": "Annuler",
+    "brushSmall": "Pinceau fin",
+    "brushMedium": "Pinceau moyen",
+    "brushLarge": "Pinceau épais"
   },
   "guessing": {
     "guessPlayerDrawing": "Devine le dessin de {name}",
@@ -250,5 +257,26 @@
     "drawing": "Manche {round} : dessin",
     "guessing": "Manche {round} : devinettes",
     "timeLow": "Plus que {count} secondes"
+  },
+  "colors": {
+    "black": "Noir",
+    "white": "Blanc",
+    "red": "Rouge",
+    "blue": "Bleu",
+    "green": "Vert",
+    "orange": "Orange",
+    "coral": "Corail",
+    "yellow": "Jaune",
+    "lavender": "Lavande",
+    "peach": "Pêche"
+  },
+  "reactions": {
+    "laugh": "Rire",
+    "shock": "Choc",
+    "art": "Joli dessin",
+    "mindBlown": "Bluffant",
+    "think": "Perplexe",
+    "group": "Réactions au dessin de {name}",
+    "react": "{reaction} pour le dessin de {name}"
   }
 }

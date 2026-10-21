@@ -18,7 +18,8 @@
     "soundMute": "Wycisz dźwięk",
     "soundUnmute": "Włącz dźwięk",
     "and": "i",
-    "gotIt": "Rozumiem"
+    "gotIt": "Rozumiem",
+    "close": "Zamknij"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "włączony",
     "soundOff": "wyłączony",
     "about": "O aplikacji",
-    "namePrompt": "Wybierz imię, aby kontynuować."
+    "namePrompt": "Wybierz imię, aby kontynuować.",
+    "decrease": "Zmniejsz: {label}",
+    "increase": "Zwiększ: {label}",
+    "avatarColor": "Kolor awatara"
   },
   "lobby": {
     "leaveRoom": "Opuść pokój",
@@ -106,7 +110,10 @@
     "clear": "Wyczyść",
     "loadingCategory": "Ładowanie...",
     "hint": "Stuknij hasło, gdy je narysujesz.",
-    "undo": "Cofnij"
+    "undo": "Cofnij",
+    "brushSmall": "Mały pędzel",
+    "brushMedium": "Średni pędzel",
+    "brushLarge": "Duży pędzel"
   },
   "guessing": {
     "guessPlayerDrawing": "Zgadnij rysunek gracza {name}",
@@ -250,5 +257,26 @@
     "drawing": "Runda {round}: rysowanie",
     "guessing": "Runda {round}: zgadywanie",
     "timeLow": "Zostało {count} sekund"
+  },
+  "colors": {
+    "black": "Czarny",
+    "white": "Biały",
+    "red": "Czerwony",
+    "blue": "Niebieski",
+    "green": "Zielony",
+    "orange": "Pomarańczowy",
+    "coral": "Koralowy",
+    "yellow": "Żółty",
+    "lavender": "Lawendowy",
+    "peach": "Brzoskwiniowy"
+  },
+  "reactions": {
+    "laugh": "Śmiech",
+    "shock": "Szok",
+    "art": "Piękny rysunek",
+    "mindBlown": "Odlot",
+    "think": "Zastanawiam się",
+    "group": "Reakcje na rysunek gracza {name}",
+    "react": "{reaction} dla rysunku gracza {name}"
   }
 }

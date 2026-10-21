@@ -9,6 +9,16 @@ export const AVATAR_COLORS = [
 
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
 
+/** i18n keys that name each avatar colour for screen readers. */
+export const AVATAR_COLOR_NAMES: Record<AvatarColor, string> = {
+  "var(--avatar-1)": "colors.coral",
+  "var(--avatar-2)": "colors.green",
+  "var(--avatar-3)": "colors.blue",
+  "var(--avatar-4)": "colors.yellow",
+  "var(--avatar-5)": "colors.lavender",
+  "var(--avatar-6)": "colors.peach",
+};
+
 /** Hash a player id into a stable index in [0, AVATAR_COLORS.length). */
 function hash(id: string): number {
   let h = 0;

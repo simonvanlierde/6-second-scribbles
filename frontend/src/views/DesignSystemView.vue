@@ -138,7 +138,7 @@ function setTheme(t: "light" | "dark" | null): void {
 
     <section class="ds-section">
       <h2>Reactions</h2>
-      <HdReactionPad @react="onReact" />
+      <HdReactionPad name="Ada" @react="onReact" />
       <p>Counts: {{ counts }}</p>
     </section>
 

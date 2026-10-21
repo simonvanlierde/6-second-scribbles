@@ -18,7 +18,8 @@
     "soundMute": "Silenciar sonido",
     "soundUnmute": "Activar sonido",
     "and": "y",
-    "gotIt": "Entendido"
+    "gotIt": "Entendido",
+    "close": "Cerrar"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "activado",
     "soundOff": "desactivado",
     "about": "Acerca de",
-    "namePrompt": "Elige un nombre para continuar."
+    "namePrompt": "Elige un nombre para continuar.",
+    "decrease": "Disminuir {label}",
+    "increase": "Aumentar {label}",
+    "avatarColor": "Color del avatar"
   },
   "lobby": {
     "leaveRoom": "Salir de la sala",
@@ -106,7 +110,10 @@
     "clear": "Borrar",
     "loadingCategory": "Cargando...",
     "hint": "Toca un elemento cuando lo hayas dibujado.",
-    "undo": "Deshacer"
+    "undo": "Deshacer",
+    "brushSmall": "Pincel pequeño",
+    "brushMedium": "Pincel mediano",
+    "brushLarge": "Pincel grande"
   },
   "guessing": {
     "guessPlayerDrawing": "Adivina el dibujo de {name}",
@@ -250,5 +257,26 @@
     "drawing": "Ronda {round}: dibujo",
     "guessing": "Ronda {round}: adivinanzas",
     "timeLow": "Quedan {count} segundos"
+  },
+  "colors": {
+    "black": "Negro",
+    "white": "Blanco",
+    "red": "Rojo",
+    "blue": "Azul",
+    "green": "Verde",
+    "orange": "Naranja",
+    "coral": "Coral",
+    "yellow": "Amarillo",
+    "lavender": "Lavanda",
+    "peach": "Melocotón"
+  },
+  "reactions": {
+    "laugh": "Risa",
+    "shock": "Sorpresa",
+    "art": "Qué arte",
+    "mindBlown": "Alucinante",
+    "think": "Pensativo",
+    "group": "Reacciones al dibujo de {name}",
+    "react": "{reaction} para el dibujo de {name}"
   }
 }

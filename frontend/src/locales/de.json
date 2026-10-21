@@ -18,7 +18,8 @@
     "soundMute": "Ton aus",
     "soundUnmute": "Ton an",
     "and": "und",
-    "gotIt": "Verstanden"
+    "gotIt": "Verstanden",
+    "close": "Schließen"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "an",
     "soundOff": "aus",
     "about": "Über",
-    "namePrompt": "Wähle einen Namen, um fortzufahren."
+    "namePrompt": "Wähle einen Namen, um fortzufahren.",
+    "decrease": "{label} verringern",
+    "increase": "{label} erhöhen",
+    "avatarColor": "Avatarfarbe"
   },
   "lobby": {
     "leaveRoom": "Raum verlassen",
@@ -106,7 +110,10 @@
     "clear": "Löschen",
     "loadingCategory": "Lädt...",
     "hint": "Tippe ein Wort an, sobald du es gezeichnet hast.",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "brushSmall": "Kleiner Pinsel",
+    "brushMedium": "Mittlerer Pinsel",
+    "brushLarge": "Großer Pinsel"
   },
   "guessing": {
     "guessPlayerDrawing": "Errate {name}s Zeichnung",
@@ -250,5 +257,26 @@
     "drawing": "Runde {round}: Zeichnen",
     "guessing": "Runde {round}: Raten",
     "timeLow": "Noch {count} Sekunden"
+  },
+  "colors": {
+    "black": "Schwarz",
+    "white": "Weiß",
+    "red": "Rot",
+    "blue": "Blau",
+    "green": "Grün",
+    "orange": "Orange",
+    "coral": "Koralle",
+    "yellow": "Gelb",
+    "lavender": "Lavendel",
+    "peach": "Pfirsich"
+  },
+  "reactions": {
+    "laugh": "Lachen",
+    "shock": "Schock",
+    "art": "Schöne Kunst",
+    "mindBlown": "Umgehauen",
+    "think": "Nachdenklich",
+    "group": "Reaktionen auf {name}s Zeichnung",
+    "react": "{reaction} für {name}s Zeichnung"
   }
 }

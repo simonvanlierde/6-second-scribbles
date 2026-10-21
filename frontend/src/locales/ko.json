@@ -18,7 +18,8 @@
     "soundMute": "소리 끄기",
     "soundUnmute": "소리 켜기",
     "and": "그리고",
-    "gotIt": "알겠어요"
+    "gotIt": "알겠어요",
+    "close": "닫기"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "켜짐",
     "soundOff": "꺼짐",
     "about": "정보",
-    "namePrompt": "계속하려면 이름을 입력하세요."
+    "namePrompt": "계속하려면 이름을 입력하세요.",
+    "decrease": "{label} 줄이기",
+    "increase": "{label} 늘리기",
+    "avatarColor": "아바타 색상"
   },
   "lobby": {
     "leaveRoom": "방 나가기",
@@ -106,7 +110,10 @@
     "clear": "지우기",
     "loadingCategory": "불러오는 중...",
     "hint": "그린 항목을 한 번 탭하세요.",
-    "undo": "되돌리기"
+    "undo": "되돌리기",
+    "brushSmall": "가는 붓",
+    "brushMedium": "중간 붓",
+    "brushLarge": "굵은 붓"
   },
   "guessing": {
     "guessPlayerDrawing": "{name}님의 그림 맞히기",
@@ -250,5 +257,26 @@
     "drawing": "라운드 {round}: 그리기",
     "guessing": "라운드 {round}: 맞히기",
     "timeLow": "{count}초 남음"
+  },
+  "colors": {
+    "black": "검정",
+    "white": "흰색",
+    "red": "빨강",
+    "blue": "파랑",
+    "green": "초록",
+    "orange": "주황",
+    "coral": "코랄",
+    "yellow": "노랑",
+    "lavender": "라벤더",
+    "peach": "복숭아색"
+  },
+  "reactions": {
+    "laugh": "웃음",
+    "shock": "충격",
+    "art": "멋진 그림",
+    "mindBlown": "대박",
+    "think": "생각 중",
+    "group": "{name}님의 그림에 반응하기",
+    "react": "{name}님의 그림에 {reaction}"
   }
 }

@@ -1,18 +1,30 @@
 <script setup lang="ts">
 import { REACTION_EMOJI, REACTION_KEYS, type ReactionKey } from "@/composables/useReactions";
+import { i18n } from "@/i18n";
 
+/** Whose drawing the reactions are for; screen readers hear it with each button. */
+defineProps<{ name: string }>();
 defineEmits<{ react: [ReactionKey] }>();
+
+const { t } = i18n.global;
+const LABEL_KEYS: Record<ReactionKey, string> = {
+  laugh: "reactions.laugh",
+  shock: "reactions.shock",
+  art: "reactions.art",
+  "mind-blown": "reactions.mindBlown",
+  think: "reactions.think",
+};
 </script>
 
 <template>
   <!-- biome-ignore lint/a11y/useSemanticElements: role=group + aria-label names the reaction button cluster; no native element fits -->
-  <div class="hd-rpad" role="group" aria-label="Reactions">
+  <div class="hd-rpad" role="group" :aria-label="t('reactions.group', { name })">
     <button
       v-for="k in REACTION_KEYS"
       :key="k"
       type="button"
       class="hd-rpad__btn"
-      :aria-label="`React with ${k}`"
+      :aria-label="t('reactions.react', { reaction: t(LABEL_KEYS[k]), name })"
       @click="$emit('react', k)"
     >
       {{ REACTION_EMOJI[k] }}

@@ -2,7 +2,7 @@
 import { useI18n } from "vue-i18n";
 
 import HdIconButton from "@/components/ui/HdIconButton.vue";
-import { BRUSH_SIZES, DRAW_PALETTE } from "@/config/drawing";
+import { BRUSH_SIZE_NAMES, BRUSH_SIZES, DRAW_COLOR_NAMES, DRAW_PALETTE } from "@/config/drawing";
 
 withDefaults(
   defineProps<{
@@ -42,7 +42,7 @@ const { t } = useI18n();
         class="swatch"
         :class="{ 'swatch--active': currentColor === color }"
         :style="{ background: color }"
-        :aria-label="color"
+        :aria-label="DRAW_COLOR_NAMES[color] ? t(DRAW_COLOR_NAMES[color]) : color"
         :aria-pressed="currentColor === color"
         @click="$emit('select-color', color)"
       />
@@ -56,7 +56,7 @@ const { t } = useI18n();
         type="button"
         class="brush"
         :class="{ 'brush--active': currentWidth === size }"
-        :aria-label="`${size}`"
+        :aria-label="BRUSH_SIZE_NAMES[size] ? t(BRUSH_SIZE_NAMES[size]) : `${size}`"
         :aria-pressed="currentWidth === size"
         @click="$emit('select-size', size)"
       >

@@ -18,7 +18,8 @@
     "soundMute": "靜音",
     "soundUnmute": "取消靜音",
     "and": "和",
-    "gotIt": "知道了"
+    "gotIt": "知道了",
+    "close": "關閉"
   },
   "home": {
     "title": "Six Second Scribbles",
@@ -64,7 +65,10 @@
     "soundOn": "開",
     "soundOff": "關",
     "about": "關於",
-    "namePrompt": "輸入名字以繼續。"
+    "namePrompt": "輸入名字以繼續。",
+    "decrease": "減少{label}",
+    "increase": "增加{label}",
+    "avatarColor": "頭像顏色"
   },
   "lobby": {
     "leaveRoom": "離開房間",
@@ -106,7 +110,10 @@
     "clear": "清除",
     "loadingCategory": "載入中…",
     "hint": "畫完一個項目後點一下它。",
-    "undo": "復原"
+    "undo": "復原",
+    "brushSmall": "細筆刷",
+    "brushMedium": "中筆刷",
+    "brushLarge": "粗筆刷"
   },
   "guessing": {
     "guessPlayerDrawing": "猜猜 {name} 的圖畫",
@@ -250,5 +257,26 @@
     "drawing": "第 {round} 回合：繪畫",
     "guessing": "第 {round} 回合：猜測",
     "timeLow": "還剩 {count} 秒"
+  },
+  "colors": {
+    "black": "黑色",
+    "white": "白色",
+    "red": "紅色",
+    "blue": "藍色",
+    "green": "綠色",
+    "orange": "橙色",
+    "coral": "珊瑚色",
+    "yellow": "黃色",
+    "lavender": "薰衣草紫",
+    "peach": "桃色"
+  },
+  "reactions": {
+    "laugh": "大笑",
+    "shock": "震驚",
+    "art": "畫得好",
+    "mindBlown": "太絕了",
+    "think": "思考中",
+    "group": "對 {name} 的圖畫的反應",
+    "react": "給 {name} 的圖畫：{reaction}"
   }
 }

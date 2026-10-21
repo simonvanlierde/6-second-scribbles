@@ -110,7 +110,7 @@ function selectTheme(value: Theme) {
   <dialog ref="dialog" class="settings-dialog" @click.self="close" @close="close">
     <header class="settings-dialog__header">
       <h2 class="settings-dialog__title">{{ t("settings.title") }}</h2>
-      <HdIconButton label="Close" variant="ghost" data-testid="settings-close" @click="close">
+      <HdIconButton :label="t('common.close')" variant="ghost" data-testid="settings-close" @click="close">
         <svg
           viewBox="0 0 24 24"
           fill="none"

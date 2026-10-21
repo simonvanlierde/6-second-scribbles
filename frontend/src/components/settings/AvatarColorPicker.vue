@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import HdAvatar from "@/components/ui/HdAvatar.vue";
-import { AVATAR_COLORS, type AvatarColor } from "@/composables/useAvatar";
+import { AVATAR_COLOR_NAMES, AVATAR_COLORS, type AvatarColor } from "@/composables/useAvatar";
+import { i18n } from "@/i18n";
 
 const model = defineModel<AvatarColor>({ required: true });
 defineProps<{ initial: string }>();
+const { t } = i18n.global;
 </script>
 
 <template>
-  <div class="avatar-picker" role="radiogroup" aria-label="Avatar color">
+  <div class="avatar-picker" role="radiogroup" :aria-label="t('settings.avatarColor')">
     <button
       v-for="c in AVATAR_COLORS"
       :key="c"
       type="button"
       class="avatar-picker__btn"
       :class="{ 'avatar-picker__btn--active': c === model }"
+      :aria-label="t(AVATAR_COLOR_NAMES[c])"
       v-bind="{ role: 'radio', 'aria-checked': c === model }"
       @click="model = c"
     >
