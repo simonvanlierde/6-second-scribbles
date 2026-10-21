@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 from app.system import router as system_router
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncGenerator, Callable
 
     import pytest
     from fakeredis import FakeRedis
@@ -25,7 +25,7 @@ def _session_maker(*, fails: bool) -> Callable[[], Callable[[], object]]:
     """Stand in for get_session_maker: a session whose SELECT 1 works or raises."""
 
     @asynccontextmanager
-    async def session() -> AsyncIterator[AsyncMock]:
+    async def session() -> AsyncGenerator[AsyncMock]:
         db = AsyncMock()
         if fails:
             db.execute.side_effect = ConnectionRefusedError("database down")
