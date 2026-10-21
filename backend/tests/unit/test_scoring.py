@@ -1,5 +1,5 @@
 """Tests for fuzzy matching and scoring functionality."""
-# spell-checker: ignore elefant, girafe, tigger
+# spell-checker: ignore elefant, girafe, tigger, gatos, gato, flores
 
 import pytest
 
