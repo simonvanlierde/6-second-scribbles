@@ -42,8 +42,4 @@ README.md
 justfile
 
 # Local generated / scratch files
-scripts/.seed_translation_hash
 scripts/seed_data _bk copy.yaml
-
-# Translation cache
-**/.translation_cache.json

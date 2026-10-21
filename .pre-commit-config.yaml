@@ -4,14 +4,11 @@
 # Revs are commit SHAs, since tags are mutable; Dependabot moves each SHA and its
 # `# frozen:` tag together.
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
-# Scripts write the first three: auto_translate_seed_data.py dumps the seed YAML and
-# hashes it, and the translation cache is a JSON dump. Formatting them by hand would
-# change the hash and fight the next run. Env files stay as written.
+# The seed YAML was written by the retired machine translation script. Reformatting it
+# would only churn the history. Env files stay as written.
 exclude: |-
   (?x)^(
     backend/scripts/seed_data\.yaml
-    |backend/scripts/\.seed_translation_hash
-    |backend/translation/\.translation_cache\.json
     |(.*/)?\.env(\..*)?
   )$
 repos:
@@ -30,7 +27,7 @@ repos:
 
   # Tolerates JSONC configs (tsconfig, VS Code settings).
   - repo: https://github.com/simonvanlierde/check-json5
-    rev: c70883b5be6d9fb87deac8d75395031372d54e83 # frozen: v1.2.0
+    rev: 118b80eca91bf55f227f34016a21f78dbfafdf83 # frozen: v2.0.0
     hooks:
       - id: check-json5
 
@@ -74,7 +71,7 @@ repos:
       - id: hadolint-docker
 
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: 83cecb6b523a053d7d3dfdc4798d705b505a88f9 # frozen: v0.2.78
+    rev: 3429bee0c8870bff7874f898c6e8659d1ffe9645 # frozen: v0.2.79
     hooks:
       - id: rumdl
         args: [--fix]
