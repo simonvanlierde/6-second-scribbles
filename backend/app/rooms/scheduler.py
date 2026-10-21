@@ -232,7 +232,9 @@ class RoomTaskScheduler:
             await self._room.broadcast(event)
             logger.info("[GameRoom %s] Game complete. Winner: %s", self._room.room_id, event.winner)
             await self._room.persist()
-            self.schedule_restart()
+            # A room that emptied meanwhile has nobody to restart for; a returning player re-arms it.
+            if not self._room.is_empty():
+                self.schedule_restart()
         except asyncio.CancelledError:
             pass
         except Exception:
