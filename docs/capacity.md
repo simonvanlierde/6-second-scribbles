@@ -102,6 +102,29 @@ in throwaway credentials and publishes the backend on `127.0.0.1:18000`
 when it finishes. To aim the test at a backend you already run, use
 `just backend/loadtest --url ws://127.0.0.1:8000 --smoke`.
 
+### Comparing two commits
+
+```bash
+just loadtest-ab 85ddbea main                          # 3 runs each at 40, 50 and 60 rooms
+just loadtest-ab main HEAD --runs 5 --rooms 60,70,80   # other flags pass through to run.py
+```
+
+This builds each commit's prod stack from a temporary worktree outside the
+checkout, but always drives it with the load generator from your
+checkout, so an old server meets today's workload. Runs alternate A, B, A, B, so
+a change in host load during the comparison hits both commits alike. Each run
+starts on a fresh database. The backend container is pinned to one CPU (still
+capped at 1.0 CPU), the load generator to up to three other cores, and Postgres
+and Redis to what is left. On a CPU with hyperthreads, the backend's and the
+generator's twin threads stay idle. The script prints the host load before each
+run and warns above 1.5.
+
+The summary gives, per step, the median and range of p95, backend CPU,
+deliveries/s, and backend CPU per 1,000 deliveries/s, then B/A of the medians.
+The last one is the fairest speed measure below the knee, where both commits
+deliver everything sent. The command fails if any run had errors or delivered
+nothing, or if a commit's stack does not start.
+
 Outside prod, the backend ignores `X-Forwarded-For` by default, so every test room comes
 from the same client. That client may hold at most 5 open rooms and create 10
 rooms a minute, so keep `--rooms` at 5 or below there.

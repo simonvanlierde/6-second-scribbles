@@ -110,6 +110,12 @@ loadtest *args:
     {{ loadtest_compose }} run --rm --build --name tmp-6ss-load-seed database-seed
     just backend/loadtest --url "ws://127.0.0.1:${LOADTEST_PORT:-18000}" --container tmp-6ss-load-backend-1 {{ args }}
 
+# E.g. `just loadtest-ab main HEAD --runs 3 --rooms 40,50,60`; see docs/capacity.md.
+# Compare two commits' capacity with pinned CPUs and alternating runs.
+[group('test')]
+loadtest-ab ref-a ref-b *args:
+    cd backend && uv run python -m loadtest.ab {{ ref-a }} {{ ref-b }} {{ args }}
+
 # ── Check & Format ────────────────────────────────────────────────────────────
 
 # Check everything.

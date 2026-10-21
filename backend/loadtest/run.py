@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import dataclasses
 import json
 import math
 import multiprocessing
@@ -446,6 +447,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--container", help="backend container to sample with docker stats")
     parser.add_argument("--prefix", type=int, default=10, help="two-digit room code prefix")
     parser.add_argument("--smoke", action="store_true", help="a few seconds at tiny load; fails on any problem")
+    parser.add_argument("--keep-going", action="store_true", help="run every step, also past the knee")
+    parser.add_argument("--json", metavar="PATH", help="also write the step results to PATH as JSON")
     args = parser.parse_args(argv)
     if args.smoke:
         args.rooms, args.players, args.duration, args.lobby_seconds, args.draw_seconds = "2", 3, 8, 4, 1
@@ -461,14 +464,21 @@ def main(argv: list[str] | None = None) -> int:
     print(TABLE_HEADER, flush=True)  # noqa: T201
     knee: StepResult | None = None
     last: StepResult | None = None
+    results: list[StepResult] = []
     for rooms in steps:
         last = run_step(args, rooms)
+        results.append(last)
+        if args.json:
+            # Rewritten after every step, so a run cut short still leaves its finished steps.
+            with open(args.json, "w", encoding="utf-8") as out:  # noqa: PTH123
+                json.dump([dataclasses.asdict(r) for r in results], out)
         print(last.row(), flush=True)  # noqa: T201
         if last.generator_cpu_pct > 80:
             print("  warning: a load-generator process was near a full core; raise --workers", flush=True)  # noqa: T201
-        if is_knee(last.p95_ms, sum(last.errors.values()), args.p95_limit):
+        if is_knee(last.p95_ms, sum(last.errors.values()), args.p95_limit) and knee is None:
             knee = last
-            break
+            if not args.keep_going:
+                break
     if args.smoke:
         ok = last is not None and knee is None and last.rounds_scored > 0
         print("smoke: ok" if ok else "smoke: FAILED (errors, no deliveries, or no round scored)")  # noqa: T201
