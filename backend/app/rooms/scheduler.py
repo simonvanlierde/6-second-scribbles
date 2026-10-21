@@ -247,9 +247,9 @@ class RoomTaskScheduler:
 
     async def _restart_after_delay(self) -> None:
         try:
+            # Every path that replaces this task cancels it first, and a cancelled task
+            # always gets CancelledError when it resumes, so no "superseded" check is needed.
             await asyncio.sleep(settings.final_results_restart_seconds)
-            if self._restart_task is not asyncio.current_task():
-                return  # superseded/cancelled while we slept
             await self._room.restart_game()
         except asyncio.CancelledError:
             pass
