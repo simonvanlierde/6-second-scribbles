@@ -6,7 +6,7 @@ ENV PNPM_HOME=/pnpm \
 # Node 25+ no longer bundles Corepack, so it has to be installed before it can be
 # enabled. Corepack is kept rather than installing pnpm directly so that
 # package.json's `packageManager` field stays the one source of the pnpm version.
-RUN npm install -g corepack@latest && corepack enable
+RUN npm install -g corepack@0.36.0 && corepack enable
 
 WORKDIR /app
 
