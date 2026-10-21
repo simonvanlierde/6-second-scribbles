@@ -54,6 +54,49 @@ SERVER_ERROR_TYPES = {
     "kick_error",
 }
 MAX_ROOMS = 500  # settings.max_total_rooms
+
+
+# The server bounds game timers (15-180 s) and stroke widths (at most 64), so the
+# generator must send values a real client could; tests/unit/test_loadtest_messages.py
+# validates these messages against the server's protocol models.
+MIN_ROUND_SECONDS = 15
+SEND_TIME_PREFIX = "t"
+
+
+def stroke_fragment(player_id: str, points: list[dict[str, float]], sent: float, *, start: bool) -> dict[str, object]:
+    """A lobby stroke fragment whose `color` carries the monotonic send time.
+
+    The server relays the fragment unchanged, so the receiver reads the time back
+    from `color`; `width` stays a real pen width the server accepts.
+    """
+    return {
+        "type": "draw_stroke_partial",
+        "playerId": player_id,
+        "stroke": {"color": f"{SEND_TIME_PREFIX}{sent:.6f}", "width": 4, "points": points},
+        "strokeStart": start,
+    }
+
+
+def sent_at(stroke: dict[str, object]) -> float:
+    """The monotonic send time a fragment from `stroke_fragment` carries."""
+    return float(str(stroke["color"]).removeprefix(SEND_TIME_PREFIX))
+
+
+def start_game_message(draw_seconds: float) -> dict[str, object]:
+    """A one-round start_game within the server's timer bounds.
+
+    Players press ready before the timer runs out, so a long limit does not slow
+    the rounds down.
+    """
+    return {
+        "type": "start_game",
+        "rounds": 1,
+        "difficulty": "easy",
+        "drawingTimeLimit": max(MIN_ROUND_SECONDS, math.ceil(draw_seconds)),
+        "guessingTimeLimit": MIN_ROUND_SECONDS,
+    }
+
+
 LOBBY, FINAL = "lobby", "final"
 # The room phase each server event moves a client into.
 PHASE_AFTER = {
@@ -202,7 +245,7 @@ class Player:
                 case "draw_stroke_partial":
                     window_start, window_end = self.cfg.window
                     if msg.get("playerId") != self.player_id and window_start <= now <= window_end:
-                        self.stats.latencies_ms.append((now - msg["stroke"]["width"]) * 1000)
+                        self.stats.latencies_ms.append((now - sent_at(msg["stroke"])) * 1000)
                 case "player_joined" if msg.get("playerId") == self.player_id:
                     if self.is_host and not msg.get("isHost"):
                         self.stats.errors["not_host"] += 1
@@ -251,17 +294,7 @@ class Player:
                 for _ in range(POINTS_PER_FRAME):
                     x, y = x + rng.uniform(-5, 5), y + rng.uniform(-5, 5)
                     points.append({"x": round(x, 1), "y": round(y, 1)})
-                # The server relays the fragment unchanged, so `width` carries the
-                # monotonic send time and the receiver subtracts it.
-                stroke = {"color": "#1f2937", "width": time.monotonic(), "points": points}
-                await self.send(
-                    {
-                        "type": "draw_stroke_partial",
-                        "playerId": self.player_id,
-                        "stroke": stroke,
-                        "strokeStart": frame == 0,
-                    }
-                )
+                await self.send(stroke_fragment(self.player_id, points, time.monotonic(), start=frame == 0))
                 await asyncio.sleep(1 / FRAME_HZ)
             await asyncio.sleep(rng.uniform(*PAUSE_SECONDS))
 
@@ -271,15 +304,7 @@ class Player:
             # Jitter the lobby time so rooms' games do not line up.
             await asyncio.sleep(random.uniform(0.5, 1.5) * self.cfg.lobby_seconds)  # noqa: S311
             if self.phase == LOBBY:
-                await self.send(
-                    {
-                        "type": "start_game",
-                        "rounds": 1,
-                        "difficulty": "easy",
-                        "drawingTimeLimit": max(1, math.ceil(self.cfg.draw_seconds)),
-                        "guessingTimeLimit": 10,
-                    }
-                )
+                await self.send(start_game_message(self.cfg.draw_seconds))
             # The server ignores start_game until a second player has joined, so the
             # phase may stay in the lobby; otherwise wait for the final results.
             await asyncio.sleep(0.5)
