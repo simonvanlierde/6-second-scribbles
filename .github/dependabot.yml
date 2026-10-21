@@ -1,78 +1,80 @@
+# No automerge: that needs a workflow with contents:write.
+#
+# `cooldown` holds a version update back until the release has been public for a
+# week, long enough for a compromised release to be caught and yanked, and a major
+# for a month. Security updates ignore it. github-actions, pre-commit and the
+# docker ecosystems take default-days only.
 version: 2
 updates:
+  # The composite actions under .github/actions pin actions too, and a bare `/`
+  # reads only .github/workflows.
   - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
+    directories: ["/", "/.github/actions/*"]
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7}
     groups:
-      actions:
-        patterns: [ "*" ]
-    cooldown:
-      default-days: 7
+      actions: {patterns: ["*"]}
 
+  # Version updates only. Dependabot has no security updates for this ecosystem.
+  # Hook revs group wholesale: all dev tooling.
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7}
+    groups:
+      hooks: {patterns: ["*"]}
+
+  # Dev tooling lands as one PR. A runtime dependency gets its own, so a risky bump
+  # is not buried in lint-tool churn. Advisories ignore the version-update groups,
+  # so the security group keeps them to one PR and one CI run per ecosystem.
   - package-ecosystem: npm
     directory: /
-    schedule:
-      interval: monthly
-    cooldown:
-      default-days: 7
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7, semver-major-days: 30}
     groups:
-      npm-deps:
-        patterns: [ "*" ]
-      # Advisories arrive outside the weekly window and ignore the groups above,
-      # so without this each one opens its own pull request and its own CI run.
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+        patterns: ["*"]
       npm-security:
         applies-to: security-updates
         patterns: ["*"]
-    ignore:
-      - dependency-name: "*"
-        update-types: [ "version-update:semver-major" ]
 
   - package-ecosystem: uv
     directory: /backend
-    schedule:
-      interval: monthly
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7, semver-major-days: 30}
     groups:
-      uv-deps:
-        patterns: [ "*" ]
-      # Advisories arrive outside the weekly window and ignore the groups above,
-      # so without this each one opens its own pull request and its own CI run.
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+        patterns: ["*"]
       uv-security:
         applies-to: security-updates
         patterns: ["*"]
-    ignore:
-      - dependency-name: "*"
-        update-types: [ "version-update:semver-major" ]
-    cooldown:
-      default-days: 7
 
-  # Base images in both Docker builds and the service images in compose. Majors stay
-  # manual: a new Postgres major needs a dump and restore.
+  # Base images in both Docker builds and the service images in compose. The images
+  # run in production, so they stay here. Majors stay manual: a new Postgres major
+  # needs a dump and restore.
   - package-ecosystem: docker
-    directories: [ "/backend", "/frontend" ]
-    schedule:
-      interval: monthly
+    directories: ["/backend", "/frontend"]
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7}
     groups:
-      docker-images:
-        patterns: [ "*" ]
+      docker-images: {patterns: ["*"]}
     ignore:
       - dependency-name: "*"
-        update-types: [ "version-update:semver-major" ]
+        update-types: ["version-update:semver-major"]
       # ctranslate2 has no cp315 wheels yet; see backend/.python-version.
       - dependency-name: python
-        versions: [ ">=3.15" ]
-    cooldown:
-      default-days: 7
+        versions: [">=3.15"]
 
   - package-ecosystem: docker-compose
     directory: /
-    schedule:
-      interval: monthly
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7}
     groups:
-      compose-images:
-        patterns: [ "*" ]
+      compose-images: {patterns: ["*"]}
     ignore:
       - dependency-name: "*"
-        update-types: [ "version-update:semver-major" ]
-    cooldown:
-      default-days: 7
+        update-types: ["version-update:semver-major"]
