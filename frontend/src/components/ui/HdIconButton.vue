@@ -63,7 +63,7 @@ defineEmits<{ click: [MouseEvent] }>();
   box-shadow: none;
 }
 .hd-icon-btn--ghost:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.04);
+  background: color-mix(in srgb, var(--color-ink) 8%, transparent);
 }
 .hd-icon-btn:disabled {
   opacity: 0.45;

@@ -3,6 +3,8 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
+import HdDialog from "@/components/ui/HdDialog.vue";
+import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import { i18n } from "@/i18n";
 
 vi.mock("@/composables/useLocaleAvailability", () => ({
@@ -67,5 +69,18 @@ describe("SettingsPanel", () => {
     const soundToggle = w.find(".switch__input");
     expect(soundToggle.exists()).toBe(true);
     expect((soundToggle.element as HTMLInputElement).type).toBe("checkbox");
+  });
+
+  it("is the shared dialog, and closing it resumes the action that asked for a name", async () => {
+    const w = mountPanel({ localPlayerName: "Simon" });
+    expect(w.findComponent(HdDialog).exists()).toBe(true);
+    expect(w.find('[data-testid="hd-dialog-confirm"]').exists()).toBe(false);
+    const action = vi.fn();
+    useSettingsPanel().pendingNameAction.value = action;
+
+    await w.get('[data-testid="hd-dialog-close"]').trigger("click");
+
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(w.emitted("update:open")?.at(-1)).toEqual([false]);
   });
 });

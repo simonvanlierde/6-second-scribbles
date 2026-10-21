@@ -72,6 +72,6 @@ describe("accessible names in German", () => {
     const w = mount(SettingsPanel, {
       global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false }), i18n] },
     });
-    expect(w.get("[data-testid=settings-close]").attributes("aria-label")).toBe("Schließen");
+    expect(w.get("[data-testid=hd-dialog-close]").attributes("aria-label")).toBe("Schließen");
   });
 });
