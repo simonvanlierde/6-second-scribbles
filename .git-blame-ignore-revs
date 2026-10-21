@@ -1,0 +1,5 @@
+# Formatting-only commits. `git config blame.ignoreRevsFile .git-blame-ignore-revs`
+# makes local git blame skip them; GitHub reads this file on its own.
+
+# style: apply the yamlfmt and whitespace hooks
+2bae68018cd2c7f50fb8ac0d3448abe36e1a1e8e
