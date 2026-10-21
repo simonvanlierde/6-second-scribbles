@@ -46,19 +46,21 @@ let sendTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingPoints: Array<{ x: number; y: number }> = [];
 let pendingMeta: { color: string; width: number } | null = null;
 let pendingStart = false;
-// How many points of each stroke in the store are on the canvas, so the watcher
-// only redraws strokes that grew.
-const drawnCounts = new Map<number, number>();
-// Remote strokes still drawn as live, by index in the store, each with the timer
-// that commits it once its player stops sending fragments.
+// Strokes are tracked by object, not by place in the store: the store drops the
+// oldest strokes past the server's caps, which moves every index.
+// How many points of each stroke are on the canvas, so the watcher only redraws
+// strokes that grew.
+let drawnCounts = new WeakMap<DrawStroke, number>();
+// Remote strokes still drawn as live, each with the timer that commits it once its
+// player stops sending fragments.
 const LIVE_TIMEOUT_MS = 300;
-const liveTimers = new Map<number, ReturnType<typeof setTimeout>>();
-// The toolbar's clear empties only this pad: strokes before this store index stay
-// off it, on redraws too, until the whole doodle is cleared.
-let clearedBefore = 0;
-// Store index of this player's latest stroke. While it is being drawn the canvas
-// shows it live, so a redraw must not also commit it.
-let localIndex = -1;
+const liveTimers = new Map<DrawStroke, ReturnType<typeof setTimeout>>();
+// The toolbar's clear empties only this pad: the strokes it cleared stay off it,
+// on redraws too, until the whole doodle is cleared.
+let cleared = new WeakSet<DrawStroke>();
+// This player's latest stroke. While it is being drawn the canvas shows it live, so
+// a redraw must not also commit it.
+let localStroke: DrawStroke | null = null;
 
 // Pad coordinates (see PAD_SCALE) for the points drawn on this canvas, in pixels.
 function toPad(points: Array<{ x: number; y: number }>): number[] {
@@ -84,28 +86,21 @@ function toCanvas(stroke: DrawStroke): CanvasStroke {
 }
 
 function redrawAll() {
-  drawnCounts.clear();
-  store.currentStrokes.forEach((stroke, i) => {
-    drawnCounts.set(i, stroke.points.length / 2);
-  });
+  drawnCounts = new WeakMap();
+  for (const stroke of store.currentStrokes) drawnCounts.set(stroke, stroke.points.length / 2);
   const drawingLocal = canvas.isDrawing.value;
   canvas.replaceStrokes(
     store.currentStrokes
-      .filter((_, i) => i >= clearedBefore && !liveTimers.has(i) && !(drawingLocal && i === localIndex))
+      .filter((s) => !cleared.has(s) && !liveTimers.has(s) && !(drawingLocal && s === localStroke))
       .map((s) => toCanvas(s)),
   );
-  for (const i of liveTimers.keys()) {
-    const stroke = store.currentStrokes[i];
-    if (stroke) canvas.setLiveStroke(i, toCanvas(stroke));
-  }
+  for (const stroke of liveTimers.keys()) canvas.setLiveStroke(stroke, toCanvas(stroke));
 }
 
-function commitRemote(index: number) {
-  clearTimeout(liveTimers.get(index));
-  liveTimers.delete(index);
-  const stroke = store.currentStrokes[index];
-  if (stroke) canvas.commitStroke(toCanvas(stroke), index);
-  else canvas.setLiveStroke(index, null);
+function commitRemote(stroke: DrawStroke) {
+  clearTimeout(liveTimers.get(stroke));
+  liveTimers.delete(stroke);
+  canvas.commitStroke(toCanvas(stroke), stroke);
 }
 
 function dropRemote() {
@@ -116,7 +111,7 @@ function dropRemote() {
 function clearLocal() {
   dropRemote();
   canvas.clear();
-  clearedBefore = store.currentStrokes.length;
+  cleared = new WeakSet(store.currentStrokes);
 }
 
 function flushPending() {
@@ -126,9 +121,8 @@ function flushPending() {
     send({ type: "draw_stroke_partial", playerId: store.localPlayerId, stroke, strokeStart: pendingStart });
     // Keep our own strokes in the store with everyone else's, so a resize can redraw
     // the whole doodle; they are already on the canvas.
-    const index = store.applyPartialStroke(store.localPlayerId, stroke, pendingStart);
-    drawnCounts.set(index, (store.currentStrokes[index]?.points.length ?? 0) / 2);
-    localIndex = index;
+    localStroke = store.applyPartialStroke(store.localPlayerId, stroke, pendingStart);
+    drawnCounts.set(localStroke, localStroke.points.length / 2);
   }
   pendingPoints = [];
   pendingStart = false;
@@ -145,39 +139,45 @@ function scheduleSend() {
 // A remote stroke stays live, refilled on each fragment, until its player starts
 // another stroke or stops sending; then it is filled once as finished.
 watch(
-  () => store.currentStrokes,
-  (strokes) => {
+  () => store.strokesVersion,
+  () => {
+    const strokes = store.currentStrokes;
     if (strokes.length === 0) {
-      drawnCounts.clear();
+      drawnCounts = new WeakMap();
       dropRemote();
-      clearedBefore = 0;
+      cleared = new WeakSet();
       canvas.clear();
       return;
     }
-    for (let i = 0; i < strokes.length; i++) {
-      const stroke = strokes[i];
-      if (!stroke) continue;
+    for (const stroke of strokes) {
       const total = stroke.points.length / 2;
-      if (total > (drawnCounts.get(i) ?? 0) && i >= clearedBefore) {
-        drawnCounts.set(i, total);
-        clearTimeout(liveTimers.get(i));
+      if (total > (drawnCounts.get(stroke) ?? 0) && !cleared.has(stroke)) {
+        drawnCounts.set(stroke, total);
+        clearTimeout(liveTimers.get(stroke));
         // Its player has moved on (or it came in a room_state snapshot): fill it once,
         // not live, or a join with many strokes repaints them all on every one.
-        if (!store.isLatestStroke(i)) {
-          liveTimers.delete(i);
-          canvas.commitStroke(toCanvas(stroke), i);
+        if (!store.isLatestStroke(stroke)) {
+          liveTimers.delete(stroke);
+          canvas.commitStroke(toCanvas(stroke), stroke);
           continue;
         }
         liveTimers.set(
-          i,
-          setTimeout(() => commitRemote(i), LIVE_TIMEOUT_MS),
+          stroke,
+          setTimeout(() => commitRemote(stroke), LIVE_TIMEOUT_MS),
         );
-        canvas.setLiveStroke(i, toCanvas(stroke));
+        canvas.setLiveStroke(stroke, toCanvas(stroke));
       }
     }
-    for (const i of [...liveTimers.keys()]) if (!store.isLatestStroke(i)) commitRemote(i);
+    // A live stroke whose player started another, or that the store dropped past its caps.
+    const held = new Set(strokes);
+    for (const stroke of [...liveTimers.keys()]) {
+      if (!held.has(stroke)) {
+        clearTimeout(liveTimers.get(stroke));
+        liveTimers.delete(stroke);
+        canvas.setLiveStroke(stroke, null);
+      } else if (!store.isLatestStroke(stroke)) commitRemote(stroke);
+    }
   },
-  { deep: true },
 );
 
 watch(color, (v) => canvas.setColor(v));

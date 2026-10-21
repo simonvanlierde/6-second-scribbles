@@ -163,11 +163,12 @@ describe("SharedDrawpad", () => {
         { x: 200, y: 100 },
       ],
     };
-    expect(canvasMocks.setLiveStroke).toHaveBeenLastCalledWith(0, grown);
+    const stroke = store.currentStrokes[0];
+    expect(canvasMocks.setLiveStroke).toHaveBeenLastCalledWith(stroke, grown);
     vi.advanceTimersByTime(299);
     expect(canvasMocks.commitStroke).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
-    expect(canvasMocks.commitStroke).toHaveBeenCalledWith(grown, 0);
+    expect(canvasMocks.commitStroke).toHaveBeenCalledWith(grown, stroke);
   });
 
   it("commits a remote stroke as soon as its player starts the next one", async () => {
@@ -183,8 +184,11 @@ describe("SharedDrawpad", () => {
     await nextTick();
 
     expect(canvasMocks.commitStroke).toHaveBeenCalledTimes(1);
-    expect(canvasMocks.commitStroke).toHaveBeenCalledWith({ color: "#f00", width: 4, points: [{ x: 0, y: 0 }] }, 0);
-    expect(canvasMocks.setLiveStroke).toHaveBeenLastCalledWith(2, {
+    expect(canvasMocks.commitStroke).toHaveBeenCalledWith(
+      { color: "#f00", width: 4, points: [{ x: 0, y: 0 }] },
+      store.currentStrokes[0],
+    );
+    expect(canvasMocks.setLiveStroke).toHaveBeenLastCalledWith(store.currentStrokes[2], {
       color: "#f00",
       width: 4,
       points: [{ x: 100, y: 50 }],
@@ -257,7 +261,10 @@ describe("SharedDrawpad", () => {
     // Only the stroke drawn after the clear comes back.
     expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([]);
     expect(canvasMocks.setLiveStroke).toHaveBeenCalledTimes(1);
-    expect(canvasMocks.setLiveStroke).toHaveBeenCalledWith(1, expect.objectContaining({ color: "#f00" }));
+    expect(canvasMocks.setLiveStroke).toHaveBeenCalledWith(
+      store.currentStrokes[1],
+      expect.objectContaining({ color: "#f00" }),
+    );
   });
 
   it("fills strokes from a room_state snapshot once each, not as live strokes", async () => {
@@ -266,7 +273,9 @@ describe("SharedDrawpad", () => {
       global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
     });
 
+    // As a room_state snapshot hydrates the store: the strokes, then one version bump.
     store.currentStrokes = [1, 2, 3].map((n) => ({ color: "#000", width: 4, points: [n * 1000, n * 1000] }));
+    store.strokesVersion++;
     await nextTick();
 
     expect(canvasMocks.setLiveStroke).not.toHaveBeenCalled();
@@ -295,6 +304,27 @@ describe("SharedDrawpad", () => {
     isDrawing.value = false;
     resize();
     expect(canvasMocks.replaceStrokes).toHaveBeenLastCalledWith([expect.objectContaining({ color: "#123" })]);
+  });
+
+  it("forgets the oldest strokes past the server's cap and redraws the rest", async () => {
+    const store = useGameStore();
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+    // 25 players' worth of strokes, 1,000 points each: 25,000 points, 5,000 over the cap.
+    for (let i = 0; i < 25; i++) {
+      store.applyPartialStroke(`p${i}`, { color: "#000", width: 4, points: Array(2000).fill(i) }, true);
+    }
+    const pointsHeld = store.currentStrokes.reduce((sum, s) => sum + s.points.length / 2, 0);
+    expect(pointsHeld).toBe(20_000);
+    expect(store.currentStrokes[0]?.points[0]).toBe(5);
+    await nextTick();
+
+    canvasMocks.replaceStrokes.mockClear();
+    canvasMocks.setResizeHandler.mock.calls[0]?.[0]();
+    // Every stroke is still its player's latest, so all 20 are redrawn live.
+    expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([]);
+    expect(new Set(canvasMocks.setLiveStroke.mock.calls.slice(-20).map((call) => call[0])).size).toBe(20);
   });
 
   it("clears locally and forwards toolbar choices to the canvas", async () => {
