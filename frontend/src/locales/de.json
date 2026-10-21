@@ -134,7 +134,7 @@
     "noGuessesSubmitted": "Keine Tipps abgegeben",
     "highlightsTitle": "Runden-Highlights",
     "bestGuesser": "Bester Rater",
-    "speedDemon": "Speed-Teufel",
+    "speedDemon": "Tempoteufel",
     "wildestMiss": "Wildester Fehlgriff",
     "bestGuesserDetail": "{detail} richtig",
     "speedDemonDetail": "Als Erster erraten",
@@ -149,7 +149,7 @@
     "guessingRound": "Raterunde",
     "roundResults": "Rundenergebnis",
     "finalResults": "Endergebnis",
-    "watchingRoom": "Raum zuschauen",
+    "watchingRoom": "Raum beobachten",
     "watchingLive": "Du siehst Live-Updates. Du kannst beitreten, wenn der Raum zurück in die Lobby kehrt.",
     "leaveRoom": "Raum verlassen",
     "players": "Spieler",
@@ -195,7 +195,7 @@
     "hostUpdatedSettings": "Der Host hat die Spieleinstellungen aktualisiert",
     "roomLanguageChanged": "Raumsprache geändert zu {locale}",
     "drawpadShown": "Der Host hat das Zeichenfeld für den Raum angezeigt",
-    "drawpadHidden": "Der Host hat das Zeichenfeld für den Raum versteckt"
+    "drawpadHidden": "Der Host hat das Zeichenfeld für den Raum ausgeblendet"
   },
   "leaveDialog": {
     "drawingTitle": "Spiel verlassen?",
@@ -222,7 +222,7 @@
     "finalResults": "Endergebnis",
     "loadFailed": "Wir konnten diesen Raum gerade nicht laden.",
     "roomDoesNotExist": "Dieser Raum existiert nicht.",
-    "watchRoom": "Raum zuschauen",
+    "watchRoom": "Raum beobachten",
     "joinRoom": "Raum betreten",
     "connecting": "Verbinde..."
   },

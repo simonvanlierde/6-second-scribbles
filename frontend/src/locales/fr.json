@@ -35,7 +35,7 @@
     "tagline": "Dessiner. Deviner. Rire.",
     "roomCodeLabel": "Code de salle",
     "quickPlayHeading": "Jouer maintenant.",
-    "quickPlayBody": "Plonge et joue avec des joueurs du monde entier.",
+    "quickPlayBody": "Rejoins des joueurs du monde entier pour jouer.",
     "quickPlayCta": "Partie rapide →"
   },
   "settings": {
@@ -71,7 +71,7 @@
     "players": "Joueurs ({count})",
     "startGame": "Commencer la partie",
     "waitingForPlayers": "En attente de joueurs (2+ requis)",
-    "waitingForHost": "En attente du lancement par l'hôte…",
+    "waitingForHost": "En attente de l'hôte pour commencer…",
     "waitingForMore": "En attente d'autres joueurs…",
     "doodleTitle": "Gribouille pendant l'attente !",
     "drawTogetherWhileWaiting": "Dessine avec les autres joueurs en attendant !",
@@ -89,7 +89,7 @@
     "roomInProgress": "La partie est en cours. Tu peux regarder maintenant et rejoindre quand elle reviendra dans le salon.",
     "playersInRoom": "{count} joueur dans le salon | {count} joueurs dans le salon",
     "invalidCodeText": "Les codes de salon comportent 6 caractères utilisant A–Z et 0–9. Vérifie le code et réessaie.",
-    "tryGoBack": "Essaie de revenir au salon et de saisir à nouveau le code.",
+    "tryGoBack": "Essaie de retourner dans la salle d'attente et de ressaisir le code.",
     "enterYourName": "Entre ton nom",
     "yourName": "Ton nom",
     "back": "Retour",
@@ -105,7 +105,7 @@
     "size": "Taille",
     "clear": "Effacer",
     "loadingCategory": "Chargement…",
-    "hint": "Tape un objet une fois que tu l’as dessiné.",
+    "hint": "Touche un élément une fois que tu l’as dessiné.",
     "undo": "Annuler"
   },
   "guessing": {
@@ -134,8 +134,8 @@
     "noGuessesSubmitted": "Aucune réponse envoyée",
     "highlightsTitle": "Temps forts de la manche",
     "bestGuesser": "Meilleur devineur",
-    "speedDemon": "Éclair de vitesse",
-    "wildestMiss": "Plus gros raté",
+    "speedDemon": "Le plus rapide",
+    "wildestMiss": "Pire réponse",
     "bestGuesserDetail": "{detail} bonnes réponses",
     "speedDemonDetail": "Premier à deviner",
     "wildestMissDetail": "A deviné « {detail} »",
@@ -179,7 +179,7 @@
   "notifications": {
     "createRoomFailed": "Échec de la création du salon. Réessaie.",
     "tooManyRooms": "Trop de salons sont ouverts depuis ton réseau. Ferme-en un, rejoins le salon d’un ami ou attends quelques minutes.",
-    "drawingTooLarge": "Ton dessin était trop lourd pour être envoyé, les autres joueurs ne le voient donc pas.",
+    "drawingTooLarge": "Ton dessin est trop lourd pour être envoyé, les autres joueurs ne peuvent donc pas le voir.",
     "enterRoomCode": "Saisis un code de salon",
     "invalidRoomCode": "Le code du salon doit comporter 6 caractères (A–Z, 0–9)",
     "roomDoesNotExist": "Ce salon n’existe pas. Rejoins un autre salon ou crées-en un nouveau !",

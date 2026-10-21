@@ -86,7 +86,7 @@
     "checkingRoom": "正在檢查房間…",
     "invalidCode": "房間代碼無效",
     "roomNotFound": "找不到房間",
-    "roomInProgress": "房間正在進行中。你現在可以觀看，等它回到大廳後再加入。",
+    "roomInProgress": "房間正在進行中。你現在可以觀看，等回到大廳後再加入。",
     "playersInRoom": "房間內有 {count} 位玩家 | 房間內有 {count} 位玩家",
     "invalidCodeText": "房間代碼為 6 個字元，使用 A–Z 和 0–9。請檢查代碼後再試。",
     "tryGoBack": "試著回到大廳並重新輸入代碼。",
@@ -229,7 +229,7 @@
   "finalResults": {
     "gameOver": "遊戲結束",
     "champion": "冠軍",
-    "champions": "冠軍",
+    "champions": "冠軍們",
     "standings": "最終排名",
     "gameStats": "遊戲統計",
     "statRounds": "回合",

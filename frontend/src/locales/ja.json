@@ -238,7 +238,7 @@
     "statDrawings": "絵",
     "statGuesses": "正解数",
     "allDrawings": "すべての絵",
-    "downloadDrawing": "{name}の絵をダウンロード",
+    "downloadDrawing": "{name}さんの絵をダウンロード",
     "roundTag": "R{round}",
     "playAgain": "もう一度遊ぶ",
     "readyForNext": "次のゲームの準備完了",

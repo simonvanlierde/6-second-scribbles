@@ -86,7 +86,7 @@
     "checkingRoom": "正在检查房间…",
     "invalidCode": "房间代码无效",
     "roomNotFound": "未找到房间",
-    "roomInProgress": "房间正在进行中。你现在可以观看，并在返回大厅后加入。",
+    "roomInProgress": "房间正在进行中。你现在可以观看，等返回大厅后再加入。",
     "playersInRoom": "房间内有 {count} 名玩家 | 房间内有 {count} 名玩家",
     "invalidCodeText": "房间代码为 6 位，使用 A–Z 和 0–9。请检查代码后再试。",
     "tryGoBack": "试着返回大厅并重新输入代码。",
@@ -229,7 +229,7 @@
   "finalResults": {
     "gameOver": "游戏结束",
     "champion": "冠军",
-    "champions": "冠军们",
+    "champions": "冠军",
     "standings": "最终排名",
     "gameStats": "游戏统计",
     "statRounds": "回合",
