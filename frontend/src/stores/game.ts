@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { computed, ref, shallowRef } from "vue";
 
 import { AVATAR_COLORS, type AvatarColor, getAvatarColor } from "@/composables/useAvatar";
+import { LOBBY_MAX_POINTS, LOBBY_MAX_STROKE_POINTS, LOBBY_MAX_STROKES } from "@/config/drawing";
 import { GAME_SETTINGS, STORAGE_KEYS } from "@/config/gameConfig";
 import type { ServerEventOf } from "@/generated/protocol";
 import { getBrowserLocale } from "@/shared/locales";
@@ -21,43 +22,68 @@ export const useGameStore = defineStore(
   "game",
   () => {
     // --- Drawing ---
-    const currentStrokes = ref<DrawStroke[]>([]);
+    // Shallow, so Vue does not walk every point of the doodle on each fragment;
+    // strokesVersion counts the changes made inside it.
+    const currentStrokes = shallowRef<DrawStroke[]>([]);
+    const strokesVersion = ref(0);
     const localPadVisible = ref<boolean>(true);
     const roomPadVisible = ref<boolean>(true);
-    // Index into currentStrokes of each remote player's in-progress stroke, so
-    // delta fragments append to the same stroke instead of creating a new entry
-    // per frame (the source of the old O(n^2) growth).
-    const partialStrokeIndex = new Map<string, number>();
+    // Each player's in-progress stroke, so delta fragments append to it instead of
+    // creating a new entry per frame (the source of the old O(n^2) growth).
+    const partialStroke = new Map<string, DrawStroke>();
+    // Points across currentStrokes, kept as they change, for the doodle cap.
+    let strokePoints = 0;
+
+    /** Drop the oldest strokes past the server's caps, as the server does, and forget their owners. */
+    function trimStrokes() {
+      let drop = 0;
+      const strokes = currentStrokes.value;
+      while (
+        drop < strokes.length - 1 &&
+        (strokes.length - drop > LOBBY_MAX_STROKES || strokePoints > LOBBY_MAX_POINTS)
+      ) {
+        strokePoints -= (strokes[drop]?.points.length ?? 0) / 2;
+        drop++;
+      }
+      if (drop === 0) return;
+      const dropped = new Set(strokes.slice(0, drop));
+      currentStrokes.value = strokes.slice(drop);
+      for (const [playerId, stroke] of partialStroke) if (dropped.has(stroke)) partialStroke.delete(playerId);
+    }
 
     // Prior/completed strokes are hydrated from room_state.lobbyStrokes on join
     // (the server reconstructs them from these same partials). A stroke still in
     // progress exactly at join time may restart on its next fragment — a one-stroke
     // seam, not a permanent gap.
-    /** Add a fragment to the player's stroke; returns that stroke's index in currentStrokes. */
-    function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean): number {
-      const idx = partialStrokeIndex.get(playerId);
-      if (isStart || idx === undefined || !currentStrokes.value[idx]) {
-        currentStrokes.value.push({
-          color: stroke.color,
-          width: stroke.width,
-          points: [...stroke.points],
-        });
-        partialStrokeIndex.set(playerId, currentStrokes.value.length - 1);
-        return currentStrokes.value.length - 1;
+    /** Add a fragment to the player's stroke; returns that stroke. */
+    function applyPartialStroke(playerId: string, stroke: DrawStroke, isStart: boolean): DrawStroke {
+      let target = partialStroke.get(playerId);
+      if (isStart || !target) {
+        target = { color: stroke.color, width: stroke.width, points: [] };
+        currentStrokes.value.push(target);
+        partialStroke.set(playerId, target);
       }
-      currentStrokes.value[idx].points.push(...stroke.points);
-      return idx;
+      // The server caps points per stroke, so a stroke never grows without end.
+      const room = Math.max(0, LOBBY_MAX_STROKE_POINTS - target.points.length / 2);
+      const added = stroke.points.slice(0, room * 2);
+      target.points.push(...added);
+      strokePoints += added.length / 2;
+      trimStrokes();
+      strokesVersion.value++;
+      return target;
     }
 
-    /** Whether the stroke at `index` is a player's latest one, which further fragments may extend. */
-    function isLatestStroke(index: number): boolean {
-      for (const idx of partialStrokeIndex.values()) if (idx === index) return true;
+    /** Whether `stroke` is a player's latest one, which further fragments may extend. */
+    function isLatestStroke(stroke: DrawStroke): boolean {
+      for (const latest of partialStroke.values()) if (latest === stroke) return true;
       return false;
     }
 
     function clearStrokes() {
       currentStrokes.value = [];
-      partialStrokeIndex.clear();
+      partialStroke.clear();
+      strokePoints = 0;
+      strokesVersion.value++;
     }
 
     function setRoomPadVisible(visible: boolean) {
@@ -416,7 +442,10 @@ export const useGameStore = defineStore(
           width: s.width,
           points: [...(s.points ?? [])],
         }));
-        partialStrokeIndex.clear();
+        partialStroke.clear();
+        strokePoints = currentStrokes.value.reduce((sum, s) => sum + s.points.length / 2, 0);
+        trimStrokes();
+        strokesVersion.value++;
       }
       if (roomState.padVisibility !== undefined) setRoomPadVisible(roomState.padVisibility);
       if (roomState.defaultLocale) defaultLocale.value = roomState.defaultLocale;
@@ -496,6 +525,7 @@ export const useGameStore = defineStore(
       guessingTimeLimit,
       // Drawing state
       currentStrokes,
+      strokesVersion,
       localPadVisible,
       roomPadVisible,
       localPlayerCard,
