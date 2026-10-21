@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- If your device's clock ran slightly behind the server's, the drawing timer ended the moment a round started and your guesses were sent straight away.
+- If everyone left the final results and someone came back, the room no longer returned to the lobby on its own, so only the host could start a new game.
+- Your own avatar now shows the colour everyone else sees. When the colour you picked was taken, your header and settings showed your pick instead.
+- Quick play no longer sends you to a room that will turn you away because too many players recently left it.
+- The "wildest miss" highlight now reads a guess with the guesser's own language rules. It used English plurals, so a German "Eis" for "Ei" counted as a perfect match and could never be the wildest miss.
+
 ## [0.3.0] - 2026-10-21
 
 ### Upgrade notes
