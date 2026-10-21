@@ -104,8 +104,9 @@ ENV SERVER_HOST=0.0.0.0
 EXPOSE 8000
 
 # No access log: Caddy already logs each request (with masked IPs), and uvicorn's
-# would add the visitor's full forwarded IP.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+# would add the visitor's full forwarded IP. No per-message deflate: compressing
+# every small JSON frame once per recipient costs more CPU than the bytes it saves.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--ws-per-message-deflate", "false"]
 
 # ── DB Ops ────────────────────────────────────────────────────────────────────
 FROM runtime-base AS db-migrations
