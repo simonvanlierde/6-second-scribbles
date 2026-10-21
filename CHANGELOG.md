@@ -11,12 +11,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. The default, one step at 40 rooms, takes about five minutes. See [docs/capacity.md](docs/capacity.md).
 - For contributors: an end-to-end axe check of the lobby, drawing, guessing and round results screens, in both colour schemes.
 
+### Changed
+
+- **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen. Players who had the game open during the update need to reload the page before the doodle works again.
+- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later, and the server handles far more busy lobbies on the same CPU.
+
 ### Removed
 
 - The Argos Translate machine translation of seed data is gone: the `db-translate` dependency group and Docker target, the `translate-seed` and `seed-auto` recipes, and the `ARGOS_MODELS_DIR` volume in the dev Compose file. Seed translations are now written and reviewed by hand. The game never used it at runtime.
 
 ### Fixed
 
+- When the lobby drawpad changed size, for example when you rotated your phone, the other players' strokes disappeared from it.
 - In French, the player count now uses the singular for zero, as French grammar does.
 - If your device's clock ran slightly behind the server's, the drawing timer ended the moment a round started and your guesses were sent straight away.
 - If everyone left the final results and someone came back, the room no longer returned to the lobby on its own, so only the host could start a new game.

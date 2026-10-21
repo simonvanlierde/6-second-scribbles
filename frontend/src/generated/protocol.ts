@@ -50,11 +50,7 @@ export const ServerEventSchema = z.union([
       lobbyStrokes: z
         .array(
           z
-            .object({
-              color: z.string(),
-              width: z.number(),
-              points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
-            })
+            .object({ color: z.string(), width: z.number(), points: z.array(z.number().int()).optional() })
             .strict()
             .describe(
               "A full shared-drawpad stroke the server reconstructs from partial fragments.\n\nUnlike ``StrokeDelta`` (a per-frame fragment, capped at 1000 points), this is a\nwhole completed/in-progress stroke, so late joiners can hydrate the collective\ndoodle from ``room_state`` instead of only seeing strokes drawn after they join.",
@@ -255,10 +251,7 @@ export const ServerEventSchema = z.union([
               .object({
                 color: z.string().max(32),
                 width: z.number().gt(0).lte(64),
-                points: z
-                  .array(z.object({ x: z.number(), y: z.number() }))
-                  .max(1000)
-                  .optional(),
+                points: z.array(z.number().int().gte(0).lte(10000)).max(2000).optional(),
               })
               .describe(
                 "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",
@@ -356,10 +349,7 @@ export const ClientEventSchema = z.union([
           .object({
             color: z.string().max(32),
             width: z.number().gt(0).lte(64),
-            points: z
-              .array(z.object({ x: z.number(), y: z.number() }))
-              .max(1000)
-              .optional(),
+            points: z.array(z.number().int().gte(0).lte(10000)).max(2000).optional(),
           })
           .describe(
             "A stroke fragment: only the points added since the previous partial.\n\nSending deltas (rather than the whole growing point list every frame) keeps\nan in-progress stroke's relayed payload O(new points) instead of O(n^2).",

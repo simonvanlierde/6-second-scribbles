@@ -65,7 +65,9 @@ MIN_ROUND_SECONDS = 15
 SEND_TIME_PREFIX = "t"
 
 
-def stroke_fragment(player_id: str, points: list[dict[str, float]], sent: float, *, start: bool) -> dict[str, object]:
+def stroke_fragment(
+    player_id: str, points: list[int] | list[dict[str, float]], sent: float, *, start: bool
+) -> dict[str, object]:
     """A lobby stroke fragment whose `color` carries the monotonic send time.
 
     The server relays the fragment unchanged, so the receiver reads the time back
@@ -120,6 +122,7 @@ class Config:
     lobby_seconds: float
     draw_seconds: float
     send_hz: float
+    point_objects: bool
     end_at: float  # time.monotonic() deadline; CLOCK_MONOTONIC is shared across processes
     window: tuple[float, float]  # latency samples count only inside this monotonic window
 
@@ -299,13 +302,21 @@ class Player:
             if self.phase != LOBBY:
                 await asyncio.sleep(0.2)
                 continue
-            x, y = rng.uniform(0, 800), rng.uniform(0, 600)
+            # Pad coordinates, 0-10000 across and down the pad; a step of 60 is about
+            # 5 px on an 800 px wide pad.
+            x, y = rng.randint(0, 10_000), rng.randint(0, 10_000)
             for frame in range(round(STROKE_SECONDS * self.cfg.send_hz)):
                 points = []
                 for _ in range(round(POINTS_PER_SECOND / self.cfg.send_hz)):
-                    x, y = x + rng.uniform(-5, 5), y + rng.uniform(-5, 5)
-                    points.append({"x": round(x, 1), "y": round(y, 1)})
-                await self.send(stroke_fragment(self.player_id, points, time.monotonic(), start=frame == 0))
+                    x = min(10_000, max(0, x + rng.randint(-60, 60)))
+                    y = min(10_000, max(0, y + rng.randint(-60, 60)))
+                    points += [x, y]
+                payload: list[int] | list[dict[str, float]] = points
+                if self.cfg.point_objects:
+                    # Servers before pad coordinates took pixel {x, y} objects (an 800 x 600 pad).
+                    pairs = zip(points[::2], points[1::2], strict=True)
+                    payload = [{"x": px * 0.08, "y": py * 0.06} for px, py in pairs]
+                await self.send(stroke_fragment(self.player_id, payload, time.monotonic(), start=frame == 0))
                 await asyncio.sleep(1 / self.cfg.send_hz)
             await asyncio.sleep(rng.uniform(*PAUSE_SECONDS))
 
@@ -413,6 +424,7 @@ def run_step(args: argparse.Namespace, rooms: int) -> StepResult:
         lobby_seconds=args.lobby_seconds,
         draw_seconds=args.draw_seconds,
         send_hz=args.send_hz,
+        point_objects=args.point_objects,
         end_at=window[1],
         window=window,
     )
@@ -460,6 +472,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--draw-seconds", type=float, default=3, help="in-game drawing time per round")
     parser.add_argument(
         "--send-hz", type=float, default=SEND_HZ, help="doodle fragments each drawing player sends per second"
+    )
+    parser.add_argument(
+        "--point-objects", action="store_true", help="send pixel {x, y} points, for servers before pad coordinates"
     )
     parser.add_argument("--p95-limit", type=float, default=250, help="p95 latency (ms) that marks the knee")
     parser.add_argument("--workers", type=int, default=4, help="load-generator processes")

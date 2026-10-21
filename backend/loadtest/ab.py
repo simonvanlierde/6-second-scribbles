@@ -34,6 +34,7 @@ import argparse
 import json
 import math
 import os
+import shlex
 import shutil
 import statistics
 import subprocess
@@ -101,10 +102,11 @@ def split_cpus(allowed: list[int]) -> tuple[int, list[int], list[int]]:
 class Stack:
     """The prod-limited stack of one ref, built from its own temporary worktree."""
 
-    def __init__(self, label: str, ref: str, workdir: Path, override: Path, port: int) -> None:
+    def __init__(self, label: str, ref: str, workdir: Path, override: Path, port: int, generator_args: str) -> None:
         self.label = label
         self.ref = ref
         self.port = port
+        self.generator_args = shlex.split(generator_args)
         self.project = f"tmp-6ss-ab-{label.lower()}"
         self.container = f"{self.project}-backend-1"
         self.tree = workdir / f"tree-{label.lower()}"
@@ -256,6 +258,8 @@ def parse_args(argv: list[str] | None) -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument("ref_b")
     parser.add_argument("--runs", type=int, default=3, help="runs per ref, alternating A, B, A, B...")
     parser.add_argument("--rooms", default="40", help="comma-separated room counts per run")
+    parser.add_argument("--a-args", default="", help="extra load generator flags for ref A only")
+    parser.add_argument("--b-args", default="", help="extra load generator flags for ref B only")
     args, extra = parser.parse_known_args(argv)
     if not any(arg.startswith("--duration") for arg in extra):
         extra += ["--duration", "20"]
@@ -275,8 +279,8 @@ def main(argv: list[str] | None = None) -> int:
         f'  database:\n    cpuset: "{rest_list}"\n  cache:\n    cpuset: "{rest_list}"\n'
     )
     stacks = {
-        "A": Stack("A", args.ref_a, workdir, override, PORT),
-        "B": Stack("B", args.ref_b, workdir, override, PORT + 1),
+        "A": Stack("A", args.ref_a, workdir, override, PORT, args.a_args),
+        "B": Stack("B", args.ref_b, workdir, override, PORT + 1, args.b_args),
     }
     results: dict[str, dict[int, list[dict]]] = {"A": defaultdict(list), "B": defaultdict(list)}
     status = 0
@@ -291,7 +295,13 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"\nrun {run}/{args.runs}, {stack.label} ({stack.ref})", flush=True)
                 if load_average() > LOAD_WARNING:
                     print(f"  warning: host load is above {LOAD_WARNING}; expect noisier numbers", flush=True)
-                steps = run_generator(stack, generator_cpus, args.rooms, extra, workdir / f"{stack.label}-{run}.json")
+                steps = run_generator(
+                    stack,
+                    generator_cpus,
+                    args.rooms,
+                    [*extra, *stack.generator_args],
+                    workdir / f"{stack.label}-{run}.json",
+                )
                 if not steps:
                     print(f"  {stack.label}: the run produced no results", flush=True)
                     return 1

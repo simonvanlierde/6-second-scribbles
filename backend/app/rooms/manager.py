@@ -320,29 +320,29 @@ class GameRoom:
             self.lobby_strokes.append(
                 DrawStrokePayload(color=stroke.color, width=stroke.width, points=list(stroke.points))
             )
-            self._lobby_points += len(stroke.points)
+            self._lobby_points += len(stroke.points) // 2
             self._lobby_partial_index[player_id] = len(self.lobby_strokes) - 1
         else:
             # Bound points per stroke too: a client that keeps sending continuation
             # fragments without a new strokeStart would grow one stroke unbounded.
-            room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points)
+            room = MAX_STROKE_POINTS - len(self.lobby_strokes[idx].points) // 2
             if room > 0:
-                added = stroke.points[:room]
+                added = stroke.points[: room * 2]
                 self.lobby_strokes[idx].points.extend(added)
-                self._lobby_points += len(added)
+                self._lobby_points += len(added) // 2
         # NOTE: bound the shared doodle by stroke count and total points so a
         # marathon lobby can't grow unbounded; the oldest strokes go first.
         drop = max(0, len(self.lobby_strokes) - MAX_LOBBY_STROKES)
-        total = self._lobby_points - sum(len(s.points) for s in self.lobby_strokes[:drop])
+        total = self._lobby_points - sum(len(s.points) // 2 for s in self.lobby_strokes[:drop])
         while total > MAX_LOBBY_POINTS and drop < len(self.lobby_strokes) - 1:
-            total -= len(self.lobby_strokes[drop].points)
+            total -= len(self.lobby_strokes[drop].points) // 2
             drop += 1
         if drop:
             self._trim_lobby_strokes(drop)
 
     def _trim_lobby_strokes(self, drop: int) -> None:
         """Drop the oldest `drop` strokes, keeping in-progress strokes attached to theirs."""
-        self._lobby_points -= sum(len(s.points) for s in self.lobby_strokes[:drop])
+        self._lobby_points -= sum(len(s.points) // 2 for s in self.lobby_strokes[:drop])
         self.lobby_strokes = self.lobby_strokes[drop:]
         self._lobby_partial_index = {pid: i - drop for pid, i in self._lobby_partial_index.items() if i >= drop}
 

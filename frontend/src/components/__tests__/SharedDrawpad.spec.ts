@@ -12,8 +12,10 @@ const canvasMocks = vi.hoisted(() => ({
   drawStroke: vi.fn(),
   initCanvas: vi.fn(),
   setColor: vi.fn(),
+  setResizeHandler: vi.fn(),
   setStrokeProgressCallback: vi.fn(),
   setWidth: vi.fn(),
+  size: vi.fn(),
 }));
 
 const sendMock = vi.hoisted(() => vi.fn());
@@ -54,6 +56,7 @@ describe("SharedDrawpad", () => {
     sendMock.mockReset();
     for (const mock of Object.values(canvasMocks)) mock.mockReset();
     vi.useFakeTimers();
+    canvasMocks.size.mockReturnValue({ width: 200, height: 100 });
   });
 
   afterEach(() => {
@@ -62,7 +65,8 @@ describe("SharedDrawpad", () => {
 
   it("initializes the canvas and replays existing lobby strokes", () => {
     const store = useGameStore();
-    store.currentStrokes = [{ color: "#000", width: 4, points: [{ x: 1, y: 2 }] }];
+    // Halfway across and a fifth down the 200 x 100 pad.
+    store.currentStrokes = [{ color: "#000", width: 4, points: [5000, 2000] }];
 
     mount(SharedDrawpad, {
       global: {
@@ -74,7 +78,7 @@ describe("SharedDrawpad", () => {
     });
 
     expect(canvasMocks.initCanvas).toHaveBeenCalledWith(expect.any(HTMLCanvasElement));
-    expect(canvasMocks.drawStroke).toHaveBeenCalledWith(store.currentStrokes[0]);
+    expect(canvasMocks.drawStroke).toHaveBeenCalledWith({ color: "#000", width: 4, points: [{ x: 100, y: 20 }] });
     expect(canvasMocks.setStrokeProgressCallback).toHaveBeenCalledWith(expect.any(Function));
   });
 
@@ -96,8 +100,8 @@ describe("SharedDrawpad", () => {
       color: "#123",
       width: 6,
       points: [
-        { x: 1, y: 1 },
-        { x: 2, y: 2 },
+        { x: 50, y: 25 },
+        { x: 200, y: 100 },
       ],
       first: true,
     });
@@ -110,13 +114,27 @@ describe("SharedDrawpad", () => {
       stroke: {
         color: "#123",
         width: 6,
-        points: [
-          { x: 1, y: 1 },
-          { x: 2, y: 2 },
-        ],
+        points: [2500, 2500, 10000, 10000],
       },
       strokeStart: true,
     });
+    // Our own stroke joins the room's doodle, so a resize can redraw it.
+    expect(store.currentStrokes).toEqual([{ color: "#123", width: 6, points: [2500, 2500, 10000, 10000] }]);
+  });
+
+  it("redraws the whole doodle at the new size when the pad resizes", () => {
+    const store = useGameStore();
+    store.currentStrokes = [{ color: "#000", width: 4, points: [5000, 5000] }];
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+    canvasMocks.drawStroke.mockClear();
+
+    canvasMocks.size.mockReturnValue({ width: 400, height: 300 });
+    canvasMocks.setResizeHandler.mock.calls[0]?.[0]();
+
+    expect(canvasMocks.clear).toHaveBeenCalled();
+    expect(canvasMocks.drawStroke).toHaveBeenCalledWith({ color: "#000", width: 4, points: [{ x: 200, y: 150 }] });
   });
 
   it("clears locally and forwards toolbar choices to the canvas", async () => {
@@ -128,6 +146,7 @@ describe("SharedDrawpad", () => {
         },
       },
     });
+    canvasMocks.clear.mockClear(); // the first draw clears once
 
     await wrapper.find(".clear").trigger("click");
     await wrapper.find(".color").trigger("click");

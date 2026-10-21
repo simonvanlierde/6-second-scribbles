@@ -57,13 +57,13 @@ describe("client message handlers", () => {
     handleMessage({
       type: "draw_stroke_batch",
       fragments: [
-        { playerId: "p2", stroke: { color: "#123", width: 2, points: [{ x: 1, y: 2 }] }, strokeStart: true },
-        { playerId: "p1", stroke: { color: "#123", width: 2, points: [{ x: 3, y: 4 }] }, strokeStart: true },
-        { playerId: "p3", stroke: { color: "#456", width: 2, points: [{ x: 5, y: 6 }] }, strokeStart: true },
+        { playerId: "p2", stroke: { color: "#123", width: 2, points: [1, 2] }, strokeStart: true },
+        { playerId: "p1", stroke: { color: "#123", width: 2, points: [3, 4] }, strokeStart: true },
+        { playerId: "p3", stroke: { color: "#456", width: 2, points: [5, 6] }, strokeStart: true },
       ],
     });
 
-    expect(store.currentStrokes.map((stroke) => stroke.points[0]?.x)).toEqual([1, 5]);
+    expect(store.currentStrokes.map((stroke) => stroke.points[0])).toEqual([1, 5]);
   });
 
   it("applies pad_visibility to the store", () => {

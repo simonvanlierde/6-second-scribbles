@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
 
 from app.core.types import (
     Difficulty,
@@ -151,9 +151,11 @@ class DrawStrokeEvent(DrawEventModel):
     type: Literal["draw_stroke"]
 
 
-class StrokePoint(BaseModel):
-    x: float
-    y: float
+# Lobby doodle points are flat integer lists, x0, y0, x1, y1, ..., each a fraction of
+# the pad's width or height from 0 to PAD_SCALE, so a stroke lands in the same place
+# on every pad size. Plain ints also validate far faster than one model per point.
+PAD_SCALE = 10_000
+PadCoordinate = Annotated[int, Field(ge=0, le=PAD_SCALE)]
 
 
 class StrokeDelta(BaseModel):
@@ -165,7 +167,16 @@ class StrokeDelta(BaseModel):
 
     color: str = Field(max_length=32)
     width: float = Field(gt=0, le=64)
-    points: list[StrokePoint] = Field(default_factory=list, max_length=1000)
+    # Up to 1000 points, as x, y pairs.
+    points: list[PadCoordinate] = Field(default_factory=list, max_length=2000)
+
+    @field_validator("points")
+    @classmethod
+    def _whole_points(cls, points: list[int]) -> list[int]:
+        if len(points) % 2:
+            msg = "points holds x, y pairs"
+            raise ValueError(msg)
+        return points
 
 
 class DrawStrokePartialEvent(ClientEventModel):
@@ -189,7 +200,8 @@ class DrawStrokePayload(BaseModel):
 
     color: str
     width: float
-    points: list[StrokePoint] = Field(default_factory=list)
+    # Flat x, y pairs in pad coordinates, as in StrokeDelta.
+    points: list[int] = Field(default_factory=list)
 
 
 class DrawpadClearEvent(ClientEventModel):

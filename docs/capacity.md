@@ -110,6 +110,7 @@ when it finishes. To aim the test at a backend you already run, use
 ```bash
 just loadtest-ab 85ddbea main                          # 3 runs each, one 20 s step at 40 rooms: about 5 minutes
 just loadtest-ab main HEAD --runs 5 --rooms 60,70,80   # other flags, such as --duration, pass through to run.py
+just loadtest-ab c7bbe1c HEAD --a-args=--point-objects  # flags for one side: A predates pad coordinates
 ```
 
 This builds each commit's prod stack from a temporary worktree outside the

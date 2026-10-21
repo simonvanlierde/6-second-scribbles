@@ -25,7 +25,7 @@ def test_start_game_is_within_the_server_bounds(draw_seconds: float) -> None:
 
 def test_stroke_fragment_is_valid_and_carries_its_send_time() -> None:
     """The fragment validates, and the receiver reads the send time back unchanged."""
-    message = stroke_fragment(PLAYER, [{"x": 1.5, "y": 2.0}], 12345.678901, start=True)
+    message = stroke_fragment(PLAYER, [150, 200], 12345.678901, start=True)
 
     event = CLIENT_EVENT_ADAPTER.validate_python(message)
 
