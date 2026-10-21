@@ -221,6 +221,8 @@ async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClea
     if not await require_host(session, "clear the drawpad"):
         return
     session.room.clear_lobby_strokes()
+    # A batch already going out must land before the clear, or players see it after.
+    await session.room.wait_for_lobby_batch()
     await session.room.broadcast(event)
 
 
