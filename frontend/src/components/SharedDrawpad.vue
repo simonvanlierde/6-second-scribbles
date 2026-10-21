@@ -46,46 +46,69 @@ let sendTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingPoints: Array<{ x: number; y: number }> = [];
 let pendingMeta: { color: string; width: number } | null = null;
 let pendingStart = false;
-// How many points of each stroke in the store are on the canvas, so a stroke that
-// grows via delta fragments is rendered incrementally.
+// How many points of each stroke in the store are on the canvas, so the watcher
+// only redraws strokes that grew.
 const drawnCounts = new Map<number, number>();
+// Remote strokes still drawn as live, by index in the store, each with the timer
+// that commits it once its player stops sending fragments.
+const LIVE_TIMEOUT_MS = 300;
+const liveTimers = new Map<number, ReturnType<typeof setTimeout>>();
 // The toolbar's clear empties only this pad: strokes before this store index stay
 // off it, on redraws too, until the whole doodle is cleared.
 let clearedBefore = 0;
 
 // Pad coordinates (see PAD_SCALE) for the points drawn on this canvas, in pixels.
 function toPad(points: Array<{ x: number; y: number }>): number[] {
-  const { width, height } = canvas.size();
+  const pad = canvas.size();
   // A pad out of the layout has no size, and its points have no position on it.
-  if (width === 0 || height === 0) return [];
+  if (pad.width === 0 || pad.height === 0) return [];
   const scale = (value: number, size: number) =>
     Math.min(PAD_SCALE, Math.max(0, Math.round((value / size) * PAD_SCALE)));
-  return points.flatMap((p) => [scale(p.x, width), scale(p.y, height)]);
+  return points.flatMap((p) => [scale(p.x, pad.width), scale(p.y, pad.height)]);
 }
 
-// A stored stroke from point `from` on, in this canvas's pixels.
-function toCanvas(stroke: DrawStroke, from: number): CanvasStroke {
-  const { width, height } = canvas.size();
+// A stored stroke in this canvas's pixels.
+function toCanvas(stroke: DrawStroke): CanvasStroke {
+  const pad = canvas.size();
   const points: Array<{ x: number; y: number }> = [];
-  for (let i = from * 2; i + 1 < stroke.points.length; i += 2) {
+  for (let i = 0; i + 1 < stroke.points.length; i += 2) {
     points.push({
-      x: ((stroke.points[i] ?? 0) / PAD_SCALE) * width,
-      y: ((stroke.points[i + 1] ?? 0) / PAD_SCALE) * height,
+      x: ((stroke.points[i] ?? 0) / PAD_SCALE) * pad.width,
+      y: ((stroke.points[i + 1] ?? 0) / PAD_SCALE) * pad.height,
     });
   }
   return { color: stroke.color, width: stroke.width, points };
 }
 
 function redrawAll() {
-  canvas.clear();
   drawnCounts.clear();
   store.currentStrokes.forEach((stroke, i) => {
-    if (i >= clearedBefore) canvas.drawStroke(toCanvas(stroke, 0));
     drawnCounts.set(i, stroke.points.length / 2);
   });
+  canvas.replaceStrokes(
+    store.currentStrokes.filter((_, i) => i >= clearedBefore && !liveTimers.has(i)).map((s) => toCanvas(s)),
+  );
+  for (const i of liveTimers.keys()) {
+    const stroke = store.currentStrokes[i];
+    if (stroke) canvas.setLiveStroke(i, toCanvas(stroke));
+  }
+}
+
+function commitRemote(index: number) {
+  clearTimeout(liveTimers.get(index));
+  liveTimers.delete(index);
+  const stroke = store.currentStrokes[index];
+  if (stroke) canvas.commitStroke(toCanvas(stroke), index);
+  else canvas.setLiveStroke(index, null);
+}
+
+function dropRemote() {
+  for (const timer of liveTimers.values()) clearTimeout(timer);
+  liveTimers.clear();
 }
 
 function clearLocal() {
+  dropRemote();
   canvas.clear();
   clearedBefore = store.currentStrokes.length;
 }
@@ -112,13 +135,14 @@ function scheduleSend() {
   }, SEND_INTERVAL_MS);
 }
 
-// Render incoming remote strokes incrementally: for each stroke, draw only the
-// tail that hasn't been drawn yet.
+// A remote stroke stays live, refilled on each fragment, until its player starts
+// another stroke or stops sending; then it is filled once as finished.
 watch(
   () => store.currentStrokes,
   (strokes) => {
     if (strokes.length === 0) {
       drawnCounts.clear();
+      dropRemote();
       clearedBefore = 0;
       canvas.clear();
       return;
@@ -126,14 +150,18 @@ watch(
     for (let i = 0; i < strokes.length; i++) {
       const stroke = strokes[i];
       if (!stroke) continue;
-      const done = drawnCounts.get(i) ?? 0;
       const total = stroke.points.length / 2;
-      if (total > done && i >= clearedBefore) {
-        // Start one point back, so the new tail joins the part already drawn.
-        canvas.drawStroke(toCanvas(stroke, Math.max(0, done - 1)));
+      if (total > (drawnCounts.get(i) ?? 0) && i >= clearedBefore) {
         drawnCounts.set(i, total);
+        clearTimeout(liveTimers.get(i));
+        liveTimers.set(
+          i,
+          setTimeout(() => commitRemote(i), LIVE_TIMEOUT_MS),
+        );
+        canvas.setLiveStroke(i, toCanvas(stroke));
       }
     }
+    for (const i of [...liveTimers.keys()]) if (!store.isLatestStroke(i)) commitRemote(i);
   },
   { deep: true },
 );
@@ -170,6 +198,7 @@ onBeforeUnmount(() => {
 });
 
 onUnmounted(() => {
+  dropRemote();
   canvas.cleanup();
 });
 </script>
