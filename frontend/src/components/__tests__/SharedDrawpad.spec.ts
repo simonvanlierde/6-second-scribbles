@@ -9,9 +9,11 @@ import { useGameStore } from "@/stores/game";
 const canvasMocks = vi.hoisted(() => ({
   clear: vi.fn(),
   cleanup: vi.fn(),
-  drawStroke: vi.fn(),
+  commitStroke: vi.fn(),
   initCanvas: vi.fn(),
+  replaceStrokes: vi.fn(),
   setColor: vi.fn(),
+  setLiveStroke: vi.fn(),
   setResizeHandler: vi.fn(),
   setStrokeProgressCallback: vi.fn(),
   setWidth: vi.fn(),
@@ -78,7 +80,7 @@ describe("SharedDrawpad", () => {
     });
 
     expect(canvasMocks.initCanvas).toHaveBeenCalledWith(expect.any(HTMLCanvasElement));
-    expect(canvasMocks.drawStroke).toHaveBeenCalledWith({ color: "#000", width: 4, points: [{ x: 100, y: 20 }] });
+    expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([{ color: "#000", width: 4, points: [{ x: 100, y: 20 }] }]);
     expect(canvasMocks.setStrokeProgressCallback).toHaveBeenCalledWith(expect.any(Function));
   });
 
@@ -128,13 +130,61 @@ describe("SharedDrawpad", () => {
     mount(SharedDrawpad, {
       global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
     });
-    canvasMocks.drawStroke.mockClear();
+    canvasMocks.replaceStrokes.mockClear();
 
     canvasMocks.size.mockReturnValue({ width: 400, height: 300 });
     canvasMocks.setResizeHandler.mock.calls[0]?.[0]();
 
-    expect(canvasMocks.clear).toHaveBeenCalled();
-    expect(canvasMocks.drawStroke).toHaveBeenCalledWith({ color: "#000", width: 4, points: [{ x: 200, y: 150 }] });
+    expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([
+      { color: "#000", width: 4, points: [{ x: 200, y: 150 }] },
+    ]);
+  });
+
+  it("shows a remote stroke as live and commits it once fragments stop", async () => {
+    const store = useGameStore();
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+
+    store.applyPartialStroke("p2", { color: "#f00", width: 4, points: [0, 0] }, true);
+    await nextTick();
+    store.applyPartialStroke("p2", { color: "#f00", width: 4, points: [10000, 10000] }, false);
+    await nextTick();
+
+    const grown = {
+      color: "#f00",
+      width: 4,
+      points: [
+        { x: 0, y: 0 },
+        { x: 200, y: 100 },
+      ],
+    };
+    expect(canvasMocks.setLiveStroke).toHaveBeenLastCalledWith(0, grown);
+    vi.advanceTimersByTime(299);
+    expect(canvasMocks.commitStroke).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(canvasMocks.commitStroke).toHaveBeenCalledWith(grown, 0);
+  });
+
+  it("commits a remote stroke as soon as its player starts the next one", async () => {
+    const store = useGameStore();
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+
+    store.applyPartialStroke("p2", { color: "#f00", width: 4, points: [0, 0] }, true);
+    store.applyPartialStroke("p3", { color: "#00f", width: 4, points: [0, 0] }, true);
+    await nextTick();
+    store.applyPartialStroke("p2", { color: "#f00", width: 4, points: [5000, 5000] }, true);
+    await nextTick();
+
+    expect(canvasMocks.commitStroke).toHaveBeenCalledTimes(1);
+    expect(canvasMocks.commitStroke).toHaveBeenCalledWith({ color: "#f00", width: 4, points: [{ x: 0, y: 0 }] }, 0);
+    expect(canvasMocks.setLiveStroke).toHaveBeenLastCalledWith(2, {
+      color: "#f00",
+      width: 4,
+      points: [{ x: 100, y: 50 }],
+    });
   });
 
   it("sends nothing for points buffered on a pad with no size", () => {
@@ -194,15 +244,16 @@ describe("SharedDrawpad", () => {
       global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
     });
     await wrapper.find(".clear").trigger("click");
-    canvasMocks.drawStroke.mockClear();
+    canvasMocks.replaceStrokes.mockClear();
 
     canvasMocks.setResizeHandler.mock.calls[0]?.[0]();
     store.applyPartialStroke("p2", { color: "#f00", width: 4, points: [1000, 1000] }, true);
     await wrapper.vm.$nextTick();
 
     // Only the stroke drawn after the clear comes back.
-    expect(canvasMocks.drawStroke).toHaveBeenCalledTimes(1);
-    expect(canvasMocks.drawStroke).toHaveBeenCalledWith(expect.objectContaining({ color: "#f00" }));
+    expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([]);
+    expect(canvasMocks.setLiveStroke).toHaveBeenCalledTimes(1);
+    expect(canvasMocks.setLiveStroke).toHaveBeenCalledWith(1, expect.objectContaining({ color: "#f00" }));
   });
 
   it("clears locally and forwards toolbar choices to the canvas", async () => {
