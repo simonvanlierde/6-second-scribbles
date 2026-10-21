@@ -120,6 +120,18 @@ The last one is the fairest speed measure below the knee, where both commits
 deliver everything sent. The command fails if any run had errors or delivered
 nothing, or if a commit's stack does not start.
 
+### Benchmarks on every PR
+
+CodSpeed runs `backend/tests/benchmarks` on every PR and on main
+(`.github/workflows/benchmarks.yml`) and reports on the PR when one gets slower:
+validating a stroke fragment, encoding a `draw_stroke_batch`, fanning it out to six
+connections, and storing a new stroke on a full doodle; scoring a guesser's submission;
+and saving and loading a mid-round room snapshot for Redis. It counts CPU instructions,
+so the result does not depend on how busy the runner is. It measures only code in
+this process, not uvicorn or websockets, so dependency bumps and releases still
+need `just loadtest-ab`. To try the benchmarks locally:
+`cd backend && uv run pytest tests/benchmarks --codspeed` (wall time, not instructions).
+
 Outside prod, the backend ignores `X-Forwarded-For` by default, so every test room comes
 from the same client. That client may hold at most 5 open rooms and create 10
 rooms a minute, so keep `--rooms` at 5 or below there.
