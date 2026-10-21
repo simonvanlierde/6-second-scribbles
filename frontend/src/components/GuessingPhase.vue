@@ -25,6 +25,7 @@ const playerGuesses = ref<Record<string, string[]>>({});
 const submittedPlayers = ref<string[]>([]);
 const allGuessesSubmitted = ref(false);
 const leaveDialog = useTemplateRef<InstanceType<typeof LeaveRoomDialog>>("leaveDialog");
+const guessPanel = useTemplateRef<HTMLElement>("guessPanel");
 const skipDialogOpen = ref(false);
 const emptyGuessDialogTarget = ref<string | null>(null);
 
@@ -129,6 +130,8 @@ function doSubmitGuesses(targetPlayerId: string, guesses: string[]) {
     allGuessesSubmitted.value = true;
     send({ type: "player_ready", playerId: store.localPlayerId });
     draft.clear();
+    // The submit button goes away with the form; keep focus in place instead of on <body>.
+    void nextTick(() => guessPanel.value?.focus());
   }
 }
 
@@ -177,6 +180,7 @@ function handleImageError(playerId: string) {
         <!-- Guess panel. It scrolls, so once submitted (nothing inside takes focus)
              it takes focus itself, letting keyboard users scroll it. -->
         <section
+          ref="guessPanel"
           class="guess-panel"
           :aria-label="$t('guessing.yourGuesses')"
           :tabindex="submittedPlayers.includes(assignedTargetPlayer.id) ? 0 : undefined"
