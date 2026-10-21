@@ -396,6 +396,9 @@ jobs:
               | jq -e '.[0].HostConfig | .ReadonlyRootfs == true and .CapDrop == ["ALL"]' \
               || { echo "::error::$service is not read-only with all capabilities dropped"; exit 1; }
           done
+          docker inspect "$(docker compose ps -q frontend)" \
+            | jq -e '.[0] | (.Config.User | test("^(0|root)?(:|$)") | not) and (.HostConfig.CapAdd // []) == []' \
+            || { echo "::error::frontend runs as root or adds a capability"; exit 1; }
 
       - name: Print container logs
         if: failure()

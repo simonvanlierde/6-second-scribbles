@@ -131,14 +131,16 @@ services:
     logging: *logging
     build:
       target: prod
-    # Caddy runs as root to bind port 80, the tunnel's target, so it keeps that one
-    # capability. It writes its autosaved config and state to /config and /data.
-    cap_add:
-      - NET_BIND_SERVICE
+    # Caddy runs as uid 10001 (frontend/Dockerfile) with no capabilities. Port 80, the
+    # tunnel's target, stays: this namespaced sysctl lets an unprivileged process bind
+    # it inside the container's own network namespace only. Caddy writes its autosaved
+    # config and state to /config and /data, so those tmpfs mounts belong to that uid.
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
     tmpfs:
       - /tmp
-      - /config
-      - /data
+      - /config:uid=10001,gid=10001
+      - /data:uid=10001,gid=10001
     restart: unless-stopped
     # Bind to loopback only: the Cloudflare tunnel reaches the frontend over the
     # internal Docker network (service name `frontend`), so the host port does not
