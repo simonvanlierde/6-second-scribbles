@@ -4,14 +4,11 @@
 # Revs are commit SHAs, since tags are mutable; Dependabot moves each SHA and its
 # `# frozen:` tag together.
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
-# The first three were written by the retired machine translation script: the seed
-# YAML, its hash and the translation cache. Reformatting them would only churn the
-# history. Env files stay as written.
+# The seed YAML was written by the retired machine translation script. Reformatting it
+# would only churn the history. Env files stay as written.
 exclude: |-
   (?x)^(
     backend/scripts/seed_data\.yaml
-    |backend/scripts/\.seed_translation_hash
-    |backend/translation/\.translation_cache\.json
     |(.*/)?\.env(\..*)?
   )$
 repos:

@@ -22,7 +22,6 @@ ignorePaths:
   - ".cspell.yml"
   - "backend/alembic/versions/**"
   - "backend/scripts/seed_data.yaml"
-  - "backend/translation/.translation_cache.json"
   - "contracts/openapi.json"
   - "contracts/room-events.json"
   - "contracts/jsonschema/**"
