@@ -109,12 +109,13 @@ export const useGameStore = defineStore(
 
     // --- Computed ---
     const localPlayer = computed(() => players.value.get(localPlayerId.value));
-    // The local player's avatar colour: picked, else the one the room assigned, else a per-id one.
+    // The local player's avatar colour: the one the room assigned (what everyone else sees),
+    // else the picked one, else a per-id one.
     const localAvatarColor = computed(
       // The server only assigns colour tokens, so a room colour is an AvatarColor.
       () =>
-        localPlayerColor.value ??
         (localPlayer.value?.color as AvatarColor | undefined) ??
+        localPlayerColor.value ??
         getAvatarColor(localPlayerId.value),
     );
     const playersList = computed(() => Array.from(players.value.values()));
