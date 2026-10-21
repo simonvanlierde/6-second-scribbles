@@ -151,7 +151,7 @@ describe("RoomView", () => {
     wrapper.unmount();
   });
 
-  it("announces game over even though the results screen has no heading to focus", async () => {
+  it("still announces the phase when the new screen has no heading to focus", async () => {
     const store = joinRoom("round_results");
 
     const wrapper = mount(RoomView, { attachTo: document.body });
