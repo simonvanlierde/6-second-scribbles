@@ -251,7 +251,9 @@
     "readyForNext": "Pronto para o próximo jogo",
     "readyWaiting": "Pronto — esperando o anfitrião…",
     "backHome": "Voltar ao início",
-    "playersReady": "{count} / {total} jogadores prontos"
+    "playersReady": "{count} / {total} jogadores prontos",
+    "noWinner": "Desta vez não há vencedor",
+    "noWinnerDetail": "Ninguém marcou pontos."
   },
   "phase": {
     "drawing": "Rodada {round}: desenho",

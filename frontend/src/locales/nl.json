@@ -251,7 +251,9 @@
     "readyForNext": "Klaar voor het volgende spel",
     "readyWaiting": "Klaar — wachten op host…",
     "backHome": "Terug naar start",
-    "playersReady": "{count} / {total} spelers klaar"
+    "playersReady": "{count} / {total} spelers klaar",
+    "noWinner": "Deze keer geen winnaar",
+    "noWinnerDetail": "Niemand heeft punten gescoord."
   },
   "phase": {
     "drawing": "Ronde {round}: tekenen",

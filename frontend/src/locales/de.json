@@ -251,7 +251,9 @@
     "readyForNext": "Bereit fürs nächste Spiel",
     "readyWaiting": "Bereit — warte auf Host…",
     "backHome": "Zurück zur Startseite",
-    "playersReady": "{count} / {total} Spieler bereit"
+    "playersReady": "{count} / {total} Spieler bereit",
+    "noWinner": "Diesmal kein Sieger",
+    "noWinnerDetail": "Niemand hat Punkte geholt."
   },
   "phase": {
     "drawing": "Runde {round}: Zeichnen",

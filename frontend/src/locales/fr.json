@@ -251,7 +251,9 @@
     "readyForNext": "Prêt pour la prochaine partie",
     "readyWaiting": "Prêt — en attente de l’hôte…",
     "backHome": "Retour à l’accueil",
-    "playersReady": "{count} / {total} joueurs prêts"
+    "playersReady": "{count} / {total} joueurs prêts",
+    "noWinner": "Pas de vainqueur cette fois",
+    "noWinnerDetail": "Personne n’a marqué de point."
   },
   "phase": {
     "drawing": "Manche {round} : dessin",

@@ -1,21 +1,39 @@
 <script setup lang="ts">
-import HdAvatar from "@/components/ui/HdAvatar.vue";
+import { computed } from "vue";
 
-defineProps<{
+import HdAvatar from "@/components/ui/HdAvatar.vue";
+import { getAvatarInitial } from "@/composables/useAvatar";
+
+const props = defineProps<{
+  /** The winners' names, already joined for display. */
   name: string;
-  initial: string;
-  color: string;
+  /** Everyone sharing the top score. */
+  winners: { name: string; color: string }[];
   score: number;
-  isTie: boolean;
 }>();
+
+// A game where nobody scored has no champion, even though everyone "shares" first place.
+const noWinner = computed(() => props.score <= 0 || props.winners.length === 0);
 </script>
 
 <template>
-  <div class="winner-card">
+  <div v-if="noWinner" class="winner-card winner-card--none">
+    <h2 class="winner-card__name">{{ $t("finalResults.noWinner") }}</h2>
+    <p class="winner-card__detail">{{ $t("finalResults.noWinnerDetail") }}</p>
+  </div>
+  <div v-else class="winner-card">
     <span class="winner-card__ribbon" aria-hidden="true">
-      {{ isTie ? $t("finalResults.champions") : $t("finalResults.champion") }}
+      {{ winners.length > 1 ? $t("finalResults.champions") : $t("finalResults.champion") }}
     </span>
-    <HdAvatar :initial="initial" :color="color" size="lg" />
+    <div class="winner-card__avatars">
+      <HdAvatar
+        v-for="(winner, index) in winners"
+        :key="index"
+        :initial="getAvatarInitial(winner.name)"
+        :color="winner.color"
+        size="lg"
+      />
+    </div>
     <h2 class="winner-card__name">{{ name }}</h2>
     <p class="winner-card__score">{{ $t("common.pointsShort", { count: score }) }}</p>
   </div>
@@ -36,6 +54,25 @@ defineProps<{
   box-shadow: var(--shadow-card);
   transform: rotate(var(--rotate-card));
   overflow: hidden;
+}
+.winner-card--none {
+  background: var(--color-card);
+  color: var(--color-ink);
+}
+.winner-card__avatars {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* Tied winners overlap like a stack of cards. */
+.winner-card__avatars > * + * {
+  margin-left: calc(-1 * var(--space-4));
+}
+.winner-card__detail {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-body-lg);
+  color: var(--color-ink-muted);
 }
 .winner-card__ribbon {
   position: absolute;

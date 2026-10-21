@@ -251,7 +251,9 @@
     "readyForNext": "다음 게임 준비 완료",
     "readyWaiting": "준비 완료 — 방장을 기다리는 중…",
     "backHome": "홈으로 돌아가기",
-    "playersReady": "{count} / {total}명 준비 완료"
+    "playersReady": "{count} / {total}명 준비 완료",
+    "noWinner": "이번엔 우승자가 없어요",
+    "noWinnerDetail": "아무도 점수를 얻지 못했어요."
   },
   "phase": {
     "drawing": "라운드 {round}: 그리기",
