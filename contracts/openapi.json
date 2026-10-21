@@ -373,7 +373,7 @@
     },
     "/api/health": {
       "get": {
-        "description": "Health check endpoint including Redis and database connectivity.",
+        "description": "Health check endpoint including Redis and database connectivity.\n\nAnswers 503 with the same body when either is down, so container health checks and\n`docker compose up --wait` see a degraded backend as failing.",
         "operationId": "health_api_health_get",
         "responses": {
           "200": {

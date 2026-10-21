@@ -24,7 +24,7 @@ OK_STATUS = "ok"
 async def health(response: Response) -> AppInfoResponse:
     """Health check endpoint including Redis and database connectivity.
 
-    Answers 503 with the same body when either is down, so container healthchecks and
+    Answers 503 with the same body when either is down, so container health checks and
     `docker compose up --wait` see a degraded backend as failing.
     """
     db_status = "ok"
