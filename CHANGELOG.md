@@ -27,6 +27,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Three word cards were never dealt because no category held them. Reading and sleeping are now in the Actions category. Clouds is gone: it duplicated the cloud card, which is already in four categories.
 - If a category had no words in your language, your guesses were checked against its words in the category's default language, usually English, even when the room's language was available. They are now checked in the same language your own card falls back to: the room's, then the category's default, then English.
 - A long session of doodling in the lobby no longer makes the page slower and slower: your browser now forgets the oldest strokes once the doodle reaches the size the server keeps.
 - The server no longer turns players away once about 1,000 are connected. It ran out of open files, one per connection, long before it ran out of CPU.

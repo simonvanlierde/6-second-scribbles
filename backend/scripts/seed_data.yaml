@@ -3654,57 +3654,6 @@ prompts:
     label: 구름
     aliases:
     - 뭉게구름
-- id: clouds
-  translations:
-  - locale: en
-    label: Clouds
-    aliases:
-    - cloudscape
-    - overcast
-  - locale: es
-    label: nubes
-    aliases:
-    - nubosidad
-  - locale: fr
-    label: nuages
-    aliases:
-    - nébulosité
-    - ciel couvert
-  - locale: it
-    label: Nuvole
-    aliases:
-    - coperto
-  - locale: nl
-    label: Wolken
-    aliases:
-    - bewolkt
-  - locale: de
-    label: Wolken
-    aliases:
-    - wolkenstein
-    - bewölkt
-  - locale: pl
-    label: Chmury
-    aliases:
-    - zachmurzenie
-  - locale: pt
-    label: Nuvens
-    aliases:
-    - nublado
-  - locale: zh-CN
-    label: 云层
-    aliases: []
-  - locale: zh-TW
-    label: 雲層
-    aliases: []
-  - locale: ja
-    label: 雲
-    aliases:
-    - クラウドスケープ
-  - locale: ko
-    label: 구름
-    aliases:
-    - 구름 풍경
 - id: coat
   translations:
   - locale: en
@@ -20561,6 +20510,8 @@ system_categories:
   - swimming
   - dancing
   - singing
+  - reading
+  - sleeping
 - id: weather
   difficulty: easy
   default_locale: en
