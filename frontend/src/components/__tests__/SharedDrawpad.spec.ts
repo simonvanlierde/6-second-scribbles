@@ -327,6 +327,46 @@ describe("SharedDrawpad", () => {
     expect(new Set(canvasMocks.setLiveStroke.mock.calls.slice(-20).map((call) => call[0])).size).toBe(20);
   });
 
+  it("starts a new stroke when a trim dropped the player's stroke in progress", async () => {
+    const store = useGameStore();
+    mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+    // p0's stroke is the oldest; five full-length strokes after it push the doodle past the cap.
+    store.applyPartialStroke("p0", { color: "#000", width: 4, points: Array(4000).fill(0) }, true);
+    for (let i = 1; i <= 5; i++) {
+      store.applyPartialStroke(`p${i}`, { color: "#000", width: 4, points: Array(8000).fill(i) }, true);
+    }
+    expect(store.currentStrokes).toHaveLength(5);
+    expect(store.currentStrokes.some((s) => s.points[0] === 0)).toBe(false);
+
+    // Not a start fragment: the server also begins a new stroke, as it no longer holds p0's.
+    store.applyPartialStroke("p0", { color: "#f00", width: 4, points: [7, 7] }, false);
+
+    expect(store.currentStrokes).toHaveLength(5);
+    expect(store.currentStrokes.at(-1)?.points).toEqual([7, 7]);
+  });
+
+  it("keeps strokes cleared locally after a trim off the pad", async () => {
+    const store = useGameStore();
+    const wrapper = mount(SharedDrawpad, {
+      global: { stubs: { DrawingCanvasStage: DrawingCanvasStageStub, DrawingToolbar: DrawingToolbarStub } },
+    });
+    for (let i = 0; i < 6; i++) {
+      store.applyPartialStroke(`p${i}`, { color: "#000", width: 4, points: Array(8000).fill(i) }, true);
+    }
+    expect(store.currentStrokes).toHaveLength(5);
+    await nextTick();
+
+    await wrapper.find(".clear").trigger("click");
+    canvasMocks.replaceStrokes.mockClear();
+    canvasMocks.setLiveStroke.mockClear();
+    canvasMocks.setResizeHandler.mock.calls[0]?.[0]();
+
+    expect(canvasMocks.replaceStrokes).toHaveBeenCalledWith([]);
+    expect(canvasMocks.setLiveStroke).not.toHaveBeenCalled();
+  });
+
   it("clears locally and forwards toolbar choices to the canvas", async () => {
     const wrapper = mount(SharedDrawpad, {
       global: {
