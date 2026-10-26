@@ -20,6 +20,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
 - Strokes are smoother, in the game and on the lobby doodle. A stroke now thins and thickens with the speed of your pen, like ink, and curves stay round instead of turning into short straight segments. Taps leave a dot.
 - Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. With every player drawing at once, one server now holds about 200 rooms of 6 instead of about 60.
+- For contributors: pnpm now installs only package releases at least a week old, the same wait Dependabot already has. Updating the lockfile by hand no longer picks up a release from the past few days.
 
 ### Removed
 
