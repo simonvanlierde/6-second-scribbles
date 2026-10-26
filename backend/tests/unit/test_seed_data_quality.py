@@ -1351,3 +1351,10 @@ def test_text_has_no_stray_whitespace_or_markup() -> None:
     stray = set(string.punctuation) - set("-'.&")
     bad = [row for row in _entries() if row[3] != row[3].strip() or " " * 2 in row[3] or set(row[3]) & stray]
     assert not bad, f"{len(bad)} entries with stray whitespace or symbols: {bad}"
+
+
+def test_every_prompt_is_in_a_category() -> None:
+    """A card in no category is never dealt."""
+    dealt = {item for category in SEED_DATA["system_categories"] for item in category["items"]}
+    orphans = sorted(prompt["id"] for prompt in SEED_DATA["prompts"] if prompt["id"] not in dealt)
+    assert not orphans
