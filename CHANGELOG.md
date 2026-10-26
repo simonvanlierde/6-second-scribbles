@@ -39,6 +39,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The "wildest miss" highlight now reads a guess with the guesser's own language rules. It used English plurals, so a German "Eis" for "Ei" counted as a perfect match and could never be the wildest miss.
 - For contributors: `just loadtest` measured nothing since 2026-10-18. The server rejected every stroke and game start the load generator sent, so each run reported zero deliveries.
 
+### Security
+
+- For contributors: updated the test and commit-lint tooling to versions that fix known advisories in undici and fast-uri. The game itself does not ship these packages. An unused happy-dom install, also flagged, is gone from the lockfile.
+
 ## [0.3.0] - 2026-10-21
 
 ### Upgrade notes
