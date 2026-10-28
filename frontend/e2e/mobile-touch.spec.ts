@@ -65,7 +65,9 @@ test("home footer links and the language picker are 44 px", async ({ browser }) 
   await page.goto("/");
   for (const link of await page.locator(".home-footer__link").all()) await expectTarget(link);
   await page.getByRole("button", { name: /^settings$/i }).click();
-  await expectTarget(page.getByRole("button", { name: /^language$/i }));
+  const languagePicker = page.getByRole("button", { name: /^language:/i });
+  await expect(languagePicker).toHaveAccessibleName(`Language: ${await languagePicker.innerText()}`);
+  await expectTarget(languagePicker);
 });
 
 test("Finish stays in a short laptop window", async ({ browser }) => {
