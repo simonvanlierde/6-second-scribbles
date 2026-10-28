@@ -26,10 +26,10 @@ repos:
       - id: check-toml
 
   # Tolerates JSONC configs (tsconfig, VS Code settings).
-  - repo: https://github.com/simonvanlierde/check-json5
-    rev: 118b80eca91bf55f227f34016a21f78dbfafdf83 # frozen: v2.0.0
+  - repo: https://github.com/simonvanlierde/jsonvet
+    rev: 022d320d5b971eccb28cfa6ce205152cbb382e53 # frozen: v3.2.0
     hooks:
-      - id: check-json5
+      - id: jsonvet
 
   # Formats first, so yamllint below sees the formatted file.
   - repo: https://github.com/google/yamlfmt
