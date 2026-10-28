@@ -175,7 +175,7 @@ function selectTheme(value: Theme) {
             ref="localeBtnRef"
             type="button"
             class="locale-trigger"
-            :aria-label="t('settings.language')"
+            :aria-label="`${t('settings.language')}: ${formatLocaleLabel(playerLocale)}`"
             :aria-expanded="localeOpen"
             popovertarget="settings-locale-popover"
           >

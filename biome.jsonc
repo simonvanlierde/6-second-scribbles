@@ -53,6 +53,12 @@
       "suspicious": "on"
     }
   },
+  // Markdown stays with rumdl and markdownlint; Biome rewrites ADR front matter.
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
   "overrides": [
     {
       // Vue SFC <script> blocks are always-strict ES modules (useStrictMode wants a
