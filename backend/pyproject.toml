@@ -1,8 +1,8 @@
 [project]
   dependencies = [
     "asyncpg>=0.31.0",
-    "fastapi>=0.143.2",
-    "pydantic-settings>=2.16.0",
+    "fastapi>=0.161.1",
+    "pydantic-settings>=2.16.1",
     "rapidfuzz>=3.14.6",
     "redis>=8.1.0",
     "sqlalchemy[asyncio]>=2.1.4",
