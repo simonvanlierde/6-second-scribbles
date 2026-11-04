@@ -26,9 +26,8 @@ routes rooms to workers today: `frontend/Caddyfile` sends all `/api` and `/ws`
 traffic to the single `backend:8000`. If the app ever runs more workers, Caddy
 would have to route each room to one worker first.
 
-Per-player state changes go through methods on `RoomMetadataState`
-(`backend/app/rooms/state.py`: `seat_player`, `forget_player`, `reset_game`,
-`add_round_points`), and the stored JSON is unchanged. Because the stored shape
+Per-player state changes go through the methods of `RoomMetadataState` in
+`backend/app/rooms/state.py`, and the stored JSON is unchanged. Because the stored shape
 did not change, a rollback stays possible.
 
 ### Consequences
