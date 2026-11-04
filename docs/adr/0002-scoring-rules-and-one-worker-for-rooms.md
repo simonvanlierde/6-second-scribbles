@@ -20,11 +20,16 @@ Game rules (ruled 2026-10-21):
 - The white pen stays.
 - Guesses are scored in the same locale chain as the card.
 
-Rooms stay in one worker. The backend runs `uvicorn` with `--workers 1`. If the
-app ever runs more workers, Caddy must route each room to one worker.
+Rooms stay in one worker. The production image runs `uvicorn` with
+`--workers 1` (`backend/Dockerfile`). Room state lives in that process. Nothing
+routes rooms to workers today: `frontend/Caddyfile` sends all `/api` and `/ws`
+traffic to the single `backend:8000`. If the app ever runs more workers, Caddy
+would have to route each room to one worker first.
 
-Per-player state goes through three metadata methods, and the stored JSON is
-unchanged. Because the stored shape did not change, a rollback stays possible.
+Per-player state changes go through methods on `RoomMetadataState`
+(`backend/app/rooms/state.py`: `seat_player`, `forget_player`, `reset_game`,
+`add_round_points`), and the stored JSON is unchanged. Because the stored shape
+did not change, a rollback stays possible.
 
 ### Consequences
 
