@@ -21,7 +21,7 @@ just hooks      # every git hook over the whole repo
 ```
 
 If you change what the backend sends or accepts, run `just generate-contracts` so
-the frontend stays in sync ([ADR 0001](docs/adr/0001-committed-generated-contracts.md)).
+the frontend stays in sync ([the contracts ADR](docs/adr/committed-generated-contracts.md)).
 
 ## Accessibility checks
 

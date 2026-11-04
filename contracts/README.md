@@ -1,7 +1,7 @@
 # Contracts
 
 Generated contract files that the backend and frontend share. Don't edit them by
-hand. [ADR 0001](../docs/adr/0001-committed-generated-contracts.md) explains why
+hand. [The contracts ADR](../docs/adr/committed-generated-contracts.md) explains why
 they are committed.
 
 - `openapi.json`: exported HTTP API schema

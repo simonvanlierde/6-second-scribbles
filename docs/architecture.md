@@ -38,7 +38,7 @@ and the digest pin on `cloudflared`.
 
 The backend owns the wire format and exports it into `contracts/`. The frontend
 generates its types from those files, and CI fails if the backend no longer
-reproduces them. [ADR 0001](adr/0001-committed-generated-contracts.md) has the
+reproduces them. [The contracts ADR](adr/committed-generated-contracts.md) has the
 reasons and the alternatives.
 
 ```mermaid
