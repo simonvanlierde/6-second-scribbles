@@ -22,7 +22,8 @@
       "!**/playwright-report",
       "!**/test-results",
       "!**/node_modules",
-      "!**/.venv"
+      "!**/.venv",
+      "!**/.rumdl_cache"
     ]
   },
   "formatter": {
