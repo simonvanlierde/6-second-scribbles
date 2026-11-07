@@ -1,8 +1,7 @@
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { defineComponent, h } from "vue";
-
 import { useRoundDraft } from "@/composables/useRoundDraft";
+import DraftHarness from "./DraftHarness.svelte";
 
 function createMemoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -20,9 +19,8 @@ function createMemoryStorage(): Storage {
 
 const KEY = "draftKey";
 
+const wrappers: Array<ReturnType<typeof mount>> = [];
 type DraftApi = ReturnType<typeof useRoundDraft<string[]>>;
-
-const wrappers: VueWrapper[] = [];
 
 function mountDraft(opts: {
   round: () => number;
@@ -31,15 +29,18 @@ function mountDraft(opts: {
   active: () => boolean;
 }) {
   let api!: DraftApi;
-  const wrapper = mount(
-    defineComponent({
-      setup() {
+  const target = document.createElement("div");
+  const component = mount(DraftHarness, {
+    target,
+    props: {
+      setup: () => {
         api = useRoundDraft<string[]>(KEY, opts);
-        return () => h("div");
       },
-    }),
-  );
-  wrappers.push(wrapper);
+    },
+  });
+  flushSync();
+  wrappers.push(component);
+  const wrapper = { unmount: () => unmount(component) };
   return { wrapper, api };
 }
 
@@ -52,8 +53,8 @@ beforeEach(() => {
 });
 
 // Unmount between tests so leaked pagehide listeners don't fire across cases.
-afterEach(() => {
-  for (const wrapper of wrappers.splice(0)) wrapper.unmount();
+afterEach(async () => {
+  for (const wrapper of wrappers.splice(0)) await unmount(wrapper);
 });
 
 describe("useRoundDraft", () => {

@@ -1,17 +1,16 @@
 // cspell:ignore Avatarfarbe Blau erhöhen Gelb Großer Grün Kleiner Koralle Lachen Lavendel Mittlerer Pfirsich Pinsel
 // cspell:ignore Reaktionen Runden Schließen Schwarz verringern Weiß Zeichnung
-import { createTestingPinia } from "@pinia/testing";
-import { mount } from "@vue/test-utils";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { render } from "@testing-library/svelte";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import DrawingToolbar from "@/components/DrawingToolbar.vue";
-import StepperInput from "@/components/StepperInput.vue";
-import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
-import SettingsPanel from "@/components/settings/SettingsPanel.vue";
-import HdReactionPad from "@/components/ui/HdReactionPad.vue";
+import DrawingToolbar from "@/components/DrawingToolbar.svelte";
+import StepperInput from "@/components/StepperInput.svelte";
+import AvatarColorPicker from "@/components/settings/AvatarColorPicker.svelte";
+import SettingsPanel from "@/components/settings/SettingsPanel.svelte";
+import HdReactionPad from "@/components/ui/HdReactionPad.svelte";
 import { AVATAR_COLORS } from "@/composables/useAvatar";
 import { BRUSH_SIZES, DRAW_PALETTE } from "@/config/drawing";
-import { i18n, setLocale } from "@/i18n";
+import { setLocale } from "@/i18n";
 
 // Screen-reader names are text too: they must follow the player's language.
 describe("accessible names in German", () => {
@@ -22,20 +21,19 @@ describe("accessible names in German", () => {
     await setLocale("en");
   });
 
-  const global = { plugins: [i18n] };
-
   it("names the stepper buttons", () => {
-    const w = mount(StepperInput, { props: { modelValue: 5, label: "Runden", min: 1, max: 10 }, global });
-    const labels = w.findAll("button").map((b) => b.attributes("aria-label"));
+    const w = render(StepperInput, { props: { modelValue: 5, label: "Runden", min: 1, max: 10 } });
+    const labels = Array.from(w.container.querySelectorAll("button"), (b) => b.getAttribute("aria-label"));
     expect(labels).toEqual(["Runden verringern", "Runden erhöhen"]);
   });
 
   it("names pen colours and brush sizes instead of hex codes and numbers", () => {
-    const w = mount(DrawingToolbar, {
+    const w = render(DrawingToolbar, {
       props: { currentColor: DRAW_PALETTE[0], currentWidth: BRUSH_SIZES[0] },
-      global,
     });
-    const labels = w.findAll("button.swatch, button.brush").map((b) => b.attributes("aria-label"));
+    const labels = Array.from(w.container.querySelectorAll("button.swatch, button.brush"), (b) =>
+      b.getAttribute("aria-label"),
+    );
     expect(labels).toEqual([
       "Schwarz",
       "Weiß",
@@ -50,15 +48,15 @@ describe("accessible names in German", () => {
   });
 
   it("says whose drawing a reaction is for", () => {
-    const w = mount(HdReactionPad, { props: { name: "Ada" }, global });
-    expect(w.get("[role=group]").attributes("aria-label")).toBe("Reaktionen auf Adas Zeichnung");
-    expect(w.get("button").attributes("aria-label")).toBe("Lachen für Adas Zeichnung");
+    const w = render(HdReactionPad, { props: { name: "Ada" } });
+    expect(w.container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe("Reaktionen auf Adas Zeichnung");
+    expect(w.container.querySelector("button")?.getAttribute("aria-label")).toBe("Lachen für Adas Zeichnung");
   });
 
   it("names the avatar colours", () => {
-    const w = mount(AvatarColorPicker, { props: { modelValue: AVATAR_COLORS[0], initial: "A" }, global });
-    expect(w.get("[role=radiogroup]").attributes("aria-label")).toBe("Avatarfarbe");
-    expect(w.findAll("button").map((b) => b.attributes("aria-label"))).toEqual([
+    const w = render(AvatarColorPicker, { props: { modelValue: AVATAR_COLORS[0], initial: "A" } });
+    expect(w.container.querySelector("[role=radiogroup]")?.getAttribute("aria-label")).toBe("Avatarfarbe");
+    expect(Array.from(w.container.querySelectorAll("button"), (b) => b.getAttribute("aria-label"))).toEqual([
       "Koralle",
       "Grün",
       "Blau",
@@ -69,9 +67,7 @@ describe("accessible names in German", () => {
   });
 
   it("names the settings close button", () => {
-    const w = mount(SettingsPanel, {
-      global: { plugins: [createTestingPinia({ createSpy: vi.fn, stubActions: false }), i18n] },
-    });
-    expect(w.get("[data-testid=hd-dialog-close]").attributes("aria-label")).toBe("Schließen");
+    const w = render(SettingsPanel, {});
+    expect(w.container.querySelector("[data-testid=hd-dialog-close]")?.getAttribute("aria-label")).toBe("Schließen");
   });
 });

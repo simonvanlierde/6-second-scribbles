@@ -1,16 +1,23 @@
-import { flushPromises, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, reactive } from "vue";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick } from "svelte";
 
-import { useGameStore } from "@/stores/game";
-import RoomAccessView from "@/views/RoomAccessView.vue";
+const flushPromises = async () => {
+  await Promise.resolve();
+  await tick();
+  await Promise.resolve();
+  await tick();
+};
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useGameStore } from "@/stores/game.svelte";
+import RoomAccessView from "@/views/RoomAccessView.svelte";
 
 const connectMock = vi.fn();
 const fetchMock = vi.fn();
-const routeState = reactive({ roomCode: "ROOM01" });
+const routeState = { roomCode: "ROOM01" };
 
-vi.mock("vue-router", () => ({
+vi.mock("@/router", () => ({
   useRoute: () => ({
     params: routeState,
   }),
@@ -19,14 +26,15 @@ vi.mock("vue-router", () => ({
   }),
 }));
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({
     connect: connectMock,
   }),
 }));
 
 beforeEach(() => {
-  setActivePinia(createPinia());
+  useGameStore().reset();
+  useGameStore().localPlayerId = "";
   routeState.roomCode = "ROOM01";
   connectMock.mockClear();
   fetchMock.mockReset();
@@ -43,29 +51,29 @@ describe("RoomAccessView", () => {
     const store = useGameStore();
     store.localPlayerName = "";
 
-    const wrapper = mount(RoomAccessView);
+    const wrapper = render(RoomAccessView);
 
     await flushPromises();
-    await nextTick();
+    await tick();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.text()).toContain("Enter your name");
-    expect(wrapper.text()).toContain("Join room");
-    expect(wrapper.text()).toContain("2 players in room");
-    expect(wrapper.find("dialog").exists()).toBe(false);
-    expect(wrapper.find("input.name-input").exists()).toBe(true);
+    expect(wrapper.container.textContent).toContain("Enter your name");
+    expect(wrapper.container.textContent).toContain("Join room");
+    expect(wrapper.container.textContent).toContain("2 players in room");
+    expect(Boolean(wrapper.container.querySelector("dialog"))).toBe(false);
+    expect(Boolean(wrapper.container.querySelector("input.name-input"))).toBe(true);
   });
 
   it("prefills the saved name but waits for an explicit join action", async () => {
     const store = useGameStore();
     store.localPlayerName = "Alice";
 
-    const wrapper = mount(RoomAccessView);
+    const wrapper = render(RoomAccessView);
 
     await flushPromises();
-    await nextTick();
+    await tick();
 
-    expect((wrapper.get("input.name-input").element as HTMLInputElement).value).toBe("Alice");
+    expect((wrapper.container.querySelector("input.name-input")! as HTMLInputElement).value).toBe("Alice");
     expect(connectMock).not.toHaveBeenCalled();
   });
 
@@ -73,13 +81,15 @@ describe("RoomAccessView", () => {
     const store = useGameStore();
     store.localPlayerName = "Alice";
 
-    const wrapper = mount(RoomAccessView);
+    const wrapper = render(RoomAccessView);
 
     await flushPromises();
-    await nextTick();
+    await tick();
 
-    const joinButton = wrapper.findAll("button").find((button) => button.text().match(/join room/i));
-    await joinButton?.trigger("click");
+    const joinButton = Array.from(wrapper.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.match(/join room/i),
+    );
+    await fireEvent.click(joinButton!);
 
     expect(connectMock).toHaveBeenCalledWith("ROOM01");
     expect(store.roomCode).toBe("ROOM01");
@@ -93,16 +103,18 @@ describe("RoomAccessView", () => {
     const store = useGameStore();
     store.localPlayerName = "Alice";
 
-    const wrapper = mount(RoomAccessView);
+    const wrapper = render(RoomAccessView);
 
     await flushPromises();
-    await nextTick();
+    await tick();
 
-    expect(wrapper.text()).toContain("Game in progress");
-    expect(wrapper.text()).toContain("Watch room");
+    expect(wrapper.container.textContent).toContain("Game in progress");
+    expect(wrapper.container.textContent).toContain("Watch room");
 
-    const watchButton = wrapper.findAll("button").find((button) => button.text().match(/watch room/i));
-    await watchButton?.trigger("click");
+    const watchButton = Array.from(wrapper.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.match(/watch room/i),
+    );
+    await fireEvent.click(watchButton!);
 
     expect(connectMock).toHaveBeenCalledWith("ROOM01", { observeOnly: true });
     expect(store.localPlayerId).toBe("");
@@ -113,26 +125,30 @@ describe("RoomAccessView", () => {
       json: async () => ({ exists: false }),
     } as Response);
 
-    const wrapper = mount(RoomAccessView);
+    const wrapper = render(RoomAccessView);
 
     await flushPromises();
-    await nextTick();
+    await tick();
 
-    expect(wrapper.text()).toContain("Room not found");
-    expect(wrapper.text()).toContain("This room does not exist.");
-    expect(wrapper.findAll("button").some((button) => button.text().match(/back to home/i))).toBe(true);
+    expect(wrapper.container.textContent).toContain("Room not found");
+    expect(wrapper.container.textContent).toContain("This room does not exist.");
+    expect(
+      Array.from(wrapper.container.querySelectorAll("button")).some((button) =>
+        button.textContent?.match(/back to home/i),
+      ),
+    ).toBe(true);
   });
 
   it("rejects invalid room codes before hitting the network", async () => {
     routeState.roomCode = "BAD!!";
 
-    const wrapper = mount(RoomAccessView);
+    const wrapper = render(RoomAccessView);
 
     await flushPromises();
-    await nextTick();
+    await tick();
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain("Invalid room code");
-    expect(wrapper.text()).toContain("Room codes are 6 characters");
+    expect(wrapper.container.textContent).toContain("Invalid room code");
+    expect(wrapper.container.textContent).toContain("Room codes are 6 characters");
   });
 });

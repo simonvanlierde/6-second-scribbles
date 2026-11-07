@@ -1,7 +1,6 @@
-import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore } from "@/stores/auth.svelte";
 
 const apiRequestMock = vi.fn();
 
@@ -19,7 +18,7 @@ const user = {
 
 describe("auth store", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useAuthStore().currentUser = null;
     apiRequestMock.mockReset();
   });
 

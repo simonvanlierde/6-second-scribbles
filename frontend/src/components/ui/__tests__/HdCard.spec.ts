@@ -1,24 +1,26 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { render } from "@testing-library/svelte";
+import { createRawSnippet } from "svelte";
+import { describe, expect, it, vi } from "vitest";
 
-import HdCard from "@/components/ui/HdCard.vue";
+import HdCard from "@/components/ui/HdCard.svelte";
 
 describe("HdCard", () => {
   it("renders default slot", () => {
-    const w = mount(HdCard, { slots: { default: "<p>hi</p>" } });
-    expect(w.text()).toBe("hi");
+    const w = render(HdCard, { props: { children: text("<p>hi</p>") } });
+    expect(w.container.textContent?.trim()).toBe("hi");
   });
 
   it("applies the default variant class", () => {
-    const w = mount(HdCard, { slots: { default: "x" } });
-    expect(w.classes()).toContain("hd-card--default");
+    const w = render(HdCard, { props: { children: text("x") } });
+    expect(Array.from(w.container.firstElementChild?.classList)).toContain("hd-card--default");
   });
 
   it("applies the postit variant class", () => {
-    const w = mount(HdCard, {
-      props: { variant: "postit" },
-      slots: { default: "x" },
-    });
-    expect(w.classes()).toContain("hd-card--postit");
+    const w = render(HdCard, { props: { variant: "postit", children: text("x") } });
+    expect(Array.from(w.container.firstElementChild?.classList)).toContain("hd-card--postit");
   });
 });
+
+function text(value: string) {
+  return createRawSnippet(() => ({ render: () => `<span>${value}</span>` }));
+}

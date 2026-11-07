@@ -1,62 +1,56 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render } from "@testing-library/svelte";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import HdDialog from "@/components/ui/HdDialog.vue";
+import HdDialog from "@/components/ui/HdDialog.svelte";
 
 describe("HdDialog", () => {
   it("renders title and message", () => {
-    const w = mount(HdDialog, {
-      props: {
-        open: true,
-        title: "Are you sure?",
-        message: "This will leave the room.",
-      },
+    const w = render(HdDialog, {
+      props: { ...callbacks, open: true, title: "Are you sure?", message: "This will leave the room." },
     });
-    expect(w.text()).toContain("Are you sure?");
-    expect(w.text()).toContain("This will leave the room.");
+    expect(w.container.textContent?.trim()).toContain("Are you sure?");
+    expect(w.container.textContent?.trim()).toContain("This will leave the room.");
   });
 
   it("emits confirm when the confirm button is clicked", async () => {
-    const w = mount(HdDialog, {
-      props: { open: true, title: "T", message: "M" },
-    });
-    await w.find('[data-testid="hd-dialog-confirm"]').trigger("click");
-    expect(w.emitted("confirm")).toHaveLength(1);
-    expect(w.emitted("update:open")?.[0]).toEqual([false]);
+    const w = render(HdDialog, { props: { ...callbacks, open: true, title: "T", message: "M" } });
+    await fireEvent.click(w.container.querySelector('[data-testid="hd-dialog-confirm"]')!);
+    expect(events.confirm.mock.calls).toHaveLength(1);
+    expect(w.container.querySelector("dialog")?.open).toBe(false);
   });
 
   it("emits cancel when the cancel button is clicked", async () => {
-    const w = mount(HdDialog, {
-      props: { open: true, title: "T", message: "M", cancelLabel: "Cancel" },
+    const w = render(HdDialog, {
+      props: { ...callbacks, open: true, title: "T", message: "M", cancelLabel: "Cancel" },
     });
-    await w.find('[data-testid="hd-dialog-cancel"]').trigger("click");
-    expect(w.emitted("cancel")).toHaveLength(1);
-    expect(w.emitted("update:open")?.[0]).toEqual([false]);
+    await fireEvent.click(w.container.querySelector('[data-testid="hd-dialog-cancel"]')!);
+    expect(events.cancel.mock.calls).toHaveLength(1);
+    expect(w.container.querySelector("dialog")?.open).toBe(false);
   });
 
   it("uses custom button labels when provided", () => {
-    const w = mount(HdDialog, {
-      props: {
-        open: true,
-        title: "T",
-        message: "M",
-        confirmLabel: "Yep",
-        cancelLabel: "Nope",
-      },
+    const w = render(HdDialog, {
+      props: { ...callbacks, open: true, title: "T", message: "M", confirmLabel: "Yep", cancelLabel: "Nope" },
     });
-    expect(w.find('[data-testid="hd-dialog-confirm"]').text()).toBe("Yep");
-    expect(w.find('[data-testid="hd-dialog-cancel"]').text()).toBe("Nope");
+    expect(w.container.querySelector('[data-testid="hd-dialog-confirm"]')?.textContent?.trim()).toBe("Yep");
+    expect(w.container.querySelector('[data-testid="hd-dialog-cancel"]')?.textContent?.trim()).toBe("Nope");
   });
 
   it("can carry its own close button and no action buttons", async () => {
-    const w = mount(HdDialog, {
-      props: { open: true, title: "Settings", closeLabel: "Close", actions: false },
+    const w = render(HdDialog, {
+      props: { ...callbacks, open: true, title: "Settings", closeLabel: "Close", actions: false },
     });
-    expect(w.find('[data-testid="hd-dialog-confirm"]').exists()).toBe(false);
-    const close = w.get('[data-testid="hd-dialog-close"]');
-    expect(close.attributes("aria-label")).toBe("Close");
-    await close.trigger("click");
-    expect(w.emitted("cancel")).toHaveLength(1);
-    expect(w.emitted("update:open")?.[0]).toEqual([false]);
+    expect(Boolean(w.container.querySelector('[data-testid="hd-dialog-confirm"]'))).toBe(false);
+    const close = w.container.querySelector('[data-testid="hd-dialog-close"]');
+    expect(close?.getAttribute("aria-label")).toBe("Close");
+    await fireEvent.click(close!);
+    expect(events.cancel.mock.calls).toHaveLength(1);
+    expect(w.container.querySelector("dialog")?.open).toBe(false);
   });
+});
+
+const events = { confirm: vi.fn(), cancel: vi.fn() };
+const callbacks = { onconfirm: events.confirm, oncancel: events.cancel };
+beforeEach(() => {
+  for (const event of Object.values(events)) event.mockClear();
 });

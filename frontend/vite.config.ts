@@ -1,12 +1,18 @@
 import { fileURLToPath, URL } from "node:url";
-
+import { lingui } from "@lingui/vite-plugin";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
-import vue from "@vitejs/plugin-vue";
+import linguiForSvelte from "lingui-for-svelte/unplugin/vite";
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [
+    linguiForSvelte(),
+    svelte({ configFile: fileURLToPath(new URL("./svelte.config.js", import.meta.url)) }),
+    lingui({ cwd: fileURLToPath(new URL(".", import.meta.url)) }),
+    tailwindcss(),
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

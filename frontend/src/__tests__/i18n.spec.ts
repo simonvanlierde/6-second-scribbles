@@ -1,7 +1,7 @@
 // cspell:ignore dans joueur joueurs salon gracz gracze graczy pokoju punkt punkty sekund sekunda sekundy Została Zostało Zostały
 import { afterEach, describe, expect, it } from "vitest";
 
-import { i18n, setLocale } from "@/i18n";
+import { i18n, setLocale, t } from "@/i18n";
 import en from "@/locales/en.json";
 import { SUPPORTED_LOCALES } from "@/shared/locales";
 
@@ -41,7 +41,7 @@ describe("setLocale", () => {
 
   it("sets the document language to the chosen locale", async () => {
     await setLocale("de");
-    expect(i18n.global.locale.value).toBe("de");
+    expect(i18n.locale).toBe("de");
     expect(document.documentElement.lang).toBe("de");
   });
 
@@ -57,7 +57,7 @@ describe("plurals", () => {
     await setLocale("en");
   });
 
-  const players = (count: number) => i18n.global.t("roomEntry.playersInRoom", { count });
+  const players = (count: number) => t("roomEntry.playersInRoom", { count });
 
   it("uses the three Polish forms: 1, 2-4 (not 12-14), and the rest", async () => {
     await setLocale("pl");
@@ -74,7 +74,7 @@ describe("plurals", () => {
 
   it("declines the Polish time-left announcement too", async () => {
     await setLocale("pl");
-    const left = (count: number) => i18n.global.t("phase.timeLow", { count });
+    const left = (count: number) => t("phase.timeLow", { count });
     expect([10, 3, 1].map(left)).toEqual(["Zostało 10 sekund", "Zostały 3 sekundy", "Została 1 sekunda"]);
   });
 
@@ -93,8 +93,8 @@ describe("plurals", () => {
 
   it("still picks singular and plural when a Polish string has only two forms", async () => {
     await setLocale("pl");
-    i18n.global.mergeLocaleMessage("pl", { twoFormTest: "{count} punkt | {count} punkty" });
-    const points = (count: number) => i18n.global.t("twoFormTest", { count });
+    i18n.load("pl", { twoFormTest: ["", ["count", "plural", { one: ["#", " punkt"], other: ["#", " punkty"] }]] });
+    const points = (count: number) => t("twoFormTest", { count });
     expect([1, 2, 5].map(points)).toEqual(["1 punkt", "2 punkty", "5 punkty"]);
   });
 });

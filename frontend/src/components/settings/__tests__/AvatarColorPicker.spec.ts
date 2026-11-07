@@ -1,31 +1,34 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render } from "@testing-library/svelte";
+import { describe, expect, it, vi } from "vitest";
 
-import AvatarColorPicker from "@/components/settings/AvatarColorPicker.vue";
+import AvatarColorPicker from "@/components/settings/AvatarColorPicker.svelte";
 import { AVATAR_COLORS } from "@/composables/useAvatar";
 
 describe("AvatarColorPicker", () => {
   it("renders one selectable button per avatar color", () => {
-    const w = mount(AvatarColorPicker, {
-      props: { modelValue: AVATAR_COLORS[0], initial: "S" },
+    const onmodelValueChange = vi.fn();
+    const w = render(AvatarColorPicker, {
+      props: { modelValue: AVATAR_COLORS[0], initial: "S", onmodelValueChange },
     });
-    expect(w.findAll("button")).toHaveLength(AVATAR_COLORS.length);
+    expect(Array.from(w.container.querySelectorAll("button"))).toHaveLength(AVATAR_COLORS.length);
   });
 
   it("emits update:modelValue with the chosen color when clicked", async () => {
-    const w = mount(AvatarColorPicker, {
-      props: { modelValue: AVATAR_COLORS[0], initial: "S" },
+    const onmodelValueChange = vi.fn();
+    const w = render(AvatarColorPicker, {
+      props: { modelValue: AVATAR_COLORS[0], initial: "S", onmodelValueChange },
     });
-    await w.findAll("button")[2]?.trigger("click");
-    expect(w.emitted("update:modelValue")?.[0]).toEqual([AVATAR_COLORS[2]]);
+    await fireEvent.click(Array.from(w.container.querySelectorAll("button"))[2]!);
+    expect(onmodelValueChange).toHaveBeenCalledWith(AVATAR_COLORS[2]);
   });
 
   it("marks the current modelValue as active via aria-checked", () => {
-    const w = mount(AvatarColorPicker, {
+    const _onmodelValueChange = vi.fn();
+    const w = render(AvatarColorPicker, {
       props: { modelValue: AVATAR_COLORS[3], initial: "S" },
     });
-    const btns = w.findAll("button");
-    expect(btns[3]?.attributes("aria-checked")).toBe("true");
-    expect(btns[0]?.attributes("aria-checked")).toBe("false");
+    const btns = Array.from(w.container.querySelectorAll("button"));
+    expect(btns[3]?.getAttribute("aria-checked")).toBe("true");
+    expect(btns[0]?.getAttribute("aria-checked")).toBe("false");
   });
 });

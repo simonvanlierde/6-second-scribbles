@@ -1,12 +1,11 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import PlayerListPanel from "@/components/PlayerListPanel.vue";
-import { useGameStore } from "@/stores/game";
+import PlayerListPanel from "@/components/PlayerListPanel.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 const sendMock = vi.fn();
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({
     send: sendMock,
   }),
@@ -14,7 +13,8 @@ vi.mock("@/composables/useGameConnection", () => ({
 
 describe("PlayerListPanel", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
     sendMock.mockClear();
     HTMLDialogElement.prototype.showModal = vi.fn();
     HTMLDialogElement.prototype.close = vi.fn();
@@ -31,8 +31,10 @@ describe("PlayerListPanel", () => {
     return store;
   }
 
-  function rowFor(wrapper: ReturnType<typeof mount>, playerName: string) {
-    const row = wrapper.findAll("li").find((item) => item.text().includes(playerName));
+  function rowFor(wrapper: ReturnType<typeof render>, playerName: string) {
+    const row = Array.from(wrapper.container.querySelectorAll("li")).find((item) =>
+      item.textContent?.includes(playerName),
+    );
     if (!row) throw new Error(`Missing row for ${playerName}`);
     return row;
   }
@@ -41,10 +43,10 @@ describe("PlayerListPanel", () => {
     const store = seedPlayers();
     store.localPlayerId = "p1";
 
-    const wrapper = mount(PlayerListPanel);
+    const wrapper = render(PlayerListPanel);
 
-    expect(wrapper.text()).toContain("Kick");
-    expect(wrapper.text()).not.toContain("Vote kick");
+    expect(wrapper.container.textContent!).toContain("Kick");
+    expect(wrapper.container.textContent!).not.toContain("Vote kick");
   });
 
   it("shows Vote kick for non-host players in public rooms only", async () => {
@@ -52,12 +54,16 @@ describe("PlayerListPanel", () => {
     store.localPlayerId = "p2";
     store.setPrivacy(false);
 
-    const wrapper = mount(PlayerListPanel);
-    const voteButtons = wrapper.findAll("button").filter((button) => button.text() === "Vote kick");
-    const hostRow = wrapper.findAll("li").find((row) => row.text().includes("Host"));
+    const wrapper = render(PlayerListPanel);
+    const voteButtons = Array.from(wrapper.container.querySelectorAll("button")).filter(
+      (button) => button.textContent?.trim() === "Vote kick",
+    );
+    const hostRow = Array.from(wrapper.container.querySelectorAll("li")).find((row) =>
+      row.textContent?.includes("Host"),
+    );
 
     expect(voteButtons).toHaveLength(1);
-    expect(hostRow?.text()).not.toContain("Vote kick");
+    expect(hostRow?.textContent).not.toContain("Vote kick");
   });
 
   it("hides Vote kick for non-host players in private rooms", async () => {
@@ -65,33 +71,36 @@ describe("PlayerListPanel", () => {
     store.localPlayerId = "p2";
     store.setPrivacy(true);
 
-    const wrapper = mount(PlayerListPanel);
+    const wrapper = render(PlayerListPanel);
 
-    expect(wrapper.text()).not.toContain("Vote kick");
+    expect(wrapper.container.textContent!).not.toContain("Vote kick");
   });
 
   it("uses different confirmation copy for host kick and vote-kick", async () => {
     const hostStore = seedPlayers();
     hostStore.localPlayerId = "p1";
 
-    const hostWrapper = mount(PlayerListPanel);
-    await hostWrapper
-      .findAll("button")
-      .find((button) => button.text() === "Kick player")
-      ?.trigger("click");
-    expect(hostWrapper.text()).toContain("Kick player?");
+    const hostWrapper = render(PlayerListPanel);
+    await fireEvent.click(
+      Array.from(hostWrapper.container.querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "Kick player",
+      )!,
+    );
+    expect(hostWrapper.container.textContent!).toContain("Kick player?");
 
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
     const playerStore = seedPlayers();
     playerStore.localPlayerId = "p2";
     playerStore.setPrivacy(false);
 
-    const playerWrapper = mount(PlayerListPanel);
-    await playerWrapper
-      .findAll("button")
-      .find((button) => button.text() === "Vote kick")
-      ?.trigger("click");
-    expect(playerWrapper.text()).toContain("Start vote-kick?");
+    const playerWrapper = render(PlayerListPanel);
+    await fireEvent.click(
+      Array.from(playerWrapper.container.querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "Vote kick",
+      )!,
+    );
+    expect(playerWrapper.container.textContent!).toContain("Start vote-kick?");
   });
 
   it("casts a vote when a kick vote is already active", async () => {
@@ -103,13 +112,14 @@ describe("PlayerListPanel", () => {
       expiresAt: Date.now() + 30_000,
     });
 
-    const wrapper = mount(PlayerListPanel);
-    await rowFor(wrapper, "Player Three")
-      .findAll("button")
-      .find((button) => button.text() === "Vote kick")
-      ?.trigger("click");
+    const wrapper = render(PlayerListPanel);
+    await fireEvent.click(
+      Array.from(rowFor(wrapper, "Player Three").querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "Vote kick",
+      )!,
+    );
 
-    expect(wrapper.text()).toContain("Vote: 1/2");
+    expect(wrapper.container.textContent?.replace(/\s+/g, " ")).toContain("Vote: 1/2");
     expect(sendMock).toHaveBeenCalledWith({
       type: "cast_kick_vote",
       targetPlayerId: "p3",
@@ -120,12 +130,13 @@ describe("PlayerListPanel", () => {
     const store = seedPlayers();
     store.localPlayerId = "p1";
 
-    const wrapper = mount(PlayerListPanel);
-    await rowFor(wrapper, "Player Two")
-      .findAll("button")
-      .find((button) => button.text() === "Kick player")
-      ?.trigger("click");
-    await wrapper.find('[data-testid="hd-dialog-confirm"]').trigger("click");
+    const wrapper = render(PlayerListPanel);
+    await fireEvent.click(
+      Array.from(rowFor(wrapper, "Player Two").querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "Kick player",
+      )!,
+    );
+    await fireEvent.click(wrapper.container.querySelector('[data-testid="hd-dialog-confirm"]')!);
 
     expect(sendMock).toHaveBeenCalledWith({
       type: "initiate_kick",

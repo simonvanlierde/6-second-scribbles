@@ -1,12 +1,13 @@
-import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { AVATAR_COLORS, getAvatarColor } from "@/composables/useAvatar";
-import { useGameStore } from "@/stores/game";
+import { useGameStore } from "@/stores/game.svelte";
 
 describe("game store — localPlayerColor", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
+    useGameStore().localPlayerColor = null;
     localStorage.clear();
   });
 

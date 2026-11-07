@@ -7,3 +7,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module "*.json?lingui" {
+  export const messages: import("@lingui/core").Messages;
+}

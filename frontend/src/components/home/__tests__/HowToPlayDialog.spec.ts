@@ -1,17 +1,15 @@
-import { mount } from "@vue/test-utils";
+import { render } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 
-import HowToPlayDialog from "@/components/home/HowToPlayDialog.vue";
-import { i18n } from "@/i18n";
+import HowToPlayDialog from "@/components/home/HowToPlayDialog.svelte";
 
 describe("HowToPlayDialog", () => {
   it("renders the how-to steps when open", () => {
-    const wrapper = mount(HowToPlayDialog, {
+    const wrapper = render(HowToPlayDialog, {
       props: { open: true },
-      global: { plugins: [i18n] },
     });
 
-    expect(wrapper.text()).toContain("How to Play");
-    expect(wrapper.findAll("li")).toHaveLength(4);
+    expect(wrapper.container.textContent!).toContain("How to Play");
+    expect(Array.from(wrapper.container.querySelectorAll("li"))).toHaveLength(4);
   });
 });

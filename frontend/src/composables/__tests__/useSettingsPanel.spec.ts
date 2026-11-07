@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useSettingsPanel } from "@/composables/useSettingsPanel";
+import { useSettingsPanel } from "@/composables/useSettingsPanel.svelte";
 
 describe("useSettingsPanel", () => {
   beforeEach(() => {
@@ -12,9 +12,9 @@ describe("useSettingsPanel", () => {
 
     panel.open();
 
-    expect(panel.isOpen.value).toBe(true);
-    expect(panel.focusNameOnOpen.value).toBe(false);
-    expect(panel.pendingNameAction.value).toBeNull();
+    expect(panel.isOpen).toBe(true);
+    expect(panel.focusNameOnOpen).toBe(false);
+    expect(panel.pendingNameAction).toBeNull();
   });
 
   it("opens for name entry with an optional action to resume", () => {
@@ -23,9 +23,9 @@ describe("useSettingsPanel", () => {
 
     panel.openForName(action);
 
-    expect(panel.isOpen.value).toBe(true);
-    expect(panel.focusNameOnOpen.value).toBe(true);
-    expect(panel.pendingNameAction.value).toBe(action);
+    expect(panel.isOpen).toBe(true);
+    expect(panel.focusNameOnOpen).toBe(true);
+    expect(panel.pendingNameAction).toBe(action);
   });
 
   it("clears transient name-entry state when closed", () => {
@@ -34,8 +34,8 @@ describe("useSettingsPanel", () => {
 
     panel.close();
 
-    expect(panel.isOpen.value).toBe(false);
-    expect(panel.focusNameOnOpen.value).toBe(false);
-    expect(panel.pendingNameAction.value).toBeNull();
+    expect(panel.isOpen).toBe(false);
+    expect(panel.focusNameOnOpen).toBe(false);
+    expect(panel.pendingNameAction).toBeNull();
   });
 });
