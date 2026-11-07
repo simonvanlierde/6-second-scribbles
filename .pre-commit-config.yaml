@@ -23,6 +23,8 @@ repos:
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
+        # Patch context must preserve upstream whitespace.
+        exclude_types: [diff]
       - id: check-toml
 
   # Tolerates JSONC configs (tsconfig, VS Code settings).
