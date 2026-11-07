@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type CanvasStroke, useDrawingCanvas } from "@/composables/useDrawingCanvas";
+import { type CanvasStroke, useDrawingCanvas } from "@/composables/useDrawingCanvas.svelte";
 
 const stroke = (color: string): CanvasStroke => ({
   color,
@@ -87,7 +87,7 @@ describe("useDrawingCanvas", () => {
     // The visible canvas now shows only the layer: no live stroke on top.
     expect(visible.fills).toEqual([]);
     expect(visible.drawImages).toBe(1);
-    expect(canvas.strokes.value).toHaveLength(1);
+    expect(canvas.strokes).toHaveLength(1);
   });
 
   it("commits a live stroke under its key and keeps other live strokes", () => {
@@ -109,7 +109,7 @@ describe("useDrawingCanvas", () => {
 
     canvas.undo();
 
-    expect(canvas.strokes.value.map((s) => s.color)).toEqual(["#000", "#f00"]);
+    expect(canvas.strokes.map((s) => s.color)).toEqual(["#000", "#f00"]);
     expect(layer.fills).toEqual(["#000", "#f00"]);
     expect(visible.fills).toEqual(["#0f0"]);
   });
@@ -158,13 +158,13 @@ describe("useDrawingCanvas", () => {
     observers[0]?.();
     pointer(el, "pointerup", 0, 0);
 
-    expect(canvas.strokes.value[0]?.points).toEqual([{ x: 200, y: 100 }]);
+    expect(canvas.strokes[0]?.points).toEqual([{ x: 200, y: 100 }]);
     vi.unstubAllGlobals();
   });
 
   it("undo is a no-op when there are no strokes", () => {
     const canvas = useDrawingCanvas();
     expect(() => canvas.undo()).not.toThrow();
-    expect(canvas.strokes.value).toEqual([]);
+    expect(canvas.strokes).toEqual([]);
   });
 });

@@ -1,11 +1,19 @@
-import { flushPromises, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick } from "svelte";
+
+const flushPromises = async () => {
+  await Promise.resolve();
+  await tick();
+  await Promise.resolve();
+  await tick();
+};
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import HomeCreateJoin from "@/components/home/HomeCreateJoin.vue";
-import { i18n } from "@/i18n";
+import HomeCreateJoin from "@/components/home/HomeCreateJoin.svelte";
+import { t } from "@/i18n";
 import { ApiError } from "@/lib/api";
-import { useGameStore } from "@/stores/game";
+import { useGameStore } from "@/stores/game.svelte";
 
 const apiRequestMock = vi.fn();
 const connectMock = vi.fn();
@@ -18,15 +26,15 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   apiRequest: (...args: unknown[]) => apiRequestMock(...args),
 }));
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({ connect: connectMock }),
 }));
 
-vi.mock("@/composables/useSettingsPanel", () => ({
+vi.mock("@/composables/useSettingsPanel.svelte", () => ({
   useSettingsPanel: () => ({ openForName: openForNameMock }),
 }));
 
-vi.mock("@/composables/notifications", () => ({
+vi.mock("@/composables/notifications.svelte", () => ({
   showNotification: (...args: unknown[]) => showNotificationMock(...args),
 }));
 
@@ -38,21 +46,18 @@ vi.mock("@/shared/playerIdentity", () => ({
   getOrCreatePlayerId: () => "player-1",
 }));
 
-vi.mock("vue-router", () => ({
+vi.mock("@/router", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
 function mountPanel() {
-  return mount(HomeCreateJoin, {
-    global: {
-      plugins: [i18n],
-    },
-  });
+  return render(HomeCreateJoin);
 }
 
 describe("HomeCreateJoin", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
     apiRequestMock.mockReset();
     connectMock.mockReset();
     openForNameMock.mockReset();
@@ -63,7 +68,7 @@ describe("HomeCreateJoin", () => {
   it("opens the name prompt before creating a room without a player name", async () => {
     const wrapper = mountPanel();
 
-    await wrapper.findAll("button")[0].trigger("click");
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button"))[0]!);
 
     expect(openForNameMock).toHaveBeenCalledWith(expect.any(Function));
     expect(apiRequestMock).not.toHaveBeenCalled();
@@ -75,7 +80,7 @@ describe("HomeCreateJoin", () => {
     apiRequestMock.mockResolvedValueOnce({ room_code: "ABC123" });
 
     const wrapper = mountPanel();
-    await wrapper.findAll("button")[0].trigger("click");
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button"))[0]!);
     await flushPromises();
 
     expect(apiRequestMock).toHaveBeenCalledWith(
@@ -96,11 +101,11 @@ describe("HomeCreateJoin", () => {
     apiRequestMock.mockRejectedValueOnce(new ApiError(429, "Too many open rooms from your network."));
 
     const wrapper = mountPanel();
-    await wrapper.findAll("button")[0].trigger("click");
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button"))[0]!);
     await flushPromises();
 
-    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.tooManyRooms"), "error");
-    expect(i18n.global.t("notifications.tooManyRooms")).toContain("wait a few minutes");
+    expect(showNotificationMock).toHaveBeenCalledWith(t("notifications.tooManyRooms"), "error");
+    expect(t("notifications.tooManyRooms")).toContain("wait a few minutes");
     expect(pushMock).not.toHaveBeenCalled();
   });
 
@@ -109,7 +114,7 @@ describe("HomeCreateJoin", () => {
     const store = useGameStore();
 
     const wrapper = mountPanel();
-    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button")).at(-1)!);
     await flushPromises();
 
     expect(store.localPlayerName).toBe("Sketchy Guest");
@@ -126,10 +131,10 @@ describe("HomeCreateJoin", () => {
     apiRequestMock.mockRejectedValueOnce(new ApiError(429, "Too many open rooms from your network."));
 
     const wrapper = mountPanel();
-    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button")).at(-1)!);
     await flushPromises();
 
-    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.tooManyRooms"), "error");
+    expect(showNotificationMock).toHaveBeenCalledWith(t("notifications.tooManyRooms"), "error");
     expect(connectMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });
@@ -138,10 +143,10 @@ describe("HomeCreateJoin", () => {
     apiRequestMock.mockRejectedValueOnce(new ApiError(503, "Service unavailable"));
 
     const wrapper = mountPanel();
-    await wrapper.findAll("button").at(-1)?.trigger("click");
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button")).at(-1)!);
     await flushPromises();
 
-    expect(showNotificationMock).toHaveBeenCalledWith(i18n.global.t("notifications.connectFailed"), "error");
+    expect(showNotificationMock).toHaveBeenCalledWith(t("notifications.connectFailed"), "error");
     expect(pushMock).not.toHaveBeenCalled();
   });
 
@@ -150,8 +155,8 @@ describe("HomeCreateJoin", () => {
     store.localPlayerName = "Simon";
     const wrapper = mountPanel();
 
-    await wrapper.find("input").setValue("NOPE");
-    await wrapper.findAll("button")[1].trigger("click");
+    await fireEvent.input(wrapper.container.querySelector("input")!, { target: { value: "NOPE" } });
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button"))[1]!);
 
     expect(showNotificationMock).toHaveBeenCalledWith(
       expect.stringContaining("Room code must be 6 characters"),

@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import type { UserConfig } from "vite";
 import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 
-import viteConfig from "./vite.config";
+import viteConfig from "./vite.config.ts";
 
 // Merge the project's Vite config with some test-specific overrides.
 // Keep the original intent: use jsdom, respect default excludes and
@@ -10,6 +10,7 @@ import viteConfig from "./vite.config";
 export default mergeConfig(
   viteConfig as UserConfig,
   defineConfig({
+    resolve: { conditions: ["browser"] },
     test: {
       environment: "jsdom",
       include: ["src/**/*.spec.{js,ts,jsx,tsx}", "src/**/__tests__/**/*.{js,ts}", "tests/**/*.test.{js,ts}"],

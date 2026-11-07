@@ -1,10 +1,9 @@
-import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type HandlerContext, handleServerEvent } from "@/composables/connection/handlers";
-import { useReactions } from "@/composables/useReactions";
+import { useReactions } from "@/composables/useReactions.svelte";
 import { ServerEventSchema } from "@/generated/protocol";
-import { useGameStore } from "@/stores/game";
+import { useGameStore } from "@/stores/game.svelte";
 
 describe("connection handlers translations", () => {
   let store: ReturnType<typeof useGameStore>;
@@ -12,7 +11,9 @@ describe("connection handlers translations", () => {
   let ctx: HandlerContext;
 
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
+    useGameStore().localPlayerColor = null;
     store = useGameStore();
     showNotification = vi.fn();
     ctx = {

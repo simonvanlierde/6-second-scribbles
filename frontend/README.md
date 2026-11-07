@@ -1,6 +1,6 @@
 # Frontend
 
-The frontend is a Vue 3 single-page app. Players use it to create rooms, join games,
+The frontend is a Svelte 5 single-page app. Players use it to create rooms, join games,
 draw, guess, and see the round results in real time.
 
 ## Main Areas
@@ -8,10 +8,16 @@ draw, guess, and see the round results in real time.
 - `src/views/`: route-level screens
 - `src/components/`: reusable UI building blocks
 - `src/composables/`: connection, canvas, timer, and room lifecycle logic
-- `src/stores/`: auth, game, and drawing state (Pinia)
+- `src/stores/`: reactive auth, game, and drawing state
 - `src/shared/`: shared types and small domain helpers
 - `src/generated/`: API and protocol types generated from [`contracts/`](../contracts/README.md);
   regenerate with `pnpm run contracts:generate`
+
+Reactive stores and helpers use Svelte runes in `.svelte.ts` modules. Keep their returned
+objects intact when reading reactive properties.
+
+Translations use Lingui with explicit IDs in `src/locales/*.json`. Catalogs use ICU
+message syntax and compile during the Vite build; other languages load on demand.
 
 ## Routes
 

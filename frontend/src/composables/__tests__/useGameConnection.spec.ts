@@ -1,10 +1,9 @@
-import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useNotifications } from "@/composables/notifications";
+import { useNotifications } from "@/composables/notifications.svelte";
 import { AVATAR_COLORS } from "@/composables/useAvatar";
-import { useGameConnection } from "@/composables/useGameConnection";
-import { useGameStore } from "@/stores/game";
+import { useGameConnection } from "@/composables/useGameConnection.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -30,7 +29,9 @@ class MockWebSocket {
 
 describe("client message handlers", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
+    useGameStore().localPlayerColor = null;
     MockWebSocket.instances = [];
     vi.stubGlobal("WebSocket", MockWebSocket);
   });

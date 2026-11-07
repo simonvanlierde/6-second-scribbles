@@ -23,6 +23,8 @@ repos:
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
+        # Patch context must preserve upstream whitespace.
+        exclude_types: [diff]
       - id: check-toml
 
   # Tolerates JSONC configs (tsconfig, VS Code settings).
@@ -109,16 +111,15 @@ repos:
         name: biome check
         entry: pnpm exec biome check --write --no-errors-on-unmatched
         language: system
-        files: \.(js|cjs|mjs|ts|tsx|vue|json|jsonc|css|html|md)$
+        files: \.(js|cjs|mjs|ts|tsx|svelte|json|jsonc|css|html|md)$
 
-      # vue-tsc --build, the frontend's own type-check. A bare `vue-tsc --noEmit`
-      # follows the solution tsconfig's empty `files` and checks nothing.
+      # Check Svelte components and the frontend's TypeScript configuration.
       - id: tsc
-        name: vue-tsc --build
+        name: svelte-check + tsc
         entry: pnpm --dir frontend run type-check
         language: system
         pass_filenames: false
-        files: ^frontend/.*\.(ts|tsx|vue)$|^frontend/tsconfig
+        files: ^frontend/.*\.(ts|tsx|svelte)$|^frontend/tsconfig
 
       - id: commitlint
         name: commitlint

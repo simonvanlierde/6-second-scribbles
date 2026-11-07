@@ -1,6 +1,6 @@
 # Architecture
 
-A Vue 3 single-page frontend, a FastAPI backend, and committed contracts that keep
+A Svelte 5 single-page frontend, a FastAPI backend, and committed contracts that keep
 the two in sync. The [frontend](../frontend/README.md) and
 [backend](../backend/README.md) READMEs cover each side.
 
@@ -15,7 +15,7 @@ starts only after the database migrations finish.
 
 ```mermaid
 flowchart TD
-    Browser["Player browser<br/>(Vue 3 SPA)"]
+    Browser["Player browser<br/>(Svelte 5 SPA)"]
     Tunnel["Cloudflare Tunnel"]
     Frontend["Frontend container<br/>Caddy + built SPA<br/>proxies /api and /ws"]
     Backend["Backend container<br/>FastAPI<br/>HTTP /api + WS /ws/{room_id}"]

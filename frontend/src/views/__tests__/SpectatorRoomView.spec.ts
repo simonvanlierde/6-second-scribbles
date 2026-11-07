@@ -1,23 +1,23 @@
-import { mount } from "@vue/test-utils";
+import { fireEvent, render } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import SpectatorRoomView from "@/views/SpectatorRoomView.vue";
+import SpectatorRoomView from "@/views/SpectatorRoomView.svelte";
 
 const disconnectMock = vi.fn();
 const resetMock = vi.fn();
 const routerPushMock = vi.fn();
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({
     disconnect: disconnectMock,
   }),
 }));
 
-vi.mock("vue-router", () => ({
+vi.mock("@/router", () => ({
   useRouter: () => ({ push: routerPushMock }),
 }));
 
-vi.mock("@/stores/game", () => ({
+vi.mock("@/stores/game.svelte", () => ({
   useGameStore: () => ({
     roomCode: "ROOM1",
     gamePhase: "drawing",
@@ -42,11 +42,11 @@ beforeEach(() => {
 
 describe("SpectatorRoomView", () => {
   it("leaves immediately without a confirmation dialog", async () => {
-    const wrapper = mount(SpectatorRoomView);
+    const wrapper = render(SpectatorRoomView);
 
-    expect(wrapper.find("dialog").exists()).toBe(false);
+    expect(Boolean(wrapper.container.querySelector("dialog"))).toBe(false);
 
-    await wrapper.get("button.leave-btn").trigger("click");
+    await fireEvent.click(wrapper.container.querySelector("button.leave-btn")!);
 
     expect(disconnectMock).toHaveBeenCalledTimes(1);
     expect(resetMock).toHaveBeenCalledTimes(1);

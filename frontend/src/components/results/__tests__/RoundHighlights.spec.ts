@@ -1,10 +1,9 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { render } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import RoundHighlights from "@/components/results/RoundHighlights.vue";
+import RoundHighlights from "@/components/results/RoundHighlights.svelte";
 import type { RoundHighlights as RoundHighlightsData } from "@/shared/types";
-import { useGameStore } from "@/stores/game";
+import { useGameStore } from "@/stores/game.svelte";
 
 function seedPlayers() {
   const store = useGameStore();
@@ -16,7 +15,8 @@ function seedPlayers() {
 }
 
 beforeEach(() => {
-  setActivePinia(createPinia());
+  useGameStore().reset();
+  useGameStore().setLocalPlayer("", "");
   seedPlayers();
 });
 
@@ -28,16 +28,16 @@ describe("RoundHighlights", () => {
       wildestMiss: { playerId: "p3", detail: "banana" },
     };
 
-    const wrapper = mount(RoundHighlights, { props: { highlights } });
+    const wrapper = render(RoundHighlights, { props: { highlights } });
 
-    const cards = wrapper.findAll(".highlight");
+    const cards = Array.from(wrapper.container.querySelectorAll(".highlight"));
     expect(cards).toHaveLength(3);
-    expect(wrapper.text()).toContain("Alice");
-    expect(wrapper.text()).toContain("Got 3/4 right");
-    expect(wrapper.text()).toContain("First to guess");
-    expect(wrapper.text()).toContain("banana");
+    expect(wrapper.container.textContent!).toContain("Alice");
+    expect(wrapper.container.textContent!).toContain("Got 3/4 right");
+    expect(wrapper.container.textContent!).toContain("First to guess");
+    expect(wrapper.container.textContent!).toContain("banana");
     // Middle card uses the post-it variant for rhythm.
-    expect(cards[1]?.classes()).toContain("hd-card--postit");
+    expect(cards[1]?.classList).toContain("hd-card--postit");
   });
 
   it("skips highlights that are null", () => {
@@ -47,15 +47,15 @@ describe("RoundHighlights", () => {
       wildestMiss: null,
     };
 
-    const wrapper = mount(RoundHighlights, { props: { highlights } });
+    const wrapper = render(RoundHighlights, { props: { highlights } });
 
-    expect(wrapper.findAll(".highlight")).toHaveLength(1);
+    expect(Array.from(wrapper.container.querySelectorAll(".highlight"))).toHaveLength(1);
   });
 
   it("shows a fallback when there are no highlights", () => {
-    const wrapper = mount(RoundHighlights, { props: { highlights: null } });
+    const wrapper = render(RoundHighlights, { props: { highlights: null } });
 
-    expect(wrapper.findAll(".highlight")).toHaveLength(0);
-    expect(wrapper.text()).toContain("No highlights this round");
+    expect(Array.from(wrapper.container.querySelectorAll(".highlight"))).toHaveLength(0);
+    expect(wrapper.container.textContent!).toContain("No highlights this round");
   });
 });

@@ -1,45 +1,24 @@
-import { mount } from "@vue/test-utils";
+import { fireEvent, render } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
-
-import StepperInput from "@/components/StepperInput.vue";
-import { i18n } from "@/i18n";
-
-function mountStepper(modelValue = 5) {
-  return mount(StepperInput, {
-    props: {
-      modelValue,
-      label: "Rounds",
-      min: 1,
-      max: 10,
-    },
-    global: { plugins: [i18n] },
-  });
-}
+import StepperInput from "./fixtures/StepperHarness.svelte";
 
 describe("StepperInput", () => {
   it("increments and decrements within range", async () => {
-    const wrapper = mountStepper(5);
-
-    await wrapper.find('[aria-label="Increase Rounds"]').trigger("click");
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([6]);
-
-    await wrapper.setProps({ modelValue: 6 });
-    await wrapper.find('[aria-label="Decrease Rounds"]').trigger("click");
-
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([5]);
+    const { container } = render(StepperInput);
+    await fireEvent.click(container.querySelector('[aria-label="Increase Rounds"]')!);
+    expect(container.querySelector("output")?.textContent).toBe("6");
+    await fireEvent.click(container.querySelector('[aria-label="Decrease Rounds"]')!);
+    expect(container.querySelector("output")?.textContent).toBe("5");
   });
 
   it("updates only valid typed values and clamps on blur", async () => {
-    const wrapper = mountStepper(5);
-    const input = wrapper.find("input");
-
-    await input.setValue("8");
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([8]);
-
-    await input.setValue("99");
-    expect(wrapper.text()).toContain("Must be between 1 and 10");
-
-    await input.trigger("blur");
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([10]);
+    const { container } = render(StepperInput);
+    const input = container.querySelector("input")!;
+    await fireEvent.input(input, { target: { value: "8" } });
+    expect(container.querySelector("output")?.textContent).toBe("8");
+    await fireEvent.input(input, { target: { value: "99" } });
+    expect(container.textContent).toContain("Must be between 1 and 10");
+    await fireEvent.blur(input);
+    expect(container.querySelector("output")?.textContent).toBe("10");
   });
 });

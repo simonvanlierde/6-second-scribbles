@@ -8,37 +8,37 @@ describe("useTheme", () => {
   });
 
   it("defaults to auto and removes data-theme from <html>", async () => {
-    const { useTheme } = await import("@/composables/useTheme");
-    const { theme } = useTheme();
-    expect(theme.value).toBe("auto");
+    const { useTheme } = await import("@/composables/useTheme.svelte");
+    const themeState = useTheme();
+    expect(themeState.theme).toBe("auto");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
   it("persists light / dark to localStorage and sets data-theme", async () => {
-    const { useTheme } = await import("@/composables/useTheme");
-    const { theme } = useTheme();
-    theme.value = "light";
+    const { useTheme } = await import("@/composables/useTheme.svelte");
+    const themeState = useTheme();
+    themeState.theme = "light";
     expect(localStorage.getItem("ds:theme")).toBe("light");
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
-    theme.value = "dark";
+    themeState.theme = "dark";
     expect(localStorage.getItem("ds:theme")).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
 
   it("clears data-theme when switched back to auto", async () => {
-    const { useTheme } = await import("@/composables/useTheme");
-    const { theme } = useTheme();
-    theme.value = "dark";
-    theme.value = "auto";
+    const { useTheme } = await import("@/composables/useTheme.svelte");
+    const themeState = useTheme();
+    themeState.theme = "dark";
+    themeState.theme = "auto";
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     expect(localStorage.getItem("ds:theme")).toBe("auto");
   });
 
   it("restores from localStorage on module reload", async () => {
     localStorage.setItem("ds:theme", "dark");
-    const { useTheme } = await import("@/composables/useTheme");
-    const { theme } = useTheme();
-    expect(theme.value).toBe("dark");
+    const { useTheme } = await import("@/composables/useTheme.svelte");
+    const themeState = useTheme();
+    expect(themeState.theme).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
 });

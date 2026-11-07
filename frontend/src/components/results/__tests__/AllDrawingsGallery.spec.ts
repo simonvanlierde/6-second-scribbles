@@ -1,7 +1,7 @@
-import { mount } from "@vue/test-utils";
+import { fireEvent, render } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AllDrawingsGallery from "@/components/results/AllDrawingsGallery.vue";
+import AllDrawingsGallery from "@/components/results/AllDrawingsGallery.svelte";
 import type { GalleryDrawing } from "@/shared/types";
 
 const exportDrawingMock = vi.fn();
@@ -40,22 +40,22 @@ beforeEach(() => {
 
 describe("AllDrawingsGallery", () => {
   it("renders one cell per drawing", () => {
-    const wrapper = mount(AllDrawingsGallery, { props: { drawings } });
-    expect(wrapper.findAll(".gallery__cell")).toHaveLength(3);
+    const wrapper = render(AllDrawingsGallery, { props: { drawings } });
+    expect(Array.from(wrapper.container.querySelectorAll(".gallery__cell"))).toHaveLength(3);
   });
 
   it("shows an empty state when there are no drawings", () => {
-    const wrapper = mount(AllDrawingsGallery, { props: { drawings: [] } });
-    expect(wrapper.findAll(".gallery__cell")).toHaveLength(0);
-    expect(wrapper.find(".gallery__empty").exists()).toBe(true);
+    const wrapper = render(AllDrawingsGallery, { props: { drawings: [] } });
+    expect(Array.from(wrapper.container.querySelectorAll(".gallery__cell"))).toHaveLength(0);
+    expect(wrapper.container.querySelector(".gallery__empty")! !== null).toBe(true);
   });
 
   it("downloads the matching drawing when its button is clicked", async () => {
-    const wrapper = mount(AllDrawingsGallery, { props: { drawings } });
+    const wrapper = render(AllDrawingsGallery, { props: { drawings } });
 
-    const buttons = wrapper.findAll(".gallery__download");
+    const buttons = Array.from(wrapper.container.querySelectorAll(".gallery__download"));
     expect(buttons).toHaveLength(3);
-    await buttons[1]?.trigger("click");
+    await fireEvent.click(buttons[1]!);
 
     expect(exportDrawingMock).toHaveBeenCalledTimes(1);
     expect(exportDrawingMock.mock.calls[0]?.[0]).toBe("data:image/png;base64,A2");
@@ -64,8 +64,8 @@ describe("AllDrawingsGallery", () => {
   });
 
   it("gives each download button a descriptive aria-label", () => {
-    const wrapper = mount(AllDrawingsGallery, { props: { drawings } });
-    const label = wrapper.find(".gallery__download").attributes("aria-label");
+    const wrapper = render(AllDrawingsGallery, { props: { drawings } });
+    const label = wrapper.container.querySelector(".gallery__download")?.getAttribute("aria-label");
     expect(label).toContain("Alice");
   });
 });
