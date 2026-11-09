@@ -10,6 +10,7 @@ vulnerabilities:
       - usr/bin/caddy
     statement: >-
       Denial of service from crafted HTML input to golang.org/x/net/html. Not reachable
-      here: the Caddyfile uses no templates or other directive that parses HTML, and
-      reverse_proxy and file_server pass bodies through unparsed.
+      here: Caddy v2.11.9 imports it only through modules/caddypki (smallstep
+      cli-utils/usage, which renders CLI help), and this Caddyfile runs no PKI, ACME
+      server or TLS. reverse_proxy and file_server pass bodies through unparsed.
     expired_at: 2026-11-30
