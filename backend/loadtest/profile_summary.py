@@ -20,7 +20,9 @@ def summarize(lines: list[str]) -> tuple[Counter[str], Counter[str], int]:
 
     Each line is ``frame;frame;...;leaf count``, root first. Line numbers are dropped
     so every line of a function counts towards the function. A function that appears
-    twice in one stack (recursion) counts once towards its inclusive total.
+    twice in one stack (recursion) counts once towards its inclusive total. Functions
+    with the same name in the same file (two ``__init__`` or nested ``wrapper``
+    closures) merge into one row.
     """
     self_counts: Counter[str] = Counter()
     inclusive: Counter[str] = Counter()

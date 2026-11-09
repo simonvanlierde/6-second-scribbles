@@ -86,7 +86,11 @@ limit, is not part of the measurement.
 just loadtest                      # build the prod stack, seed it, ramp, tear down
 just loadtest --smoke              # 2 rooms x 3 players for a few seconds; fails on any problem
 just loadtest --rooms 60,70,80 --players 8
+just profile                       # py-spy on the backend during a 40-room run; prints self and inclusive time
 ```
+
+CI runs the smoke in the images job, through Caddy against the prod stack it just
+built, so a server error or rejected message fails the pull request.
 
 `just loadtest` runs the stack as the Compose project `tmp-6ss-load` with the
 prod build and limits, plus
