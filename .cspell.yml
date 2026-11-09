@@ -51,6 +51,9 @@ words:
 
   # Software terms
   - ACMR
+  - ossf
+  - sarif
+  - taiki
   - Caddyfile
   - carryforward
   - Centralised

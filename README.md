@@ -27,11 +27,22 @@ just dev                                        # Docker services + dev servers
 
 Then open <http://localhost:3001>. `just up` runs the whole stack in containers instead. `just test`, `just check`, and `just format` run the tests, the linters, and the formatters.
 
+## Development
+
+Run the checks and tests that need no Docker. CI runs these blocks in a fresh container.
+
+```sh
+just install
+just check-frontend check-backend
+just test
+```
+
 ## Docs
 
 - [Architecture](docs/architecture.md), including how production runs, and the [design decisions](docs/adr/)
 - [Capacity](docs/capacity.md): how many rooms one backend holds
 - [Frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md)
+- [Accessibility statement](frontend/docs/accessibility.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## Attribution
