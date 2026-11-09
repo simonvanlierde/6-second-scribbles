@@ -35,6 +35,7 @@
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000"
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		# The SPA calls /api and /ws on its own origin (src/config/gameConfig.ts).
 		# Under CSP Level 3, 'self' also allows ws:/wss: to the same host, which
@@ -56,6 +57,17 @@
 		reverse_proxy backend:8000 {
 			header_up X-Forwarded-For {client_ip}
 		}
+	}
+
+	# RFC 9116. Renew the Expires date before it passes.
+	handle /.well-known/security.txt {
+		header Content-Type "text/plain; charset=utf-8"
+		respond `Contact: mailto:code@duinlab.nl
+Contact: https://github.com/simonvanlierde/6-second-scribbles/security/advisories/new
+Expires: 2027-11-09T00:00:00.000Z
+Preferred-Languages: en, nl
+Canonical: https://6ss.duinlab.nl/.well-known/security.txt
+` 200
 	}
 
 	handle /healthz {
