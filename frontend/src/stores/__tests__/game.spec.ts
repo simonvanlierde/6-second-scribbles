@@ -1,9 +1,8 @@
-import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { GAME_SETTINGS } from "@/config/gameConfig";
 import type { RoundResult } from "@/shared/types";
-import { useGameStore } from "@/stores/game";
+import { useGameStore } from "@/stores/game.svelte";
 
 function createMemoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -36,7 +35,9 @@ beforeEach(() => {
     configurable: true,
     writable: true,
   });
-  setActivePinia(createPinia());
+  useGameStore().reset();
+  useGameStore().setLocalPlayer("", "");
+  useGameStore().localPlayerColor = null;
 });
 
 // ---------------------------------------------------------------------------
@@ -176,9 +177,6 @@ describe("localPlayer", () => {
     expect(store.localPlayer).toBeUndefined();
   });
 });
-
-// Persistence of localPlayerName is handled by pinia-plugin-persistedstate (key: "gameState").
-// Testing the plugin itself is out of scope; it is covered by the library's own test suite.
 
 describe("player locale state", () => {
   it("tracks the local player locale separately", () => {

@@ -30,6 +30,11 @@ ignorePaths:
   - "frontend/src/generated/**"
 
 ignoreWords:
+  - lingui
+  - onclear
+  - onleave
+  - onmodelValueChange
+  - onreact
   # Software terms
   - vueuse
   - jsonvet

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useLocaleAvailability } from "@/composables/useLocaleAvailability";
+import { useLocaleAvailability } from "@/composables/useLocaleAvailability.svelte";
 
 const apiRequestMock = vi.fn();
 
@@ -14,9 +14,9 @@ describe("useLocaleAvailability", () => {
   });
 
   it("keeps locales enabled before first successful load", () => {
-    const { localeOptions } = useLocaleAvailability();
+    const locales = useLocaleAvailability();
 
-    expect(localeOptions.value.every((option) => option.enabled)).toBe(true);
+    expect(locales.localeOptions.every((option) => option.enabled)).toBe(true);
   });
 
   it("disables locales with zero category coverage after load", async () => {
@@ -29,12 +29,12 @@ describe("useLocaleAvailability", () => {
       { locale: "es", category_count: 0, difficulty_counts: {} },
     ]);
 
-    const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
-    await fetchLocaleAvailability(true);
+    const locales = useLocaleAvailability();
+    await locales.fetchLocaleAvailability(true);
 
-    const en = localeOptions.value.find((option) => option.code === "en");
-    const es = localeOptions.value.find((option) => option.code === "es");
-    const fr = localeOptions.value.find((option) => option.code === "fr");
+    const en = locales.localeOptions.find((option) => option.code === "en");
+    const es = locales.localeOptions.find((option) => option.code === "es");
+    const fr = locales.localeOptions.find((option) => option.code === "fr");
 
     expect(en?.enabled).toBe(true);
     expect(es?.enabled).toBe(false);
@@ -61,12 +61,12 @@ describe("useLocaleAvailability", () => {
       },
     ]);
 
-    const { localeOptions, fetchLocaleAvailability } = useLocaleAvailability();
-    await fetchLocaleAvailability(true);
+    const locales = useLocaleAvailability();
+    await locales.fetchLocaleAvailability(true);
 
-    expect(localeOptions.value.some((option) => option.code === "zh")).toBe(false);
-    expect(localeOptions.value.find((option) => option.code === "de")?.enabled).toBe(true);
-    expect(localeOptions.value.find((option) => option.code === "zh-CN")?.enabled).toBe(true);
-    expect(localeOptions.value.find((option) => option.code === "zh-TW")?.enabled).toBe(true);
+    expect(locales.localeOptions.some((option) => option.code === "zh")).toBe(false);
+    expect(locales.localeOptions.find((option) => option.code === "de")?.enabled).toBe(true);
+    expect(locales.localeOptions.find((option) => option.code === "zh-CN")?.enabled).toBe(true);
+    expect(locales.localeOptions.find((option) => option.code === "zh-TW")?.enabled).toBe(true);
   });
 });

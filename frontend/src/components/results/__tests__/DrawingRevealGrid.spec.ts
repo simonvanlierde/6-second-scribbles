@@ -1,14 +1,14 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import DrawingRevealGrid from "@/components/results/DrawingRevealGrid.vue";
-import { useReactions } from "@/composables/useReactions";
-import { useGameStore } from "@/stores/game";
+import DrawingRevealGrid from "@/components/results/DrawingRevealGrid.svelte";
+import { useReactions } from "@/composables/useReactions.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 const sendMock = vi.fn();
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({ send: sendMock }),
 }));
 
@@ -23,7 +23,8 @@ function seedDrawings() {
 }
 
 beforeEach(() => {
-  setActivePinia(createPinia());
+  useGameStore().reset();
+  useGameStore().setLocalPlayer("", "");
   sendMock.mockClear();
   useReactions().clear();
   seedDrawings();
@@ -31,15 +32,15 @@ beforeEach(() => {
 
 describe("DrawingRevealGrid", () => {
   it("renders one cell per drawing", () => {
-    const wrapper = mount(DrawingRevealGrid);
-    expect(wrapper.findAll(".reveal__cell")).toHaveLength(2);
+    const wrapper = render(DrawingRevealGrid);
+    expect(Array.from(wrapper.container.querySelectorAll(".reveal__cell"))).toHaveLength(2);
   });
 
   it("sends a reaction_send event when a reaction is tapped", async () => {
-    const wrapper = mount(DrawingRevealGrid);
+    const wrapper = render(DrawingRevealGrid);
 
     // First reaction button of the first drawing's pad.
-    await wrapper.find('[aria-label="Laugh for Alice\'s drawing"]').trigger("click");
+    await fireEvent.click(wrapper.container.querySelector('[aria-label="Laugh for Alice\'s drawing"]')!);
 
     expect(sendMock).toHaveBeenCalledWith({
       type: "reaction_send",
@@ -53,11 +54,11 @@ describe("DrawingRevealGrid", () => {
     reactions.add("p1", "laugh");
     reactions.add("p1", "laugh");
 
-    const wrapper = mount(DrawingRevealGrid);
-    await wrapper.vm.$nextTick();
+    const wrapper = render(DrawingRevealGrid);
+    await tick();
 
-    const badge = wrapper.find(".reveal__badge");
-    expect(badge.exists()).toBe(true);
-    expect(badge.text()).toContain("2");
+    const badge = wrapper.container.querySelector(".reveal__badge")!;
+    expect(badge !== null).toBe(true);
+    expect(badge.textContent!).toContain("2");
   });
 });

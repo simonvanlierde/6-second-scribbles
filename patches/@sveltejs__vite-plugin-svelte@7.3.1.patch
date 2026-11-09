@@ -1,0 +1,28 @@
+diff --git a/src/utils/options.js b/src/utils/options.js
+index 7ab9e64b60e33b98e7287c3afc118e2f6ff13355..feba9418be0ef6a851a2672eef29dc8d0f37ab0f 100644
+--- a/src/utils/options.js
++++ b/src/utils/options.js
+@@ -27,7 +27,10 @@ import {
+ } from './constants.js';
+ 
+ import path from 'node:path';
+-import deepmerge from 'deepmerge';
++import createDeepmerge from 'deepmerge';
++const deepmerge = createDeepmerge({
++	isMergeableObject: (value) => !Array.isArray(value) && createDeepmerge.isMergeableObject(value)
++});
+ import {
+ 	crawlFrameworkPkgs,
+ 	isDepExcluded,
+@@ -186,10 +189,7 @@ function mergeConfigs(...configs) {
+ 	/** @type {Partial<T>} */
+ 	let result = {};
+ 	for (const config of configs.filter((x) => x != null)) {
+-		result = deepmerge(result, /** @type {Partial<T>} */ (config), {
+-			// replace arrays
+-			arrayMerge: (target, source) => source ?? target
+-		});
++		result = deepmerge(result, /** @type {Partial<T>} */ (config));
+ 	}
+ 	return /** @type {T} */ result;
+ }

@@ -1,49 +1,49 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { render } from "@testing-library/svelte";
+import { tick } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
 
-import { useAnnouncer } from "@/composables/useAnnouncer";
+import { useAnnouncer } from "@/composables/useAnnouncer.svelte";
 import type { GamePhase } from "@/shared/types";
 
-import { useGameStore } from "@/stores/game";
-import RoomView from "@/views/RoomView.vue";
+import { useGameStore } from "@/stores/game.svelte";
+import RoomView from "@/views/RoomView.svelte";
 
-vi.mock("vue-router", () => ({
+vi.mock("@/router", () => ({
   useRoute: () => ({ params: { roomCode: "ROOM1" } }),
 }));
 
 const connectMock = vi.fn();
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({
     connect: connectMock,
-    connectionStatus: ref("disconnected"),
+    connectionStatus: "disconnected",
   }),
 }));
 
-vi.mock("@/views/RoomAccessView.vue", () => ({
-  default: { template: "<div>guest</div>" },
+vi.mock("@/views/RoomAccessView.svelte", async () => ({
+  default: (await import("./fixtures/RoomAccessView.svelte")).default,
 }));
-vi.mock("@/views/SpectatorRoomView.vue", () => ({
-  default: { template: "<main><h1>spectator</h1></main>" },
+vi.mock("@/views/SpectatorRoomView.svelte", async () => ({
+  default: (await import("./fixtures/SpectatorRoomView.svelte")).default,
 }));
-vi.mock("@/views/LobbyView.vue", () => ({
-  default: { template: "<main><h1>waiting</h1></main>" },
+vi.mock("@/views/LobbyView.svelte", async () => ({
+  default: (await import("./fixtures/LobbyView.svelte")).default,
 }));
-vi.mock("@/views/GameView.vue", () => ({
-  default: { template: "<main><h1>game</h1></main>" },
+vi.mock("@/views/GameView.svelte", async () => ({
+  default: (await import("./fixtures/GameView.svelte")).default,
 }));
-vi.mock("@/views/RoundResultsView.vue", () => ({
-  default: { template: "<div>round-results</div>" },
+vi.mock("@/views/RoundResultsView.svelte", async () => ({
+  default: (await import("./fixtures/RoundResultsView.svelte")).default,
 }));
-vi.mock("@/views/ResultsView.vue", () => ({
-  default: { template: "<div>final-results</div>" },
+vi.mock("@/views/ResultsView.svelte", async () => ({
+  default: (await import("./fixtures/ResultsView.svelte")).default,
 }));
 
 describe("RoomView", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
-    useAnnouncer().message.value = "";
+    useGameStore().reset();
+    useGameStore().localPlayerId = "";
+    useAnnouncer().message = "";
   });
 
   function joinRoom(phase: GamePhase) {
@@ -56,15 +56,34 @@ describe("RoomView", () => {
     return store;
   }
 
+  it("keeps a saved player identity in spectator mode without reconnecting as a player", async () => {
+    const store = joinRoom("drawing");
+    store.isSpectatorMode = true;
+    connectMock.mockClear();
+
+    const wrapper = render(RoomView);
+    await tick();
+
+    expect(wrapper.container.textContent).toContain("spectator");
+    expect(connectMock).not.toHaveBeenCalled();
+    expect(store.localPlayerId).toBe("p1");
+
+    store.gamePhase = "lobby";
+    await tick();
+    expect(wrapper.container.textContent).toContain("guest");
+    expect(connectMock).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("falls back to the guest flow when the saved room code does not match the URL", () => {
     const store = useGameStore();
     store.localPlayerId = "p1";
     store.roomCode = "OLDROOM";
     store.gamePhase = "lobby";
 
-    const wrapper = mount(RoomView);
+    const wrapper = render(RoomView);
 
-    expect(wrapper.text()).toContain("guest");
+    expect(wrapper.container.textContent).toContain("guest");
   });
 
   it("drops spectator mode once the room returns to the lobby", () => {
@@ -73,10 +92,10 @@ describe("RoomView", () => {
     store.gamePhase = "lobby";
     store.roomCode = "ROOM1";
 
-    const wrapper = mount(RoomView);
+    const wrapper = render(RoomView);
 
-    expect(wrapper.text()).toContain("guest");
-    expect(wrapper.text()).not.toContain("spectator");
+    expect(wrapper.container.textContent).toContain("guest");
+    expect(wrapper.container.textContent).not.toContain("spectator");
   });
 
   it("moves focus to the new phase's heading, announces it and retitles the page", async () => {
@@ -86,19 +105,19 @@ describe("RoomView", () => {
     store.hydrated = true;
     store.gamePhase = "lobby";
     store.currentRound = 1;
-    const { message } = useAnnouncer();
+    const announcer = useAnnouncer();
 
-    const wrapper = mount(RoomView, { attachTo: document.body });
+    const wrapper = render(RoomView);
     expect(document.title).toBe("Lobby · Six Second Scribbles");
 
     store.gamePhase = "drawing";
-    await nextTick();
-    await nextTick();
+    await tick();
+    await tick();
 
-    const heading = wrapper.get("h1").element;
+    const heading = wrapper.container.querySelector("h1")!;
     expect(document.activeElement).toBe(heading);
     expect(heading.getAttribute("tabindex")).toBe("-1");
-    expect(message.value).toBe("Round 1: drawing");
+    expect(announcer.message).toBe("Round 1: drawing");
     expect(document.title).toBe("Round 1: drawing · Six Second Scribbles");
     wrapper.unmount();
   });
@@ -110,7 +129,7 @@ describe("RoomView", () => {
   ])("names the %s screen and round in the tab title", (phase, title) => {
     joinRoom(phase);
 
-    const wrapper = mount(RoomView);
+    const wrapper = render(RoomView);
 
     expect(document.title).toBe(`${title} · Six Second Scribbles`);
     wrapper.unmount();
@@ -120,15 +139,15 @@ describe("RoomView", () => {
     const store = joinRoom("lobby");
     store.hydrated = false;
 
-    const wrapper = mount(RoomView);
-    expect(wrapper.get("h1").text()).toBe("Connecting…");
+    const wrapper = render(RoomView);
+    expect(wrapper.container.querySelector("h1")?.textContent).toBe("Connecting…");
     expect(document.title).toBe("Connecting… · Six Second Scribbles");
 
     store.gamePhase = "drawing";
-    await nextTick();
-    await nextTick();
+    await tick();
+    await tick();
 
-    expect(useAnnouncer().message.value).toBe("");
+    expect(useAnnouncer().message).toBe("");
     wrapper.unmount();
   });
 
@@ -139,14 +158,14 @@ describe("RoomView", () => {
     store.hydrated = true;
     store.gamePhase = "drawing";
 
-    const wrapper = mount(RoomView, { attachTo: document.body });
+    const wrapper = render(RoomView);
     expect(document.title).toBe("Watching room · Six Second Scribbles");
 
     store.gamePhase = "guessing";
-    await nextTick();
-    await nextTick();
+    await tick();
+    await tick();
 
-    expect(useAnnouncer().message.value).toBe("Watching room");
+    expect(useAnnouncer().message).toBe("Watching room");
     expect(document.activeElement).toBe(document.body);
     wrapper.unmount();
   });
@@ -154,12 +173,12 @@ describe("RoomView", () => {
   it("still announces the phase when the new screen has no heading to focus", async () => {
     const store = joinRoom("round_results");
 
-    const wrapper = mount(RoomView, { attachTo: document.body });
+    const wrapper = render(RoomView);
     store.gamePhase = "final_results";
-    await nextTick();
-    await nextTick();
+    await tick();
+    await tick();
 
-    expect(useAnnouncer().message.value).toBe("Game over");
+    expect(useAnnouncer().message).toBe("Game over");
     expect(document.activeElement).toBe(document.body);
     wrapper.unmount();
   });

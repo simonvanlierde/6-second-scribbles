@@ -1,27 +1,33 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render } from "@testing-library/svelte";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import HdInput from "@/components/ui/HdInput.vue";
+import HdInput from "@/components/ui/HdInput.svelte";
 
 describe("HdInput", () => {
   it("renders an input element", () => {
-    const w = mount(HdInput);
-    expect(w.find("input").exists()).toBe(true);
+    const w = render(HdInput, { props: { ...callbacks } });
+    expect(Boolean(w.container.querySelector("input"))).toBe(true);
   });
 
   it("supports v-model via update:modelValue", async () => {
-    const w = mount(HdInput, { props: { modelValue: "" } });
-    await w.find("input").setValue("hello");
-    expect(w.emitted("update:modelValue")?.[0]).toEqual(["hello"]);
+    const w = render(HdInput, { props: { ...callbacks, modelValue: "" } });
+    await fireEvent.input(w.container.querySelector("input")!, { target: { value: "hello" } });
+    expect(events["update:modelValue"].mock.calls?.[0]).toEqual(["hello"]);
   });
 
   it("renders the placeholder", () => {
-    const w = mount(HdInput, { props: { placeholder: "type here" } });
-    expect(w.find("input").attributes("placeholder")).toBe("type here");
+    const w = render(HdInput, { props: { ...callbacks, placeholder: "type here" } });
+    expect(w.container.querySelector("input")?.getAttribute("placeholder")).toBe("type here");
   });
 
   it("applies the code variant class", () => {
-    const w = mount(HdInput, { props: { variant: "code" } });
-    expect(w.classes()).toContain("hd-input--code");
+    const w = render(HdInput, { props: { ...callbacks, variant: "code" } });
+    expect(Array.from(w.container.firstElementChild?.classList)).toContain("hd-input--code");
   });
+});
+
+const events = { "update:modelValue": vi.fn() };
+const callbacks = { onmodelValueChange: events["update:modelValue"] };
+beforeEach(() => {
+  for (const event of Object.values(events)) event.mockClear();
 });

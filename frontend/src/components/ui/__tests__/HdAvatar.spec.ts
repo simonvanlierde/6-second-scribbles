@@ -1,29 +1,23 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { render } from "@testing-library/svelte";
+import { describe, expect, it, vi } from "vitest";
 
-import HdAvatar from "@/components/ui/HdAvatar.vue";
+import HdAvatar from "@/components/ui/HdAvatar.svelte";
 
 describe("HdAvatar", () => {
   it("renders the initial passed in", () => {
-    const w = mount(HdAvatar, {
-      props: { initial: "S", color: "var(--avatar-3)" },
-    });
-    expect(w.text()).toBe("S");
+    const w = render(HdAvatar, { props: { initial: "S", color: "var(--avatar-3)" } });
+    expect(w.container.textContent?.trim()).toBe("S");
   });
 
   it("applies the size class", () => {
-    const sm = mount(HdAvatar, {
-      props: { initial: "X", color: "var(--avatar-1)", size: "sm" },
-    });
-    const lg = mount(HdAvatar, {
-      props: { initial: "X", color: "var(--avatar-1)", size: "lg" },
-    });
-    expect(sm.classes()).toContain("hd-avatar--sm");
-    expect(lg.classes()).toContain("hd-avatar--lg");
+    const sm = render(HdAvatar, { props: { initial: "X", color: "var(--avatar-1)", size: "sm" } });
+    const lg = render(HdAvatar, { props: { initial: "X", color: "var(--avatar-1)", size: "lg" } });
+    expect(Array.from(sm.container.firstElementChild?.classList)).toContain("hd-avatar--sm");
+    expect(Array.from(lg.container.firstElementChild?.classList)).toContain("hd-avatar--lg");
   });
 
   it("sets background color via inline style", () => {
-    const w = mount(HdAvatar, { props: { initial: "S", color: "#FFB4A2" } });
-    expect((w.element as HTMLElement).style.background).toMatch(/#ffb4a2|rgb\(255, 180, 162\)/i);
+    const w = render(HdAvatar, { props: { initial: "S", color: "#FFB4A2" } });
+    expect((w.container.firstElementChild! as HTMLElement).style.background).toMatch(/#ffb4a2|rgb\(255, 180, 162\)/i);
   });
 });

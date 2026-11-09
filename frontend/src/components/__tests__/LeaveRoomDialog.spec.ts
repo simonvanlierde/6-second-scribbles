@@ -1,57 +1,47 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
-import { useGameStore } from "@/stores/game";
+import LeaveRoomDialog from "@/components/LeaveRoomDialog.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 const leaveRoomMock = vi.fn();
-
-vi.mock("@/composables/useLeaveRoom", () => ({
-  useLeaveRoom: () => ({ leaveRoom: leaveRoomMock }),
-}));
+vi.mock("@/composables/useLeaveRoom", () => ({ useLeaveRoom: () => ({ leaveRoom: leaveRoomMock }) }));
 
 describe("LeaveRoomDialog", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
     leaveRoomMock.mockReset();
+    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.open = true;
+    });
+    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+      this.open = false;
+    });
   });
-
   it("asks before a player leaves mid-round, and leaves on confirm", async () => {
     useGameStore().gamePhase = "drawing";
-    const wrapper = mount(LeaveRoomDialog, { global: { stubs: { HdDialog: true } } });
-
-    wrapper.vm.request();
-    await wrapper.vm.$nextTick();
-
-    const dialog = wrapper.findComponent(HdDialog);
-    expect(dialog.props("open")).toBe(true);
+    const { component, container } = render(LeaveRoomDialog);
+    component.request();
+    await tick();
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
     expect(leaveRoomMock).not.toHaveBeenCalled();
-
-    dialog.vm.$emit("confirm");
+    await fireEvent.click(container.querySelector('[data-testid="hd-dialog-confirm"]')!);
     expect(leaveRoomMock).toHaveBeenCalledTimes(1);
   });
-
   it("stays in the room when the player cancels", async () => {
     useGameStore().gamePhase = "guessing";
-    const wrapper = mount(LeaveRoomDialog, { global: { stubs: { HdDialog: true } } });
-    wrapper.vm.request();
-    await wrapper.vm.$nextTick();
-
-    wrapper.findComponent(HdDialog).vm.$emit("update:open", false);
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.findComponent(HdDialog).props("open")).toBe(false);
+    const { component, container } = render(LeaveRoomDialog);
+    component.request();
+    await tick();
+    await fireEvent.click(container.querySelector('[data-testid="hd-dialog-cancel"]')!);
+    expect(HTMLDialogElement.prototype.close).toHaveBeenCalled();
     expect(leaveRoomMock).not.toHaveBeenCalled();
   });
-
   it("leaves at once when there is nothing to lose", () => {
-    const wrapper = mount(LeaveRoomDialog, { global: { stubs: { HdDialog: true } } });
-
-    wrapper.vm.request();
-
-    expect(wrapper.findComponent(HdDialog).props("open")).toBe(false);
+    const { component } = render(LeaveRoomDialog);
+    component.request();
+    expect(HTMLDialogElement.prototype.showModal).not.toHaveBeenCalled();
     expect(leaveRoomMock).toHaveBeenCalledTimes(1);
   });
 });

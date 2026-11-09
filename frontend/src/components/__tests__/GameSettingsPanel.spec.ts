@@ -1,45 +1,44 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick as nextTick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
 
-import GameSettingsPanel from "@/components/GameSettingsPanel.vue";
+import GameSettingsPanel from "@/components/GameSettingsPanel.svelte";
 import { UI_TIMINGS } from "@/config/gameConfig";
-import { i18n } from "@/i18n";
-import { useGameStore } from "@/stores/game";
+import { useGameStore } from "@/stores/game.svelte";
 
 const sendMock = vi.fn();
 const fetchLocaleAvailabilityMock = vi.fn();
-const localeOptions = ref([
-  { code: "en", label: "English", enabled: true },
-  { code: "nl", label: "Nederlands", enabled: true },
-]);
+const localeOptions = {
+  current: [
+    { code: "en", label: "English", enabled: true },
+    { code: "nl", label: "Nederlands", enabled: true },
+  ],
+};
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({ send: sendMock }),
 }));
 
-vi.mock("@/composables/useLocaleAvailability", () => ({
+vi.mock("@/composables/useLocaleAvailability.svelte", () => ({
   useLocaleAvailability: () => ({
     fetchLocaleAvailability: fetchLocaleAvailabilityMock,
-    localeOptions,
+    get localeOptions() {
+      return localeOptions.current;
+    },
   }),
 }));
 
 function mountPanel() {
-  return mount(GameSettingsPanel, {
-    global: {
-      plugins: [i18n],
-    },
-  });
+  return render(GameSettingsPanel);
 }
 
 describe("GameSettingsPanel", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
     sendMock.mockReset();
     fetchLocaleAvailabilityMock.mockReset();
-    localeOptions.value = [
+    localeOptions.current = [
       { code: "en", label: "English", enabled: true },
       { code: "nl", label: "Nederlands", enabled: true },
     ];
@@ -66,11 +65,11 @@ describe("GameSettingsPanel", () => {
 
     const wrapper = mountPanel();
 
-    expect(wrapper.find(".settings--readonly").exists()).toBe(true);
-    expect(wrapper.text()).toContain("hard");
-    expect(wrapper.text()).toContain("5 Rounds");
-    expect(wrapper.text()).toContain("70s");
-    expect(wrapper.text()).toContain("40s");
+    expect(!!wrapper.container.querySelector(".settings--readonly")).toBe(true);
+    expect(wrapper.container.textContent).toContain("hard");
+    expect(wrapper.container.textContent).toContain("5 Rounds");
+    expect(wrapper.container.textContent).toContain("70s");
+    expect(wrapper.container.textContent).toContain("40s");
     expect(fetchLocaleAvailabilityMock).toHaveBeenCalledTimes(1);
   });
 
@@ -85,14 +84,14 @@ describe("GameSettingsPanel", () => {
 
     const wrapper = mountPanel();
 
-    expect(wrapper.find(".settings--readonly").exists()).toBe(false);
-    expect(wrapper.text()).toContain("Difficulty");
-    expect(wrapper.findAll(".hd-seg__item")).toHaveLength(3);
+    expect(!!wrapper.container.querySelector(".settings--readonly")).toBe(false);
+    expect(wrapper.container.textContent).toContain("Difficulty");
+    expect(wrapper.container.querySelectorAll(".hd-seg__item")).toHaveLength(3);
 
-    await wrapper.find(".advanced-toggle").trigger("click");
+    await fireEvent.click(wrapper.getByRole("button", { name: "Advanced Settings" }));
 
-    expect(wrapper.text()).toContain("Drawing time");
-    expect(wrapper.text()).toContain("Guessing time");
+    expect(wrapper.container.textContent).toContain("Drawing time");
+    expect(wrapper.container.textContent).toContain("Guessing time");
   });
 
   it("host broadcasts their playable locale as the room default", () => {
@@ -122,10 +121,10 @@ describe("GameSettingsPanel", () => {
     const wrapper = mountPanel();
     sendMock.mockReset();
 
-    const increase = wrapper.get('button[aria-label="Increase Rounds"]');
-    await increase.trigger("click");
-    await increase.trigger("click");
-    await increase.trigger("click");
+    const increase = wrapper.getByRole("button", { name: "Increase Rounds", exact: true });
+    await fireEvent.click(increase);
+    await fireEvent.click(increase);
+    await fireEvent.click(increase);
     vi.advanceTimersByTime(299);
 
     expect(sendMock).not.toHaveBeenCalled();
@@ -149,15 +148,15 @@ describe("GameSettingsPanel", () => {
     const wrapper = mountPanel();
 
     store.applySettingsUpdate({ rounds: 7 });
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
-    expect(wrapper.find(".settings-flash").exists()).toBe(true);
-    expect(wrapper.text()).toContain("7 Rounds");
+    expect(!!wrapper.container.querySelector(".settings-flash")).toBe(true);
+    expect(wrapper.container.textContent).toContain("7 Rounds");
 
     vi.advanceTimersByTime(UI_TIMINGS.SETTINGS_FLASH_MS);
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
-    expect(wrapper.find(".settings-flash").exists()).toBe(false);
+    expect(!!wrapper.container.querySelector(".settings-flash")).toBe(false);
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "settings_update" }));
   });
 });

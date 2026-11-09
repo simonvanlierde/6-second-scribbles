@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted } from "vue";
+import { onDestroy, onMount } from "svelte";
 
 interface RoundDraftOptions<T> {
   /** The round the draft belongs to; a restore only applies when this matches. */
@@ -14,7 +14,7 @@ interface RoundDraftOptions<T> {
 /**
  * Round-gated localStorage draft for in-progress client state (drawing strokes,
  * typed guesses) that the server doesn't hold until submit. Persists on
- * `pagehide`/unmount — `pagehide` fires on refresh/navigation where `onUnmounted`
+ * `pagehide`/unmount — `pagehide` fires on refresh/navigation where `onDestroy`
  * does not — and only restores a draft saved for the current round.
  *
  * The caller invokes `restore()` itself (so it can order it relative to other
@@ -55,8 +55,10 @@ export function useRoundDraft<T>(key: string, options: RoundDraftOptions<T>) {
     }
   }
 
-  onMounted(() => window.addEventListener("pagehide", persist));
-  onUnmounted(() => {
+  onMount(() => {
+    window.addEventListener("pagehide", persist);
+  });
+  onDestroy(() => {
     window.removeEventListener("pagehide", persist);
     persist();
   });

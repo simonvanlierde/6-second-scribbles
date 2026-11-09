@@ -1,12 +1,8 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick as nextTick } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
-import GuessingPhase from "@/components/GuessingPhase.vue";
-import GameHeader from "@/components/game/GameHeader.vue";
-import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
-import { useGameStore } from "@/stores/game";
+import GuessingPhase from "@/components/GuessingPhase.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 const sendMock = vi.fn();
 const playMock = vi.fn();
@@ -14,12 +10,12 @@ const leaveRoomMock = vi.fn();
 const draftRestoreMock = vi.fn();
 const draftClearMock = vi.fn();
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({ send: sendMock }),
 }));
 
-vi.mock("@/composables/useGameTimer", () => ({
-  useGameTimer: () => ({ timeLeft: ref(30), isWarning: ref(false), stop: vi.fn() }),
+vi.mock("@/composables/useGameTimer.svelte", () => ({
+  useGameTimer: () => ({ timeLeft: 30, isWarning: false, stop: vi.fn() }),
 }));
 
 vi.mock("@/composables/useLeaveRoom", () => ({
@@ -30,7 +26,7 @@ vi.mock("@/composables/useRoundDraft", () => ({
   useRoundDraft: () => ({ restore: draftRestoreMock, clear: draftClearMock }),
 }));
 
-vi.mock("@/composables/useSound", () => ({
+vi.mock("@/composables/useSound.svelte", () => ({
   useSound: () => ({ play: playMock }),
 }));
 
@@ -48,7 +44,8 @@ function seedGuessing() {
 
 describe("GuessingPhase", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
     HTMLDialogElement.prototype.showModal = vi.fn();
     HTMLDialogElement.prototype.close = vi.fn();
     sendMock.mockReset();
@@ -60,22 +57,26 @@ describe("GuessingPhase", () => {
   });
 
   it("renders the assigned drawing and seeds an empty guess input", () => {
-    const wrapper = mount(GuessingPhase);
+    const wrapper = render(GuessingPhase);
 
-    expect(wrapper.text()).toContain("Guess Bob's drawing");
-    expect(wrapper.find("img.drawing-frame__img").attributes("src")).toBe("data:image/png;base64,BBBB");
-    expect(wrapper.findAll("input.guess-input")).toHaveLength(1);
+    expect(wrapper.container.textContent).toContain("Guess Bob's drawing");
+    expect(wrapper.container.querySelector("img.drawing-frame__img")?.getAttribute("src")).toBe(
+      "data:image/png;base64,BBBB",
+    );
+    expect(wrapper.container.querySelectorAll("input.guess-input")).toHaveLength(1);
     expect(draftRestoreMock).toHaveBeenCalledTimes(1);
   });
 
   it("adds another input as guesses are typed and submits non-empty guesses", async () => {
-    const wrapper = mount(GuessingPhase);
+    const wrapper = render(GuessingPhase);
 
-    await wrapper.find("input.guess-input").setValue("cat");
+    await fireEvent.input(wrapper.container.querySelector("input.guess-input") as HTMLElement, {
+      target: { value: "cat" },
+    });
 
-    expect(wrapper.findAll("input.guess-input")).toHaveLength(2);
+    expect(wrapper.container.querySelectorAll("input.guess-input")).toHaveLength(2);
 
-    await wrapper.find(".guess-card__submit").trigger("click");
+    await fireEvent.click(wrapper.container.querySelector(".guess-card__submit") as HTMLElement);
 
     expect(playMock).toHaveBeenCalledWith("click");
     expect(sendMock).toHaveBeenCalledWith({
@@ -86,39 +87,43 @@ describe("GuessingPhase", () => {
     });
     expect(sendMock).toHaveBeenCalledWith({ type: "player_ready", playerId: "p1" });
     expect(draftClearMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.text()).toContain("Guesses submitted");
+    expect(wrapper.container.textContent).toContain("Guesses submitted");
   });
 
   it("keeps the scrolling guess panel reachable by keyboard once nothing in it can take focus", async () => {
-    const wrapper = mount(GuessingPhase);
-    const panel = wrapper.get(".guess-panel");
-    expect(panel.attributes("aria-label")).toBe("Your guesses");
+    const wrapper = render(GuessingPhase);
+    const panel = wrapper.container.querySelector(".guess-panel") as HTMLElement;
+    expect(panel.getAttribute("aria-label")).toBe("Your guesses");
 
-    await wrapper.find("input.guess-input").setValue("cat");
-    await wrapper.find(".guess-card__submit").trigger("click");
+    await fireEvent.input(wrapper.container.querySelector("input.guess-input") as HTMLElement, {
+      target: { value: "cat" },
+    });
+    await fireEvent.click(wrapper.container.querySelector(".guess-card__submit") as HTMLElement);
 
-    expect(panel.attributes("tabindex")).toBe("0");
+    expect(panel.getAttribute("tabindex")).toBe("0");
   });
 
   it("keeps keyboard focus on the guess panel when submitting removes the button", async () => {
-    const wrapper = mount(GuessingPhase, { attachTo: document.body });
-    await wrapper.find("input.guess-input").setValue("cat");
-    await wrapper.find(".guess-card__submit").trigger("click");
+    const wrapper = render(GuessingPhase);
+    await fireEvent.input(wrapper.container.querySelector("input.guess-input") as HTMLElement, {
+      target: { value: "cat" },
+    });
+    await fireEvent.click(wrapper.container.querySelector(".guess-card__submit") as HTMLElement);
     await nextTick();
 
-    expect(document.activeElement).toBe(wrapper.get(".guess-panel").element);
+    expect(document.activeElement).toBe(wrapper.container.querySelector(".guess-panel"));
     wrapper.unmount();
   });
 
   it("confirms before submitting an empty guess list", async () => {
-    const wrapper = mount(GuessingPhase);
+    const wrapper = render(GuessingPhase);
 
-    await wrapper.find(".guess-card__submit").trigger("click");
+    await fireEvent.click(wrapper.container.querySelector(".guess-card__submit") as HTMLElement);
 
-    expect(wrapper.text()).toContain("No guesses entered");
+    expect(wrapper.container.textContent).toContain("No guesses entered");
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "submit_guess" }));
 
-    await wrapper.findAll('[data-testid="hd-dialog-confirm"]').at(-1)?.trigger("click");
+    await fireEvent.click(wrapper.getAllByTestId("hd-dialog-confirm")[1] as HTMLElement);
 
     expect(sendMock).toHaveBeenCalledWith({
       type: "submit_guess",
@@ -132,18 +137,18 @@ describe("GuessingPhase", () => {
     const store = useGameStore();
     store.guessTargets = {};
 
-    const wrapper = mount(GuessingPhase);
+    const wrapper = render(GuessingPhase);
 
-    expect(wrapper.text()).toContain("Waiting for your assigned drawing");
+    expect(wrapper.container.textContent).toContain("Waiting for your assigned drawing");
   });
 
   it("asks before leaving mid-guessing from the header", async () => {
-    const wrapper = mount(GuessingPhase);
+    const wrapper = render(GuessingPhase);
 
-    wrapper.findComponent(GameHeader).vm.$emit("leave");
-    await wrapper.vm.$nextTick();
+    await fireEvent.click(wrapper.getByRole("button", { name: "Leave", exact: true }));
+    await nextTick();
 
-    expect(wrapper.findComponent(LeaveRoomDialog).findComponent(HdDialog).props("open")).toBe(true);
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
     expect(leaveRoomMock).not.toHaveBeenCalled();
   });
 });

@@ -1,22 +1,23 @@
-import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { useRoomLeave } from "@/composables/useRoomLeave";
-import { useGameStore } from "@/stores/game";
+import { useRoomLeave } from "@/composables/useRoomLeave.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 describe("useRoomLeave", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
+    useGameStore().localPlayerColor = null;
   });
 
   it("returns translated drawing-phase confirmation copy", () => {
     const store = useGameStore();
     store.gamePhase = "drawing";
 
-    const { shouldConfirm, dialog } = useRoomLeave();
+    const leave = useRoomLeave();
 
-    expect(shouldConfirm.value).toBe(true);
-    expect(dialog.value).toMatchObject({
+    expect(leave.shouldConfirm).toBe(true);
+    expect(leave.dialog).toMatchObject({
       title: "Leave Game?",
       message: "Your drawing progress will be lost and the round will continue without you.",
       confirmLabel: "Leave",
@@ -28,9 +29,9 @@ describe("useRoomLeave", () => {
     const store = useGameStore();
     store.gamePhase = "guessing";
 
-    const { dialog } = useRoomLeave();
+    const leave = useRoomLeave();
 
-    expect(dialog.value).toMatchObject({
+    expect(leave.dialog).toMatchObject({
       title: "Leave Round?",
       message: "Your guesses will be lost and the round will continue without you.",
       confirmLabel: "Leave",
@@ -48,10 +49,10 @@ describe("useRoomLeave", () => {
     ]);
     store.setHost("p1");
 
-    const { shouldConfirm, dialog } = useRoomLeave();
+    const leave = useRoomLeave();
 
-    expect(shouldConfirm.value).toBe(true);
-    expect(dialog.value).toMatchObject({
+    expect(leave.shouldConfirm).toBe(true);
+    expect(leave.dialog).toMatchObject({
       title: "Leave Room?",
       message: "Host will pass to another player when you leave.",
       confirmLabel: "Leave room",
@@ -63,10 +64,10 @@ describe("useRoomLeave", () => {
     const store = useGameStore();
     store.gamePhase = "lobby";
 
-    const { shouldConfirm, dialog } = useRoomLeave();
+    const leave = useRoomLeave();
 
-    expect(shouldConfirm.value).toBe(false);
-    expect(dialog.value).toMatchObject({
+    expect(leave.shouldConfirm).toBe(false);
+    expect(leave.dialog).toMatchObject({
       title: "Leave Room?",
       message: "",
       confirmLabel: "Leave",

@@ -1,13 +1,13 @@
-import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it } from "vitest";
+import { fireEvent, render } from "@testing-library/svelte";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import GameHeader from "@/components/game/GameHeader.vue";
-import { useGameStore } from "@/stores/game";
+import GameHeader from "@/components/game/GameHeader.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 describe("GameHeader", () => {
   beforeEach(() => {
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().setLocalPlayer("", "");
   });
 
   it("renders the timer value and round progress", () => {
@@ -15,17 +15,18 @@ describe("GameHeader", () => {
     store.currentRound = 2;
     store.maxRounds = 5;
 
-    const wrapper = mount(GameHeader, { props: { timeLeft: 42 } });
+    const wrapper = render(GameHeader, { props: { timeLeft: 42 } });
 
-    expect(wrapper.text()).toContain("42");
-    expect(wrapper.text()).toContain("2");
+    expect(wrapper.container.textContent!).toContain("42");
+    expect(wrapper.container.textContent!).toContain("2");
   });
 
   it("emits leave when the leave button is clicked", async () => {
-    const wrapper = mount(GameHeader, { props: { timeLeft: 30 } });
+    const onleave = vi.fn();
+    const wrapper = render(GameHeader, { props: { timeLeft: 30, onleave } });
 
-    await wrapper.get('button[aria-label="Leave"]').trigger("click");
+    await fireEvent.click(wrapper.container.querySelector('button[aria-label="Leave"]')!);
 
-    expect(wrapper.emitted("leave")).toHaveLength(1);
+    expect(onleave).toHaveBeenCalledTimes(1);
   });
 });

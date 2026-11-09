@@ -14,6 +14,7 @@ FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/package.json
+COPY patches patches
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm fetch --frozen-lockfile --filter ./frontend... && \

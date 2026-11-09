@@ -1,10 +1,7 @@
-import { mount } from "@vue/test-utils";
+import { fireEvent, render } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import GameHeader from "@/components/game/GameHeader.vue";
-import LeaveRoomDialog from "@/components/LeaveRoomDialog.vue";
-import HdDialog from "@/components/ui/HdDialog.vue";
 import type { GalleryDrawing } from "@/shared/types";
-import ResultsView from "@/views/ResultsView.vue";
+import ResultsView from "@/views/ResultsView.svelte";
 
 const pushMock = vi.fn();
 const sendMock = vi.fn();
@@ -41,20 +38,20 @@ type StoreMock = {
 
 let storeMock: StoreMock;
 
-vi.mock("vue-router", () => ({
+vi.mock("@/router", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-vi.mock("@/composables/useGameConnection", () => ({
+vi.mock("@/composables/useGameConnection.svelte", () => ({
   useGameConnection: () => ({ send: sendMock, disconnect: vi.fn() }),
 }));
 
-vi.mock("@/composables/useSound", () => ({
+vi.mock("@/composables/useSound.svelte", () => ({
   useSound: () => ({ enabled: { value: false }, play: playMock }),
   SOUND_KEYS: { winner: "winner" },
 }));
 
-vi.mock("@/stores/game", () => ({
+vi.mock("@/stores/game.svelte", () => ({
   useGameStore: () => storeMock,
 }));
 
@@ -101,12 +98,12 @@ beforeEach(() => {
 
 describe("ResultsView", () => {
   it("renders the winner card with the top scorer", () => {
-    const wrapper = mount(ResultsView);
-    const card = wrapper.find(".winner-card");
-    expect(card.exists()).toBe(true);
-    expect(card.text()).toContain("Alice");
-    expect(card.text()).toContain("42 pts");
-    expect(card.find(".winner-card__ribbon").text()).toBe("Champion");
+    const wrapper = render(ResultsView);
+    const card = wrapper.container.querySelector(".winner-card")!;
+    expect(Boolean(card)).toBe(true);
+    expect(card.textContent).toContain("Alice");
+    expect(card.textContent).toContain("42 pts");
+    expect(card.querySelector(".winner-card__ribbon")?.textContent).toBe("Champion");
   });
 
   it("shows tied winners with a plural champions ribbon", () => {
@@ -114,10 +111,10 @@ describe("ResultsView", () => {
       { playerId: "p1", playerName: "Alice", score: 42 },
       { playerId: "p2", playerName: "Bob", score: 42 },
     ]);
-    const wrapper = mount(ResultsView);
-    expect(wrapper.find(".winner-card__ribbon").text()).toBe("Champions");
-    expect(wrapper.find(".winner-card").text()).toContain("Alice");
-    expect(wrapper.find(".winner-card").text()).toContain("Bob");
+    const wrapper = render(ResultsView);
+    expect(wrapper.container.querySelector(".winner-card__ribbon")?.textContent).toBe("Champions");
+    expect(wrapper.container.querySelector(".winner-card")?.textContent).toContain("Alice");
+    expect(wrapper.container.querySelector(".winner-card")?.textContent).toContain("Bob");
   });
 
   it("crowns nobody after a game where nobody scored", () => {
@@ -125,19 +122,19 @@ describe("ResultsView", () => {
       { playerId: "p1", playerName: "Alice", score: 0 },
       { playerId: "p2", playerName: "Bob", score: 0 },
     ]);
-    const wrapper = mount(ResultsView);
-    expect(wrapper.find(".winner-card").text()).toContain("No winner this time");
-    expect(wrapper.find(".winner-card__ribbon").exists()).toBe(false);
+    const wrapper = render(ResultsView);
+    expect(wrapper.container.querySelector(".winner-card")?.textContent).toContain("No winner this time");
+    expect(Boolean(wrapper.container.querySelector(".winner-card__ribbon"))).toBe(false);
   });
 
   it("shows no ready count in the game-over header", () => {
-    const wrapper = mount(ResultsView);
-    expect(wrapper.find(".game-header").text()).not.toMatch(/ready/i);
+    const wrapper = render(ResultsView);
+    expect(wrapper.container.querySelector(".game-header")?.textContent).not.toMatch(/ready/i);
   });
 
   it("lists every player in the standings", () => {
-    const wrapper = mount(ResultsView);
-    expect(wrapper.findAll(".final-standings__row")).toHaveLength(2);
+    const wrapper = render(ResultsView);
+    expect(Array.from(wrapper.container.querySelectorAll(".final-standings__row"))).toHaveLength(2);
   });
 
   it("shows game stats including drawings and correct guesses", () => {
@@ -160,8 +157,8 @@ describe("ResultsView", () => {
       ],
       totalGuessesMade: 7,
     });
-    const wrapper = mount(ResultsView);
-    const stats = wrapper.find(".final-stats").text();
+    const wrapper = render(ResultsView);
+    const stats = wrapper.container.querySelector(".final-stats")?.textContent;
     expect(stats).toContain("2"); // drawings
     expect(stats).toContain("7"); // correct guesses
     expect(stats).toContain("medium"); // difficulty
@@ -179,27 +176,27 @@ describe("ResultsView", () => {
         },
       ],
     });
-    const wrapper = mount(ResultsView);
-    expect(wrapper.findAll(".gallery__cell")).toHaveLength(1);
+    const wrapper = render(ResultsView);
+    expect(Array.from(wrapper.container.querySelectorAll(".gallery__cell"))).toHaveLength(1);
   });
 
   it("plays the winner stinger once on mount", () => {
-    mount(ResultsView);
+    render(ResultsView);
     expect(playMock).toHaveBeenCalledWith("winner");
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
   it("host play-again restarts the game", async () => {
-    const wrapper = mount(ResultsView);
-    await wrapper.find(".final-cta__again").trigger("click");
+    const wrapper = render(ResultsView);
+    await fireEvent.click(wrapper.container.querySelector(".final-cta__again")!);
     expect(sendMock).toHaveBeenCalledWith({ type: "restart_game" });
     expect(storeMock.onRestartGame).toHaveBeenCalled();
   });
 
   it("non-host play-again sends player_ready", async () => {
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }], { isHost: false });
-    const wrapper = mount(ResultsView);
-    await wrapper.find(".final-cta__again").trigger("click");
+    const wrapper = render(ResultsView);
+    await fireEvent.click(wrapper.container.querySelector(".final-cta__again")!);
     expect(sendMock).toHaveBeenCalledWith({
       type: "player_ready",
       playerId: "p1",
@@ -209,8 +206,8 @@ describe("ResultsView", () => {
   it("back-home leaves immediately when no confirmation is needed", async () => {
     // Single player → useRoomLeave.shouldConfirm is false.
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }]);
-    const wrapper = mount(ResultsView);
-    await wrapper.find(".final-cta__home").trigger("click");
+    const wrapper = render(ResultsView);
+    await fireEvent.click(wrapper.container.querySelector(".final-cta__home")!);
     expect(storeMock.reset).toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith({ name: "home" });
   });
@@ -218,12 +215,11 @@ describe("ResultsView", () => {
   it("asks the host before they leave others behind from the header", async () => {
     HTMLDialogElement.prototype.showModal = vi.fn(); // jsdom has no modal dialogs
     HTMLDialogElement.prototype.close = vi.fn();
-    const wrapper = mount(ResultsView);
+    const wrapper = render(ResultsView);
 
-    wrapper.findComponent(GameHeader).vm.$emit("leave");
-    await wrapper.vm.$nextTick();
+    await fireEvent.click(wrapper.container.querySelector('[aria-label="Leave"]')!);
 
-    expect(wrapper.findComponent(LeaveRoomDialog).findComponent(HdDialog).props("open")).toBe(true);
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
     expect(storeMock.reset).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });

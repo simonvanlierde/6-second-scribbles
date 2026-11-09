@@ -1,7 +1,6 @@
-import { useRouter } from "vue-router";
-
-import { useGameConnection } from "@/composables/useGameConnection";
-import { useGameStore } from "@/stores/game";
+import { useGameConnection } from "@/composables/useGameConnection.svelte";
+import { useRouter } from "@/router";
+import { useGameStore } from "@/stores/game.svelte";
 
 /**
  * The shared "leave room" action used by every in-game view: send the explicit

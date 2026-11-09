@@ -5,16 +5,15 @@
  * isolation without a live WebSocket connection.
  */
 
-import type { Router } from "vue-router";
-
-import type { NotificationType } from "@/composables/notifications";
-import { useReactions } from "@/composables/useReactions";
+import type { NotificationType } from "@/composables/notifications.svelte";
+import { useReactions } from "@/composables/useReactions.svelte";
 import { UI_TIMINGS } from "@/config/gameConfig";
 import type { ClientEvent, ServerEvent } from "@/generated/protocol";
-import { i18n } from "@/i18n";
+import { t } from "@/i18n";
+import type { useRouter } from "@/router";
 import { formatLocaleLabel } from "@/shared/locales";
 import { createLogger } from "@/shared/logger";
-import type { useGameStore } from "@/stores/game";
+import type { useGameStore } from "@/stores/game.svelte";
 
 const log = createLogger("WebSocket");
 
@@ -22,7 +21,7 @@ type ShowNotification = (text: string, type?: NotificationType, duration?: numbe
 
 export type HandlerContext = {
   store: ReturnType<typeof useGameStore>;
-  router: Router;
+  router: ReturnType<typeof useRouter>;
   showNotification: ShowNotification;
   send: (message: ClientEvent) => void;
 };
@@ -36,16 +35,16 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
 
     case "join_error":
       if (message.error === "game_in_progress") {
-        showNotification(message.message || i18n.global.t("notifications.roundInProgressJoinLater"), "info");
+        showNotification(message.message || t("notifications.roundInProgressJoinLater"), "info");
         break;
       }
 
       showNotification(
         message.error === "spectators_full"
-          ? i18n.global.t("notifications.spectatorsFull")
+          ? t("notifications.spectatorsFull")
           : message.error === "seats_busy"
-            ? i18n.global.t("notifications.seatsBusy")
-            : message.message || i18n.global.t("notifications.unableToJoinRoom"),
+            ? t("notifications.seatsBusy")
+            : message.message || t("notifications.unableToJoinRoom"),
         "error",
       );
       log.error("Join error:", message.message);
@@ -54,7 +53,7 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
 
     case "host_restored":
       log.info("Host status restored");
-      showNotification(i18n.global.t("notifications.hostStatusRestored"), "success");
+      showNotification(t("notifications.hostStatusRestored"), "success");
       break;
 
     case "room_state":
@@ -80,15 +79,15 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
     case "host_changed":
       store.setHost(message.newHostId);
       if (message.newHostId === store.localPlayerId) {
-        showNotification(i18n.global.t("notifications.youAreNowHost"), "success");
+        showNotification(t("notifications.youAreNowHost"), "success");
       } else {
         const nextHost = store.players.get(message.newHostId);
         showNotification(
           nextHost
-            ? i18n.global.t("notifications.hostChanged", {
+            ? t("notifications.hostChanged", {
                 name: nextHost.name,
               })
-            : i18n.global.t("notifications.hostChangedFallback"),
+            : t("notifications.hostChangedFallback"),
         );
       }
       break;
@@ -131,7 +130,7 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
     case "settings_update":
       store.applySettingsUpdate(message);
       if (!store.isHost) {
-        showNotification(i18n.global.t("notifications.hostUpdatedSettings"));
+        showNotification(t("notifications.hostUpdatedSettings"));
       }
       break;
 
@@ -140,7 +139,7 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
         store.setDefaultLocale(message.locale);
         if (!store.isHost) {
           showNotification(
-            i18n.global.t("notifications.roomLanguageChanged", {
+            t("notifications.roomLanguageChanged", {
               locale: formatLocaleLabel(message.locale),
             }),
           );
@@ -177,7 +176,7 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
     case "pad_visibility":
       store.setRoomPadVisible(message.visible);
       if (!store.isHost) {
-        showNotification(i18n.global.t(message.visible ? "notifications.drawpadShown" : "notifications.drawpadHidden"));
+        showNotification(t(message.visible ? "notifications.drawpadShown" : "notifications.drawpadHidden"));
       }
       break;
 
@@ -197,13 +196,13 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
       });
       if (message.initiatorId === store.localPlayerId) {
         showNotification(
-          i18n.global.t("moderation.kickVoteStartedByYou", {
+          t("moderation.kickVoteStartedByYou", {
             name: message.targetPlayerName,
           }),
         );
       } else {
         showNotification(
-          i18n.global.t("moderation.kickVoteStarted", {
+          t("moderation.kickVoteStarted", {
             name: message.targetPlayerName,
           }),
         );
@@ -221,12 +220,12 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
       store.removePlayer(message.playerId);
       store.removeKickVote(message.playerId);
       if (message.playerId === store.localPlayerId) {
-        showNotification(i18n.global.t("moderation.youWereKicked"), "error");
+        showNotification(t("moderation.youWereKicked"), "error");
         store.reset();
         router.push({ name: "home" });
       } else {
         showNotification(
-          i18n.global.t("moderation.playerKicked", {
+          t("moderation.playerKicked", {
             name: message.playerName,
           }),
         );
@@ -236,21 +235,20 @@ export function handleServerEvent(message: ServerEvent, ctx: HandlerContext): vo
     case "kick_vote_expired": {
       // The event carries only the id, so resolve the display name from the store
       // (falling back to a generic label rather than showing a raw player id).
-      const targetName = store.players.get(message.targetPlayerId)?.name ?? i18n.global.t("common.unknown");
+      const targetName = store.players.get(message.targetPlayerId)?.name ?? t("common.unknown");
       store.removeKickVote(message.targetPlayerId);
-      showNotification(i18n.global.t("moderation.kickVoteExpired", { name: targetName }));
+      showNotification(t("moderation.kickVoteExpired", { name: targetName }));
       break;
     }
 
     case "kick_error":
-      showNotification(message.error || i18n.global.t("moderation.kickRequestFailed"), "error");
+      showNotification(message.error || t("moderation.kickRequestFailed"), "error");
       break;
 
     case "protocol_error":
       // The server drops oversized frames; without this a drawing that did not
       // fit would vanish and guessers would wait for it forever.
-      if (message.error === "payload_too_large")
-        showNotification(i18n.global.t("notifications.drawingTooLarge"), "error", 8000);
+      if (message.error === "payload_too_large") showNotification(t("notifications.drawingTooLarge"), "error", 8000);
       else log.warn("Server rejected a message:", message.error);
       break;
   }

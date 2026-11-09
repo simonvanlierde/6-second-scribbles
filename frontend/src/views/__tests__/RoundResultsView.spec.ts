@@ -1,8 +1,16 @@
-import { flushPromises, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { fireEvent, render } from "@testing-library/svelte";
+import { tick } from "svelte";
+
+const flushPromises = async () => {
+  await Promise.resolve();
+  await tick();
+  await Promise.resolve();
+  await tick();
+};
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useGameStore } from "@/stores/game";
-import RoundResultsView from "@/views/RoundResultsView.vue";
+import { useGameStore } from "@/stores/game.svelte";
+import RoundResultsView from "@/views/RoundResultsView.svelte";
 
 const leaveRoomMock = vi.fn();
 const playMock = vi.fn();
@@ -11,7 +19,7 @@ vi.mock("@/composables/useLeaveRoom", () => ({
   useLeaveRoom: () => ({ leaveRoom: leaveRoomMock }),
 }));
 
-vi.mock("@/composables/useSound", () => ({
+vi.mock("@/composables/useSound.svelte", () => ({
   useSound: () => ({ play: playMock }),
 }));
 
@@ -49,7 +57,8 @@ function seedRoundResults() {
 describe("RoundResultsView", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    setActivePinia(createPinia());
+    useGameStore().reset();
+    useGameStore().localPlayerId = "";
     leaveRoomMock.mockReset();
     playMock.mockReset();
     seedRoundResults();
@@ -60,16 +69,16 @@ describe("RoundResultsView", () => {
   });
 
   it("renders grouped round performance and score standings", () => {
-    const wrapper = mount(RoundResultsView);
+    const wrapper = render(RoundResultsView);
 
     expect(playMock).toHaveBeenCalledWith("reveal");
-    expect(wrapper.text()).toContain("Round 2 Results");
-    expect(wrapper.text()).toContain("Alice's drawing");
-    expect(wrapper.text()).toContain("3/5");
-    expect(wrapper.text()).toContain("+6 pts");
-    expect(wrapper.text()).toContain("No guesses submitted");
+    expect(wrapper.container.textContent).toContain("Round 2 Results");
+    expect(wrapper.container.textContent).toContain("Alice's drawing");
+    expect(wrapper.container.textContent).toContain("3/5");
+    expect(wrapper.container.textContent).toContain("+6 pts");
+    expect(wrapper.container.textContent).toContain("No guesses submitted");
 
-    const standings = wrapper.findAll(".standings__row").map((row) => row.text());
+    const standings = Array.from(wrapper.container.querySelectorAll(".standings__row")).map((row) => row.textContent);
     expect(standings[0]).toContain("Bob");
     expect(standings[0]).toContain("12 pts");
     expect(standings[0]).toContain("You");
@@ -77,14 +86,14 @@ describe("RoundResultsView", () => {
   });
 
   it("counts down once per second", async () => {
-    const wrapper = mount(RoundResultsView);
+    const wrapper = render(RoundResultsView);
 
-    expect(wrapper.find(".game-header__timer").text()).toContain("15");
+    expect(wrapper.container.querySelector(".game-header__timer")?.textContent).toContain("15");
 
     vi.advanceTimersByTime(2_000);
     await flushPromises();
 
-    expect(wrapper.find(".game-header__timer").text()).toContain("13");
+    expect(wrapper.container.querySelector(".game-header__timer")?.textContent).toContain("13");
   });
 
   it("leaves immediately when no confirmation is required", async () => {
@@ -93,17 +102,21 @@ describe("RoundResultsView", () => {
     store.localPlayerId = "p1";
     store.setHost("p1");
 
-    const wrapper = mount(RoundResultsView);
-    await wrapper.find('[aria-label="Leave"]').trigger("click");
+    const wrapper = render(RoundResultsView);
+    await fireEvent.click(wrapper.container.querySelector('[aria-label="Leave"]')!);
 
     expect(leaveRoomMock).toHaveBeenCalledTimes(1);
   });
 
   it("says the next round is coming, and after the last round that the final results are", () => {
     const store = useGameStore();
-    expect(mount(RoundResultsView).get(".round-results__lead").text()).toContain("Next round");
+    expect(render(RoundResultsView).container.querySelector(".round-results__lead")?.textContent).toContain(
+      "Next round",
+    );
 
     store.currentRound = 3;
-    expect(mount(RoundResultsView).get(".round-results__lead").text()).toContain("Final results");
+    expect(render(RoundResultsView).container.querySelector(".round-results__lead")?.textContent).toContain(
+      "Final results",
+    );
   });
 });

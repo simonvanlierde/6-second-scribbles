@@ -1,33 +1,37 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render } from "@testing-library/svelte";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import HdToggle from "@/components/ui/HdToggle.vue";
+import HdToggle from "@/components/ui/HdToggle.svelte";
 
 describe("HdToggle", () => {
   it("renders optional label and help text", () => {
-    const wrapper = mount(HdToggle, {
+    const wrapper = render(HdToggle, {
       props: {
+        ...callbacks,
         modelValue: false,
         label: "Private Room",
         help: "Private rooms do not appear in quick play.",
       },
     });
 
-    expect(wrapper.text()).toContain("Private Room");
-    expect(wrapper.find('[role="img"]').attributes("title")).toBe("Private rooms do not appear in quick play.");
+    expect(wrapper.container.textContent?.trim()).toContain("Private Room");
+    expect(wrapper.container.querySelector('[role="img"]')?.getAttribute("title")).toBe(
+      "Private rooms do not appear in quick play.",
+    );
   });
 
   it("emits model update and change when toggled", async () => {
-    const wrapper = mount(HdToggle, {
-      props: {
-        modelValue: false,
-        label: "Private Room",
-      },
-    });
+    const wrapper = render(HdToggle, { props: { ...callbacks, modelValue: false, label: "Private Room" } });
 
-    await wrapper.find("input").setValue(true);
+    await fireEvent.click(wrapper.container.querySelector("input")!);
 
-    expect(wrapper.emitted("update:modelValue")?.[0]).toEqual([true]);
-    expect(wrapper.emitted("change")).toHaveLength(1);
+    expect(events["update:modelValue"].mock.calls?.[0]).toEqual([true]);
+    expect(events.change.mock.calls).toHaveLength(1);
   });
+});
+
+const events = { "update:modelValue": vi.fn(), change: vi.fn() };
+const callbacks = { onmodelValueChange: events["update:modelValue"], onchange: events.change };
+beforeEach(() => {
+  for (const event of Object.values(events)) event.mockClear();
 });

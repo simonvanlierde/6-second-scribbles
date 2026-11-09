@@ -15,7 +15,7 @@ vi.stubGlobal(
   }),
 );
 
-import { SOUND_KEYS, useSound } from "@/composables/useSound";
+import { SOUND_KEYS, useSound } from "@/composables/useSound.svelte";
 
 describe("useSound", () => {
   beforeEach(() => {
@@ -28,26 +28,26 @@ describe("useSound", () => {
   });
 
   it("is disabled by default and does not call play", () => {
-    const { enabled, play } = useSound();
-    expect(enabled.value).toBe(false);
-    play("click");
+    const sound = useSound();
+    expect(sound.enabled).toBe(false);
+    sound.play("click");
     expect(playMock).not.toHaveBeenCalled();
   });
 
   it("plays when enabled is set to true", () => {
-    const { enabled, play } = useSound();
-    enabled.value = true;
-    play("click");
+    const sound = useSound();
+    sound.enabled = true;
+    sound.play("click");
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
   it("persists the enabled flag to localStorage across module reloads", async () => {
-    const first = await import("@/composables/useSound");
-    first.useSound().enabled.value = true;
+    const first = await import("@/composables/useSound.svelte");
+    first.useSound().enabled = true;
     expect(localStorage.getItem("ds:sound-enabled")).toBe("true");
 
     vi.resetModules();
-    const second = await import("@/composables/useSound");
-    expect(second.useSound().enabled.value).toBe(true);
+    const second = await import("@/composables/useSound.svelte");
+    expect(second.useSound().enabled).toBe(true);
   });
 });
