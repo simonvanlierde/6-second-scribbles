@@ -20,8 +20,8 @@
     { include-group = "db-migrations" },
     { include-group = "db-seed" },
     { include-group = "testing" },
-    "ruff>=0.17.2",
-    "ty>=0.0.91",
+    "ruff>=0.17.3",
+    "ty>=0.0.95",
   ]
 
   db-migrations = ["alembic>=1.20.1"]
@@ -30,12 +30,12 @@
     "fakeredis>=2.40.0",
     "greenlet>=3.5.6",
     "httpx>=0.28.1",
-    "hypothesis>=6.170.8",
-    "pytest-asyncio>=1.4.0",
+    "hypothesis>=6.170.13",
+    "pytest-asyncio>=1.4.1",
     "pytest-codspeed>=5.0.3",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.17.0",
-    "pytest>=9.1.1",
+    "pytest>=9.2.0",
     "testcontainers>=4.15.0",
   ]
 
