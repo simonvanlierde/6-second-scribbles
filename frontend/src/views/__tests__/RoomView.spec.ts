@@ -56,6 +56,25 @@ describe("RoomView", () => {
     return store;
   }
 
+  it("keeps a saved player identity in spectator mode without reconnecting as a player", async () => {
+    const store = joinRoom("drawing");
+    store.isSpectatorMode = true;
+    connectMock.mockClear();
+
+    const wrapper = render(RoomView);
+    await tick();
+
+    expect(wrapper.container.textContent).toContain("spectator");
+    expect(connectMock).not.toHaveBeenCalled();
+    expect(store.localPlayerId).toBe("p1");
+
+    store.gamePhase = "lobby";
+    await tick();
+    expect(wrapper.container.textContent).toContain("guest");
+    expect(connectMock).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("falls back to the guest flow when the saved room code does not match the URL", () => {
     const store = useGameStore();
     store.localPlayerId = "p1";

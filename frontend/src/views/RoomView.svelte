@@ -18,7 +18,9 @@ const route = useRoute();
 const connection = useGameConnection();
 const { connect } = connection;
 const routeRoomCode = $derived(normalizeRoomCode(String(route.params.roomCode || "")));
-const inActiveRoom = $derived(Boolean(store.localPlayerId) && store.roomCode === routeRoomCode);
+const inActiveRoom = $derived(
+  !store.isSpectatorMode && Boolean(store.localPlayerId) && store.roomCode === routeRoomCode,
+);
 
 // Owning the (re)connect here — rather than in App.svelte's one-shot mount —
 // is reliable: this view only renders once the room route is resolved, so the
