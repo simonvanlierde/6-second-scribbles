@@ -15,6 +15,9 @@ loadtest_compose := "docker compose -p tmp-6ss-load --profile db-seed -f compose
 default:
     @just --list
 
+# Pinned: the profiler runs from a throwaway container that installs it at run time.
+py_spy_version := "0.4.3"
+
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
 # Start local frontend/backend dev servers against Dockerized infra.
@@ -115,6 +118,37 @@ loadtest *args:
 [group('test')]
 loadtest-ab ref-a ref-b *args:
     cd backend && uv run python -m loadtest.ab {{ ref-a }} {{ ref-b }} {{ args }}
+
+# Samples the backend with py-spy from a throwaway container in its PID namespace while a
+# load test runs, then prints self and inclusive time per function. Raw stacks go to
+# .tmp/profile/stacks.txt (speedscope reads them). Extra args reach the
+# load generator, e.g. `just profile --rooms 80`.
+# Profile the backend under WebSocket load.
+[group('test')]
+profile *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="$PWD/.tmp/profile"
+    rm -rf "$out"
+    mkdir -p "$out"
+    trap '{{ loadtest_compose }} down -v --rmi local' EXIT
+    {{ loadtest_compose }} up -d --build --wait backend
+    {{ loadtest_compose }} run --rm --build --name tmp-6ss-load-seed database-seed
+    # Root with SYS_PTRACE is what py-spy needs to read the backend's non-root process.
+    # PID 1 of the joined namespace is uvicorn. The sampling window outlasts the
+    # generator's 30 s measured window plus its ramp-up.
+    docker run --rm --name tmp-6ss-profile --pid=container:tmp-6ss-load-backend-1 \
+        --cap-add SYS_PTRACE -v "$out":/out python:3.14-slim-trixie \
+        sh -c 'pip install -q --no-cache-dir --root-user-action=ignore py-spy=={{ py_spy_version }} \
+            && touch /out/ready && py-spy record --pid 1 --nonblocking --rate 100 --duration 40 --format raw \
+                --output /out/stacks.txt && rm /out/ready \
+            && chown {{ `id -u` }}:{{ `id -g` }} /out/stacks.txt' &
+    profiler=$!
+    until [ -e "$out/ready" ] || ! kill -0 "$profiler" 2>/dev/null; do sleep 1; done  # load starts once py-spy is installed
+    just backend/loadtest --url "ws://127.0.0.1:${LOADTEST_PORT:-18000}" --container tmp-6ss-load-backend-1 \
+        --rooms 40 --duration 30 --keep-going {{ args }}
+    wait "$profiler"
+    (cd backend && uv run python -m loadtest.profile_summary "$out/stacks.txt")
 
 # ── Check & Format ────────────────────────────────────────────────────────────
 
