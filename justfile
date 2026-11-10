@@ -122,7 +122,8 @@ loadtest-ab ref-a ref-b *args:
 # Samples the backend with py-spy from a throwaway container in its PID namespace while a
 # load test runs, then prints self and inclusive time per function. Raw stacks go to
 # .tmp/profile/stacks.txt (speedscope reads them). Extra args reach the
-# load generator, e.g. `just profile --rooms 80`.
+# load generator, e.g. `just profile --rooms 80`. py-spy samples a fixed 40 s, so keep
+# to one --rooms step and the default --duration, or the later load goes unsampled.
 # Profile the backend under WebSocket load.
 [group('test')]
 profile *args:
@@ -145,6 +146,7 @@ profile *args:
             && chown {{ `id -u` }}:{{ `id -g` }} /out/stacks.txt' &
     profiler=$!
     until [ -e "$out/ready" ] || ! kill -0 "$profiler" 2>/dev/null; do sleep 1; done  # load starts once py-spy is installed
+    [ -e "$out/ready" ] || { wait "$profiler"; exit 1; }  # pip failed: don't run the load for nothing
     just backend/loadtest --url "ws://127.0.0.1:${LOADTEST_PORT:-18000}" --container tmp-6ss-load-backend-1 \
         --rooms 40 --duration 30 --keep-going {{ args }}
     wait "$profiler"
