@@ -39,6 +39,7 @@ just test
 
 ## Docs
 
+- [Product brief](frontend/PRODUCT.md) and the [next roadmap](frontend/docs/roadmap.md)
 - [Architecture](docs/architecture.md), including how production runs, and the [design decisions](docs/adr/)
 - [Capacity](docs/capacity.md): how many rooms one backend holds
 - [Frontend](frontend/README.md), [backend](backend/README.md), and [contracts](contracts/README.md)

@@ -16,6 +16,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- An agreed [product brief](frontend/PRODUCT.md) and [roadmap](frontend/docs/roadmap.md): comfortable phone play, a shared reveal wall and device-exported keepsakes are the next milestone.
 - Shared game links now show a drawing-themed preview image.
 - For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. The default, one step at 40 rooms, takes about five minutes. See [docs/capacity.md](docs/capacity.md).
 - For contributors: CodSpeed benchmarks of the server's stroke path run on every PR and flag one that makes it slower. See [docs/capacity.md](docs/capacity.md).
