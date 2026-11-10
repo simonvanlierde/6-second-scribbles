@@ -7,18 +7,21 @@ import pytest
 from app.core.types import GamePhase
 from app.rooms.manager import RoomManager, room_manager
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
-from tests.constants import ANIMALS, HOST_ONE
+from tests.constants import HOST_ONE
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="session")]
 
 
 async def test_room_manager_restores_room_state_from_real_redis(redis_client: object) -> None:
-    """Room state can be restored from Redis."""
+    """A stopped manager retains the room and restores an interrupted game to the lobby."""
     _ = redis_client
     room = room_manager.get_or_create_room("REDIS01")
     room.host_id = HOST_ONE
     room.metadata.game_phase = GamePhase.DRAWING
     room.metadata.current_round = 2
+    room.metadata.difficulty = "hard"
+    room.metadata.player_rejoin_keys = {HOST_ONE: "key-hash"}
+    room.metadata.player_seats = {HOST_ONE: 0}
     room.metadata.ready_players.add(HOST_ONE)
     room.metadata.player_assignments = {
         HOST_ONE: PlayerPromptAssignmentState(
@@ -34,6 +37,7 @@ async def test_room_manager_restores_room_state_from_real_redis(redis_client: ob
     ]
 
     await room.persist()
+    await room_manager.stop()
 
     restored_manager = RoomManager()
     await restored_manager.start()
@@ -41,11 +45,13 @@ async def test_room_manager_restores_room_state_from_real_redis(redis_client: ob
         restored_room = restored_manager.get_room("REDIS01")
         assert restored_room is not None
         assert restored_room.host_id == HOST_ONE
-        assert restored_room.metadata.game_phase == GamePhase.DRAWING
-        assert restored_room.metadata.current_round == 2
-        assert restored_room.metadata.ready_players == {HOST_ONE}
-        assert restored_room.metadata.player_assignments[HOST_ONE].category == ANIMALS
-        assert restored_room.metadata.guess_submissions[0].player_id == HOST_ONE
-        assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
+        assert restored_room.metadata.game_phase == GamePhase.LOBBY
+        assert restored_room.metadata.current_round == 0
+        assert restored_room.metadata.ready_players == set()
+        assert restored_room.metadata.player_assignments == {}
+        assert restored_room.metadata.guess_submissions == []
+        assert restored_room.metadata.difficulty == room.metadata.difficulty
+        assert restored_room.metadata.player_rejoin_keys == {HOST_ONE: "key-hash"}
+        assert restored_room.metadata.player_seats == {HOST_ONE: 0}
     finally:
         await restored_manager.stop()

@@ -704,12 +704,31 @@ class TestGameRoom:
 
         assert result == VOTE_KICK_PUBLIC_ONLY_ERROR
 
-    async def test_room_state_round_trips_through_persistence_model(self, game_room: GameRoom) -> None:
-        """Test persisted room state preserves structured metadata."""
+    @pytest.mark.parametrize("phase", list(GamePhase))
+    async def test_restored_room_returns_to_lobby_with_settings_and_bindings(
+        self, game_room: GameRoom, phase: GamePhase
+    ) -> None:
+        """Restarts keep the room usable without resuming missing drawings or timers."""
         game_room.host_id = HOST_ONE
         game_room.last_host_id = HOST_ONE
-        game_room.metadata.game_phase = GamePhase.DRAWING
+        game_room.metadata.game_phase = phase
+        game_room.metadata.difficulty = "hard"
+        game_room.metadata.drawing_time_limit = 30
+        game_room.metadata.guessing_time_limit = 45
+        game_room.metadata.max_rounds = 3
+        game_room.metadata.is_private = True
+        game_room.metadata.pad_visibility = False
+        game_room.metadata.default_locale = "nl"
+        game_room.metadata.player_locales = {PLAYER_ONE_ID: "nl"}
+        game_room.metadata.player_user_ids = {PLAYER_ONE_ID: "user-one"}
+        game_room.metadata.player_rejoin_keys = {PLAYER_TWO_ID: "key-hash"}
+        game_room.metadata.player_seats = {PLAYER_ONE_ID: 0, PLAYER_TWO_ID: 1}
+        game_room.metadata.player_departed_at = {PLAYER_TWO_ID: 100.0}
         game_room.metadata.current_round = 2
+        game_room.metadata.round_start_time = 1000
+        game_room.metadata.guessing_start_time = 2000
+        game_room.metadata.player_scores = {PLAYER_ONE_ID: 30}
+        game_room.metadata.guess_targets = {PLAYER_TWO_ID: PLAYER_ONE_ID}
         game_room.metadata.ready_players.add(HOST_ONE)
         game_room.metadata.submitted_players.add(PLAYER_TWO_ID)
         game_room.metadata.player_assignments = {
@@ -725,16 +744,66 @@ class TestGameRoom:
             GuessSubmissionState(player_id=PLAYER_TWO_ID, target_player_id=PLAYER_ONE_ID, guesses=["cat"]),
         ]
 
-        restored_room = GameRoom.from_state(game_room.to_state())
+        state = game_room.to_state()
+        original = state.model_dump()
+        restored_room = GameRoom.from_state(state)
 
+        assert restored_room.room_id == game_room.room_id
         assert restored_room.host_id == HOST_ONE
-        assert restored_room.metadata.game_phase == GamePhase.DRAWING
-        assert restored_room.metadata.current_round == 2
-        assert restored_room.metadata.ready_players == {HOST_ONE}
-        assert restored_room.metadata.submitted_players == {PLAYER_TWO_ID}
-        assert restored_room.metadata.player_assignments[PLAYER_ONE_ID].alternatives == {"cat": ["kitty"]}
-        assert restored_room.metadata.guess_submissions[0].player_id == PLAYER_TWO_ID
-        assert restored_room.metadata.guess_submissions[0].guesses == ["cat"]
+        assert restored_room.last_host_id == HOST_ONE
+        assert restored_room.created_at == game_room.created_at
+        assert all(
+            task is None for name, task in _scheduler_tasks(restored_room.scheduler).items() if name.endswith("_task")
+        )
+        assert restored_room.metadata.game_phase == GamePhase.LOBBY
+        if phase == GamePhase.LOBBY:
+            assert restored_room.metadata == state.metadata
+        else:
+            assert restored_room.metadata.current_round == 0
+            assert restored_room.metadata.player_scores == {}
+            assert restored_room.metadata.player_assignments == {}
+            assert restored_room.metadata.guess_targets == {}
+            assert restored_room.metadata.guess_submissions == []
+            assert restored_room.metadata.ready_players == set()
+            assert restored_room.metadata.submitted_players == set()
+            assert restored_room.metadata.round_start_time is None
+            assert restored_room.metadata.guessing_start_time is None
+            for field in state.metadata.SETTINGS_FIELDS | state.metadata.SEAT_FIELDS:
+                assert getattr(restored_room.metadata, field) == getattr(state.metadata, field)
+        assert state.model_dump() == original
+
+    @pytest.mark.parametrize("join_order", [(HOST_ONE, PLAYER_ONE_ID), (PLAYER_ONE_ID, HOST_ONE)])
+    async def test_restored_host_survives_reconnection_order(
+        self, game_room: GameRoom, make_ws: Callable[..., TestWebSocket], join_order: tuple[str, str]
+    ) -> None:
+        """The first reconnecting guest cannot replace the saved host before its grace expires."""
+        for player_id in (HOST_ONE, PLAYER_ONE_ID):
+            await player_lifecycle.add_player(game_room, player_id, player_id, as_websocket(make_ws()))
+        game_room.metadata.game_phase = GamePhase.DRAWING
+        restored = GameRoom.from_state(game_room.to_state())
+
+        for player_id in join_order:
+            await player_lifecycle.add_player(restored, player_id, player_id, as_websocket(make_ws()))
+
+        assert restored.host_id == HOST_ONE
+        assert restored.last_host_id == HOST_ONE
+        assert restored.pending_host_transfer is None
+
+    async def test_restored_absent_host_transfers_after_reconnection_grace(
+        self, game_room: GameRoom, make_ws: Callable[..., TestWebSocket], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A returning guest can host once the saved host has missed the normal grace window."""
+        monkeypatch.setattr(settings, "host_transfer_delay_ms", 0)
+        game_room.host_id = HOST_ONE
+        game_room.last_host_id = HOST_ONE
+        restored = GameRoom.from_state(game_room.to_state())
+
+        await player_lifecycle.add_player(restored, PLAYER_ONE_ID, PLAYER_ONE_NAME, as_websocket(make_ws()))
+        assert restored.pending_host_transfer is not None
+        await restored.pending_host_transfer
+
+        assert restored.host_id == PLAYER_ONE_ID
+        assert restored.last_host_id == PLAYER_ONE_ID
 
 
 class TestRoomManager:

@@ -54,6 +54,32 @@ generator ran on the same host, outside the limited container, and used at most
 50 ms tick, however many fragments arrived in it, so the work grows with rooms ×
 players, plus the parsing of each incoming fragment.
 
+## Release comparison on 2026-11-10
+
+Three alternating runs compared v0.3.0 (`4b2941a`) with the 0.4.0 preparation
+commit `48aae93`: 40 rooms of six players, with 20-second measurement windows.
+Both backends used the same pinned CPU with production limits of one CPU and
+1 GiB. The generator used three other pinned CPUs and the legacy-wire adapter
+for 0.3.0. Both versions received the same point count and send rate.
+
+| Metric | 0.3.0 median (range) | 0.4.0 candidate median (range) |
+| --- | ---: | ---: |
+| p95 latency | 928 ms (391–1,100) | 65 ms (61–66) |
+| Backend CPU | 64% (63–69) | 36% (32–36) |
+| Fragment deliveries/s | 4,460 (4,450–4,880) | 4,930 (4,760–5,030) |
+| CPU % per 1,000 deliveries/s | 14.2 (14.1–14.4) | 7.1 (6.6–7.2) |
+| Peak backend memory | 171 MiB (169–186) | 118 MiB (114–118) |
+
+Every run had zero errors and completed at least 29 scored rounds. The busiest
+generator worker used at most 20% of one CPU. The shared host's load average
+was 49–58, so treat the latency ranges as noisy. CPU per delivered fragment
+fell by about half across these runs. This compares server work at the same
+send rate; it does not measure the older browser's higher send rate.
+
+The candidate includes the file-descriptor limit of 65,536; the baseline keeps
+its original limit. The measured revision precedes the restart-recovery fix
+and the later test and documentation updates.
+
 ## Workload
 
 The test script ([`backend/loadtest/run.py`](../backend/loadtest/run.py)) speaks

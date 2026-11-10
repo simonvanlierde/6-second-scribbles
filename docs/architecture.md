@@ -75,3 +75,11 @@ stateDiagram-v2
 [`GamePhase`](../backend/app/core/types.py) defines the phases. The client and
 server messages that drive the transitions are in
 [`app/rooms/protocol.py`](../backend/app/rooms/protocol.py).
+
+Graceful shutdown keeps saved rooms in Redis. On startup, the backend returns any
+saved game to the lobby, including games showing round or final results. Drawings
+and phase timers are held in memory and cannot resume after a restart. Recovery
+clears round data and scores, while keeping the room code, host, settings and
+player identity and seat bindings. Rooms already in the lobby keep their settings.
+The saved host has the usual reconnect grace period before a returning guest can
+take over.

@@ -559,7 +559,7 @@ class GameRoom:
 
     @classmethod
     def from_state(cls, state: RoomState) -> GameRoom:
-        """Restore a room from a Redis-persisted state model (no players reconnect yet)."""
+        """Restore a saved room, returning interrupted games to the lobby."""
         room = cls(state.room_id)
         room.host_id = state.host_id
         room.last_host_id = state.last_host_id
@@ -569,6 +569,9 @@ class GameRoom:
         room.emptied_at = state.emptied_at or time.time()
         room.is_hibernated = state.is_hibernated
         room.metadata = state.metadata.model_copy(deep=True)
+        # Drawings and phase timers live only in memory, so a saved game cannot resume.
+        if room.metadata.game_phase != GamePhase.LOBBY:
+            room.metadata.reset_game(())
         return room
 
     async def persist(self) -> None:
