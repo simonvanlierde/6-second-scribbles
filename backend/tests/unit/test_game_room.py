@@ -14,17 +14,19 @@ from fastapi import HTTPException
 from app.categories import service as category_service
 from app.core.config import settings
 from app.core.types import GamePhase
-from app.rooms import kick_vote, player_lifecycle, rounds
+from app.rooms import actions, kick_vote, player_lifecycle, rounds
 from app.rooms import manager as manager_module
 from app.rooms.kick_vote import HOST_CANNOT_BE_VOTE_KICKED_ERROR, VOTE_KICK_PUBLIC_ONLY_ERROR, get_required_votes
 from app.rooms.manager import GameRoom, PlayerInfo, RoomManager
 from app.rooms.player_lifecycle import ABSENT_BINDING_GRACE_SECONDS, MAX_ABSENT_BINDINGS, SEATS_BUSY_ERROR
 from app.rooms.protocol import (
+    DrawpadClearEvent,
     DrawStrokeBatchServerEvent,
     StrokeDelta,
     StrokeFragment,
     WebSocketMessage,
 )
+from app.rooms.session import RoomWebSocketSession
 from app.rooms.state import GuessSubmissionState, PlayerPromptAssignmentState
 from tests.constants import (
     HOST_ONE,
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
 
 EXPIRES_AT = "expiresAt"
 HOST_CHANGED = "host_changed"
+DRAWPAD_CLEAR = "drawpad_clear"
 
 
 def _scheduler_tasks(scheduler: object) -> dict[str, object | None]:
@@ -69,6 +72,18 @@ class TestGameRoom:
         assert len(room.players) == 0
         assert room.host_id is None
         assert room.metadata.game_phase == GamePhase.LOBBY
+
+    async def test_room_and_join_rosters_include_authoritative_scores(self, room_with_players: GameRoom) -> None:
+        """A reconnect or roster refresh must not turn earned scores into zeros."""
+        room_with_players.metadata.player_scores = {PLAYER_ONE_ID: 30, PLAYER_TWO_ID: 10}
+        room_with_players.metadata.game_phase = GamePhase.FINAL_RESULTS
+
+        snapshot = room_with_players.room_state_event().model_dump()
+        scores = {player["id"]: player["score"] for player in snapshot["players"]}
+        assert scores == {player_id: room_with_players.metadata.player_scores.get(player_id, 0) for player_id in scores}
+        assert scores[PLAYER_ONE_ID] == 30
+        assert scores[PLAYER_TWO_ID] == 10
+        assert [player.model_dump() for player in room_with_players.get_player_list()] == snapshot["players"]
 
     async def test_add_first_player_becomes_host(self, game_room: GameRoom, mock_websocket: TestWebSocket) -> None:
         """Test that the first player to join becomes the host."""
@@ -415,6 +430,38 @@ class TestGameRoom:
         release.set()
         await asyncio.wait_for(waiting, timeout=1)
 
+    async def test_new_fragments_wait_until_clear_reaches_every_player(self, game_room: GameRoom) -> None:
+        """Drawing during a slow clear remains visible on every client."""
+        entered, release = asyncio.Event(), asyncio.Event()
+
+        class ClearStalls(TestWebSocket):
+            async def send_text(self, message: str) -> None:
+                if json.loads(message)["type"] == DRAWPAD_CLEAR:
+                    entered.set()
+                    await release.wait()
+                await super().send_text(message)
+
+        slow, fast = ClearStalls(), TestWebSocket()
+        game_room.players["slow"] = PlayerInfo(id="slow", name="Slow", websocket=as_websocket(slow))
+        game_room.players["fast"] = PlayerInfo(id="fast", name="Fast", websocket=as_websocket(fast))
+        game_room.host_id = "slow"
+        session = RoomWebSocketSession(game_room, as_websocket(slow))
+        session.player_id = "slow"
+        clearing = asyncio.create_task(actions.handle_drawpad_clear(session, DrawpadClearEvent(type=DRAWPAD_CLEAR)))
+        try:
+            await asyncio.wait_for(entered.wait(), timeout=1)
+            stroke = StrokeDelta(color="#000", width=3, points=[1, 1])
+            game_room.apply_lobby_partial("fast", stroke, is_start=True)
+            game_room.queue_lobby_fragment(StrokeFragment(player_id="fast", stroke=stroke, stroke_start=True))
+            await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+            assert fast.sent_texts == []
+        finally:
+            release.set()
+            await clearing
+        await asyncio.sleep(manager_module.LOBBY_FRAGMENT_TICK_SECONDS * 2)
+        assert [json.loads(message)["type"] for message in fast.sent_texts] == [DRAWPAD_CLEAR, "draw_stroke_batch"]
+        assert game_room.lobby_strokes[0].points == [1, 1]
+
     async def test_metadata_initialization(self, game_room: GameRoom) -> None:
         """Test that room metadata is properly initialized."""
         assert game_room.metadata.game_phase == GamePhase.LOBBY
@@ -693,6 +740,22 @@ class TestGameRoom:
 class TestRoomManager:
     """Test suite for RoomManager class."""
 
+    async def test_stop_preserves_persisted_rooms(
+        self, room_manager: RoomManager, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Stopping the process cancels room tasks without expiring Redis keys."""
+        room = room_manager.get_or_create_room("RETAIN")
+        shutdown = AsyncMock(wraps=room.scheduler.shutdown)
+        monkeypatch.setattr(room.scheduler, "shutdown", shutdown)
+        delete = AsyncMock()
+        monkeypatch.setattr(manager_module, "delete_room_state", delete)
+
+        await room_manager.stop()
+
+        shutdown.assert_awaited_once()
+        delete.assert_not_awaited()
+        assert room_manager.rooms == {}
+
     def test_create_room_manager(self, room_manager: RoomManager) -> None:
         """Test creating a room manager."""
         assert len(room_manager.rooms) == 0
@@ -726,15 +789,18 @@ class TestRoomManager:
         assert room is not None
         assert room.room_id == room_id
 
-    async def test_remove_room(self, room_manager: RoomManager) -> None:
+    async def test_remove_room(self, room_manager: RoomManager, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test removing a room."""
         room_id = TEST_ROOM_ID
+        delete = AsyncMock()
+        monkeypatch.setattr(manager_module, "delete_room_state", delete)
         room_manager.get_or_create_room(room_id)
 
         assert len(room_manager.rooms) == 1
 
         await room_manager.remove_room(room_id)
         assert len(room_manager.rooms) == 0
+        delete.assert_awaited_once_with(room_id)
 
 
 class TestIdlePlayerDetection:

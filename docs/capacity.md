@@ -105,6 +105,7 @@ when it finishes. To aim the test at a backend you already run, use
 ```bash
 just loadtest-ab 85ddbea main                          # 3 runs each, one 20 s step at 40 rooms: about 5 minutes
 just loadtest-ab main HEAD --runs 5 --rooms 60,70,80   # other flags, such as --duration, pass through to run.py
+just loadtest-ab v0.3.0 HEAD --legacy-wire-a --runs 3 --rooms 40
 ```
 
 This builds each commit's prod stack from a temporary worktree outside the
@@ -117,6 +118,12 @@ capped at 1.0 CPU), the load generator to up to three other cores, and Postgres
 and Redis to what is left. On a CPU with hyperthreads, the backend's and the
 generator's twin threads stay idle. The script prints the host load before each
 run and warns above 1.5.
+
+For 0.3.0 servers, select `--legacy-wire-a` or `--legacy-wire-b` for that
+side. This changes flat coordinate pairs to the old `{x, y}` points; the send
+rate, points per fragment and measurement window stay the same. Each relayed
+fragment counts as one delivery, whether it arrives alone or in a batch. The
+standalone generator takes `--legacy-wire`.
 
 The summary gives, per step, the median and range of p95, backend CPU,
 deliveries/s, and backend CPU per 1,000 deliveries/s, then B/A of the medians.

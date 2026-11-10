@@ -310,6 +310,7 @@ class PlayerSnapshot(BaseModel):
 
     id: str
     name: str
+    score: int = 0
     color: str | None = None
     connected: bool = True
 

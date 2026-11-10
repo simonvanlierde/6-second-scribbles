@@ -145,6 +145,7 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
             {
                 "id": PLAYER_ONE_ID,
                 "name": PLAYER_ONE_NAME,
+                "score": 0,
                 "color": "var(--avatar-1)",
                 "connected": True,
             },

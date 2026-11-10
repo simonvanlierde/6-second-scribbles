@@ -15,6 +15,7 @@ export const ServerEventSchema = z.union([
           .object({
             id: z.string(),
             name: z.string(),
+            score: z.number().int().default(0),
             color: z.union([z.string(), z.null()]).default(null),
             connected: z.boolean().default(true),
           })
@@ -86,6 +87,7 @@ export const ServerEventSchema = z.union([
           .object({
             id: z.string(),
             name: z.string(),
+            score: z.number().int().default(0),
             color: z.union([z.string(), z.null()]).default(null),
             connected: z.boolean().default(true),
           })

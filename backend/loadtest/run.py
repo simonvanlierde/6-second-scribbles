@@ -37,7 +37,7 @@ from websockets.exceptions import ConnectionClosed, InvalidHandshake
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-# SharedDrawpad.vue sends buffered points every 50 ms.
+# SharedDrawpad.svelte sends buffered points every 50 ms.
 SEND_HZ = 20
 STROKE_FRAGMENTS = 10  # half a second of continuous drawing per stroke
 POINTS_PER_FRAGMENT = 6
@@ -64,16 +64,25 @@ MIN_ROUND_SECONDS = 15
 SEND_TIME_PREFIX = "t"
 
 
-def stroke_fragment(player_id: str, points: list[int], sent: float, *, start: bool) -> dict[str, object]:
+def stroke_fragment(
+    player_id: str, points: list[int], sent: float, *, start: bool, legacy_wire: bool = False
+) -> dict[str, object]:
     """A lobby stroke fragment whose `color` carries the monotonic send time.
 
     The server relays the fragment unchanged, so the receiver reads the time back
-    from `color`; `width` stays a real pen width the server accepts.
+    from `color`; `width` stays a real pen width the server accepts. `legacy_wire`
+    changes only the point shape to the objects accepted by v0.3.0.
     """
     return {
         "type": "draw_stroke_partial",
         "playerId": player_id,
-        "stroke": {"color": f"{SEND_TIME_PREFIX}{sent:.6f}", "width": 4, "points": points},
+        "stroke": {
+            "color": f"{SEND_TIME_PREFIX}{sent:.6f}",
+            "width": 4,
+            "points": [{"x": x, "y": y} for x, y in zip(points[::2], points[1::2], strict=True)]
+            if legacy_wire
+            else points,
+        },
         "strokeStart": start,
     }
 
@@ -120,6 +129,7 @@ class Config:
     draw_seconds: float
     end_at: float  # time.monotonic() deadline; CLOCK_MONOTONIC is shared across processes
     window: tuple[float, float]  # latency samples count only inside this monotonic window
+    legacy_wire: bool = False
 
 
 @dataclass
@@ -239,7 +249,8 @@ class Player:
         window_start, window_end = self.cfg.window
         if not window_start <= now <= window_end:
             return
-        for fragment in msg["fragments"]:
+        fragments = msg.get("fragments", [msg])
+        for fragment in fragments:
             if fragment.get("playerId") != self.player_id:
                 self.stats.latencies_ms.append((now - sent_at(fragment["stroke"])) * 1000)
 
@@ -252,7 +263,7 @@ class Player:
             kind = msg.get("type")
             self.phase = PHASE_AFTER.get(kind, self.phase)
             match kind:
-                case "draw_stroke_batch":
+                case "draw_stroke_batch" | "draw_stroke_partial":
                     self.record_relay(msg, now)
                 case "player_joined" if msg.get("playerId") == self.player_id:
                     if self.is_host and not msg.get("isHost"):
@@ -305,7 +316,11 @@ class Player:
                     x = min(10_000, max(0, x + rng.randint(-60, 60)))
                     y = min(10_000, max(0, y + rng.randint(-60, 60)))
                     points += [x, y]
-                await self.send(stroke_fragment(self.player_id, points, time.monotonic(), start=frame == 0))
+                await self.send(
+                    stroke_fragment(
+                        self.player_id, points, time.monotonic(), start=frame == 0, legacy_wire=self.cfg.legacy_wire
+                    )
+                )
                 await asyncio.sleep(1 / SEND_HZ)
             await asyncio.sleep(rng.uniform(*PAUSE_SECONDS))
 
@@ -414,6 +429,7 @@ def run_step(args: argparse.Namespace, rooms: int) -> StepResult:
         draw_seconds=args.draw_seconds,
         end_at=window[1],
         window=window,
+        legacy_wire=args.legacy_wire,
     )
     # The same codes every step: rooms are reused instead of piling up toward MAX_ROOMS.
     codes = [f"{args.prefix:02d}{i:04d}" for i in range(rooms)]
@@ -464,6 +480,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--smoke", action="store_true", help="a few seconds at tiny load; fails on any problem")
     parser.add_argument("--keep-going", action="store_true", help="run every step, also past the knee")
     parser.add_argument("--json", metavar="PATH", help="also write the step results to PATH as JSON")
+    parser.add_argument("--legacy-wire", action="store_true", help="send v0.3.0 object points")
     args = parser.parse_args(argv)
     if args.smoke:
         # The host starts the game 4-12 s in and the window opens at about 3 s, so every

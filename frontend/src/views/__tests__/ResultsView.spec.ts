@@ -1,7 +1,10 @@
 import { fireEvent, render } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setLocale } from "@/i18n";
 import type { GalleryDrawing } from "@/shared/types";
 import ResultsView from "@/views/ResultsView.svelte";
+
+// cspell:ignore gemiddeld
 
 const pushMock = vi.fn();
 const sendMock = vi.fn();
@@ -99,11 +102,11 @@ beforeEach(() => {
 describe("ResultsView", () => {
   it("renders the winner card with the top scorer", () => {
     const wrapper = render(ResultsView);
-    const card = wrapper.container.querySelector(".winner-card")!;
+    const card = wrapper.container.querySelector(".winner-card");
     expect(Boolean(card)).toBe(true);
-    expect(card.textContent).toContain("Alice");
-    expect(card.textContent).toContain("42 pts");
-    expect(card.querySelector(".winner-card__ribbon")?.textContent).toBe("Champion");
+    expect(card?.textContent).toContain("Alice");
+    expect(card?.textContent).toContain("42 pts");
+    expect(card?.querySelector(".winner-card__ribbon")?.textContent).toBe("Champion");
   });
 
   it("shows tied winners with a plural champions ribbon", () => {
@@ -164,6 +167,16 @@ describe("ResultsView", () => {
     expect(stats).toContain("medium"); // difficulty
   });
 
+  it("translates the difficulty into the player's language", async () => {
+    await setLocale("nl");
+    try {
+      const wrapper = render(ResultsView);
+      expect(wrapper.container.querySelector(".final-stats__difficulty")?.textContent).toBe("gemiddeld");
+    } finally {
+      await setLocale("en");
+    }
+  });
+
   it("renders the all-drawings gallery from drawingHistory", () => {
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }], {
       drawingHistory: [
@@ -188,7 +201,7 @@ describe("ResultsView", () => {
 
   it("host play-again restarts the game", async () => {
     const wrapper = render(ResultsView);
-    await fireEvent.click(wrapper.container.querySelector(".final-cta__again")!);
+    await fireEvent.click(wrapper.getByRole("button", { name: "Play again" }));
     expect(sendMock).toHaveBeenCalledWith({ type: "restart_game" });
     expect(storeMock.onRestartGame).toHaveBeenCalled();
   });
@@ -196,7 +209,7 @@ describe("ResultsView", () => {
   it("non-host play-again sends player_ready", async () => {
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }], { isHost: false });
     const wrapper = render(ResultsView);
-    await fireEvent.click(wrapper.container.querySelector(".final-cta__again")!);
+    await fireEvent.click(wrapper.getByRole("button", { name: "Ready for next game" }));
     expect(sendMock).toHaveBeenCalledWith({
       type: "player_ready",
       playerId: "p1",
@@ -207,7 +220,7 @@ describe("ResultsView", () => {
     // Single player → useRoomLeave.shouldConfirm is false.
     storeMock = createStoreMock([{ playerId: "p1", playerName: "Alice", score: 42 }]);
     const wrapper = render(ResultsView);
-    await fireEvent.click(wrapper.container.querySelector(".final-cta__home")!);
+    await fireEvent.click(wrapper.getByRole("button", { name: "Back home" }));
     expect(storeMock.reset).toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith({ name: "home" });
   });
@@ -217,7 +230,7 @@ describe("ResultsView", () => {
     HTMLDialogElement.prototype.close = vi.fn();
     const wrapper = render(ResultsView);
 
-    await fireEvent.click(wrapper.container.querySelector('[aria-label="Leave"]')!);
+    await fireEvent.click(wrapper.getByRole("button", { name: "Leave", exact: true }));
 
     expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
     expect(storeMock.reset).not.toHaveBeenCalled();

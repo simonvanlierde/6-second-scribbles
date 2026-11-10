@@ -37,6 +37,7 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import PlayerInfo
 from app.rooms.protocol import (
+    DrawpadClearEvent,
     DrawStrokeBatchServerEvent,
     DrawStrokePayload,
     GalleryDrawingPayload,
@@ -152,6 +153,7 @@ class GameRoom:
         self._pending_fragments: list[StrokeFragment] = []
         self._fragment_flush: asyncio.TimerHandle | None = None
         self._fragment_send: asyncio.Task[object] | None = None
+        self._lobby_clears_pending = 0
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -365,9 +367,8 @@ class GameRoom:
 
     def _flush_lobby_fragments(self) -> None:
         loop = asyncio.get_running_loop()
-        if self._fragment_send is not None and not self._fragment_send.done():
-            # The last batch is still going out to a slow player: hold these a tick
-            # longer, so no player gets a later batch before an earlier one.
+        if self._lobby_clears_pending or (self._fragment_send is not None and not self._fragment_send.done()):
+            # A batch or clear is still going out: preserve the order for every player.
             self._fragment_flush = loop.call_later(LOBBY_FRAGMENT_TICK_SECONDS, self._flush_lobby_fragments)
             return
         self._fragment_flush = None
@@ -381,6 +382,16 @@ class GameRoom:
         if self._fragment_send is not None and not self._fragment_send.done():
             # wait() neither raises the task's error nor cancels it if we are cancelled.
             await asyncio.wait({self._fragment_send})
+
+    async def clear_and_broadcast_lobby(self, event: DrawpadClearEvent) -> None:
+        """Keep new fragments behind the clear until every player has received it."""
+        self._lobby_clears_pending += 1
+        try:
+            self.clear_lobby_strokes()
+            await self.wait_for_lobby_batch()
+            await self.broadcast(event)
+        finally:
+            self._lobby_clears_pending -= 1
 
     def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot.
@@ -520,7 +531,14 @@ class GameRoom:
     def get_player_list(self) -> list[PlayerSnapshot]:
         """Get the list of all players in the room, in stable seat order."""
         return [
-            PlayerSnapshot(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
+            PlayerSnapshot(
+                id=p.id,
+                name=p.name,
+                score=self.metadata.player_scores.get(p.id, 0),
+                color=p.color,
+                connected=p.connected,
+            )
+            for p in self._ordered_players()
         ]
 
     # ------------------------------------------------------------------ #
@@ -636,9 +654,10 @@ class RoomManager:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
 
-        # Clean up all rooms
-        for room_id in list(self.rooms.keys()):
-            await self.remove_room(room_id)
+        # Shutdown keeps persisted rooms for startup; only expiry removes their keys.
+        for room in list(self.rooms.values()):
+            await room.scheduler.shutdown()
+        self.rooms.clear()
 
         logger.info("[RoomManager] Stopped and cleaned up all rooms")
 

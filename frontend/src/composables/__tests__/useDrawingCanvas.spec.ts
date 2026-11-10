@@ -73,6 +73,22 @@ beforeEach(() => {
 });
 
 describe("useDrawingCanvas", () => {
+  it("shares a tap as one initial stroke fragment", () => {
+    const { canvas, el } = mountCanvas();
+    const progress = vi.fn();
+    canvas.setStrokeProgressCallback(progress);
+
+    pointer(el, "pointerdown", 0, 0);
+    pointer(el, "pointerup", 0, 0);
+
+    expect(progress).toHaveBeenCalledExactlyOnceWith({
+      color: canvas.strokes[0]?.color,
+      width: canvas.strokes[0]?.width,
+      points: [{ x: 0, y: 0 }],
+      first: true,
+    });
+  });
+
   it("shows a stroke as live while drawing and commits it to the layer on pointerup", () => {
     const { canvas, el, visible, layer } = mountCanvas();
     canvas.setColor("#f00");
