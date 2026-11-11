@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Six Second Scribbles social card</title>
+<!-- Source of frontend/public/og.png (1200x630). Render with `pnpm og-card` in frontend/.
+     og-paper.png and og-timer.png are the app's own drawing canvas and timer, captured by
+     frontend/scripts/og-card.mjs; the cat was drawn on that canvas by replaying mouse input.
+     Name, line and address sit inside the centred 630 px (x 285-915). -->
+<style>
+  @font-face { font-family: Kalam; font-weight: 700; src: url(../frontend/node_modules/@fontsource/kalam/files/kalam-latin-700-normal.woff2); }
+  @font-face { font-family: "Patrick Hand"; src: url(../frontend/node_modules/@fontsource/patrick-hand/files/patrick-hand-latin-400-normal.woff2); }
+  /* Tokens from frontend/src/styles/tokens.css, light theme. */
+  :root { --paper: #fdfbf7; --ink: #3a332c; --ink-muted: #6b6459; --red: #c53030; }
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; position: relative; background: var(--paper);
+         color: var(--ink); font-family: "Patrick Hand", system-ui, sans-serif; }
+  .logo { position: absolute; left: 285px; top: 54px; width: 76px; height: 76px; rotate: -3deg; }
+  .copy { position: absolute; left: 285px; top: 146px; width: 340px; height: 430px; display: flex; flex-direction: column; }
+  h1 { font-family: Kalam, "Caveat", system-ui, sans-serif; font-weight: 700; font-size: 68px; line-height: 1.02;
+       letter-spacing: -.01em; }
+  .line { margin-top: 22px; text-wrap: balance; font-size: 38px; line-height: 1.2; }
+  .addr { margin-top: auto; font-family: Kalam, system-ui, sans-serif; font-weight: 700; font-size: 32px; color: var(--red); }
+  .paper { position: absolute; left: 646px; top: 62px; width: 520px; rotate: 2deg; }
+  .timer { position: absolute; left: 596px; top: 436px; width: 170px; rotate: -4deg; }
+</style>
+<img class="logo" src="../frontend/public/favicon.svg" alt="">
+<div class="copy">
+  <h1>Six Second Scribbles</h1>
+  <p class="line">A real-time multiplayer drawing and guessing game.</p>
+  <p class="addr">6ss.duinlab.nl</p>
+</div>
+<img class="paper" src="og-paper.png" alt="">
+<img class="timer" src="og-timer.png" alt="">
