@@ -37,6 +37,18 @@ just check-frontend check-backend
 just test
 ```
 
+## Social card
+
+`frontend/public/og.png` is the 1200x630 card shown when the link is shared. It is made with the generator in
+[my site repo](https://github.com/simonvanlierde/simonvanlierde.github.io/tree/main/scripts/social-card)
+(needs Docker). From a checkout of that repo, with this repo next to it:
+
+```sh
+pnpm gen:card --visual ../6-second-scribbles/docs/screenshots/desktop-drawing.png --name "Six Second Scribbles" \
+  --line "A real-time multiplayer drawing and guessing game." \
+  --domain 6ss.duinlab.nl --focus "32% 50%" --out ../6-second-scribbles/frontend/public/og.png
+```
+
 ## Docs
 
 - [Product brief](frontend/PRODUCT.md) and the [next roadmap](frontend/docs/roadmap.md)
