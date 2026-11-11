@@ -154,6 +154,8 @@ class GameRoom:
         self._fragment_flush: asyncio.TimerHandle | None = None
         self._fragment_send: asyncio.Task[object] | None = None
         self._lobby_clears_pending = 0
+        # Include sockets awaiting authentication or a join, beyond occupied seats.
+        self.active_connections = 0
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -265,12 +267,13 @@ class GameRoom:
 
     async def restart_game(self) -> None:
         """Send the room back to the lobby after a finished game."""
-        rounds.reset_game(self)
-        # Players who dropped during the finished game and never returned are cleared
-        # as we go back to the lobby (they were kept through final results).
-        await player_lifecycle.prune_disconnected(self)
-        await self.broadcast(RestartGameEvent(type="restart_game"))
-        await self.persist()
+        async with self._scoring_lock:
+            rounds.reset_game(self)
+            # Players who dropped during the finished game and never returned are cleared
+            # as we go back to the lobby (they were kept through final results).
+            await player_lifecycle.prune_disconnected(self)
+            await self.broadcast(RestartGameEvent(type="restart_game"))
+            await self.persist()
 
     async def check_idle_players(self) -> None:
         """Drop expired kick votes, and disconnect idle players during active game phases."""

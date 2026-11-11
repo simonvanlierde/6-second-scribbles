@@ -294,6 +294,8 @@ class TestRegressionGuards:
     def test_duplicate_guess_submission_is_ignored(self) -> None:
         """A second submission from the same player is dropped, not double-scored (F4)."""
         room = GameRoom("ROOM-DUP")
+        room.metadata.game_phase = GamePhase.GUESSING
+        room.metadata.guessing_start_time = int(time.time() * 1000)
         room.metadata.guess_targets = {"p1": "p2"}
 
         round_service.record_guess_submission(room, player_id="p1", target_player_id="p2", guesses=["cat"])

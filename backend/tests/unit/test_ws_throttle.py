@@ -10,6 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.core.config import settings
+from app.rooms import player_lifecycle
 from app.rooms.manager import MAX_LOBBY_POINTS
 from app.rooms.protocol import PAD_SCALE, StrokeDelta, encode_ws_message, parse_client_event
 from app.rooms.session import RoomWebSocketSession
@@ -41,6 +42,7 @@ async def test_draw_strokes_dropped_past_window_limit(
     broadcast = AsyncMock()
     monkeypatch.setattr(game_room, "broadcast", broadcast)
     session = RoomWebSocketSession(game_room, as_websocket(mock_websocket))
+    await player_lifecycle.add_player(game_room, PLAYER_ONE_ID, "Player", as_websocket(mock_websocket))
     session.player_id = PLAYER_ONE_ID
 
     for _ in range(3):

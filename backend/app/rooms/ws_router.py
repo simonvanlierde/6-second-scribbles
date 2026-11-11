@@ -52,13 +52,19 @@ async def websocket_endpoint(websocket: WebSocket, room_id: RoomCode) -> None:
         await websocket.close(code=1013, reason="Server at capacity")
         return
 
-    session_maker = get_session_maker()
-    session_id = websocket.cookies.get(settings.session_cookie_name)
-    async with session_maker() as db:
-        current_user = await get_user_by_session(db, session_id)
-    session = RoomWebSocketSession(room, websocket, current_user=current_user)
+    # Leave one extra socket per player for reconnects while old transports close.
+    if room.active_connections >= 2 * settings.max_players + settings.max_observers:
+        await websocket.close(code=1013, reason="Too many room connections")
+        return
+    room.active_connections += 1
+    session: RoomWebSocketSession | None = None
 
     try:
+        session_maker = get_session_maker()
+        session_id = websocket.cookies.get(settings.session_cookie_name)
+        async with session_maker() as db:
+            current_user = await get_user_by_session(db, session_id)
+        session = RoomWebSocketSession(room, websocket, current_user=current_user)
         await session.run()
     except WebSocketDisconnect:
         logger.info("[WebSocket] Client disconnected from room %s", room_id)
@@ -67,4 +73,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: RoomCode) -> None:
         # and cancellation errors still propagate for test/shutdown integrity.
         logger.exception("[WebSocket] Unexpected error in room %s", room_id)
     finally:
-        await session.on_disconnect()
+        room.active_connections -= 1
+        if session is not None:
+            await session.on_disconnect()
+        else:
+            await websocket.close(code=1011, reason="Connection setup failed")

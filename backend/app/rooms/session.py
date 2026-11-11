@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 # A spectator only watches: anything else it sends is refused.
 OBSERVER_EVENT_TYPES = frozenset({"heartbeat", "leave", "request_game_state", "watch"})
+CONNECTION_JOIN_TIMEOUT_SECONDS = 10
 
 
 class RoomWebSocketSession:
@@ -59,15 +61,22 @@ class RoomWebSocketSession:
 
     async def run(self) -> None:
         """Send the initial snapshot, then process messages until disconnect."""
-        await send_ws_message(self.websocket, self.room.room_state_event())
+        join_deadline = asyncio.get_running_loop().time() + CONNECTION_JOIN_TIMEOUT_SECONDS
+        try:
+            async with asyncio.timeout(settings.ws_send_timeout_seconds):
+                await send_ws_message(self.websocket, self.room.room_state_event())
 
-        while True:
-            payload = await self.websocket.receive_text()
-            # Reject oversized frames before any JSON parsing/validation work.
-            if len(payload) > settings.ws_max_message_bytes:
-                await self.send_error("protocol_error", "payload_too_large", "Message too large.")
-                continue
-            await self.handle(payload)
+            while True:
+                deadline = None if self.player_id is not None or self.is_observer else join_deadline
+                async with asyncio.timeout_at(deadline):
+                    payload = await self.websocket.receive_text()
+                    # Reject oversized frames before any JSON parsing/validation work.
+                    if len(payload) > settings.ws_max_message_bytes:
+                        await self.send_error("protocol_error", "payload_too_large", "Message too large.")
+                        continue
+                    await self.handle(payload)
+        except TimeoutError:
+            await self.websocket.close(code=1008, reason="Connection timed out before joining.")
 
     def _draw_allowed(self) -> bool:
         """Return whether another draw event fits the per-connection rate window."""
@@ -102,6 +111,14 @@ class RoomWebSocketSession:
             if self.is_observer and event.type not in OBSERVER_EVENT_TYPES:
                 await self.send_error("permission_error", "spectator", "Spectators cannot take part in the game.")
                 return
+            if event.type == JOIN_EVENT_TYPE and self.player_id is not None:
+                await self.send_error("permission_error", "already_joined", "This connection already has a player.")
+                return
+            if self.player_id is not None:
+                player = self.room.players.get(self.player_id)
+                if player is None or not player.connected or player.websocket is not self.websocket:
+                    await self.websocket.close(code=1008, reason="Player connection was replaced or removed.")
+                    return
             if event.type != JOIN_EVENT_TYPE and self.player_id:
                 player_lifecycle.update_player_activity(self.room, self.player_id)
             await dispatch_event(self, event)
