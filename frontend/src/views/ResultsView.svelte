@@ -117,7 +117,7 @@ onMount(() => {
               </div>
               <div class="final-stats__item">
                 <dt>{t("finalResults.statDifficulty")}</dt>
-                <dd class="final-stats__difficulty">{store.difficulty}</dd>
+                <dd class="final-stats__difficulty">{t(`settings.${store.difficulty}`)}</dd>
               </div>
               <div class="final-stats__item">
                 <dt>{t("finalResults.statDrawings")}</dt>

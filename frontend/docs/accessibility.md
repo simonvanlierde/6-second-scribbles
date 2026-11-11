@@ -23,7 +23,8 @@ Simon van Lierde runs the checks below. No outside expert has tested it.
 
 - Drawing is possible only with a pointing device, and there is no keyboard alternative. No fix planned.
   [2.1.1 Keyboard]
-- The layout is built for desktop and is not tuned for small screens. No fix planned.
+- The layout is built for desktop and is not tuned for small screens. The next milestone's
+  [phone-layout plan](roadmap.md#phone-layout-assessment-and-implementation-plan) covers portrait drawing and guessing with the keyboard open.
   [1.4.10 Reflow]
 
 ## Tell us about a problem
@@ -39,8 +40,8 @@ We'll reply within 10 working days.
 
 These automatic checks run on every proposed change:
 
-- [axe-core](https://github.com/dequelabs/axe-core) scans the home page, the settings panel and the
-  design-system page, in the light and the dark theme, for WCAG 2.1 level A and AA problems.
+- [axe-core](https://github.com/dequelabs/axe-core) scans the home page, settings panel, design-system
+  page, lobby, drawing, guessing and round results in both themes for WCAG 2.1 level A and AA problems.
 - [Biome's accessibility rules](https://biomejs.dev/linter/javascript/rules/#a11y) check the code for
   mistakes such as missing alt text or invalid ARIA.
 
@@ -52,7 +53,7 @@ It needs HTML, CSS and JavaScript to work.
 
 Prepared: 9 November 2026
 
-Last reviewed: 9 November 2026
+Last reviewed: 10 November 2026
 
 Next review: within 12 months of the last review.
 

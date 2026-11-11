@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 POINTS_PER_CORRECT_GUESS = 10
+SCORING_TIMEOUT_BUFFER_SECONDS = 3
 
 
 def configure_game(
@@ -144,6 +145,13 @@ def mark_player_ready(room: GameRoom, player_id: str) -> ReadyStatusEvent:
 
 def record_guess_submission(room: GameRoom, *, player_id: str, target_player_id: str, guesses: list[str]) -> bool:
     """Store a guess submission and report whether scoring should begin immediately."""
+    metadata = room.metadata
+    if metadata.game_phase != GamePhase.GUESSING or metadata.guessing_start_time is None:
+        return False
+    if time.time() * 1000 >= metadata.guessing_start_time + 1000 * (
+        (metadata.guessing_time_limit or 60) + SCORING_TIMEOUT_BUFFER_SECONDS
+    ):
+        return False
     if player_id in room.metadata.submitted_players:
         # Ignore duplicate submissions: score_round credits points per stored
         # submission, so appending a second one would double the guesser's (and

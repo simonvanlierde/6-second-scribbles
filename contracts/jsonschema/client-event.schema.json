@@ -184,7 +184,7 @@
             "maxLength": 100,
             "type": "string"
           },
-          "maxItems": 50,
+          "maxItems": 10,
           "title": "Guesses",
           "type": "array"
         }

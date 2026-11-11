@@ -58,7 +58,7 @@ async function scribble(page: Page) {
 }
 
 test("a dense HiDPI drawing reaches the guesser", async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   const host = await openPlayer(browser, "Host");
   await host.page.getByRole("button", { name: /create room/i }).click();
   await expect(host.page).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
@@ -69,12 +69,20 @@ test("a dense HiDPI drawing reaches the guesser", async ({ browser }) => {
   await guest.page.getByRole("button", { name: /join room/i }).click();
   await expect(host.page.getByRole("heading", { name: /players \(2\)/i })).toBeVisible();
 
+  // The dense pointer workload can outlast a normal round on a busy runner.
+  await host.page.locator(".advanced-toggle").click();
+  const drawingTime = host.page.getByRole("textbox", { name: /drawing time/i });
+  await drawingTime.fill("180");
+  await drawingTime.blur();
+  await expect(drawingTime).toHaveValue("180");
+  await expect(guest.page.locator(".settings-chips .chip").nth(2)).toHaveText("180s");
   await host.page.getByRole("button", { name: /start game/i }).click();
 
   // Both draw at once: the round timer keeps running for everyone.
   await Promise.all(
     [host, guest].map(async ({ page }) => {
       await scribble(page);
+      await expect(page.locator(".drawing-phase")).toBeVisible();
       await page
         .getByRole("button", { name: /^finish$/i })
         .first()

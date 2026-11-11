@@ -15,6 +15,7 @@ export const ServerEventSchema = z.union([
           .object({
             id: z.string(),
             name: z.string(),
+            score: z.number().int().default(0),
             color: z.union([z.string(), z.null()]).default(null),
             connected: z.boolean().default(true),
           })
@@ -86,6 +87,7 @@ export const ServerEventSchema = z.union([
           .object({
             id: z.string(),
             name: z.string(),
+            score: z.number().int().default(0),
             color: z.union([z.string(), z.null()]).default(null),
             connected: z.boolean().default(true),
           })
@@ -315,7 +317,7 @@ export const ClientEventSchema = z.union([
     type: z.literal("submit_guess"),
     targetPlayerId: z.string(),
     playerId: z.string().max(64),
-    guesses: z.array(z.string().max(100)).max(50).optional(),
+    guesses: z.array(z.string().max(100)).max(10).optional(),
   }),
   z.object({ type: z.literal("restart_game") }),
   z.object({ type: z.literal("heartbeat") }),

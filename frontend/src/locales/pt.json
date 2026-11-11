@@ -29,7 +29,7 @@
   "home.step3": "Adivinhe o que os outros jogadores desenharam",
   "home.step4": "Tanto quem desenha quanto quem adivinha ganham pontos por acertos!",
   "home.footerText": "Uma versão web multijogador de {original} da Gamely Games · Inspirado por {inspiration} · {source}",
-  "home.privacyNote": "Privacidade: uma conta de convidado guarda apenas o seu nome e idioma, e é apagada 30 dias depois que a sessão terminar. Os registros do servidor guardam um endereço de rede encurtado, não o seu IP completo, para evitar abusos, e os registros antigos são substituídos à medida que chegam novos.",
+  "home.privacyNote": "Privacidade: uma conta de convidado guarda apenas o seu nome e idioma, e é apagada após o término da sessão de 30 dias. Os registros do servidor guardam um endereço de rede encurtado, não o seu IP completo, para evitar abusos, e os registros antigos são substituídos à medida que chegam novos.",
   "home.tagline": "Desenhe. Adivinhe. Ria.",
   "home.roomCodeLabel": "Código da sala",
   "home.quickPlayHeading": "Só jogar.",

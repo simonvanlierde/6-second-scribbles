@@ -6,20 +6,30 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
+### Upgrade notes
+
+- Deploy the frontend and backend together. Refresh any open game tabs. The new WebSocket contract includes batched lobby strokes and player scores; older tabs cannot read these events.
+
 <!-- cspell:ignore stroom jagody Reiniger Saiten Saiteninstrument -->
 
 ### Added
 
+- An agreed [product brief](frontend/PRODUCT.md) and [roadmap](frontend/docs/roadmap.md): comfortable phone play, a shared reveal wall and device-exported keepsakes are the next milestone.
+- Shared game links now show a drawing-themed preview image.
 - For contributors: `just loadtest-ab <ref-a> <ref-b>` compares the capacity of two commits. It builds each one, drives both with today's load generator on pinned CPUs, alternates the runs, and prints the median and B/A ratio of p95 latency and backend CPU per step. The default, one step at 40 rooms, takes about five minutes. See [docs/capacity.md](docs/capacity.md).
 - For contributors: CodSpeed benchmarks of the server's stroke path run on every PR and flag one that makes it slower. See [docs/capacity.md](docs/capacity.md).
 - For contributors: an end-to-end axe check of the lobby, drawing, guessing and round results screens, in both colour schemes.
 
 ### Changed
 
+- For contributors: the frontend now uses Svelte 5 and Lingui instead of Vue, Pinia and Vue I18n. Room links and the game rules stay the same.
 - About 100 word cards in 10 languages accept better answers. Words a player would really type were added, such as Dom for cathedral in German and stroom for electricity in Dutch, and wrong ones were removed: Polish jagody (blueberries) from strawberry, German Reiniger (a household cleaner) from soap. A word that only names the strings, like German Saiten, is now the instrument family (Saiteninstrument). A language model suggested the changes; each was checked against the card's category and the deck's rules.
 - **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
 - Strokes are smoother, in the game and on the lobby doodle. A stroke now thins and thickens with the speed of your pen, like ink, and curves stay round instead of turning into short straight segments. Taps leave a dot.
-- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. With every player drawing at once, one server now holds about 200 rooms of 6 instead of about 60.
+- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. A short, one-round load test reached about 200 rooms of 6 instead of about 60; [capacity limits](docs/capacity.md) explain what this does not cover.
+- A pinned comparison at 40 rooms used about half the backend CPU per delivered stroke fragment as 0.3.0. The host was shared; [the measurements](docs/capacity.md#release-comparison-on-2026-11-10) include the ranges and workload.
 - For contributors: pnpm now installs only package releases at least a week old, the same wait Dependabot already has. Updating the lockfile by hand no longer picks up a release from the past few days.
 
 ### Removed
@@ -28,6 +38,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Restarting while a round is being scored now waits for scoring, then returns to the lobby without starting another round.
+- Lobby taps now reach the other players and survive a resized drawpad, just like longer strokes.
+- A new lobby stroke no longer disappears when it arrives while a clear is still reaching another player.
+- Reloading a game restores the players' scores, including the final standings.
+- A normal backend shutdown keeps saved rooms in Redis instead of deleting them. After a restart, interrupted games return to the lobby with the same room, settings and player identity bindings.
+- The difficulty on the final results screen now follows your chosen language.
 - Three word cards were never dealt because no category held them. Reading and sleeping are now in the Actions category. Clouds is gone: it duplicated the cloud card, which is already in four categories.
 - If a category had no words in your language, your guesses were checked against its words in the category's default language, usually English, even when the room's language was available. They are now checked in the same language your own card falls back to: the room's, then the category's default, then English.
 - A long session of doodling in the lobby no longer makes the page slower and slower: your browser now forgets the oldest strokes once the doodle reaches the size the server keeps.
@@ -43,6 +59,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- A replaced connection can no longer act as the player who reconnected or disconnect that player's new connection.
+- Drawing and guess submissions now follow the server's deadlines, including when a delayed timer has not yet advanced the phase.
+- A player can submit at most ten guesses for their assigned drawing. Modified clients can no longer try extra answers to increase their score.
+- Each room now limits open connections and closes sockets that do not join or watch within ten seconds, so idle connections cannot accumulate without limit.
+- Hosts can change game settings only in the lobby, so a modified client cannot change a running game's timers or rounds.
 - For contributors: updated the test and commit-lint tooling to versions that fix known advisories in undici and fast-uri. The game itself does not ship these packages. An unused happy-dom install, also flagged, is gone from the lockfile.
 
 ## [0.3.0] - 2026-10-21
@@ -208,7 +229,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   registered accounts, locale-aware prompt categories, and a deployable
   Docker Compose stack.
 
-[Unreleased]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/simonvanlierde/6-second-scribbles/compare/v0.1.0...v0.2.0

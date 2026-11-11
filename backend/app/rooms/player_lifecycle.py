@@ -207,6 +207,9 @@ def _settle_host_on_join(
         # transfer promote a present player instead.
         if room.host_id == player_id:
             room.host_id = None
+    elif len(room.players) == 1 and room.host_id is not None:
+        # A restored room has no sockets yet; give its saved host the usual reconnect grace.
+        restart_host_transfer(room, room.host_id)
     elif len(room.players) == 1:
         room.host_id = player_id
         room.last_host_id = player_id

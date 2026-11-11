@@ -188,6 +188,7 @@ function createGameStore() {
     nextPlayers: Array<{
       id: string;
       name: string;
+      score?: number;
       color?: string | null;
       connected?: boolean;
     }>,
@@ -198,7 +199,7 @@ function createGameStore() {
       const player = $state<Player>({
         id: incoming.id,
         name: incoming.name,
-        score: existing?.score ?? 0,
+        score: incoming.score ?? existing?.score ?? 0,
         // The server always sends a colour; the per-id one only fills the nullable contract field.
         color: incoming.color ?? existing?.color ?? getAvatarColor(incoming.id),
         currentCard: existing?.currentCard,

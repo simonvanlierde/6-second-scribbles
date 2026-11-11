@@ -55,6 +55,11 @@
                 "title": "Name",
                 "type": "string"
               },
+              "score": {
+                "default": 0,
+                "title": "Score",
+                "type": "integer"
+              },
               "color": {
                 "anyOf": [
                   {
@@ -376,6 +381,11 @@
               "name": {
                 "title": "Name",
                 "type": "string"
+              },
+              "score": {
+                "default": 0,
+                "title": "Score",
+                "type": "integer"
               },
               "color": {
                 "anyOf": [

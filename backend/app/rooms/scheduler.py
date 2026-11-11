@@ -80,9 +80,6 @@ def _log_task_exception(task: asyncio.Task[object]) -> None:
         logger.error("[Task %s] unhandled exception", task.get_name(), exc_info=exc)
 
 
-SCORING_TIMEOUT_BUFFER_SECONDS = 3
-
-
 class RoomTaskScheduler:
     """Manages the set of async timers for one `GameRoom`."""
 
@@ -206,7 +203,7 @@ class RoomTaskScheduler:
 
     async def _scoring_timeout(self, timeout_seconds: int) -> None:
         try:
-            await asyncio.sleep(timeout_seconds + SCORING_TIMEOUT_BUFFER_SECONDS)
+            await asyncio.sleep(timeout_seconds + rounds.SCORING_TIMEOUT_BUFFER_SECONDS)
             logger.info(
                 "[GameRoom %s] Scoring timeout: %s/%s players submitted. Scoring now.",
                 self._room.room_id,

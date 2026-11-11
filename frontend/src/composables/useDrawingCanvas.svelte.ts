@@ -246,6 +246,9 @@ export function useDrawingCanvas() {
 
     if (currentStroke.length > 0) {
       const stroke = liveStroke();
+      if (progressEmittedCount === 0) {
+        onStrokeProgress?.({ ...stroke, first: true });
+      }
       strokes.push(stroke);
       commitStroke(stroke, LOCAL_STROKE);
       currentStroke = [];

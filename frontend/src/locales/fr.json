@@ -29,7 +29,7 @@
   "home.step3": "Devine ce que les autres ont dessiné",
   "home.step4": "Le dessinateur et le devineur gagnent tous les deux des points pour les bonnes réponses !",
   "home.footerText": "Une version Web multijoueur de {original} par Gamely Games · Inspiré par {inspiration} · {source}",
-  "home.privacyNote": "Confidentialité : un compte invité ne conserve que ton nom et ta langue, et il est supprimé 30 jours après la fin de sa session. Les journaux du serveur gardent une adresse réseau raccourcie, pas ton IP complète, pour bloquer les abus, et les anciens journaux sont écrasés à mesure que de nouveaux arrivent.",
+  "home.privacyNote": "Confidentialité : un compte invité ne conserve que ton nom et ta langue, et il est supprimé après expiration de sa session de 30 jours. Les journaux du serveur gardent une adresse réseau raccourcie, pas ton IP complète, pour bloquer les abus, et les anciens journaux sont écrasés à mesure que de nouveaux arrivent.",
   "home.tagline": "Dessiner. Deviner. Rire.",
   "home.roomCodeLabel": "Code de salle",
   "home.quickPlayHeading": "Jouer maintenant.",

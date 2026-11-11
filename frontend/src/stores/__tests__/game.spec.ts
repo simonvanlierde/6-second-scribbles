@@ -118,6 +118,17 @@ describe("setPlayers", () => {
     store.setPlayers([{ id: "p2", name: "Bob" }]);
     expect(store.playersList[0]?.score).toBe(0);
   });
+
+  it("uses authoritative scores when the joined roster changes", () => {
+    const store = useGameStore();
+    store.addPlayer("p1", "Alice");
+    store.onGameComplete({ finalScores: { p1: 42 } });
+    store.setPlayers([
+      { id: "p1", name: "Alice", score: 0 },
+      { id: "p2", name: "Bob", score: 20 },
+    ]);
+    expect(store.playersList.map((player) => player.score)).toEqual([0, 20]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -343,6 +354,20 @@ describe("applyRoomState", () => {
     difficulty: "medium",
     maxRounds: 3,
   } as const;
+
+  it.each(["drawing", "final_results"] as const)("restores scores after a fresh reconnect during %s", (gamePhase) => {
+    const store = useGameStore();
+    store.applyRoomState({
+      ...snapshot,
+      gamePhase,
+      players: [
+        { id: "p1", name: "Alice", score: 30 },
+        { id: "p2", name: "Bob", score: 10 },
+      ],
+    } as never);
+
+    expect(store.getFinalScores().map((player) => player.score)).toEqual([30, 10]);
+  });
 
   it("hydrates the phase with the server's ready counters", () => {
     const store = useGameStore();

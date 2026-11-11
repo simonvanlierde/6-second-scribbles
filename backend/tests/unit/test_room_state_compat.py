@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 HOST = "p1"
 GUEST = "p2"
-HOST_CATEGORY = "Pets"
 
 # Saved with RoomState.model_dump_json() by the code before the change. Rooms
 # outlive deploys and rollbacks, so this exact JSON must keep loading.
@@ -135,11 +134,11 @@ def test_saved_room_round_trips_to_the_same_json() -> None:
 
 
 async def test_saved_room_restores_and_plays(make_ws: Callable[..., TestWebSocket]) -> None:
-    """A restored room keeps seats, identity, cards and scores, and the new writers work on it."""
+    """A restored room keeps seats, identity and settings, and can start a fresh game."""
     room = GameRoom.from_state(RoomState.model_validate_json(SAVED_ROOM))
-    card = room.room_state_event(for_player_id=HOST).card
-    assert card is not None
-    assert card.category == HOST_CATEGORY
+    assert room.room_state_event(for_player_id=HOST).card is None
+    assert room.metadata.game_phase == GamePhase.LOBBY
+    assert room.metadata.player_scores == {}
 
     await player_lifecycle.add_player(room, HOST, "Al", as_websocket(make_ws()), user_id="user-1", rejoin_key="key-p1")
     with pytest.raises(ValueError, match=IDENTITY_CONFLICT_ERROR):
@@ -151,7 +150,7 @@ async def test_saved_room_restores_and_plays(make_ws: Callable[..., TestWebSocke
     await player_lifecycle.remove_player(room, GUEST, forget_identity=True)
     assert GUEST not in room.metadata.player_assignments
     assert GUEST not in room.metadata.player_rejoin_keys
-    assert room.metadata.player_scores[GUEST] == 10
+    assert GUEST not in room.metadata.player_scores
 
     rounds.reset_game(room)
     assert room.metadata.game_phase == GamePhase.LOBBY

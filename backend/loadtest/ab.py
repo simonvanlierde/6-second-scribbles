@@ -101,10 +101,13 @@ def split_cpus(allowed: list[int]) -> tuple[int, list[int], list[int]]:
 class Stack:
     """The prod-limited stack of one ref, built from its own temporary worktree."""
 
-    def __init__(self, label: str, ref: str, workdir: Path, override: Path, port: int) -> None:
+    def __init__(
+        self, label: str, ref: str, workdir: Path, override: Path, port: int, *, legacy_wire: bool = False
+    ) -> None:
         self.label = label
         self.ref = ref
         self.port = port
+        self.legacy_wire = legacy_wire
         self.project = f"tmp-6ss-ab-{label.lower()}"
         self.container = f"{self.project}-backend-1"
         self.tree = workdir / f"tree-{label.lower()}"
@@ -202,6 +205,7 @@ def run_generator(stack: Stack, cpus: list[int], rooms: str, extra: list[str], o
         "--json",
         str(out),
         *extra,
+        *(["--legacy-wire"] if stack.legacy_wire else []),
     ]
     try:
         subprocess.run(cmd, cwd=BACKEND, timeout=steps * STEP_TIMEOUT, check=False)
@@ -256,6 +260,8 @@ def parse_args(argv: list[str] | None) -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument("ref_b")
     parser.add_argument("--runs", type=int, default=3, help="runs per ref, alternating A, B, A, B...")
     parser.add_argument("--rooms", default="40", help="comma-separated room counts per run")
+    parser.add_argument("--legacy-wire-a", action="store_true", help="use the v0.3.0 wire format for A")
+    parser.add_argument("--legacy-wire-b", action="store_true", help="use the v0.3.0 wire format for B")
     args, extra = parser.parse_known_args(argv)
     if not any(arg.startswith("--duration") for arg in extra):
         extra += ["--duration", "20"]
@@ -275,8 +281,8 @@ def main(argv: list[str] | None = None) -> int:
         f'  database:\n    cpuset: "{rest_list}"\n  cache:\n    cpuset: "{rest_list}"\n'
     )
     stacks = {
-        "A": Stack("A", args.ref_a, workdir, override, PORT),
-        "B": Stack("B", args.ref_b, workdir, override, PORT + 1),
+        "A": Stack("A", args.ref_a, workdir, override, PORT, legacy_wire=args.legacy_wire_a),
+        "B": Stack("B", args.ref_b, workdir, override, PORT + 1, legacy_wire=args.legacy_wire_b),
     }
     results: dict[str, dict[int, list[dict]]] = {"A": defaultdict(list), "B": defaultdict(list)}
     status = 0

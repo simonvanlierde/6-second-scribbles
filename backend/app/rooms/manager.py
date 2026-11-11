@@ -37,6 +37,7 @@ from app.core.types import (
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import PlayerInfo
 from app.rooms.protocol import (
+    DrawpadClearEvent,
     DrawStrokeBatchServerEvent,
     DrawStrokePayload,
     GalleryDrawingPayload,
@@ -152,6 +153,9 @@ class GameRoom:
         self._pending_fragments: list[StrokeFragment] = []
         self._fragment_flush: asyncio.TimerHandle | None = None
         self._fragment_send: asyncio.Task[object] | None = None
+        self._lobby_clears_pending = 0
+        # Include sockets awaiting authentication or a join, beyond occupied seats.
+        self.active_connections = 0
 
     async def score_and_broadcast_round(self) -> None:
         """Score submitted guesses with fuzzy matching and broadcast round_complete."""
@@ -263,12 +267,13 @@ class GameRoom:
 
     async def restart_game(self) -> None:
         """Send the room back to the lobby after a finished game."""
-        rounds.reset_game(self)
-        # Players who dropped during the finished game and never returned are cleared
-        # as we go back to the lobby (they were kept through final results).
-        await player_lifecycle.prune_disconnected(self)
-        await self.broadcast(RestartGameEvent(type="restart_game"))
-        await self.persist()
+        async with self._scoring_lock:
+            rounds.reset_game(self)
+            # Players who dropped during the finished game and never returned are cleared
+            # as we go back to the lobby (they were kept through final results).
+            await player_lifecycle.prune_disconnected(self)
+            await self.broadcast(RestartGameEvent(type="restart_game"))
+            await self.persist()
 
     async def check_idle_players(self) -> None:
         """Drop expired kick votes, and disconnect idle players during active game phases."""
@@ -365,9 +370,8 @@ class GameRoom:
 
     def _flush_lobby_fragments(self) -> None:
         loop = asyncio.get_running_loop()
-        if self._fragment_send is not None and not self._fragment_send.done():
-            # The last batch is still going out to a slow player: hold these a tick
-            # longer, so no player gets a later batch before an earlier one.
+        if self._lobby_clears_pending or (self._fragment_send is not None and not self._fragment_send.done()):
+            # A batch or clear is still going out: preserve the order for every player.
             self._fragment_flush = loop.call_later(LOBBY_FRAGMENT_TICK_SECONDS, self._flush_lobby_fragments)
             return
         self._fragment_flush = None
@@ -381,6 +385,16 @@ class GameRoom:
         if self._fragment_send is not None and not self._fragment_send.done():
             # wait() neither raises the task's error nor cancels it if we are cancelled.
             await asyncio.wait({self._fragment_send})
+
+    async def clear_and_broadcast_lobby(self, event: DrawpadClearEvent) -> None:
+        """Keep new fragments behind the clear until every player has received it."""
+        self._lobby_clears_pending += 1
+        try:
+            self.clear_lobby_strokes()
+            await self.wait_for_lobby_batch()
+            await self.broadcast(event)
+        finally:
+            self._lobby_clears_pending -= 1
 
     def room_state_event(self, *, for_player_id: str | None = None) -> RoomStateEvent:
         """Build the canonical websocket room-state snapshot.
@@ -520,7 +534,14 @@ class GameRoom:
     def get_player_list(self) -> list[PlayerSnapshot]:
         """Get the list of all players in the room, in stable seat order."""
         return [
-            PlayerSnapshot(id=p.id, name=p.name, color=p.color, connected=p.connected) for p in self._ordered_players()
+            PlayerSnapshot(
+                id=p.id,
+                name=p.name,
+                score=self.metadata.player_scores.get(p.id, 0),
+                color=p.color,
+                connected=p.connected,
+            )
+            for p in self._ordered_players()
         ]
 
     # ------------------------------------------------------------------ #
@@ -541,7 +562,7 @@ class GameRoom:
 
     @classmethod
     def from_state(cls, state: RoomState) -> GameRoom:
-        """Restore a room from a Redis-persisted state model (no players reconnect yet)."""
+        """Restore a saved room, returning interrupted games to the lobby."""
         room = cls(state.room_id)
         room.host_id = state.host_id
         room.last_host_id = state.last_host_id
@@ -551,6 +572,9 @@ class GameRoom:
         room.emptied_at = state.emptied_at or time.time()
         room.is_hibernated = state.is_hibernated
         room.metadata = state.metadata.model_copy(deep=True)
+        # Drawings and phase timers live only in memory, so a saved game cannot resume.
+        if room.metadata.game_phase != GamePhase.LOBBY:
+            room.metadata.reset_game(())
         return room
 
     async def persist(self) -> None:
@@ -636,9 +660,10 @@ class RoomManager:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
 
-        # Clean up all rooms
-        for room_id in list(self.rooms.keys()):
-            await self.remove_room(room_id)
+        # Shutdown keeps persisted rooms for startup; only expiry removes their keys.
+        for room in list(self.rooms.values()):
+            await room.scheduler.shutdown()
+        self.rooms.clear()
 
         logger.info("[RoomManager] Stopped and cleaned up all rooms")
 

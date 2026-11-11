@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
+from app.core.config import settings
 from app.core.types import GamePhase
 from app.rooms import kick_vote, player_lifecycle, rounds
 from app.rooms.player_lifecycle import IDENTITY_CONFLICT_ERROR, KICKED_ERROR, SEATS_BUSY_ERROR
@@ -163,6 +165,8 @@ async def handle_player_ready(session: RoomWebSocketSession, event: PlayerReadyE
     if event.player_id != session.player_id:
         await session.send_error("player_ready_error", "invalid_player", "Ready updates must match your connection.")
         return
+    if session.room.metadata.game_phase != GamePhase.DRAWING:
+        return
     ready_status = rounds.mark_player_ready(session.room, event.player_id)
     await broadcast_and_persist(session, ready_status)
 
@@ -201,6 +205,8 @@ async def handle_settings_update(session: RoomWebSocketSession, event: SettingsU
     if not await require_host(session, "update room settings"):
         return
     room = session.room
+    if room.metadata.game_phase != GamePhase.LOBBY:
+        return
     room.metadata.difficulty = event.difficulty or room.metadata.difficulty
     room.metadata.max_rounds = event.rounds or room.metadata.max_rounds
     room.metadata.drawing_time_limit = event.drawing_time_limit or room.metadata.drawing_time_limit
@@ -212,6 +218,8 @@ async def handle_default_locale_update(session: RoomWebSocketSession, event: Def
     """Handle a default-locale update event."""
     if not await require_host(session, "update the room default locale"):
         return
+    if session.room.metadata.game_phase != GamePhase.LOBBY:
+        return
     session.room.metadata.default_locale = event.locale
     await broadcast_and_persist(session, DefaultLocaleUpdateServerEvent(locale=event.locale))
 
@@ -220,10 +228,7 @@ async def handle_drawpad_clear(session: RoomWebSocketSession, event: DrawpadClea
     """Handle a drawpad-clear event."""
     if not await require_host(session, "clear the drawpad"):
         return
-    session.room.clear_lobby_strokes()
-    # A batch already going out must land before the clear, or players see it after.
-    await session.room.wait_for_lobby_batch()
-    await session.room.broadcast(event)
+    await session.room.clear_and_broadcast_lobby(event)
 
 
 async def handle_pad_visibility(session: RoomWebSocketSession, event: PadVisibilityEvent) -> None:
@@ -307,6 +312,13 @@ async def handle_draw_stroke(session: RoomWebSocketSession, event: DrawStrokeEve
         return
     drawing = (event.model_extra or {}).get("drawing")
     if isinstance(drawing, str):
+        metadata = session.room.metadata
+        if metadata.game_phase != GamePhase.DRAWING or session.player_id in metadata.ready_players:
+            return
+        if metadata.round_start_time is None or time.time() * 1000 >= metadata.round_start_time + 1000 * (
+            (metadata.drawing_time_limit or 30) + settings.drawing_to_guessing_buffer_seconds
+        ):
+            return
         session.room.round_drawings[session.player_id] = drawing
     await session.room.broadcast(event)
 
@@ -349,8 +361,9 @@ async def handle_leave(session: RoomWebSocketSession, event: LeaveEvent) -> None
     del event
     if not session.player_id:
         return
-    await player_lifecycle.remove_player(session.room, session.player_id, forget_identity=True)
-    await broadcast_and_persist(session, PlayerLeftEvent(playerId=session.player_id))
+    player_id, session.player_id = session.player_id, None
+    await player_lifecycle.remove_player(session.room, player_id, forget_identity=True)
+    await broadcast_and_persist(session, PlayerLeftEvent(playerId=player_id))
 
 
 # Dispatch table mapping event type strings to their handler functions.

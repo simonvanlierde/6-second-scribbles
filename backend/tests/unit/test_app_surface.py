@@ -22,7 +22,6 @@ from tests.constants import (
     PLAYER_ONE_NAME,
     PLAYER_TWO_ID,
     PLAYER_TWO_NAME,
-    READY_STATUS,
     ROOM_STATE,
     TEST_ROOM_ID,
 )
@@ -145,6 +144,7 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
             {
                 "id": PLAYER_ONE_ID,
                 "name": PLAYER_ONE_NAME,
+                "score": 0,
                 "color": "var(--avatar-1)",
                 "connected": True,
             },
@@ -156,14 +156,15 @@ def test_request_game_state_returns_current_room_state(test_client: TestClient) 
 
 
 def test_ready_and_restart_messages_are_broadcast(test_client: TestClient) -> None:
-    """Readiness and restart events are echoed back through the room."""
+    """Lobby readiness is ignored and the host can restart the room."""
     with test_client.websocket_connect("/ws/CODE02") as websocket:
         receive_json(websocket)
         join_player(websocket, PLAYER_ONE_ID, PLAYER_ONE_NAME)
 
         send_json(websocket, {"type": "player_ready", "playerId": PLAYER_ONE_ID})
-        ready_status = receive_json(websocket)
-        assert ready_status == {"type": READY_STATUS, "readyCount": 1, "totalPlayers": 1}
+        send_json(websocket, {"type": "request_game_state"})
+        assert receive_json(websocket)["type"] == ROOM_STATE
+        assert not room_manager.get_or_create_room("CODE02").metadata.ready_players
 
         send_json(websocket, {"type": "restart_game"})
         assert receive_json(websocket) == {"type": "restart_game"}
