@@ -6,7 +6,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-11-10
+## [0.4.0] - 2026-11-11
 
 ### Upgrade notes
 
@@ -28,7 +28,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - About 100 word cards in 10 languages accept better answers. Words a player would really type were added, such as Dom for cathedral in German and stroom for electricity in Dutch, and wrong ones were removed: Polish jagody (blueberries) from strawberry, German Reiniger (a household cleaner) from soap. A word that only names the strings, like German Saiten, is now the instrument family (Saiteninstrument). A language model suggested the changes; each was checked against the card's category and the deck's rules.
 - **Breaking:** the lobby doodle now records each point as a position on the pad rather than in screen pixels, so a stroke lands in the same place on a phone as on a laptop. Before, a laptop player's strokes landed cut off or out of place on a smaller screen.
 - Strokes are smoother, in the game and on the lobby doodle. A stroke now thins and thickens with the speed of your pen, like ink, and curves stay round instead of turning into short straight segments. Taps leave a dot.
-- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. With every player drawing at once, one server now holds about 200 rooms of 6 instead of about 60.
+- Doodle strokes reach the other players in small batches, every 50 ms, instead of one message per screen frame. Strokes can show up to about a tenth of a second later. A short, one-round load test reached about 200 rooms of 6 instead of about 60; [capacity limits](docs/capacity.md) explain what this does not cover.
 - A pinned comparison at 40 rooms used about half the backend CPU per delivered stroke fragment as 0.3.0. The host was shared; [the measurements](docs/capacity.md#release-comparison-on-2026-11-10) include the ranges and workload.
 - For contributors: pnpm now installs only package releases at least a week old, the same wait Dependabot already has. Updating the lockfile by hand no longer picks up a release from the past few days.
 
@@ -38,6 +38,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Restarting while a round is being scored now waits for scoring, then returns to the lobby without starting another round.
 - Lobby taps now reach the other players and survive a resized drawpad, just like longer strokes.
 - A new lobby stroke no longer disappears when it arrives while a clear is still reaching another player.
 - Reloading a game restores the players' scores, including the final standings.
@@ -58,6 +59,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- A replaced connection can no longer act as the player who reconnected or disconnect that player's new connection.
+- Drawing and guess submissions now follow the server's deadlines, including when a delayed timer has not yet advanced the phase.
+- A player can submit at most ten guesses for their assigned drawing. Modified clients can no longer try extra answers to increase their score.
+- Each room now limits open connections and closes sockets that do not join or watch within ten seconds, so idle connections cannot accumulate without limit.
+- Hosts can change game settings only in the lobby, so a modified client cannot change a running game's timers or rounds.
 - For contributors: updated the test and commit-lint tooling to versions that fix known advisories in undici and fast-uri. The game itself does not ship these packages. An unused happy-dom install, also flagged, is gone from the lockfile.
 
 ## [0.3.0] - 2026-10-21

@@ -1,12 +1,13 @@
 # Capacity
 
-This page says how many rooms and players one backend container holds under the
+This page measures short workloads on one backend container under the
 production limits in [`compose.prod.yml`](../compose.prod.yml) (1.0 CPU, 1 GiB
-memory, one uvicorn worker), and where it starts to slow down.
+memory, one uvicorn worker). It does not establish sustained capacity for a
+complete game with the largest player and round counts.
 
 ## Result
 
-With every player scribbling at once, one backend holds about **200 rooms of 6
+With every player scribbling at once, the short test reached about **200 rooms of 6
 players (1,200 WebSocket connections)** with the p95 broadcast latency under
 250 ms. (p95 means 95% of messages arrive at least this fast.) In the run below,
 p95 stays near 52 ms up to 160 rooms; 50 ms of that is the server's stroke tick,
@@ -50,9 +51,27 @@ Deliveries/s counts the stroke fragments that reached another player. The load
 generator ran on the same host, outside the limited container, and used at most
 59% of one core per process.
 
-**Bottleneck:** the event loop's CPU. Each room sends every player one batch per
+**Measured bottleneck:** the event loop's CPU. Each room sends every player one batch per
 50 ms tick, however many fragments arrived in it, so the work grows with rooms ×
 players, plus the parsing of each incoming fragment.
+
+### Memory and connection limits
+
+The capacity table uses one-round games with six players. It does not cover the
+retained gallery from ten rounds with ten players. At the drawing limit of
+56 KiB per player per round, that gallery alone holds about **5.47 MiB per room**.
+At 200 rooms it holds about **1.07 GiB**, beyond the container's 1 GiB limit before
+player state, lobby strokes, Python objects or temporary JSON copies.
+
+Room snapshots and results encode retained drawings, so serialization and Redis
+saves also grow as a game progresses. The 200-room result is a short-workload
+measurement, not a safe room cap for every allowed game configuration.
+
+Connections need a separate check through Caddy, whose CPU limit is 0.5 CPU.
+The direct-backend ramp excludes that proxy. A non-reading socket has a
+five-second send timeout; concurrent slow readers can still delay room work
+until that timeout. The larger file-descriptor limit prevents the previous
+1,000-connection failure, but does not prove connection or reconnect capacity.
 
 ## Release comparison on 2026-11-10
 
@@ -156,6 +175,28 @@ deliveries/s, and backend CPU per 1,000 deliveries/s, then B/A of the medians.
 The last one is the fairest speed measure below the knee, where both commits
 deliver everything sent. The command fails if any run had errors or delivered
 nothing, or if a commit's stack does not start.
+
+### Qualifying a weekly benchmark runner
+
+A dependable weekly benchmark still needs a quiet runner. Do not schedule the
+load comparison until a runner passes this qualification:
+
+1. Reserve at least five physical cores: one for the backend, three for load
+   generators and one for Postgres and Redis. Keep their sibling threads free
+   of other jobs, and prevent overlapping benchmark runs.
+2. Compare the same commit against itself with five alternating A/A runs at
+   40 rooms of six players. Use identical images, production limits, send rates
+   and measurement windows. Record host load and the CPU allocation.
+3. Require zero protocol or connection errors and deliveries in every run.
+   Require the ranges of p95 latency and CPU per 1,000 deliveries/s to stay
+   within 10% of their respective medians. Investigate noise before scheduling
+   a weekly release comparison or using it as a regression gate.
+
+Before publishing a sustained capacity limit, add a full ten-round, ten-player
+soak with maximum-size drawings. Measure peak memory during results, snapshots
+and reconnects. Repeat through Caddy, including connection bursts, reconnect
+bursts and non-reading clients. Check that healthy clients and room timers
+continue to progress during slow-reader timeouts.
 
 ### Benchmarks on every PR
 

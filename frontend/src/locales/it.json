@@ -29,7 +29,7 @@
   "home.step3": "Indovina cosa hanno disegnato gli altri giocatori",
   "home.step4": "Sia chi disegna che chi indovina guadagnano punti per le risposte corrette!",
   "home.footerText": "Una versione web multiplayer di {original} di Gamely Games · Ispirato a {inspiration} · {source}",
-  "home.privacyNote": "Privacy: un account ospite conserva solo il tuo nome e la tua lingua, e viene eliminato 30 giorni dopo la fine della sessione. I log del server conservano un indirizzo di rete abbreviato, non il tuo IP completo, per fermare gli abusi, e i log vecchi vengono sovrascritti man mano che ne arrivano di nuovi.",
+  "home.privacyNote": "Privacy: un account ospite conserva solo il tuo nome e la tua lingua, e viene eliminato dopo la scadenza della sessione di 30 giorni. I log del server conservano un indirizzo di rete abbreviato, non il tuo IP completo, per fermare gli abusi, e i log vecchi vengono sovrascritti man mano che ne arrivano di nuovi.",
   "home.tagline": "Disegna. Indovina. Ridi.",
   "home.roomCodeLabel": "Codice stanza",
   "home.quickPlayHeading": "Gioca subito.",

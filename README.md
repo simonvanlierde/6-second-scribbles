@@ -6,7 +6,7 @@
 [![6ss.duinlab.nl](https://img.shields.io/website?url=https%3A%2F%2F6ss.duinlab.nl&up_message=online&down_message=offline)](https://6ss.duinlab.nl)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-6 Second Scribbles is a real-time multiplayer drawing and guessing game. One player races through a list of prompts while everyone else guesses what they're drawing.
+6 Second Scribbles is a real-time multiplayer drawing and guessing game. Everyone races through their own list of prompts, then each player guesses another player's drawings.
 
 Play it live at [6ss.duinlab.nl](https://6ss.duinlab.nl). The layout is built for desktop for now. It's a Svelte 5 frontend and a FastAPI backend, kept in sync by committed, generated contracts.
 

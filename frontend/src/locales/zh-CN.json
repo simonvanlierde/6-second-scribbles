@@ -29,7 +29,7 @@
   "home.step3": "猜猜你其他玩家画了什么",
   "home.step4": "画画者和猜题者在答对时都能得分！",
   "home.footerText": "Gamely Games 出品的 {original} 多人网页版 · 灵感来自 {inspiration} · {source}",
-  "home.privacyNote": "隐私：访客账户只保存你的名字和语言，并在会话结束 30 天后删除。服务器日志为防止滥用只记录缩短后的网络地址，而不是你的完整 IP，旧日志会随着新日志写入而被覆盖。",
+  "home.privacyNote": "隐私：访客账户只保存你的名字和语言，并在为期 30 天的会话到期后删除。服务器日志为防止滥用只记录缩短后的网络地址，而不是你的完整 IP，旧日志会随着新日志写入而被覆盖。",
   "home.tagline": "涂鸦。猜测。欢笑。",
   "home.roomCodeLabel": "房间码",
   "home.quickPlayHeading": "直接开玩。",

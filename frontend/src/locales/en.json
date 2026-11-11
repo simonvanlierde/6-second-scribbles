@@ -34,7 +34,7 @@
   "home.step3": "Guess what other players drew",
   "home.step4": "Both drawer and guesser earn points for correct matches!",
   "home.footerText": "A multiplayer web version of {original} by Gamely Games · Inspired by {inspiration} · {source}",
-  "home.privacyNote": "Privacy: a guest account keeps only your name and language, and is deleted 30 days after its session ends. Server logs keep a shortened network address, not your full IP, to stop abuse, and old logs are overwritten as new ones come in.",
+  "home.privacyNote": "Privacy: a guest account keeps only your name and language, and is deleted after its 30-day session expires. Server logs keep a shortened network address, not your full IP, to stop abuse, and old logs are overwritten as new ones come in.",
   "settings.enterValidNumber": "Please enter a valid number",
   "settings.mustBeBetween": "Must be between {min} and {max}",
   "settings.difficulty": "Difficulty",

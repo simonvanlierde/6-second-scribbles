@@ -21,6 +21,55 @@ and over a voice call.
 - Keep guessing usable while the software keyboard is open.
 - Check joining, drawing, guessing and the reveal on real devices.
 
+### Phone-layout assessment and implementation plan
+
+The portrait assessment found that the stacked drawing layout leaves too little
+space for the canvas. Browser measurements gave these results:
+
+| Viewport | Finding |
+| --- | --- |
+| 320 × 568 px | The drawing canvas has zero height. |
+| 390 × 844 px | The drawing canvas is only 202 px tall. |
+| 390 × 500 px | During guessing, the drawing frame takes 295 px and the guess panel gets 105 px. The submit control extends below 553 px. |
+
+The shortened 390 × 500 viewport approximates the space left by a software
+keyboard. It does not reproduce a real phone's keyboard or Safari's viewport
+behaviour. Joining still needs checks with the name field focused, validation
+messages visible and the keyboard open.
+
+Implement these changes in the next milestone, in this order:
+
+1. Rebalance `DrawingPhase.svelte` first. Give the mobile canvas panel a minimum
+   height that cannot shrink, and override the stage's `min-height: 0` with
+   matching selector specificity. Bound the prompt list and let its words scroll.
+   Preserve every prompt, check state and the persistent Finish button.
+2. In `GuessingPhase.svelte`, constrain the image stage's flex basis and image
+   dimensions. Use one scrolling field list and keep Submit outside it. Preserve
+   Enter-to-next-field and draft recovery. Add `visualViewport` handling only if
+   real-device testing shows CSS cannot keep the focused field visible.
+3. Preserve the working joining layout. In `HomeCreateJoin.svelte` and
+   `RoomAccessView.svelte`, set room-code capitalization and disable spelling
+   correction. Check paste, lowercase normalization, Enter, invalid and full rooms.
+   Compact `DrawingToolbar.svelte` only if needed to keep its controls reachable.
+
+Extend `frontend/e2e/mobile-touch.spec.ts` beyond the existing Finish check:
+
+- At 320 × 568 and 390 × 844, keep at least 260 px of drawable canvas, all prompts
+  and toolbar controls reachable, and no horizontal overflow.
+- Draw with touch without scrolling the canvas; scroll elsewhere and resize
+  without losing strokes. Check ten long translated prompts in both themes.
+- On real iOS Safari and Android Chrome, enter and edit ten guesses with the
+  keyboard open. Keep the focused field and Submit reachable. Dismiss the
+  keyboard and reconnect without losing the draft.
+- Complete a two-player mixed-device game through reveal without rotation.
+  Recheck desktop at 1280 × 720, increased text size and reduced motion.
+
+The measurements used Chromium emulation, synthetic game state, bundled fonts,
+a ten-word card and an 800 × 500 drawing. Joining at 320 px and 390 × 500 showed
+no horizontal overflow and kept Join visible. Real keyboard and Safari behavior
+still need testing. The 2026-11-10 release cut keeps UI implementation outside
+0.4.0; the assessment and plan are part of this release.
+
 ## 2. Frantic drawing and a shared reveal wall
 
 Use a chaotic sketchbook direction: rough marks, oversized handwriting and playful,

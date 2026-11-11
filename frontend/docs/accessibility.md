@@ -23,7 +23,8 @@ Simon van Lierde runs the checks below. No outside expert has tested it.
 
 - Drawing is possible only with a pointing device, and there is no keyboard alternative. No fix planned.
   [2.1.1 Keyboard]
-- The layout is built for desktop and is not tuned for small screens. No fix planned.
+- The layout is built for desktop and is not tuned for small screens. The next milestone's
+  [phone-layout plan](roadmap.md#phone-layout-assessment-and-implementation-plan) covers portrait drawing and guessing with the keyboard open.
   [1.4.10 Reflow]
 
 ## Tell us about a problem
