@@ -18,6 +18,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui --headed",
     "test:e2e:a11y": "playwright test -c playwright.a11y.config.ts",
+    "og-card": "node scripts/og-card.mjs",
     "format": "biome check --write .",
     "type-check": "svelte-check --tsconfig ./tsconfig.app.json && tsc --project tsconfig.node.json",
     "lint": "biome check ."

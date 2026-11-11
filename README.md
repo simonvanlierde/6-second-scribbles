@@ -37,6 +37,16 @@ just check-frontend check-backend
 just test
 ```
 
+## Social card
+
+`frontend/public/og.png` is the 1200x630 card shown when the link is shared. Its source is
+[`docs/og-card.html`](docs/og-card.html). The cat on the paper and the timer are captured from the running
+app, so a change to either needs a new render (needs Playwright Chromium):
+
+```sh
+cd frontend && pnpm og-card
+```
+
 ## Docs
 
 - [Product brief](frontend/PRODUCT.md) and the [next roadmap](frontend/docs/roadmap.md)
