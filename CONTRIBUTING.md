@@ -20,6 +20,17 @@ just format     # auto-format everything
 just hooks      # every git hook over the whole repo
 ```
 
+Every change that alters behaviour comes with tests: a fix with a test that fails
+without it, a feature with tests for the new paths. Backend tests use pytest, frontend
+unit tests use Vitest, and user flows go in the Playwright e2e suite.
+
+## Coding standards
+
+Python follows [Ruff](https://docs.astral.sh/ruff/) for lint and format and `ty` for
+types. TypeScript and Svelte follow [Biome](https://biomejs.dev) and `tsc`. Markdown,
+YAML and prose are linted by the git hooks. `just format` fixes most findings, and
+`just check` reports the rest.
+
 If you change what the backend sends or accepts, run `just generate-contracts` so
 the frontend stays in sync ([ADR 0001](docs/adr/0001-committed-generated-contracts.md)).
 
