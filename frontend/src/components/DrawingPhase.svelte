@@ -333,15 +333,19 @@ function toggleItem(index: number) {
     flex-shrink: 0;
     overflow-y: visible;
   }
-  /* Two columns (column-major: 1–5 left, 6–10 right) to reclaim vertical space. */
+  /* Prompts scroll inside a bounded box, so ten long words cannot push the canvas
+   * off the screen. One column on the narrowest phones, two where they fit. */
   .category-card__list {
-    display: block;
-    columns: 2;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
     column-gap: var(--space-5);
+    max-height: 9rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
-  .category-card__list li {
-    break-inside: avoid;
-    margin-bottom: var(--space-1);
+  .category-card__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   /* Phones keep the shorter rows, so the canvas keeps the vertical space. */
   .category-card__item {
@@ -356,8 +360,15 @@ function toggleItem(index: number) {
     flex-shrink: 0;
     margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
   }
-  :global(.canvas-stage) {
-    min-height: 260px;
+  /* The panel and stage cannot shrink below a drawable canvas; the body scrolls instead. Same
+   * selector as the base rule, which sets min-height: 0 and would otherwise win. */
+  .drawing-phase__canvas-panel {
+    flex: 1 0 auto;
+  }
+  :global(div.canvas-stage.drawing-phase__stage) {
+    /* 260px of canvas inside the 2.5px border. */
+    flex: 1 0 265px;
+    min-height: 265px;
   }
 }
 </style>
