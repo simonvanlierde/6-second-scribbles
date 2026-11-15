@@ -61,7 +61,7 @@ function onInput(e: Event & { currentTarget: HTMLInputElement }): void {
 }
 .hd-input::placeholder {
   color: var(--color-ink-muted);
-  opacity: 0.7;
+  opacity: 1;
 }
 .hd-input--code {
   font-family: var(--font-mono);

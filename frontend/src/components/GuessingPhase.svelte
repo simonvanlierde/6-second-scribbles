@@ -218,18 +218,21 @@ function handleImageError(playerId: string) {
             </div>
             <div class="guess-card__grid">
               {#each guessesFor(assignedTargetPlayer.id) as _, idx (idx)}
-                <HdInput
-                  class="guess-input"
-                  bind:modelValue={playerGuesses[assignedTargetPlayer.id][idx]}
-                  placeholder={t("guessing.guessNumber", { number: idx + 1 })}
-                  ariaLabel={t("guessing.guessNumber", { number: idx + 1 })}
-                  oninput={() => {
-                    onGuessInput(assignedTargetPlayer.id, idx);
-                  }}
-                  onkeydown={(event) => {
-                    handleGuessKeydown(assignedTargetPlayer.id, idx, event);
-                  }}
-                ></HdInput>
+                <div class="guess-row">
+                  <span class="guess-row__num" aria-hidden="true">{idx + 1}</span>
+                  <HdInput
+                    class="guess-input"
+                    bind:modelValue={playerGuesses[assignedTargetPlayer.id][idx]}
+                    placeholder={t("guessing.guessNumber", { number: idx + 1 })}
+                    ariaLabel={t("guessing.guessNumber", { number: idx + 1 })}
+                    oninput={() => {
+                      onGuessInput(assignedTargetPlayer.id, idx);
+                    }}
+                    onkeydown={(event) => {
+                      handleGuessKeydown(assignedTargetPlayer.id, idx, event);
+                    }}
+                  ></HdInput>
+                </div>
               {/each}
             </div>
             <HdButton
@@ -312,8 +315,8 @@ function handleImageError(playerId: string) {
   background: var(--color-paper);
 }
 .drawing-frame__img {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 .drawing-frame__placeholder {
@@ -335,6 +338,9 @@ function handleImageError(playerId: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* Shrinks with the panel so only the field list scrolls and Submit stays put. */
+  flex: 0 1 auto;
+  min-height: 0;
 }
 .guess-card__header {
   display: flex;
@@ -350,6 +356,24 @@ function handleImageError(playerId: string) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the focus ring, which the scroll container would clip. */
+  padding: 4px;
+  margin: -4px;
+}
+.guess-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.guess-row__num {
+  flex: none;
+  min-width: 1.5em;
+  text-align: right;
+  font-weight: 700;
+  color: var(--color-ink-muted);
 }
 :global(button.hd-btn.guess-card__submit) {
   width: 100%;
@@ -384,11 +408,32 @@ function handleImageError(playerId: string) {
     padding: var(--space-3);
     overflow-y: auto;
   }
-  :global(div.hd-card.drawing-frame) {
-    flex: none;
+  /* The body does not scroll: the drawing and the guess panel split what is left,
+     each with a floor, so a keyboard-shortened screen keeps Submit in view. */
+  .guessing-phase__body {
+    overflow: hidden;
   }
-  .drawing-frame__stage {
-    height: min(155px, 26dvh);
+  :global(div.hd-card.drawing-frame) {
+    flex: 1.3 1 0;
+    min-height: 9.5rem;
+    padding: var(--space-2) var(--space-3);
+  }
+  .drawing-frame__title {
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-1);
+  }
+  .guess-panel {
+    flex: 1 1 0;
+    min-height: 11.5rem;
+    overflow: hidden;
+  }
+  :global(div.hd-card.guess-card) {
+    flex: 1 1 auto;
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
+  }
+  :global(div.hd-card.guess-hint) {
+    display: none;
   }
   .guess-card__grid {
     grid-template-columns: 1fr;
