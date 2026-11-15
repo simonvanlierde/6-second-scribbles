@@ -22,6 +22,8 @@ ONE_HUNDRED = 100.0
 THRESHOLD = 85
 COLOR = "color"
 COLOUR = "colour"
+SING = "sing"
+SINGING = "singing"
 
 
 class TestGuessMatcher:
@@ -139,6 +141,11 @@ class TestLocalePlurals:
         """English keeps its -s, -es and -ing endings."""
         assert matcher.exact_match(CATS, CAT, locale="en")
         assert matcher.exact_match(BOXES, BOX, locale="en-GB")
+        assert matcher.exact_match(SINGING, SING, locale="en")
+        assert not matcher.exact_match(SINGING, SING, locale="de")
+        assert SING in _generate_variants(SINGING, "en")
+        assert SING not in _generate_variants(SINGING, "de")
+        assert SING not in _generate_variants(SINGING, "es")
 
     def test_spanish_plural_matches(self, matcher: GuessMatcher) -> None:
         """Spanish plurals add -s or -es, so they still match."""
