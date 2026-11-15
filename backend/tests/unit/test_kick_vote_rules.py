@@ -26,10 +26,13 @@ from tests.support import as_websocket
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import pytest
+
     from app.rooms.manager import GameRoom
     from tests.support import TestWebSocket
 
 STRANGER_ID = "stranger"
+NOW = 1_000_000.0
 
 
 def _sent_types(ws: TestWebSocket) -> list[str]:
@@ -185,3 +188,44 @@ class TestCastingAVote:
         assert result == HOST_CANNOT_BE_VOTE_KICKED_ERROR
         assert PLAYER_FOUR_ID in game_room.players
         assert game_room.active_kick_votes[PLAYER_FOUR_ID].voters == {PLAYER_TWO_ID}
+
+
+class TestKickVoteEdges:
+    """Exact expiry instant and the connected-only tally."""
+
+    async def test_a_vote_cast_at_the_instant_of_expiry_still_counts(
+        self, game_room: GameRoom, make_ws: Callable[..., TestWebSocket], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A vote is expired only after expires_at, not at it."""
+        await _fill_room(game_room, make_ws)
+        await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_FOUR_ID)
+        game_room.active_kick_votes[PLAYER_FOUR_ID].expires_at = NOW
+        monkeypatch.setattr(kick_vote.time, "time", lambda: NOW)
+
+        assert await kick_vote.cast_kick_vote(game_room, PLAYER_THREE_ID, PLAYER_FOUR_ID) is None
+
+    async def test_a_new_vote_may_start_at_the_instant_the_old_one_expires(
+        self, game_room: GameRoom, make_ws: Callable[..., TestWebSocket], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A running vote blocks a new one only strictly before expires_at."""
+        await _fill_room(game_room, make_ws)
+        await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_FOUR_ID)
+        game_room.active_kick_votes[PLAYER_FOUR_ID].expires_at = NOW
+        monkeypatch.setattr(kick_vote.time, "time", lambda: NOW)
+
+        assert await kick_vote.initiate_kick_vote(game_room, PLAYER_THREE_ID, PLAYER_FOUR_ID) is None
+        assert game_room.active_kick_votes[PLAYER_FOUR_ID].voters == {PLAYER_THREE_ID}
+
+    async def test_a_disconnected_voter_does_not_count(
+        self, game_room: GameRoom, make_ws: Callable[..., TestWebSocket]
+    ) -> None:
+        """A voter who dropped out of the connection cannot push the tally over the line."""
+        host_ws, *_ = await _fill_room(game_room, make_ws)
+        await kick_vote.initiate_kick_vote(game_room, PLAYER_TWO_ID, PLAYER_FOUR_ID)
+        game_room.players[PLAYER_TWO_ID].connected = False
+
+        result = await kick_vote.cast_kick_vote(game_room, PLAYER_THREE_ID, PLAYER_FOUR_ID)
+
+        assert result is None
+        assert PLAYER_FOUR_ID in game_room.players
+        assert json.loads(host_ws.sent_texts[-1])["currentVotes"] == 1

@@ -3,7 +3,7 @@
 
 import pytest
 
-from app.scoring import GuessMatcher, _generate_variants, normalize_text
+from app.scoring import GuessMatcher, GuessTarget, _generate_variants, normalize_text
 
 CAT = "cat"
 CATS = "cats"
@@ -22,6 +22,8 @@ ONE_HUNDRED = 100.0
 THRESHOLD = 85
 COLOR = "color"
 COLOUR = "colour"
+SING = "sing"
+SINGING = "singing"
 
 
 class TestGuessMatcher:
@@ -75,6 +77,18 @@ class TestGuessMatcher:
         assert score < THRESHOLD
         # Multi-character substrings are still trusted above the length gate.
         assert matcher.fuzzy_match("new york", "new york city")[0]
+
+    def test_fuzzy_match_partial_needs_most_of_the_target(self, matcher: GuessMatcher) -> None:
+        """A short guess inside a long target, or a long guess containing a target, is no match."""
+        assert matcher.match_guess("pine", "pineapple") is None
+        assert matcher.match_guess("apple", "pineapple") is None
+        assert matcher.match_guess("apple pineapple banana strawberry watermelon", "apple") is None
+        targets = [
+            GuessTarget(i, label, [])
+            for i, label in enumerate(["apple", "pineapple", "banana", "strawberry", "watermelon"])
+        ]
+        spam = ["apple pineapple banana strawberry watermelon"] * 5
+        assert matcher.score_guesses_against_targets(spam, targets) == []
 
     def test_fuzzy_match_no_match(self, matcher: GuessMatcher) -> None:
         """Test fuzzy matching with completely different words."""
@@ -139,6 +153,11 @@ class TestLocalePlurals:
         """English keeps its -s, -es and -ing endings."""
         assert matcher.exact_match(CATS, CAT, locale="en")
         assert matcher.exact_match(BOXES, BOX, locale="en-GB")
+        assert matcher.exact_match(SINGING, SING, locale="en")
+        assert not matcher.exact_match(SINGING, SING, locale="de")
+        assert SING in _generate_variants(SINGING, "en")
+        assert SING not in _generate_variants(SINGING, "de")
+        assert SING not in _generate_variants(SINGING, "es")
 
     def test_spanish_plural_matches(self, matcher: GuessMatcher) -> None:
         """Spanish plurals add -s or -es, so they still match."""

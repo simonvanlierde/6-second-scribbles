@@ -59,7 +59,7 @@ async def test_join_cannot_change_identity_on_same_socket(game_room: GameRoom) -
     """Joining twice cannot leave an unreachable first player behind."""
     session = await joined_session(game_room)
 
-    await session.handle(json.dumps({"type": "join", "playerId": "other", "name": "Other"}))
+    await session.handle(json.dumps({"type": "join", "playerId": "other", "name": "Other", "rejoinKey": "key"}))
 
     assert set(game_room.players) == {"host"}
     assert session.player_id == HOST
@@ -166,3 +166,13 @@ async def test_heartbeat_does_not_extend_unjoined_timeout(game_room: GameRoom, m
     session = RoomWebSocketSession(game_room, socket)
     await asyncio.wait_for(session.run(), timeout=0.3)
     socket.close.assert_awaited_once()
+
+
+@pytest.mark.parametrize("key", [None, ""], ids=["missing", "empty"])
+def test_join_without_a_rejoin_key_is_rejected(key: str | None) -> None:
+    """A seat made without a key has no hash, so any client could take it over later."""
+    payload: dict[str, object] = {"type": "join", "playerId": "p1", "name": "Alice"}
+    if key is not None:
+        payload["rejoinKey"] = key
+    with pytest.raises(ValidationError):
+        parse_client_event(json.dumps(payload))

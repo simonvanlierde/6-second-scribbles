@@ -303,7 +303,7 @@ export const ClientEventSchema = z.union([
     name: z.string().max(80),
     preferredLocale: z.union([z.string().regex(/^[a-z]{2,5}(?:-[A-Za-z0-9]{2,8})?$/), z.null()]).default(null),
     preferredColor: z.union([z.string(), z.null()]).default(null),
-    rejoinKey: z.union([z.string().max(128), z.null()]).default(null),
+    rejoinKey: z.string().min(1).max(128),
   }),
   z.object({
     type: z.literal("start_game"),

@@ -74,7 +74,7 @@ def test_relay_measurement_counts_fragments_with_the_same_window_and_self_exclus
 def test_the_other_bot_messages_are_valid() -> None:
     """Every other message the bots send passes validation too."""
     for message in (
-        {"type": "join", "playerId": PLAYER, "name": "Bot 1"},
+        {"type": "join", "playerId": PLAYER, "name": "Bot 1", "rejoinKey": f"bot-{PLAYER}"},
         {"type": "draw_stroke", "playerId": PLAYER, "drawing": FAKE_DRAWING},
         {"type": "player_ready", "playerId": PLAYER},
         {"type": "submit_guess", "playerId": PLAYER, "targetPlayerId": "lt-1000-1", "guesses": ["cat"]},

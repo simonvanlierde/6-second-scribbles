@@ -115,8 +115,8 @@ def test_lobby_doodle_stays_small_under_maximum_fragments(game_room: GameRoom) -
 def test_oversized_fields_are_rejected() -> None:
     """Names, ids and stroke styles have upper bounds, so one message cannot bloat every room_state."""
     too_long = [
-        {"type": "join", "playerId": PLAYER_ONE_ID, "name": "x" * 81},
-        {"type": "join", "playerId": "x" * 65, "name": "Alice"},
+        {"type": "join", "playerId": PLAYER_ONE_ID, "name": "x" * 81, "rejoinKey": "key"},
+        {"type": "join", "playerId": "x" * 65, "name": "Alice", "rejoinKey": "key"},
         {"type": "draw_stroke_partial", "stroke": {"color": "x" * 33, "width": 2, "points": []}},
         {"type": "draw_stroke_partial", "stroke": {"color": "#000", "width": 1000, "points": []}},
     ]

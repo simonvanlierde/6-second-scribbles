@@ -151,8 +151,7 @@ repos:
         files: |-
           (?x)^(
             contracts/.*
-            |backend/app/rooms/protocol\.py
-            |backend/app/[^/]+/schemas\.py
+            |backend/app/.*
             |backend/scripts/generate_contracts\.py
             |frontend/scripts/generate-contracts\.mjs
             |scripts/check-contracts\.mjs

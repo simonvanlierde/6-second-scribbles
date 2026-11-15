@@ -213,7 +213,14 @@ class Player:
                 open_timeout=30,
             ) as ws:
                 self.ws = ws
-                await self.send({"type": "join", "playerId": self.player_id, "name": f"Bot {self.seat}"})
+                await self.send(
+                    {
+                        "type": "join",
+                        "playerId": self.player_id,
+                        "name": f"Bot {self.seat}",
+                        "rejoinKey": f"bot-{self.player_id}",
+                    }
+                )
                 tasks = [asyncio.create_task(self.draw_loop())]
                 if self.is_host:
                     tasks.append(asyncio.create_task(self.host_loop()))

@@ -166,7 +166,7 @@ async def managed_room_manager() -> AsyncGenerator[RoomManager]:
 def sample_messages() -> dict[str, object]:
     """Collection of sample game messages."""
     return {
-        "join": {"type": "join", "playerId": "player-123", "name": "Test Player"},
+        "join": {"type": "join", "playerId": "player-123", "name": "Test Player", "rejoinKey": "key"},
         START_GAME: {"type": START_GAME, "difficulty": MEDIUM, "rounds": 5, "drawingTimeLimit": 60},
         "draw_stroke": {
             "type": "draw_stroke",

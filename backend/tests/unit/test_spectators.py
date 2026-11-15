@@ -89,7 +89,7 @@ async def test_observer_cannot_play(room_with_players: GameRoom) -> None:
     session, websocket = await _watching(room_with_players)
 
     await session.handle(json.dumps({"type": START_GAME, "difficulty": MEDIUM}))
-    await session.handle(json.dumps({"type": "join", "playerId": SPY, "name": "Spy"}))
+    await session.handle(json.dumps({"type": "join", "playerId": SPY, "name": "Spy", "rejoinKey": "key"}))
 
     assert _types(websocket)[1:] == ["permission_error", "permission_error"]
     assert SPY not in room_with_players.players
