@@ -20,10 +20,12 @@ test.describe("overlays", () => {
   });
 
   test("a toast shows above the modal backdrop", async ({ page }) => {
-    await page.evaluate(async () => {
-      const { showNotification } = await import("/src/composables/notifications.svelte.ts");
-      showNotification("Hello from a toast", "info", 10_000);
-    });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await page.getByRole("button", { name: "Show toast in 0.5 s" }).click();
+    await page.getByRole("button", { name: "Open dialog" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    // The toast arrives while the modal is already open.
     const toast = page.locator(".hd-toast", { hasText: "Hello from a toast" }).first();
     await expect(toast).toBeVisible();
     const box = await toast.boundingBox();

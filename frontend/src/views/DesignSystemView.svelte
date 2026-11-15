@@ -9,6 +9,7 @@ import HdPill from "@/components/ui/HdPill.svelte";
 import HdReactionPad from "@/components/ui/HdReactionPad.svelte";
 import HdTimer from "@/components/ui/HdTimer.svelte";
 import HdToast from "@/components/ui/HdToast.svelte";
+import { showNotification } from "@/composables/notifications.svelte";
 import { AVATAR_COLORS, getAvatarColor, getAvatarInitial } from "@/composables/useAvatar";
 import { type ReactionKey, useReactions } from "@/composables/useReactions.svelte";
 import { SOUND_KEYS, type SoundKey, useSound } from "@/composables/useSound.svelte";
@@ -141,6 +142,7 @@ function setTheme(t: "light" | "dark" | null): void {
     <section class="ds-section">
       <h2>Dialog</h2>
       <HdButton variant="primary" onclick={() => { dialogOpen = true; }}>Open dialog</HdButton>
+      <HdButton variant="secondary" onclick={() => setTimeout(() => showNotification("Hello from a toast", "info", 10_000), 500)}>Show toast in 0.5 s</HdButton>
       <HdDialog
         bind:open={dialogOpen}
         title="Leave the room?"
