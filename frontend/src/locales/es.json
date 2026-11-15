@@ -4,6 +4,8 @@
   "common.confirm": "Confirmar",
   "common.connecting": "Conectando…",
   "common.reconnecting": "Reconectando…",
+  "common.connectionLost": "Conexión perdida",
+  "common.retry": "Reintentar",
   "common.color": "Color",
   "common.host": "Anfitrión",
   "common.copied": "¡Copiado!",
@@ -47,7 +49,6 @@
   "settings.easy": "fácil",
   "settings.medium": "media",
   "settings.hard": "difícil",
-  "settings.title": "Configuración",
   "settings.identity": "Identidad",
   "settings.yourName": "Tu nombre",
   "settings.namePlaceholder": "Escribe tu nombre",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "Alucinante",
   "reactions.think": "Pensativo",
   "reactions.group": "Reacciones al dibujo de {name}",
-  "reactions.react": "{reaction} para el dibujo de {name}"
+  "reactions.react": "{reaction} para el dibujo de {name}",
+  "settings.title": "Configuración"
 }

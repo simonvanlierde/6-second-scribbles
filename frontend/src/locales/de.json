@@ -4,6 +4,8 @@
   "common.confirm": "Bestätigen",
   "common.connecting": "Verbinden…",
   "common.reconnecting": "Verbindung wird wiederhergestellt…",
+  "common.connectionLost": "Verbindung verloren",
+  "common.retry": "Erneut versuchen",
   "common.color": "Farbe",
   "common.host": "Host",
   "common.copied": "Kopiert!",
@@ -47,7 +49,6 @@
   "settings.easy": "leicht",
   "settings.medium": "mittel",
   "settings.hard": "schwer",
-  "settings.title": "Einstellungen",
   "settings.identity": "Identität",
   "settings.yourName": "Dein Name",
   "settings.namePlaceholder": "Name wählen",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "Umgehauen",
   "reactions.think": "Nachdenklich",
   "reactions.group": "Reaktionen auf {name}s Zeichnung",
-  "reactions.react": "{reaction} für {name}s Zeichnung"
+  "reactions.react": "{reaction} für {name}s Zeichnung",
+  "settings.title": "Einstellungen"
 }

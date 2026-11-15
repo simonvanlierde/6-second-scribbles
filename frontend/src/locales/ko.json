@@ -4,6 +4,8 @@
   "common.confirm": "확인",
   "common.connecting": "연결 중…",
   "common.reconnecting": "다시 연결 중…",
+  "common.connectionLost": "연결이 끊어졌습니다",
+  "common.retry": "다시 시도",
   "common.color": "색상",
   "common.host": "방장",
   "common.copied": "복사됐어요!",
@@ -47,7 +49,6 @@
   "settings.easy": "쉬움",
   "settings.medium": "보통",
   "settings.hard": "어려움",
-  "settings.title": "설정",
   "settings.identity": "프로필",
   "settings.yourName": "내 이름",
   "settings.namePlaceholder": "이름 입력",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "대박",
   "reactions.think": "생각 중",
   "reactions.group": "{name}님의 그림에 반응하기",
-  "reactions.react": "{name}님의 그림에 {reaction}"
+  "reactions.react": "{name}님의 그림에 {reaction}",
+  "settings.title": "설정"
 }

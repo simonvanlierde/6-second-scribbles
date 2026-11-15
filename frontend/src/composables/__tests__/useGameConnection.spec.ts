@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useNotifications } from "@/composables/notifications.svelte";
 import { AVATAR_COLORS } from "@/composables/useAvatar";
@@ -360,6 +360,57 @@ describe("client message handlers", () => {
     const invalid = send({ type: "submit_guess", playerId: "p1" } as never);
     expect(invalid).toBe(false);
     expect(socket?.sent).not.toContain(JSON.stringify({ type: "submit_guess", playerId: "p1" }));
+  });
+
+  describe("after reconnect attempts run out", () => {
+    function dropLatestSocket() {
+      const close = MockWebSocket.instances.at(-1)?.onclose as unknown as ((e: { code: number }) => void) | null;
+      close?.({ code: 1006 });
+    }
+
+    function exhaustRetries() {
+      const conn = useGameConnection();
+      conn.connect("ROOM01");
+      for (let i = 0; i < 14; i++) {
+        dropLatestSocket();
+        vi.advanceTimersByTime(5_000);
+      }
+      return conn;
+    }
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("flags the lost connection and reconnects when the browser comes back online", () => {
+      const conn = exhaustRetries();
+      expect(conn.connectionStatus).toBe("disconnected");
+      expect(conn.connectionLost).toBe(true);
+
+      const before = MockWebSocket.instances.length;
+      window.dispatchEvent(new Event("online"));
+
+      expect(MockWebSocket.instances.length).toBe(before + 1);
+      expect(conn.connectionStatus).toBe("connecting");
+      expect(conn.connectionLost).toBe(false);
+      conn.disconnect();
+    });
+
+    it("retry() reconnects to the same room", () => {
+      const conn = exhaustRetries();
+      const before = MockWebSocket.instances.length;
+      conn.retry();
+      expect(MockWebSocket.instances.length).toBe(before + 1);
+      expect(MockWebSocket.instances.at(-1)?.url).toContain("/ws/ROOM01");
+      conn.disconnect();
+    });
+
+    it("does not reconnect after an intentional leave", () => {
+      const conn = exhaustRetries();
+      conn.disconnect();
+      const before = MockWebSocket.instances.length;
+      window.dispatchEvent(new Event("online"));
+      expect(MockWebSocket.instances.length).toBe(before);
+    });
   });
 
   it("a spectator sends watch once and never polls for room_state", () => {

@@ -4,6 +4,8 @@
   "common.confirm": "确认",
   "common.connecting": "连接中…",
   "common.reconnecting": "重新连接中…",
+  "common.connectionLost": "连接已断开",
+  "common.retry": "重试",
   "common.color": "颜色",
   "common.host": "房主",
   "common.copied": "已复制！",
@@ -47,7 +49,6 @@
   "settings.easy": "简单",
   "settings.medium": "中等",
   "settings.hard": "困难",
-  "settings.title": "设置",
   "settings.identity": "身份",
   "settings.yourName": "你的名字",
   "settings.namePlaceholder": "输入名字",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "太绝了",
   "reactions.think": "思考中",
   "reactions.group": "对 {name} 的图画的反应",
-  "reactions.react": "给 {name} 的图画：{reaction}"
+  "reactions.react": "给 {name} 的图画：{reaction}",
+  "settings.title": "设置"
 }

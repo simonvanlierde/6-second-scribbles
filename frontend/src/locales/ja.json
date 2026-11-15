@@ -4,6 +4,8 @@
   "common.confirm": "確定",
   "common.connecting": "接続中…",
   "common.reconnecting": "再接続中…",
+  "common.connectionLost": "接続が切れました",
+  "common.retry": "再試行",
   "common.color": "色",
   "common.host": "ホスト",
   "common.copied": "コピーしました！",
@@ -47,7 +49,6 @@
   "settings.easy": "かんたん",
   "settings.medium": "ふつう",
   "settings.hard": "むずかしい",
-  "settings.title": "設定",
   "settings.identity": "プロフィール",
   "settings.yourName": "あなたの名前",
   "settings.namePlaceholder": "名前を入力",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "圧巻",
   "reactions.think": "考え中",
   "reactions.group": "{name}さんの絵へのリアクション",
-  "reactions.react": "{name}さんの絵に「{reaction}」"
+  "reactions.react": "{name}さんの絵に「{reaction}」",
+  "settings.title": "設定"
 }

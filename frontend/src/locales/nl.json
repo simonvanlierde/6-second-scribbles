@@ -4,6 +4,8 @@
   "common.confirm": "Bevestigen",
   "common.connecting": "Verbinden…",
   "common.reconnecting": "Opnieuw verbinden…",
+  "common.connectionLost": "Verbinding verbroken",
+  "common.retry": "Opnieuw proberen",
   "common.color": "Kleur",
   "common.host": "Host",
   "common.copied": "Gekopieerd!",
@@ -47,7 +49,6 @@
   "settings.easy": "makkelijk",
   "settings.medium": "gemiddeld",
   "settings.hard": "moeilijk",
-  "settings.title": "Instellingen",
   "settings.identity": "Identiteit",
   "settings.yourName": "Jouw naam",
   "settings.namePlaceholder": "Kies een naam",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "Verbluffend",
   "reactions.think": "Nadenkend",
   "reactions.group": "Reacties op de tekening van {name}",
-  "reactions.react": "{reaction} voor de tekening van {name}"
+  "reactions.react": "{reaction} voor de tekening van {name}",
+  "settings.title": "Instellingen"
 }

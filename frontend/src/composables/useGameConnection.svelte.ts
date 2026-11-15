@@ -20,6 +20,10 @@ let heartbeatInterval: number | null = null;
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "reconnecting";
 let connectionStatus = $state<ConnectionStatus>("disconnected");
 let intentionalClose = false;
+// True once the retry budget is spent: the UI offers a manual retry, and the
+// browser coming back online or the tab becoming visible tries again.
+let connectionLost = $state(false);
+let listening = false;
 let reconnectTimer: number | null = null;
 let reconnectAttempts = 0;
 let lastRoomCode: string | null = null;
@@ -63,6 +67,7 @@ export function useGameConnection() {
       reconnectTimer = null;
     }
     connectionStatus = options.isRetry ? "reconnecting" : "connecting";
+    connectionLost = false;
 
     if (ws) {
       ws.close();
@@ -135,6 +140,7 @@ export function useGameConnection() {
         !intentionalClose && !terminal && Boolean(lastRoomCode) && reconnectAttempts < MAX_RECONNECT_ATTEMPTS;
       if (!canReconnect) {
         connectionStatus = "disconnected";
+        connectionLost = !intentionalClose && !terminal && Boolean(lastRoomCode);
         return;
       }
 
@@ -146,6 +152,20 @@ export function useGameConnection() {
         if (lastRoomCode) connect(lastRoomCode, { ...lastConnectOptions, isRetry: true });
       }, delay);
     };
+  }
+
+  function retry() {
+    if (lastRoomCode) connect(lastRoomCode, lastConnectOptions);
+  }
+
+  function retryIfLost() {
+    if (connectionLost && document.visibilityState === "visible") retry();
+  }
+
+  if (!listening && typeof window !== "undefined") {
+    listening = true;
+    window.addEventListener("online", retryIfLost);
+    document.addEventListener("visibilitychange", retryIfLost);
   }
 
   function send(message: ClientEvent) {
@@ -200,6 +220,7 @@ export function useGameConnection() {
       ws = null;
     }
     connectionStatus = "disconnected";
+    connectionLost = false;
     isObserverConnection = false;
     store.setSpectatorMode(false);
   }
@@ -211,6 +232,10 @@ export function useGameConnection() {
     set connectionStatus(value) {
       connectionStatus = value;
     },
+    get connectionLost() {
+      return connectionLost;
+    },
+    retry,
     connect,
     send,
     disconnect,

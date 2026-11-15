@@ -4,6 +4,8 @@
   "common.confirm": "Potwierdź",
   "common.connecting": "Łączenie…",
   "common.reconnecting": "Ponowne łączenie…",
+  "common.connectionLost": "Utracono połączenie",
+  "common.retry": "Spróbuj ponownie",
   "common.color": "Kolor",
   "common.host": "Gospodarz",
   "common.copied": "Skopiowano!",
@@ -47,7 +49,6 @@
   "settings.easy": "łatwy",
   "settings.medium": "średni",
   "settings.hard": "trudny",
-  "settings.title": "Ustawienia",
   "settings.identity": "Tożsamość",
   "settings.yourName": "Twoje imię",
   "settings.namePlaceholder": "Wybierz imię",
@@ -241,5 +242,6 @@
   "reactions.mindBlown": "Odlot",
   "reactions.think": "Zastanawiam się",
   "reactions.group": "Reakcje na rysunek gracza {name}",
-  "reactions.react": "{reaction} dla rysunku gracza {name}"
+  "reactions.react": "{reaction} dla rysunku gracza {name}",
+  "settings.title": "Ustawienia"
 }

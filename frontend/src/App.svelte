@@ -79,6 +79,12 @@ onMount(() => {
         {t("common.reconnecting")}
       </div>
     {/if}
+    {#if connection.connectionLost && store.hydrated}
+      <div class="reconnect-banner" role="alert">
+        {t("common.connectionLost")}
+        <button type="button" class="reconnect-banner__retry" onclick={() => connection.retry()}>{t("common.retry")}</button>
+      </div>
+    {/if}
     <HdToast />
     <div class="sr-only" role="status" aria-atomic="true">{announcer.message}</div>
     <SettingsPanel bind:open={() => settings.isOpen, (value) => { settings.isOpen = value; }} />
@@ -113,6 +119,15 @@ onMount(() => {
   font-family: var(--font-display);
   font-size: var(--text-label-md);
   box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 25%));
+}
+:global(.reconnect-banner__retry) {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentcolor;
+  border-radius: var(--r-pill);
+  padding: 2px 12px;
+  cursor: pointer;
 }
 :global(.reconnect-banner__spinner) {
   width: 14px;
