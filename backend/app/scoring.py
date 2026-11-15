@@ -80,6 +80,11 @@ def _generate_variants(normalized: str, locale: str | None = None) -> frozenset[
     return frozenset(variants)
 
 
+PARTIAL_MIN_LENGTH = 4
+# "new york" (8) must still reach "new york city" (13), a ratio of 0.62.
+PARTIAL_MIN_COVERAGE = 0.6
+
+
 class GuessMatcher:
     """Handles fuzzy matching of player guesses against correct answers."""
 
@@ -100,12 +105,15 @@ class GuessMatcher:
             return True, 100.0
 
         token_score = fuzz.token_sort_ratio(guess_norm, target_norm)
-        # partial_ratio scores any substring 100, so it's only trustworthy for
-        # multi-character overlaps ("new york" in "new york city"). Gate it on a
-        # minimum shared length, or a single CJK character would fully match a
-        # 2-char word (e.g. "大" scoring 100 against "大象").
-        shortest = min(len(guess_norm), len(target_norm))
-        partial_score = fuzz.partial_ratio(guess_norm, target_norm) if shortest >= 4 else 0
+        # partial_ratio scores any substring 100, so trust it only when the guess is
+        # no longer than the target and spells out most of it ("new york" for
+        # "new york city"). Otherwise "pine" would match "pineapple", and one long
+        # guess listing every word would match every target. The 4-char floor also
+        # keeps a single CJK character from fully matching "大象".
+        covers = PARTIAL_MIN_LENGTH <= len(guess_norm) <= len(target_norm) and (
+            len(guess_norm) >= PARTIAL_MIN_COVERAGE * len(target_norm)
+        )
+        partial_score = fuzz.partial_ratio(guess_norm, target_norm) if covers else 0
         similarity = max(token_score, partial_score)
         return similarity >= self.FUZZY_MATCH_THRESHOLD, similarity
 

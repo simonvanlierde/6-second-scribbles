@@ -3,7 +3,7 @@
 
 import pytest
 
-from app.scoring import GuessMatcher, _generate_variants, normalize_text
+from app.scoring import GuessMatcher, GuessTarget, _generate_variants, normalize_text
 
 CAT = "cat"
 CATS = "cats"
@@ -77,6 +77,18 @@ class TestGuessMatcher:
         assert score < THRESHOLD
         # Multi-character substrings are still trusted above the length gate.
         assert matcher.fuzzy_match("new york", "new york city")[0]
+
+    def test_fuzzy_match_partial_needs_most_of_the_target(self, matcher: GuessMatcher) -> None:
+        """A short guess inside a long target, or a long guess containing a target, is no match."""
+        assert matcher.match_guess("pine", "pineapple") is None
+        assert matcher.match_guess("apple", "pineapple") is None
+        assert matcher.match_guess("apple pineapple banana strawberry watermelon", "apple") is None
+        targets = [
+            GuessTarget(i, label, [])
+            for i, label in enumerate(["apple", "pineapple", "banana", "strawberry", "watermelon"])
+        ]
+        spam = ["apple pineapple banana strawberry watermelon"] * 5
+        assert matcher.score_guesses_against_targets(spam, targets) == []
 
     def test_fuzzy_match_no_match(self, matcher: GuessMatcher) -> None:
         """Test fuzzy matching with completely different words."""
