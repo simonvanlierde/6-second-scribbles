@@ -20,7 +20,7 @@ describe("HdInput", () => {
     expect(w.container.querySelector("input")?.getAttribute("placeholder")).toBe("type here");
   });
 
-  it("turns off autocorrect and capitalises characters for the code variant only", () => {
+  it("turns off autocorrect and capitalizes characters for the code variant only", () => {
     const code = render(HdInput, { props: { ...callbacks, variant: "code" } }).container.querySelector("input")!;
     const plain = render(HdInput, { props: { ...callbacks } }).container.querySelector("input")!;
 

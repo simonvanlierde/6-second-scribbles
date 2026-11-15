@@ -51,6 +51,7 @@ words:
 
   # Software terms
   - ACMR
+  - describedby
   - ossf
   - sarif
   - taiki
