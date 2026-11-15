@@ -46,8 +46,8 @@ async def enforce_rate_limit(
     limit: int,
     window_seconds: int,
 ) -> None:
-    """Raise 429 when a fixed-window limit is exceeded."""
-    count, retry_after = await increment_rate_limit(bucket, identifier, window_seconds=window_seconds)
+    """Raise 429 when a fixed-window limit is exceeded; an IPv6 client counts by its /64."""
+    count, retry_after = await increment_rate_limit(bucket, client_network(identifier), window_seconds=window_seconds)
     if count > limit:
         raise HTTPException(
             status_code=429,

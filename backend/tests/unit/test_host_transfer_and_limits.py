@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import WebSocketDisconnect
+from fastapi import HTTPException, WebSocketDisconnect
 
 from app.core.config import settings
-from app.core.rate_limits import client_network
+from app.core.rate_limits import client_network, enforce_rate_limit
 from app.core.types import GamePhase
 from app.rooms import kick_vote, player_lifecycle
 from app.rooms import router as room_router
@@ -335,3 +335,11 @@ def test_created_rooms_count_toward_the_network_cap(
     statuses = [test_client.post("/api/rooms/").status_code for _ in range(3)]
 
     assert statuses == [HTTP_OK, HTTP_OK, HTTP_TOO_MANY_REQUESTS]
+
+
+async def test_enforce_rate_limit_counts_an_ipv6_64_as_one_client() -> None:
+    """Rotating addresses inside one /64 shares a bucket, so the limit still bites."""
+    await enforce_rate_limit(bucket="b", identifier="2001:db8:1:2::1", limit=1, window_seconds=60)
+    with pytest.raises(HTTPException) as exc:
+        await enforce_rate_limit(bucket="b", identifier="2001:db8:1:2:ffff::9", limit=1, window_seconds=60)
+    assert exc.value.status_code == HTTP_TOO_MANY_REQUESTS
