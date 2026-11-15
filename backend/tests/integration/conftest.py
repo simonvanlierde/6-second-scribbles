@@ -61,7 +61,7 @@ def _postgres_host_port(container: PostgresContainer) -> tuple[str, int]:
 class RedisTestContainer:
     """Small Redis container wrapper using structured wait strategies."""
 
-    image: str = "redis:7-alpine"
+    image: str = "redis:8-alpine"
     port: int = 6379
 
     def __post_init__(self) -> None:
@@ -89,7 +89,7 @@ class RedisTestContainer:
 def postgres_container() -> Generator[PostgresContainer]:
     """Session-scoped Postgres container for integration coverage."""
     with PostgresContainer(
-        image="postgres:16-alpine",
+        image="postgres:18-alpine",
         username="postgres",
         password=_POSTGRES_PASSWORD,
         dbname="scribbles_test",
