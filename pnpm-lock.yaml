@@ -55,11 +55,11 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@lingui/core':
-        specifier: ^6.11.0
-        version: 6.11.0(@babel/core@7.29.7)
+        specifier: ^6.12.0
+        version: 6.12.0(@babel/core@7.29.7)
       lingui-for-svelte:
         specifier: ^0.7.1
-        version: 0.7.1(@babel/core@7.29.7)(@lingui/cli@6.11.0(rolldown@1.2.15))(@lingui/conf@6.11.0)(@lingui/core@6.11.0(@babel/core@7.29.7))(rolldown@1.2.15)(svelte@5.57.3)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+        version: 0.7.1(@babel/core@7.29.7)(@lingui/cli@6.11.0(rolldown@1.2.15))(@lingui/conf@6.11.0)(@lingui/core@6.12.0(@babel/core@7.29.7))(rolldown@1.2.15)(svelte@5.57.3)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
       perfect-freehand:
         specifier: 1.2.3
         version: 1.2.3
@@ -87,7 +87,7 @@ importers:
         version: 6.11.0
       '@lingui/vite-plugin':
         specifier: ^6.11.0
-        version: 6.11.0(@babel/core@7.29.7)(@lingui/babel-plugin-lingui-macro@6.11.0(@babel/core@7.29.7))(rolldown@1.2.15)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+        version: 6.11.0(@babel/core@7.29.7)(@lingui/babel-plugin-lingui-macro@6.12.0(@babel/core@7.29.7))(rolldown@1.2.15)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
       '@playwright/test':
         specifier: ^1.64.1
         version: 1.64.1
@@ -767,6 +767,15 @@ packages:
       '@babel/core':
         optional: true
 
+  '@lingui/babel-plugin-lingui-macro@6.12.0':
+    resolution: {integrity: sha512-hG7KVmE8loEOJwDQyjheJzrtpxKbvFFJ+wQ5k0N7dO9ED03mRG0HO2XCjZUsB+UZEu0CUn/k3yrwJAQ8/4/dEQ==}
+    engines: {node: '>=22.19.0'}
+    peerDependencies:
+      '@babel/core': ^7.29.6
+    peerDependenciesMeta:
+      '@babel/core':
+        optional: true
+
   '@lingui/cli@6.11.0':
     resolution: {integrity: sha512-R5qiCOAsV6STn+O3bWF+ttngLuh7Q+wf+83J34D0xDN/5pPAnYiek26rqGFwcpM9nAESzCEM0IoQsutpGCRLvg==}
     engines: {node: '>=22.19.0'}
@@ -784,8 +793,21 @@ packages:
     resolution: {integrity: sha512-2TYTmbXkecuUxFU0DaPrRF8slUCzEd+G3Wh0RXws/uP2RkakvrcMx+m+ZjdVHypT/3VyjIGsCfDpFSnlLppo+g==}
     engines: {node: '>=22.19.0'}
 
+  '@lingui/conf@6.12.0':
+    resolution: {integrity: sha512-A4Xcip2Mcgd0iN/rs3RpxDc8MPlYiET9elP44knC7IVpJwH5zb7feK8NFsdtFQ3YlJebdLz6Qk6zjrCbq5TZKg==}
+    engines: {node: '>=22.19.0'}
+
   '@lingui/core@6.11.0':
     resolution: {integrity: sha512-JQLQeUCu0MWxHbBjQbrRdoPQqD15tKLFpXMaXII60TsWnfeNhcqBVhL1c2U9VStIjlc3c9S2sMaieawahyMkwQ==}
+    engines: {node: '>=22.19.0'}
+    peerDependencies:
+      babel-plugin-macros: 2 || 3
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
+
+  '@lingui/core@6.12.0':
+    resolution: {integrity: sha512-ya/N3Jb64MiaovtEy58NleSsKFL0iTRqRxEZDXtzNllbd47yOFe3hENFD4OaI2wJByjZMZfJprfw4p9jQeYPTQ==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
       babel-plugin-macros: 2 || 3
@@ -803,6 +825,10 @@ packages:
 
   '@lingui/message-utils@6.11.0':
     resolution: {integrity: sha512-pRRELzVBQyXKhdFzhOi98hCfRDCHBhQmmCxraxrSkuthO+YD+4Xurap+9LiejAQqj1D2HAUxC+pEc7I9MPXfzQ==}
+    engines: {node: '>=22.19.0'}
+
+  '@lingui/message-utils@6.12.0':
+    resolution: {integrity: sha512-WIRy9tnthJVudnEcNdnNNh2ZMyeSoM1eTrB8BDK5A/+BefWoHSH/Pue7wEAhRlepPgVNp+lv+/ax5O16EEqlBg==}
     engines: {node: '>=22.19.0'}
 
   '@lingui/native-tools-android-arm64@0.2.0':
@@ -3322,6 +3348,13 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.29.7
 
+  '@lingui/babel-plugin-lingui-macro@6.12.0(@babel/core@7.29.7)':
+    dependencies:
+      '@lingui/conf': 6.12.0
+      '@lingui/message-utils': 6.12.0
+    optionalDependencies:
+      '@babel/core': 7.29.7
+
   '@lingui/cli@6.11.0(rolldown@1.2.15)':
     dependencies:
       '@babel/core': 7.29.7
@@ -3359,10 +3392,24 @@ snapshots:
       lilconfig: 3.1.4
       normalize-path: 3.0.0
 
+  '@lingui/conf@6.12.0':
+    dependencies:
+      jest-validate: 29.7.0
+      jiti: 2.7.0
+      lilconfig: 3.1.4
+      normalize-path: 3.0.0
+
   '@lingui/core@6.11.0(@babel/core@7.29.7)':
     dependencies:
       '@lingui/babel-plugin-lingui-macro': 6.11.0(@babel/core@7.29.7)
       '@lingui/message-utils': 6.11.0
+    transitivePeerDependencies:
+      - '@babel/core'
+
+  '@lingui/core@6.12.0(@babel/core@7.29.7)':
+    dependencies:
+      '@lingui/babel-plugin-lingui-macro': 6.12.0(@babel/core@7.29.7)
+      '@lingui/message-utils': 6.12.0
     transitivePeerDependencies:
       - '@babel/core'
 
@@ -3377,6 +3424,12 @@ snapshots:
       pofile-ts: 4.0.3
 
   '@lingui/message-utils@6.11.0':
+    dependencies:
+      '@messageformat/date-skeleton': 1.1.0
+      '@messageformat/parser': 5.2.0
+      '@noble/hashes': 2.4.0
+
+  '@lingui/message-utils@6.12.0':
     dependencies:
       '@messageformat/date-skeleton': 1.1.0
       '@messageformat/parser': 5.2.0
@@ -3424,7 +3477,7 @@ snapshots:
       '@lingui/native-tools-win32-arm64-msvc': 0.2.0
       '@lingui/native-tools-win32-x64-msvc': 0.2.0
 
-  '@lingui/vite-plugin@6.11.0(@babel/core@7.29.7)(@lingui/babel-plugin-lingui-macro@6.11.0(@babel/core@7.29.7))(rolldown@1.2.15)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))':
+  '@lingui/vite-plugin@6.11.0(@babel/core@7.29.7)(@lingui/babel-plugin-lingui-macro@6.12.0(@babel/core@7.29.7))(rolldown@1.2.15)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@lingui/cli': 6.11.0(rolldown@1.2.15)
       '@lingui/conf': 6.11.0
@@ -3432,7 +3485,7 @@ snapshots:
       vite: 8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)
     optionalDependencies:
       '@babel/core': 7.29.7
-      '@lingui/babel-plugin-lingui-macro': 6.11.0(@babel/core@7.29.7)
+      '@lingui/babel-plugin-lingui-macro': 6.12.0(@babel/core@7.29.7)
       rolldown: 1.2.15
     transitivePeerDependencies:
       - babel-plugin-macros
@@ -4334,12 +4387,12 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  lingui-for-svelte@0.7.1(@babel/core@7.29.7)(@lingui/cli@6.11.0(rolldown@1.2.15))(@lingui/conf@6.11.0)(@lingui/core@6.11.0(@babel/core@7.29.7))(rolldown@1.2.15)(svelte@5.57.3)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)):
+  lingui-for-svelte@0.7.1(@babel/core@7.29.7)(@lingui/cli@6.11.0(rolldown@1.2.15))(@lingui/conf@6.11.0)(@lingui/core@6.12.0(@babel/core@7.29.7))(rolldown@1.2.15)(svelte@5.57.3)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)):
     dependencies:
       '@lingui-for/framework-core': 0.7.1(@lingui/cli@6.11.0(rolldown@1.2.15))(@lingui/conf@6.11.0)(typescript@6.0.3)
       '@lingui/babel-plugin-lingui-macro': 6.11.0(@babel/core@7.29.7)
       '@lingui/cli': 6.11.0(rolldown@1.2.15)
-      '@lingui/core': 6.11.0(@babel/core@7.29.7)
+      '@lingui/core': 6.12.0(@babel/core@7.29.7)
       svelte: 5.57.3
       unplugin: 3.4.0(rolldown@1.2.15)(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
     optionalDependencies:
