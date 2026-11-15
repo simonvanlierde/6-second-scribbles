@@ -164,4 +164,42 @@ describe("HomeCreateJoin", () => {
     );
     expect(apiRequestMock).not.toHaveBeenCalled();
   });
+
+  it("tunes the room code input for phone keyboards", () => {
+    const code = mountPanel().container.querySelector("input")!;
+
+    expect(code.getAttribute("autocapitalize")).toBe("characters");
+    expect(code.getAttribute("autocorrect")).toBe("off");
+    expect(code.getAttribute("spellcheck")).toBe("false");
+    expect(code.getAttribute("autocomplete")).toBe("off");
+  });
+
+  it("joins a pasted lowercase code with stray spaces, on Enter", async () => {
+    const store = useGameStore();
+    store.localPlayerName = "Simon";
+    apiRequestMock.mockResolvedValueOnce({ exists: true });
+    const wrapper = mountPanel();
+    const code = wrapper.container.querySelector("input")!;
+
+    await fireEvent.input(code, { target: { value: "ab12cd" } });
+    await fireEvent.keyDown(code, { key: "Enter" });
+    await flushPromises();
+
+    expect(apiRequestMock).toHaveBeenCalledWith("/api/rooms/AB12CD/status", expect.anything());
+    expect(pushMock).toHaveBeenCalledWith({ name: "room", params: { roomCode: "AB12CD" } });
+  });
+
+  it("stays on Home when the room does not exist", async () => {
+    const store = useGameStore();
+    store.localPlayerName = "Simon";
+    apiRequestMock.mockResolvedValueOnce({ exists: false });
+    const wrapper = mountPanel();
+
+    await fireEvent.input(wrapper.container.querySelector("input")!, { target: { value: "zzzzzz" } });
+    await fireEvent.click(Array.from(wrapper.container.querySelectorAll("button"))[1]!);
+    await flushPromises();
+
+    expect(showNotificationMock).toHaveBeenCalledWith(t("notifications.roomDoesNotExist"), "error");
+    expect(pushMock).not.toHaveBeenCalled();
+  });
 });

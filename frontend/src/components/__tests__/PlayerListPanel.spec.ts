@@ -49,6 +49,17 @@ describe("PlayerListPanel", () => {
     expect(wrapper.container.textContent!).not.toContain("Vote kick");
   });
 
+  it("draws the host's Kick button as a quiet danger button, not a filled primary one", () => {
+    seedPlayers().localPlayerId = "p1";
+    const wrapper = render(PlayerListPanel);
+    const kick = Array.from(wrapper.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Kick player",
+    )!;
+
+    expect(kick.classList.contains("hd-btn--danger")).toBe(true);
+    expect(kick.classList.contains("hd-btn--primary")).toBe(false);
+  });
+
   it("shows Vote kick for non-host players in public rooms only", async () => {
     const store = seedPlayers();
     store.localPlayerId = "p2";

@@ -96,6 +96,7 @@ function voteToKick(targetPlayerId: string) {
         {:else if canHostKick(player.id)}
           <HdButton
             class="player-row__action"
+            variant="danger"
             onclick={() => {
               openKickConfirm(player.id);
             }}

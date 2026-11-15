@@ -47,7 +47,6 @@
   "settings.easy": "leicht",
   "settings.medium": "mittel",
   "settings.hard": "schwer",
-  "settings.title": "Einstellungen",
   "settings.identity": "Identität",
   "settings.yourName": "Dein Name",
   "settings.namePlaceholder": "Name wählen",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "Raumcodes bestehen aus 6 Zeichen mit A–Z und 0–9. Prüfe den Code und versuche es erneut.",
   "roomEntry.tryGoBack": "Geh zurück zur Lobby und gib den Code erneut ein.",
   "roomEntry.enterYourName": "Gib deinen Namen ein",
+  "roomEntry.nameRequired": "Gib deinen Namen ein, um beizutreten",
   "roomEntry.yourName": "Dein Name",
   "roomEntry.back": "Zurück",
   "roomEntry.backToHome": "Zurück zur Startseite",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "Umgehauen",
   "reactions.think": "Nachdenklich",
   "reactions.group": "Reaktionen auf {name}s Zeichnung",
-  "reactions.react": "{reaction} für {name}s Zeichnung"
+  "reactions.react": "{reaction} für {name}s Zeichnung",
+  "settings.title": "Einstellungen"
 }

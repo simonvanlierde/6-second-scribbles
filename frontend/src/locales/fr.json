@@ -47,7 +47,6 @@
   "settings.easy": "facile",
   "settings.medium": "moyen",
   "settings.hard": "difficile",
-  "settings.title": "Paramètres",
   "settings.identity": "Identité",
   "settings.yourName": "Ton nom",
   "settings.namePlaceholder": "Choisir un nom",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "Les codes de salon comportent 6 caractères utilisant A–Z et 0–9. Vérifie le code et réessaie.",
   "roomEntry.tryGoBack": "Essaie de retourner dans la salle d'attente et de ressaisir le code.",
   "roomEntry.enterYourName": "Entre ton nom",
+  "roomEntry.nameRequired": "Entre ton nom pour rejoindre",
   "roomEntry.yourName": "Ton nom",
   "roomEntry.back": "Retour",
   "roomEntry.backToHome": "Retour à l'accueil",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "Bluffant",
   "reactions.think": "Perplexe",
   "reactions.group": "Réactions au dessin de {name}",
-  "reactions.react": "{reaction} pour le dessin de {name}"
+  "reactions.react": "{reaction} pour le dessin de {name}",
+  "settings.title": "Paramètres"
 }

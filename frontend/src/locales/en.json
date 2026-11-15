@@ -47,7 +47,6 @@
   "settings.easy": "easy",
   "settings.medium": "medium",
   "settings.hard": "hard",
-  "settings.title": "Settings",
   "settings.identity": "Identity",
   "settings.yourName": "Your name",
   "settings.namePlaceholder": "Pick a name",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "Room codes are 6 characters using A–Z and 0–9. Check the code and try again.",
   "roomEntry.tryGoBack": "Try going back to the lobby and re-entering the code.",
   "roomEntry.enterYourName": "Enter your name",
+  "roomEntry.nameRequired": "Enter your name to join",
   "roomEntry.yourName": "Your name",
   "roomEntry.back": "Back",
   "roomEntry.backToHome": "Back to home",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "Mind blown",
   "reactions.think": "Thinking",
   "reactions.group": "Reactions to {name}'s drawing",
-  "reactions.react": "{reaction} for {name}'s drawing"
+  "reactions.react": "{reaction} for {name}'s drawing",
+  "settings.title": "Settings"
 }
