@@ -118,6 +118,9 @@ function createGameStore() {
   let drawingTimeLimit = $state<number>(GAME_SETTINGS.drawingTimeLimitSeconds.DEFAULT);
   let guessingTimeLimit = $state<number>(GAME_SETTINGS.guessingTimeLimitSeconds.DEFAULT);
   let roundStartTime = $state<number | undefined>(undefined);
+  // Server clock minus client clock (ms), from the last room_state. Round start
+  // times are server timestamps, so timers compare them against serverNow().
+  let serverClockOffset = $state(0);
   let guessingStartTime = $state<number | undefined>(undefined);
   let guessTargets = $state<Record<string, string>>({});
   let localPlayerCard = $state<Card | undefined>();
@@ -285,9 +288,13 @@ function createGameStore() {
     }
   }
 
+  function serverNow() {
+    return Date.now() + serverClockOffset;
+  }
+
   function onStartGuessing(event: Pick<ServerEventOf<"start_guessing">, "guessingStartTime" | "guessTargets">) {
     enterPhase("guessing");
-    guessingStartTime = event.guessingStartTime ?? Date.now();
+    guessingStartTime = event.guessingStartTime ?? serverNow();
     guessTargets = event.guessTargets ?? {};
   }
 
@@ -403,6 +410,7 @@ function createGameStore() {
       drawingTimeLimit: roomState.drawingTimeLimit,
       guessingTimeLimit: roomState.guessingTimeLimit,
     });
+    if (typeof roomState.serverTime === "number") serverClockOffset = roomState.serverTime - Date.now();
     roundStartTime = roomState.roundStartTime ?? undefined;
     guessingStartTime = roomState.guessingStartTime ?? undefined;
     guessTargets = roomState.guessTargets ?? {};
@@ -471,6 +479,7 @@ function createGameStore() {
   // --- Reset ---
   function reset() {
     roomCode = "";
+    serverClockOffset = 0;
     hydrated = false;
     players.clear();
     kickVotes.clear();
@@ -563,6 +572,7 @@ function createGameStore() {
     set gamePhase(value) {
       gamePhase = value;
     },
+    serverNow,
     get roundStartTime() {
       return roundStartTime;
     },
