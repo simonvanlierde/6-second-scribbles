@@ -179,7 +179,7 @@ class TestWebSocketRoomFull:
         with test_client.websocket_connect(f"/ws/{room_id}") as ws:
             ws.receive_text()
 
-            ws.send_text(json.dumps({"type": "join", "playerId": "player_11", "name": "Player 11"}))
+            ws.send_text(json.dumps({"type": "join", "playerId": "player_11", "name": "Player 11", "rejoinKey": "key"}))
 
             response = json.loads(ws.receive_text())
             assert response["type"] == JOIN_ERROR

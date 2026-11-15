@@ -61,7 +61,8 @@ def join_player(
     websocket: WebSocketTestSession, player_id: str, name: str, *, rejoin_key: str | None = None
 ) -> dict[str, object]:
     """Join a player to a websocket room and return the immediate response."""
-    send_json(websocket, {"type": "join", "playerId": player_id, "name": name, "rejoinKey": rejoin_key})
+    key = rejoin_key if rejoin_key is not None else f"key-{player_id}"
+    send_json(websocket, {"type": "join", "playerId": player_id, "name": name, "rejoinKey": key})
     return receive_json(websocket)
 
 
@@ -79,7 +80,15 @@ def joined_players(
             websocket = stack.enter_context(test_client.websocket_connect(f"/ws/{room_id}"))
             receive_json(websocket)  # initial room_state
 
-            send_json(websocket, {"type": "join", "playerId": player.player_id, "name": player.name})
+            send_json(
+                websocket,
+                {
+                    "type": "join",
+                    "playerId": player.player_id,
+                    "name": player.name,
+                    "rejoinKey": f"key-{player.player_id}",
+                },
+            )
 
             for existing_socket in sockets:
                 receive_json(existing_socket)

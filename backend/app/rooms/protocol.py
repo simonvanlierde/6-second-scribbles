@@ -63,7 +63,8 @@ class JoinEvent(ClientPlayerEventModel):
     preferred_color: str | None = Field(default=None, alias="preferredColor")
     # Client-held secret for this player_id. player_ids are public (every roster
     # lists them), so only this key proves a guest reconnect is the same browser.
-    rejoin_key: str | None = Field(default=None, alias="rejoinKey", max_length=128)
+    # Required: a seat made without one has no stored hash and anyone could take it over.
+    rejoin_key: str = Field(alias="rejoinKey", min_length=1, max_length=128)
 
 
 class GameSettingsEventModel(ClientEventModel):

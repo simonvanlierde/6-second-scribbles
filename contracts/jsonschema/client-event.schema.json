@@ -66,20 +66,13 @@
           "title": "Preferredcolor"
         },
         "rejoinKey": {
-          "anyOf": [
-            {
-              "maxLength": 128,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Rejoinkey"
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Rejoinkey",
+          "type": "string"
         }
       },
-      "required": ["name", "playerId", "type"],
+      "required": ["name", "playerId", "rejoinKey", "type"],
       "title": "JoinEvent",
       "type": "object"
     },
