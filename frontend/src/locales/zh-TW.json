@@ -30,7 +30,7 @@
   "home.step2": "在 {time} 秒內盡可能多地畫出來",
   "home.step3": "猜猜你其他玩家畫了什麼",
   "home.step4": "畫畫者和猜題者在答對時都能得分！",
-  "home.footerText": "Gamely Games 出品的 {original} 多人網頁版 · 靈感來自 {inspiration} · {source}",
+  "home.footerText": "Gamely Games 出品的 {original} 多人網頁版 · 靈感來自 {inspiration}",
   "home.privacyNote": "隱私：訪客帳戶只保存你的名字和語言，並在為期 30 天的工作階段到期後刪除。伺服器日誌為防止濫用只記錄縮短後的網路位址，而不是你的完整 IP，舊日誌會隨著新日誌寫入而被覆蓋。",
   "home.tagline": "塗鴉。猜謎。歡笑。",
   "home.roomCodeLabel": "房間碼",
@@ -244,5 +244,8 @@
   "reactions.think": "思考中",
   "reactions.group": "對 {name} 的圖畫的反應",
   "reactions.react": "給 {name} 的圖畫：{reaction}",
+  "about.madeBy": "作者：Simon van Lierde",
+  "about.source": "原始碼",
+  "about.license": "MIT 授權",
   "settings.title": "設定"
 }

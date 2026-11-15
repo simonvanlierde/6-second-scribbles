@@ -30,7 +30,7 @@
   "home.step2": "Zeichne so viele wie möglich in {time} Sekunden",
   "home.step3": "Errate, was die anderen Spieler gezeichnet haben",
   "home.step4": "Sowohl der Zeichner als auch der Rater erhalten Punkte für richtige Antworten!",
-  "home.footerText": "Eine Multiplayer-Web-Version von {original} von Gamely Games · Inspiriert durch {inspiration} · {source}",
+  "home.footerText": "Eine Multiplayer-Web-Version von {original} von Gamely Games · Inspiriert durch {inspiration}",
   "home.privacyNote": "Datenschutz: Ein Gastkonto speichert nur deinen Namen und deine Sprache und wird nach Ablauf der 30-tägigen Sitzung gelöscht. Serverprotokolle speichern eine gekürzte Netzwerkadresse, nicht deine vollständige IP, um Missbrauch zu verhindern, und alte Protokolle werden überschrieben, sobald neue hinzukommen.",
   "home.tagline": "Malen. Raten. Lachen.",
   "home.roomCodeLabel": "Raumcode",
@@ -244,5 +244,8 @@
   "reactions.think": "Nachdenklich",
   "reactions.group": "Reaktionen auf {name}s Zeichnung",
   "reactions.react": "{reaction} für {name}s Zeichnung",
+  "about.madeBy": "Von Simon van Lierde",
+  "about.source": "Quellcode",
+  "about.license": "MIT-Lizenz",
   "settings.title": "Einstellungen"
 }

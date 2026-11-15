@@ -30,7 +30,7 @@
   "home.step2": "Dessine le plus de choses possible en {time} secondes",
   "home.step3": "Devine ce que les autres ont dessiné",
   "home.step4": "Le dessinateur et le devineur gagnent tous les deux des points pour les bonnes réponses !",
-  "home.footerText": "Une version Web multijoueur de {original} par Gamely Games · Inspiré par {inspiration} · {source}",
+  "home.footerText": "Une version Web multijoueur de {original} par Gamely Games · Inspiré par {inspiration}",
   "home.privacyNote": "Confidentialité : un compte invité ne conserve que ton nom et ta langue, et il est supprimé après expiration de sa session de 30 jours. Les journaux du serveur gardent une adresse réseau raccourcie, pas ton IP complète, pour bloquer les abus, et les anciens journaux sont écrasés à mesure que de nouveaux arrivent.",
   "home.tagline": "Dessiner. Deviner. Rire.",
   "home.roomCodeLabel": "Code de salle",
@@ -244,5 +244,8 @@
   "reactions.think": "Perplexe",
   "reactions.group": "Réactions au dessin de {name}",
   "reactions.react": "{reaction} pour le dessin de {name}",
+  "about.madeBy": "Créé par Simon van Lierde",
+  "about.source": "Code source",
+  "about.license": "Licence MIT",
   "settings.title": "Paramètres"
 }
