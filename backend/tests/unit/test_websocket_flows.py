@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import time
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, cast
 
@@ -173,6 +174,18 @@ def test_clients_cannot_deal_a_round(test_client: TestClient) -> None:
         room_state = receive_json(ws1)
         assert room_state["type"] == ROOM_STATE
         assert room_state["gamePhase"] == GamePhase.LOBBY.value
+
+
+def test_room_state_carries_the_server_clock(test_client: TestClient) -> None:
+    """Clients correct round timers by the offset between this value and their own clock."""
+    with joined_players(test_client, "CLOCK1", [JoinedPlayer(PLAYER_1, ALICE)]) as (ws1,):
+        before = int(time.time() * 1000)
+        send_json(ws1, {"type": "request_game_state", "playerId": PLAYER_1})
+        room_state = receive_json(ws1)
+
+        assert room_state["type"] == ROOM_STATE
+        server_time = cast("int", room_state["serverTime"])
+        assert before <= server_time <= int(time.time() * 1000)
 
 
 def test_public_room_player_can_vote_kick_non_host_player(test_client: TestClient) -> None:

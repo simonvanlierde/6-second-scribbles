@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAnnouncer } from "@/composables/useAnnouncer.svelte";
 import { useGameTimer } from "@/composables/useGameTimer.svelte";
+import { useGameStore } from "@/stores/game.svelte";
 
 const disposers: Array<() => void> = [];
 function timer(options: Parameters<typeof useGameTimer>[0]) {
@@ -21,6 +22,7 @@ describe("useGameTimer", () => {
   });
 
   afterEach(() => {
+    useGameStore().reset();
     for (const dispose of disposers.splice(0)) dispose();
     vi.useRealTimers();
   });
@@ -80,6 +82,25 @@ describe("useGameTimer", () => {
 
     expect(clock.timeLeft).toBe(30);
     expect(onExpire).not.toHaveBeenCalled();
+  });
+
+  it("does not expire a fresh round when the client clock runs ahead of the server", () => {
+    const serverNow = Date.now() - 10_000; // client clock is 10 s ahead
+    useGameStore().applyRoomState({
+      players: [],
+      gamePhase: "drawing",
+      difficulty: "medium",
+      maxRounds: 3,
+      serverTime: serverNow,
+    } as never);
+    const onExpire = vi.fn();
+    const clock = timer({ startTime: serverNow, duration: 6, onExpire });
+
+    expect(clock.timeLeft).toBe(6);
+    expect(onExpire).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(6_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
   });
 
   it("stops ticking once the screen that owns it goes away", () => {

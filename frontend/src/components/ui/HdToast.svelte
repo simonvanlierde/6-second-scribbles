@@ -5,11 +5,22 @@ import { useNotifications } from "@/composables/notifications.svelte";
 let { ...rest }: {} & HTMLAttributes<HTMLElement> = $props();
 
 const toast = useNotifications();
+let stack = $state<HTMLElement | null>(null);
+
+// A manual popover lives in the top layer, where a modal <dialog>'s backdrop
+// would otherwise cover the toasts. Top-layer order is last-shown-on-top, so
+// raise the stack again whenever the list changes.
+$effect(() => {
+  void toast.notifications.length;
+  if (!stack?.showPopover) return;
+  if (stack.matches(":popover-open")) stack.hidePopover();
+  stack.showPopover();
+});
 </script>
 
 <!-- The stack owns the single live region; per-toast role="status" here would
        make each notification announce twice. -->
-<div {...rest} class={[rest.class, "hd-toast-stack"]} role="status" aria-live="polite">
+<div {...rest} bind:this={stack} popover="manual" class={[rest.class, "hd-toast-stack"]} role="status" aria-live="polite">
   {#each toast.notifications as n (n.id)}
     <div class={["hd-toast", `hd-toast--${n.type}`]}>{n.text}</div>
   {/each}
@@ -18,13 +29,21 @@ const toast = useNotifications();
 <style>
 .hd-toast-stack {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  inset: 16px 16px auto auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+  width: max-content;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 1000;
   pointer-events: none;
+}
+.hd-toast-stack:not(:popover-open) {
+  display: none;
 }
 .hd-toast {
   pointer-events: auto;

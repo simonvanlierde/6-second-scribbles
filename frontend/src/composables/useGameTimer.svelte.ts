@@ -1,6 +1,7 @@
 import { untrack } from "svelte";
 import { useAnnouncer } from "@/composables/useAnnouncer.svelte";
 import { t } from "@/i18n";
+import { useGameStore } from "@/stores/game.svelte";
 
 type Input<T> = T | (() => T);
 interface UseGameTimerOptions {
@@ -14,14 +15,15 @@ function resolve<T>(input: Input<T>): T {
   return typeof input === "function" ? (input as () => T)() : input;
 }
 
-function computeTimeLeft(startTime: number | null | undefined, duration: number): number {
+function computeTimeLeft(startTime: number | null | undefined, duration: number, now: number): number {
   if (!startTime || Number.isNaN(startTime)) return duration;
-  const elapsed = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+  const elapsed = Math.max(0, Math.floor((now - startTime) / 1000));
   return Math.max(0, duration - elapsed);
 }
 
 export function useGameTimer({ startTime, duration, onExpire, warningThreshold = 10 }: UseGameTimerOptions) {
-  const initialTimeLeft = computeTimeLeft(resolve(startTime), resolve(duration));
+  const { serverNow } = useGameStore();
+  const initialTimeLeft = computeTimeLeft(resolve(startTime), resolve(duration), serverNow());
   let timeLeft = $state(initialTimeLeft);
   let expired = false;
   let wasWarning = initialTimeLeft <= warningThreshold;
@@ -33,7 +35,7 @@ export function useGameTimer({ startTime, duration, onExpire, warningThreshold =
     interval = undefined;
   }
   function refresh() {
-    timeLeft = computeTimeLeft(resolve(startTime), resolve(duration));
+    timeLeft = computeTimeLeft(resolve(startTime), resolve(duration), serverNow());
     const warning = timeLeft <= warningThreshold;
     if (warning && !wasWarning && timeLeft > 0) announce(t("phase.timeLow", { count: timeLeft }));
     wasWarning = warning;

@@ -4,6 +4,8 @@
   "common.confirm": "确认",
   "common.connecting": "连接中…",
   "common.reconnecting": "重新连接中…",
+  "common.connectionLost": "连接已断开",
+  "common.retry": "重试",
   "common.color": "颜色",
   "common.host": "房主",
   "common.copied": "已复制！",

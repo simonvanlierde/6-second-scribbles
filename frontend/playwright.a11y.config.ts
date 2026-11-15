@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
 // stands up the full stack for the backend-dependent flows.
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "a11y.spec.ts",
+  testMatch: ["a11y.spec.ts", "overlays.spec.ts"],
   timeout: 30 * 1000,
   expect: { timeout: 5000 },
   forbidOnly: !!process.env.CI,

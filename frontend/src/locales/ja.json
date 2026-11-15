@@ -4,6 +4,8 @@
   "common.confirm": "確定",
   "common.connecting": "接続中…",
   "common.reconnecting": "再接続中…",
+  "common.connectionLost": "接続が切れました",
+  "common.retry": "再試行",
   "common.color": "色",
   "common.host": "ホスト",
   "common.copied": "コピーしました！",

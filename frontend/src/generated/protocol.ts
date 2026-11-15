@@ -32,6 +32,7 @@ export const ServerEventSchema = z.union([
       guessingStartTime: z.union([z.number().int(), z.null()]).default(null),
       drawingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
       guessingTimeLimit: z.union([z.number().int().gte(1), z.null()]).default(null),
+      serverTime: z.union([z.number().int(), z.null()]).default(null),
       guessTargets: z.record(z.string(), z.string()).optional(),
       drawings: z.record(z.string(), z.string()).optional(),
       drawingHistory: z

@@ -4,6 +4,8 @@
   "common.confirm": "Confirmar",
   "common.connecting": "Conectando…",
   "common.reconnecting": "Reconectando…",
+  "common.connectionLost": "Ligação perdida",
+  "common.retry": "Tentar novamente",
   "common.color": "Cor",
   "common.host": "Anfitrião",
   "common.copied": "Copiado!",

@@ -340,6 +340,9 @@ class RoomStateEvent(ServerEventModel):
     guessing_start_time: int | None = Field(default=None, alias="guessingStartTime")
     drawing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="drawingTimeLimit")
     guessing_time_limit: PositiveRoundLengthSeconds | None = Field(default=None, alias="guessingTimeLimit")
+    # Server wall clock (epoch ms) when this snapshot was built: clients offset
+    # their own clock by it so round timers do not depend on client clock skew.
+    server_time: int | None = Field(default=None, alias="serverTime")
     guess_targets: dict[str, str] = Field(default_factory=dict, alias="guessTargets")
     drawings: dict[str, str] = Field(default_factory=dict)
     drawing_history: list[GalleryDrawingPayload] = Field(default_factory=list, alias="drawingHistory")

@@ -4,6 +4,8 @@
   "common.confirm": "Bevestigen",
   "common.connecting": "Verbinden…",
   "common.reconnecting": "Opnieuw verbinden…",
+  "common.connectionLost": "Verbinding verbroken",
+  "common.retry": "Opnieuw proberen",
   "common.color": "Kleur",
   "common.host": "Host",
   "common.copied": "Gekopieerd!",

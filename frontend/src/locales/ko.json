@@ -4,6 +4,8 @@
   "common.confirm": "확인",
   "common.connecting": "연결 중…",
   "common.reconnecting": "다시 연결 중…",
+  "common.connectionLost": "연결이 끊어졌습니다",
+  "common.retry": "다시 시도",
   "common.color": "색상",
   "common.host": "방장",
   "common.copied": "복사됐어요!",

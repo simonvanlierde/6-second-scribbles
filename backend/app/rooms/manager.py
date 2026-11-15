@@ -416,6 +416,7 @@ class GameRoom:
                 "guessingStartTime": self.metadata.guessing_start_time,
                 "drawingTimeLimit": self.metadata.drawing_time_limit,
                 "guessingTimeLimit": self.metadata.guessing_time_limit,
+                "serverTime": int(time.time() * 1000),
                 "guessTargets": self.metadata.guess_targets,
                 "drawings": self.round_drawings,
                 "drawingHistory": self.drawing_history,
