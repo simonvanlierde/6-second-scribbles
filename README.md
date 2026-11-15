@@ -29,12 +29,13 @@ Then open <http://localhost:3001>. `just up` runs the whole stack in containers 
 
 ## Development
 
-Run the checks and tests that need no Docker. CI runs these blocks in a fresh container.
+Run the checks and the unit tests, which need no Docker (`just test` also runs the backend integration tests, which start containers). CI runs these blocks in a fresh container.
 
 ```sh
 just install
 just check-frontend check-backend
-just test
+just test-frontend
+uv run --directory backend pytest tests/unit
 ```
 
 ## Social card
