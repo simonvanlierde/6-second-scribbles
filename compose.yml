@@ -24,7 +24,7 @@ services:
       start_period: 30s
 
   cache:
-    image: redis:8-alpine
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 30s
@@ -33,7 +33,7 @@ services:
       start_period: 30s
 
   database:
-    image: postgres:18-alpine
+    image: postgres:18-alpine@sha256:1018733457011bf88d81db98cf43aac6d5150afc18787dbe204771fedf80ff95
     volumes:
       - postgres_data:/var/lib/postgresql/18/docker
     healthcheck:

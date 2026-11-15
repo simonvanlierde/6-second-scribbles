@@ -4,7 +4,10 @@
 # Remove an entry as soon as `caddy:2.11-alpine` ships a Caddy built with the fix.
 
 vulnerabilities:
-  # golang.org/x/net 0.60.0 in Caddy v2.11.9; fixed in x/net 0.62.0.
+  # golang.org/x/net 0.60.0 in Caddy v2.11.9; fixed in x/net 0.62.0. Checked 2026-11-15:
+  # caddy:2.11-alpine is still v2.11.9, v2.11.9 is the latest release, and Caddy main
+  # has x/net 0.62.0 but is unreleased. `go mod why golang.org/x/net/html` on v2.11.9
+  # still ends at modules/caddypki, then smallstep cli-utils/usage.
   - id: CVE-2026-78661
     paths:
       - usr/bin/caddy
@@ -13,4 +16,4 @@ vulnerabilities:
       here: Caddy v2.11.9 imports it only through modules/caddypki (smallstep
       cli-utils/usage, which renders CLI help), and this Caddyfile runs no PKI, ACME
       server or TLS. reverse_proxy and file_server pass bodies through unparsed.
-    expired_at: 2026-11-30
+    expired_at: 2026-12-31

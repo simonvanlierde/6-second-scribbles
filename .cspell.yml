@@ -18,6 +18,7 @@ ignorePaths:
   - ".git"
   - "*-lock.*"
   - "*.sarif"
+  - ".agent-project-profiles.json"
   - ".vscode/**"
   - ".cspell.yml"
   - "backend/alembic/versions/**"

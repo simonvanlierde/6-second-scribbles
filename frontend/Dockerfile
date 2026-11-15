@@ -1,4 +1,4 @@
-FROM node:26-trixie-slim AS base
+FROM node:26-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS base
 
 ENV PNPM_HOME=/pnpm \
     PATH="/pnpm:$PATH"
@@ -38,7 +38,7 @@ WORKDIR /app/frontend
 
 RUN pnpm run build
 
-FROM caddy:2.11-alpine AS prod
+FROM caddy:2.11-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 AS prod
 
 LABEL org.opencontainers.image.source="https://github.com/simonvanlierde/6-second-scribbles" \
       org.opencontainers.image.title="6 Second Scribbles frontend" \

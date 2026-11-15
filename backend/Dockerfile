@@ -1,7 +1,7 @@
 # spell-checker: ignore PYTHONUNBUFFERED, PYTHONDONTWRITEBYTECODE
 
 # The Debian release is in the tag so a rebuild never moves to the next one by itself.
-FROM python:3.14-slim-trixie AS runtime-base
+FROM python:3.14-slim-trixie@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f AS runtime-base
 
 # Create the non-root user for all runtime stages. USER names the numeric uid so a
 # runtime (or Kubernetes runAsNonRoot) can tell it is not root without reading /etc/passwd.
