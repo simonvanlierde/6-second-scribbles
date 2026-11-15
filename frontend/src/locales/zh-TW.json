@@ -47,7 +47,6 @@
   "settings.easy": "簡單",
   "settings.medium": "中等",
   "settings.hard": "困難",
-  "settings.title": "設定",
   "settings.identity": "身分",
   "settings.yourName": "你的名字",
   "settings.namePlaceholder": "輸入名字",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "房間代碼為 6 個字元，使用 A–Z 和 0–9。請檢查代碼後再試。",
   "roomEntry.tryGoBack": "試著回到大廳並重新輸入代碼。",
   "roomEntry.enterYourName": "輸入你的名字",
+  "roomEntry.nameRequired": "輸入你的名字才能加入",
   "roomEntry.yourName": "你的名字",
   "roomEntry.back": "返回",
   "roomEntry.backToHome": "返回首頁",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "太絕了",
   "reactions.think": "思考中",
   "reactions.group": "對 {name} 的圖畫的反應",
-  "reactions.react": "給 {name} 的圖畫：{reaction}"
+  "reactions.react": "給 {name} 的圖畫：{reaction}",
+  "settings.title": "設定"
 }

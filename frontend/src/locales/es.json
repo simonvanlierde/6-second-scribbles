@@ -47,7 +47,6 @@
   "settings.easy": "fácil",
   "settings.medium": "media",
   "settings.hard": "difícil",
-  "settings.title": "Configuración",
   "settings.identity": "Identidad",
   "settings.yourName": "Tu nombre",
   "settings.namePlaceholder": "Escribe tu nombre",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "Los códigos de sala tienen 6 caracteres usando A–Z y 0–9. Revisa el código e inténtalo de nuevo.",
   "roomEntry.tryGoBack": "Intenta volver al vestíbulo y volver a introducir el código.",
   "roomEntry.enterYourName": "Ingresa tu nombre",
+  "roomEntry.nameRequired": "Ingresa tu nombre para unirte",
   "roomEntry.yourName": "Tu nombre",
   "roomEntry.back": "Atrás",
   "roomEntry.backToHome": "Volver al inicio",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "Alucinante",
   "reactions.think": "Pensativo",
   "reactions.group": "Reacciones al dibujo de {name}",
-  "reactions.react": "{reaction} para el dibujo de {name}"
+  "reactions.react": "{reaction} para el dibujo de {name}",
+  "settings.title": "Configuración"
 }

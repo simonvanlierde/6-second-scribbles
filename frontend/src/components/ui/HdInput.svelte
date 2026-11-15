@@ -11,6 +11,9 @@ let {
   ...rest
 }: Props & { onmodelValueChange?: (value: string) => void } & HTMLInputAttributes = $props();
 
+// A room code is typed letter by letter on a phone: no autocorrect, spellcheck or saved-entry popups.
+const CODE_ATTRS = { autocapitalize: "characters", autocorrect: "off", spellcheck: false, autocomplete: "off" } as const;
+
 let inputRef = $state<HTMLInputElement | null>(null);
 export function focus() {
   inputRef?.focus();
@@ -34,6 +37,7 @@ function onInput(e: Event & { currentTarget: HTMLInputElement }): void {
 </script>
 
 <input
+  {...variant === "code" ? CODE_ATTRS : {}}
   {...rest}
   class={[rest.class, "hd-input", `hd-input--${variant}`]}
   bind:this={inputRef}
@@ -62,6 +66,11 @@ function onInput(e: Event & { currentTarget: HTMLInputElement }): void {
 .hd-input::placeholder {
   color: var(--color-ink-muted);
   opacity: 1;
+}
+/* "ROOM CODE" at the input size plus 0.4em tracking is wider than a 320 px screen; the placeholder gets its own size. */
+.hd-input--code::placeholder {
+  font-size: 1rem;
+  letter-spacing: 0.1em;
 }
 .hd-input--code {
   font-family: var(--font-mono);

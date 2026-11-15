@@ -47,7 +47,6 @@
   "settings.easy": "かんたん",
   "settings.medium": "ふつう",
   "settings.hard": "むずかしい",
-  "settings.title": "設定",
   "settings.identity": "プロフィール",
   "settings.yourName": "あなたの名前",
   "settings.namePlaceholder": "名前を入力",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "ルームコードは A–Z と 0–9 を使う 6 文字です。コードを確認してもう一度試してください。",
   "roomEntry.tryGoBack": "ロビーに戻ってコードをもう一度入力してください。",
   "roomEntry.enterYourName": "名前を入力",
+  "roomEntry.nameRequired": "参加するには名前を入力してください",
   "roomEntry.yourName": "あなたの名前",
   "roomEntry.back": "戻る",
   "roomEntry.backToHome": "ホームに戻る",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "圧巻",
   "reactions.think": "考え中",
   "reactions.group": "{name}さんの絵へのリアクション",
-  "reactions.react": "{name}さんの絵に「{reaction}」"
+  "reactions.react": "{name}さんの絵に「{reaction}」",
+  "settings.title": "設定"
 }

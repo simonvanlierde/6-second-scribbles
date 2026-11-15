@@ -20,6 +20,17 @@ describe("HdInput", () => {
     expect(w.container.querySelector("input")?.getAttribute("placeholder")).toBe("type here");
   });
 
+  it("turns off autocorrect and capitalizes characters for the code variant only", () => {
+    const code = render(HdInput, { props: { ...callbacks, variant: "code" } }).container.querySelector("input")!;
+    const plain = render(HdInput, { props: { ...callbacks } }).container.querySelector("input")!;
+
+    expect(code.getAttribute("autocapitalize")).toBe("characters");
+    expect(code.getAttribute("autocorrect")).toBe("off");
+    expect(code.getAttribute("spellcheck")).toBe("false");
+    expect(code.getAttribute("autocomplete")).toBe("off");
+    expect(plain.hasAttribute("autocapitalize")).toBe(false);
+  });
+
   it("applies the code variant class", () => {
     const w = render(HdInput, { props: { ...callbacks, variant: "code" } });
     expect(Array.from(w.container.firstElementChild?.classList)).toContain("hd-input--code");

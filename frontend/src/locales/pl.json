@@ -47,7 +47,6 @@
   "settings.easy": "łatwy",
   "settings.medium": "średni",
   "settings.hard": "trudny",
-  "settings.title": "Ustawienia",
   "settings.identity": "Tożsamość",
   "settings.yourName": "Twoje imię",
   "settings.namePlaceholder": "Wybierz imię",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "Kody pokoju mają 6 znaków z A–Z i 0–9. Sprawdź kod i spróbuj ponownie.",
   "roomEntry.tryGoBack": "Spróbuj wrócić do lobby i ponownie wpisać kod.",
   "roomEntry.enterYourName": "Wpisz swoje imię",
+  "roomEntry.nameRequired": "Wpisz swoje imię, aby dołączyć",
   "roomEntry.yourName": "Twoje imię",
   "roomEntry.back": "Wstecz",
   "roomEntry.backToHome": "Powrót do strony głównej",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "Odlot",
   "reactions.think": "Zastanawiam się",
   "reactions.group": "Reakcje na rysunek gracza {name}",
-  "reactions.react": "{reaction} dla rysunku gracza {name}"
+  "reactions.react": "{reaction} dla rysunku gracza {name}",
+  "settings.title": "Ustawienia"
 }

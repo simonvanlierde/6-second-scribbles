@@ -157,15 +157,20 @@ onDestroy(() => {
             bind:modelValue={playerNameDraft}
             class="name-input"
             maxlength={20}
+            autocorrect="off"
+            spellcheck={false}
             placeholder={t('roomEntry.yourName')}
             onkeyup={(event: KeyboardEvent) => { if (event.key === "Enter") handlePrimaryAction(); }}
           />
         </label>
 
+        {#if !hasName}<p id="join-hint" class="access-hint">{t('roomEntry.nameRequired')}</p>{/if}
+
         <div class="access-actions">
           <HdButton variant="secondary" onclick={leaveRoom}>{t('roomEntry.back')}</HdButton>
           <HdButton
             variant="primary"
+            aria-describedby={hasName ? undefined : "join-hint"}
             disabled={!hasName || isLoadingRoom || !!statusError || isSubmitting}
             onclick={handlePrimaryAction}
           >
@@ -244,6 +249,12 @@ onDestroy(() => {
   font-family: var(--font-body);
   font-size: var(--text-label-md);
   color: var(--color-ink-muted);
+}
+:global(.access-hint) {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  color: var(--color-ink-muted);
+  margin: 0;
 }
 :global(.access-body) {
   font-family: var(--font-body);

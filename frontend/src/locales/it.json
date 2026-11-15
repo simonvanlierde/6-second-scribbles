@@ -47,7 +47,6 @@
   "settings.easy": "facile",
   "settings.medium": "medio",
   "settings.hard": "difficile",
-  "settings.title": "Impostazioni",
   "settings.identity": "Identità",
   "settings.yourName": "Il tuo nome",
   "settings.namePlaceholder": "Scegli un nome",
@@ -86,6 +85,7 @@
   "roomEntry.invalidCodeText": "I codici stanza sono lunghi 6 caratteri e usano A–Z e 0–9. Controlla il codice e riprova.",
   "roomEntry.tryGoBack": "Prova a tornare alla lobby e reinserire il codice.",
   "roomEntry.enterYourName": "Inserisci il tuo nome",
+  "roomEntry.nameRequired": "Inserisci il tuo nome per entrare",
   "roomEntry.yourName": "Il tuo nome",
   "roomEntry.back": "Indietro",
   "roomEntry.backToHome": "Torna alla home",
@@ -241,5 +241,6 @@
   "reactions.mindBlown": "Sbalorditivo",
   "reactions.think": "Pensieroso",
   "reactions.group": "Reazioni al disegno di {name}",
-  "reactions.react": "{reaction} per il disegno di {name}"
+  "reactions.react": "{reaction} per il disegno di {name}",
+  "settings.title": "Impostazioni"
 }

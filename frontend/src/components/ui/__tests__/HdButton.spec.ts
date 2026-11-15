@@ -22,6 +22,11 @@ describe("HdButton", () => {
     expect(events.click).not.toHaveBeenCalled();
   });
 
+  it("has a quiet danger variant", () => {
+    const w = render(HdButton, { props: { ...callbacks, variant: "danger", children: text("Kick") } });
+    expect(Array.from(w.container.firstElementChild?.classList)).toContain("hd-btn--danger");
+  });
+
   it("applies the variant class", () => {
     const primary = render(HdButton, { props: { ...callbacks, variant: "primary", children: text("P") } });
     const secondary = render(HdButton, { props: { ...callbacks, variant: "secondary", children: text("S") } });

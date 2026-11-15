@@ -64,6 +64,38 @@ describe("RoomAccessView", () => {
     expect(Boolean(wrapper.container.querySelector("input.name-input"))).toBe(true);
   });
 
+  it("says why Join is disabled until a name is entered", async () => {
+    useGameStore().localPlayerName = "";
+    const wrapper = render(RoomAccessView);
+    await flushPromises();
+    await tick();
+
+    const join = Array.from(wrapper.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.match(/join room/i),
+    )!;
+    const hint = wrapper.container.querySelector("#join-hint")!;
+    expect(join.disabled).toBe(true);
+    expect(hint.textContent).toContain("Enter your name to join");
+    expect(join.getAttribute("aria-describedby")).toBe("join-hint");
+
+    await fireEvent.input(wrapper.container.querySelector("input.name-input")!, { target: { value: "Ann" } });
+    await tick();
+
+    expect(join.disabled).toBe(false);
+    expect(wrapper.container.querySelector("#join-hint")).toBeNull();
+    expect(join.hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("stops phones from autocorrecting the player name", async () => {
+    const wrapper = render(RoomAccessView);
+    await flushPromises();
+    await tick();
+
+    const name = wrapper.container.querySelector("input.name-input")!;
+    expect(name.getAttribute("autocorrect")).toBe("off");
+    expect(name.getAttribute("spellcheck")).toBe("false");
+  });
+
   it("prefills the saved name but waits for an explicit join action", async () => {
     const store = useGameStore();
     store.localPlayerName = "Alice";
