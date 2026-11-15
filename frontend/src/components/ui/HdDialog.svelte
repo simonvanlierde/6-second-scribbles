@@ -89,7 +89,13 @@ function onClose(): void {
   aria-labelledby={titleId}
   aria-describedby={message ? messageId : undefined}
   onclick={(event) => {
-    if (event.target === event.currentTarget) onCancel();
+    // A click on the dialog's own padding also targets the <dialog>; only a
+    // click outside its box (the backdrop) cancels.
+    if (event.target !== event.currentTarget) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    const inside =
+      event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom;
+    if (!inside) onCancel();
   }}
   onclose={onClose}
 >

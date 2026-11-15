@@ -47,6 +47,18 @@ describe("HdDialog", () => {
     expect(events.cancel.mock.calls).toHaveLength(1);
     expect(w.container.querySelector("dialog")?.open).toBe(false);
   });
+
+  it("ignores a click on its own padding but cancels on a click outside its box", async () => {
+    const w = render(HdDialog, { props: { ...callbacks, open: true, title: "T", message: "M" } });
+    const dialog = w.container.querySelector("dialog") as HTMLDialogElement;
+    dialog.getBoundingClientRect = () => ({ left: 100, right: 300, top: 100, bottom: 300 }) as DOMRect;
+
+    await fireEvent.click(dialog, { clientX: 105, clientY: 105 });
+    expect(events.cancel).not.toHaveBeenCalled();
+
+    await fireEvent.click(dialog, { clientX: 10, clientY: 10 });
+    expect(events.cancel).toHaveBeenCalledTimes(1);
+  });
 });
 
 const events = { confirm: vi.fn(), cancel: vi.fn() };
