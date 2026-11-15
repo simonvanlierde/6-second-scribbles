@@ -30,7 +30,7 @@
   "home.step2": "{time} 秒以内にできるだけ多く描きましょう",
   "home.step3": "他のプレイヤーが何を描いたか当ててみましょう",
   "home.step4": "描いた人も当てた人も、正解ごとにポイントを獲得します！",
-  "home.footerText": "Gamely Games による {original} のマルチプレイヤーWeb版 · {inspiration} に着想を得て · {source}",
+  "home.footerText": "Gamely Games による {original} のマルチプレイヤーWeb版 · {inspiration} に着想を得て",
   "home.privacyNote": "プライバシー：ゲストアカウントが保存するのは名前と言語だけで、30日間のセッションの有効期限が切れた後に削除されます。サーバーログには不正利用を防ぐため、完全なIPアドレスではなく短縮したネットワークアドレスのみを記録し、古いログは新しいログで順次上書きされます。",
   "home.tagline": "描いて。当てて。笑って。",
   "home.roomCodeLabel": "ルームコード",
@@ -244,5 +244,8 @@
   "reactions.think": "考え中",
   "reactions.group": "{name}さんの絵へのリアクション",
   "reactions.react": "{name}さんの絵に「{reaction}」",
+  "about.madeBy": "制作: Simon van Lierde",
+  "about.source": "ソースコード",
+  "about.license": "MITライセンス",
   "settings.title": "設定"
 }

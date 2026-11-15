@@ -30,7 +30,7 @@
   "home.step2": "Dibuja tantos como puedas en {time} segundos",
   "home.step3": "Adivina qué dibujaron los otros jugadores",
   "home.step4": "¡Tanto el dibujante como el adivinador ganan puntos por los aciertos!",
-  "home.footerText": "Una versión web multijugador de {original} de Gamely Games · Inspirado en {inspiration} · {source}",
+  "home.footerText": "Una versión web multijugador de {original} de Gamely Games · Inspirado en {inspiration}",
   "home.privacyNote": "Privacidad: una cuenta de invitado solo guarda tu nombre y tu idioma, y se borra cuando caduca su sesión de 30 días. Los registros del servidor guardan una dirección de red acortada, no tu IP completa, para frenar abusos, y los registros antiguos se sobrescriben a medida que llegan otros nuevos.",
   "home.tagline": "Dibuja. Adivina. Ríe.",
   "home.roomCodeLabel": "Código de sala",
@@ -244,5 +244,8 @@
   "reactions.think": "Pensativo",
   "reactions.group": "Reacciones al dibujo de {name}",
   "reactions.react": "{reaction} para el dibujo de {name}",
+  "about.madeBy": "Creado por Simon van Lierde",
+  "about.source": "Código fuente",
+  "about.license": "Licencia MIT",
   "settings.title": "Configuración"
 }

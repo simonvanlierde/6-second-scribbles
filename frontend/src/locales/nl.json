@@ -30,7 +30,7 @@
   "home.step2": "Teken er zoveel als je kunt in {time} seconden",
   "home.step3": "Raad wat andere spelers hebben getekend",
   "home.step4": "Zowel de tekenaar als de rader verdienen punten voor juiste antwoorden!",
-  "home.footerText": "Een multiplayer webversie van {original} van Gamely Games · Geïnspireerd door {inspiration} · {source}",
+  "home.footerText": "Een multiplayer webversie van {original} van Gamely Games · Geïnspireerd door {inspiration}",
   "home.privacyNote": "Privacy: een gastaccount bewaart alleen je naam en taal, en wordt na afloop van de sessie van 30 dagen verwijderd. Serverlogs bewaren een ingekort netwerkadres, niet je volledige IP-adres, om misbruik te stoppen, en oude logs worden overschreven zodra er nieuwe binnenkomen.",
   "home.tagline": "Tekenen. Raden. Lachen.",
   "home.roomCodeLabel": "Kamercode",
@@ -244,5 +244,8 @@
   "reactions.think": "Nadenkend",
   "reactions.group": "Reacties op de tekening van {name}",
   "reactions.react": "{reaction} voor de tekening van {name}",
+  "about.madeBy": "Gemaakt door Simon van Lierde",
+  "about.source": "Broncode",
+  "about.license": "MIT-licentie",
   "settings.title": "Instellingen"
 }

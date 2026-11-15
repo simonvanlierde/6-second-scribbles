@@ -1,4 +1,4 @@
-// cspell:ignore multijoueur Inspiré
+// cspell:ignore multijoueur Inspiré Créé
 import { render } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, expect, it } from "vitest";
@@ -12,7 +12,7 @@ afterEach(async () => {
 it("renders translated attribution and preserves links when the locale changes", async () => {
   await setLocale("en");
   const { container } = render(AboutDialog, { open: true });
-  const paragraph = container.querySelector(".about-text");
+  const paragraph = container.querySelector(".about-credit");
   if (!paragraph) throw new Error("About attribution is missing");
   expect(paragraph.textContent).toContain("A multiplayer web version of");
   expect(paragraph.textContent).toContain("by Gamely Games");
@@ -26,7 +26,16 @@ it("renders translated attribution and preserves links when the locale changes",
   expect([...paragraph.querySelectorAll("a")].map((link) => [link.textContent?.trim(), link.href])).toEqual([
     ["Six Second Scribbles", "https://gamelygames.com/products/six-second-scribbles"],
     ["Oliver Culley de Lange's solo version", "https://github.com/OliverCulleyDeLange/6ss"],
-    ["Source on GitHub", "https://github.com/simonvanlierde/6-second-scribbles"],
   ]);
-  expect(paragraph.textContent).not.toMatch(/\{(?:original|inspiration|source)\}/);
+  expect(paragraph.textContent).not.toMatch(/\{(?:original|inspiration)\}/);
+  expect(
+    [...container.querySelectorAll(".about-links a")].map((link) => [
+      link.textContent?.trim(),
+      link.getAttribute("href"),
+    ]),
+  ).toEqual([
+    ["Créé par Simon van Lierde", "https://simonvanlierde.com"],
+    ["Code source", "https://github.com/simonvanlierde/6-second-scribbles"],
+    ["Licence MIT", "https://github.com/simonvanlierde/6-second-scribbles/blob/main/LICENSE"],
+  ]);
 });
