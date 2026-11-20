@@ -1,9 +1,11 @@
 """Property tests for guess normalization, matching and scoring."""
 
+import unicodedata
+
 from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
-# spell-checker: ignore abcdeiknorstgy
+# spell-checker: ignore abcdeiknorstgy dakuten handakuten
 from app.scoring import GuessTarget, _generate_variants, guess_matcher, normalize_text
 
 words = st.text(alphabet=st.characters(categories=["L", "M", "Zs"]), max_size=12)
@@ -19,6 +21,20 @@ def test_normalize_text_is_idempotent(text: str) -> None:
     """Normalizing twice changes nothing."""
     once = normalize_text(text)
     assert normalize_text(once) == once
+
+
+@fast
+@given(
+    st.characters(categories=["Mn", "Mc", "Me"]).filter(
+        lambda ch: bool(unicodedata.combining(ch)) and unicodedata.normalize("NFD", ch.casefold()) == ch
+    )
+)
+@example("\u3099")
+@example("\u309a")
+def test_only_japanese_voicing_marks_survive(mark: str) -> None:
+    """Only dakuten and handakuten survive combining-mark removal."""
+    expected = f"は{mark}" if mark in ("\u3099", "\u309a") else "は"
+    assert normalize_text(f"は{mark}") == unicodedata.normalize("NFC", expected)
 
 
 @fast
