@@ -2,6 +2,7 @@
 
 Uses rapidfuzz for high-performance fuzzy string matching.
 """
+# spell-checker: ignore dakuten handakuten
 
 from __future__ import annotations
 
@@ -18,6 +19,8 @@ from dataclasses import dataclass
 
 from rapidfuzz import fuzz
 
+_JAPANESE_VOICING_MARKS = frozenset({"\u3099", "\u309a"})
+
 
 @dataclass(frozen=True)
 class GuessTarget:
@@ -31,19 +34,15 @@ class GuessTarget:
 def normalize_text(text: str) -> str:
     """Normalize text for comparison: casefold, strip, remove accents.
 
-    Strips combining marks (accents) so ``café`` matches ``cafe``, but preserves
-    the base characters of every script. The previous ``encode("ascii", "ignore")``
-    dropped all non-Latin text to an empty string, making Cyrillic/CJK/Greek/Arabic
-    answers permanently unscoreable.
+    Keeps every script's base characters and the Japanese dakuten and handakuten
+    (U+3099/U+309A), which distinguish letters. Other combining marks are optional,
+    so ``café`` matches ``cafe``.
 
-    NOTE: accent-insensitive is correct for every shipped locale (European
-    accents are optional; CJK/Korean carry no combining marks on their bases). It
-    would over-match a tone/diacritic-phonemic locale where the mark IS the letter
-    (Vietnamese ``má``/``ma``/``mã``, Arabic harakat). Make stripping locale-aware
-    (thread the room locale from ``score_round``) if such a locale is ever added.
+    NOTE: locales with other meaningful combining marks (such as Vietnamese tones)
+    would need locale-aware stripping, with the room locale passed from ``score_round``.
     """
     decomposed = unicodedata.normalize("NFD", text.casefold())
-    without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    without_marks = "".join(ch for ch in decomposed if ch in _JAPANESE_VOICING_MARKS or not unicodedata.combining(ch))
     # Strip after dropping marks: a stray mark would otherwise shield a space next to it.
     return unicodedata.normalize("NFC", without_marks).strip()
 

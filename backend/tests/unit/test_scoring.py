@@ -1,9 +1,17 @@
 """Tests for fuzzy matching and scoring functionality."""
 # spell-checker: ignore elefant, girafe, tigger, gatos, gato, flores
 
+from __future__ import annotations
+
+import unicodedata
+from typing import TYPE_CHECKING
+
 import pytest
 
 from app.scoring import GuessMatcher, GuessTarget, _generate_variants, normalize_text
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 CAT = "cat"
 CATS = "cats"
@@ -134,6 +142,31 @@ class TestGuessMatcher:
         """Accents are still stripped so café matches cafe."""
         cafe = "cafe"
         assert normalize_text("Café") == cafe
+
+    @pytest.mark.parametrize(
+        ("guess", "target"), [("ガラス", "カラス"), ("ばす", "はす"), ("ぱん", "はん"), ("ぱん", "ばん")]
+    )
+    @pytest.mark.parametrize("form", ["NFC", "NFD"])
+    def test_japanese_voicing_changes_the_answer(
+        self, matcher: GuessMatcher, guess: str, target: str, form: Literal["NFC", "NFD"]
+    ) -> None:
+        """Voiced and unvoiced kana must not earn each other's points."""
+        guess = unicodedata.normalize(form, guess)
+        target = unicodedata.normalize(form, target)
+        for answer, wrong_guess in ((target, guess), (guess, target)):
+            assert matcher.match_guess(wrong_guess, answer, locale="ja") is None
+            assert matcher.match_guess(wrong_guess, "猫", [answer], locale="ja") is None
+            targets = [GuessTarget(1, answer, [])]
+            assert matcher.score_guesses_against_targets([wrong_guess, answer], targets, "ja") == [answer]
+
+    @pytest.mark.parametrize("answer", ["ガラス", "ばす", "ぱん", "café"])
+    def test_canonical_forms_score_the_same_answer(self, matcher: GuessMatcher, answer: str) -> None:
+        """Decomposed answers and accent-free Latin guesses still score."""
+        guess = unicodedata.normalize("NFD", answer)
+        targets = [GuessTarget(1, answer, [])]
+        assert matcher.score_guesses_against_targets([guess], targets, "ja") == [guess]
+        assert matcher.match_guess(guess, "猫", [answer], locale="ja") == ONE_HUNDRED
+        assert matcher.match_guess("cafe", "café") == ONE_HUNDRED
 
 
 class TestLocalePlurals:
