@@ -29,7 +29,7 @@ repos:
 
   # Tolerates JSONC configs (tsconfig, VS Code settings).
   - repo: https://github.com/simonvanlierde/jsonvet
-    rev: 83df66110a108e0fa4b7d2b2adcef6831f618e05 # frozen: v3.3.1
+    rev: 2886ba95eeb6daafcbb1cd23285cd744b9814a0f # frozen: v3.4.0
     hooks:
       - id: jsonvet
 
@@ -46,7 +46,7 @@ repos:
 
   # Staged changes only. `just check-security` and CI scan the full history.
   - repo: https://github.com/betterleaks/betterleaks
-    rev: 8d77e1712fb06fd14444cc648686f1d5655e28a8 # frozen: v1.10.0
+    rev: 39d5bdcf34db54e944facac5cf6e8b03db5e2b99 # frozen: v1.10.1
     hooks:
       - id: betterleaks
         args: [--config, .betterleaks.toml]
@@ -73,7 +73,7 @@ repos:
       - id: hadolint-docker
 
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: b0cff962ee693b9e612c097d22e71e0cba127447 # frozen: v0.3.2
+    rev: df5a947a3af0dba56640e644c6b9316184749168 # frozen: v0.3.4
     hooks:
       - id: rumdl
         args: [--fix]
