@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from rapidfuzz import fuzz
 
 _JAPANESE_VOICING_MARKS = frozenset({"\u3099", "\u309a"})
+_REMOVE_JAPANESE_VOICING = str.maketrans("", "", "".join(_JAPANESE_VOICING_MARKS))
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,14 @@ def normalize_text(text: str) -> str:
     without_marks = "".join(ch for ch in decomposed if ch in _JAPANESE_VOICING_MARKS or not unicodedata.combining(ch))
     # Strip after dropping marks: a stray mark would otherwise shield a space next to it.
     return unicodedata.normalize("NFC", without_marks).strip()
+
+
+def _differs_only_in_japanese_voicing(guess: str, target: str) -> bool:
+    if guess == target or guess.isascii() or target.isascii():
+        return False
+    guess_base = unicodedata.normalize("NFD", guess).translate(_REMOVE_JAPANESE_VOICING)
+    target_base = unicodedata.normalize("NFD", target).translate(_REMOVE_JAPANESE_VOICING)
+    return guess_base == target_base
 
 
 # Languages whose regular plural adds -s or -es. Others (German "Ei"/"Eis", Dutch,
@@ -114,7 +123,11 @@ class GuessMatcher:
         )
         partial_score = fuzz.partial_ratio(guess_norm, target_norm) if covers else 0
         similarity = max(token_score, partial_score)
-        return similarity >= self.FUZZY_MATCH_THRESHOLD, similarity
+        if similarity < self.FUZZY_MATCH_THRESHOLD:
+            return False, similarity
+
+        # Keep the similarity for round highlights even when this difference changes the answer.
+        return not _differs_only_in_japanese_voicing(guess_norm, target_norm), similarity
 
     def match_guess(
         self, guess: str, target: str, aliases: list[str] | None = None, locale: str | None = None

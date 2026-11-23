@@ -144,7 +144,16 @@ class TestGuessMatcher:
         assert normalize_text("Café") == cafe
 
     @pytest.mark.parametrize(
-        ("guess", "target"), [("ガラス", "カラス"), ("ばす", "はす"), ("ぱん", "はん"), ("ぱん", "ばん")]
+        ("guess", "target"),
+        [
+            ("ガラス", "カラス"),
+            ("ばす", "はす"),
+            ("ぱん", "はん"),
+            ("ぱん", "ばん"),
+            ("かいしゃ", "がいしゃ"),
+            ("かいしゃいん", "がいしゃいん"),
+            ("はんだんりょく", "ぱんだんりょく"),
+        ],
     )
     @pytest.mark.parametrize("form", ["NFC", "NFD"])
     def test_japanese_voicing_changes_the_answer(
@@ -154,10 +163,15 @@ class TestGuessMatcher:
         guess = unicodedata.normalize(form, guess)
         target = unicodedata.normalize(form, target)
         for answer, wrong_guess in ((target, guess), (guess, target)):
-            assert matcher.match_guess(wrong_guess, answer, locale="ja") is None
-            assert matcher.match_guess(wrong_guess, "猫", [answer], locale="ja") is None
             targets = [GuessTarget(1, answer, [])]
             assert matcher.score_guesses_against_targets([wrong_guess, answer], targets, "ja") == [answer]
+            assert matcher.match_guess(wrong_guess, "猫", [answer], locale="ja") is None
+
+    def test_fuzzy_scoring_accepts_japanese_typos_and_explicit_aliases(self, matcher: GuessMatcher) -> None:
+        """Only the voicing shortcut is excluded from fuzzy scoring."""
+        targets = [GuessTarget(1, "がいしゃいん", ["かいしゃいん"])]
+        for guess in ("かいしゃいん", "がいしゃいんん"):
+            assert matcher.score_guesses_against_targets([guess], targets, "ja") == [guess]
 
     @pytest.mark.parametrize("answer", ["ガラス", "ばす", "ぱん", "café"])
     def test_canonical_forms_score_the_same_answer(self, matcher: GuessMatcher, answer: str) -> None:
